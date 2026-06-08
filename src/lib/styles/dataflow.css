@@ -1,0 +1,581 @@
+/*
+ * Styles de React DataFlow Animator.
+ * Tout est préfixé `.rdfa-` et scopé sous `.rdfa-player` pour ne JAMAIS fuir
+ * dans la page hôte (Docusaurus & co.). Le thème passe par des variables CSS.
+ */
+
+.rdfa-player {
+  --rdfa-bg: #f8fafc;
+  --rdfa-surface: #ffffff;
+  --rdfa-border: #e2e8f0;
+  --rdfa-text: #0f172a;
+  --rdfa-muted: #64748b;
+  --rdfa-accent: #2563eb;
+  --rdfa-node-bg: #ffffff;
+  --rdfa-node-stroke: #334155;
+  --rdfa-arrow: #475569;
+  --rdfa-packet-http: #2563eb;
+  --rdfa-packet-sql: #7c3aed;
+  --rdfa-packet-sql-response: #059669;
+  --rdfa-terminal-bg: #1e293b;
+  --rdfa-terminal-text: #e2e8f0;
+  --rdfa-radius: 10px;
+  --rdfa-font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --rdfa-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--rdfa-border);
+  border-radius: var(--rdfa-radius);
+  background: var(--rdfa-bg);
+  color: var(--rdfa-text);
+  font-family: var(--rdfa-font);
+  overflow: hidden;
+}
+
+.rdfa-player *,
+.rdfa-player *::before,
+.rdfa-player *::after {
+  box-sizing: border-box;
+}
+
+.rdfa-player[data-theme='dark'] {
+  --rdfa-bg: #0b1120;
+  --rdfa-surface: #111827;
+  --rdfa-border: #1f2937;
+  --rdfa-text: #e5e7eb;
+  --rdfa-muted: #94a3b8;
+  --rdfa-accent: #60a5fa;
+  --rdfa-node-bg: #1e293b;
+  --rdfa-node-stroke: #cbd5e1;
+  --rdfa-arrow: #94a3b8;
+}
+
+@media (prefers-color-scheme: dark) {
+  .rdfa-player[data-theme='auto'] {
+    --rdfa-bg: #0b1120;
+    --rdfa-surface: #111827;
+    --rdfa-border: #1f2937;
+    --rdfa-text: #e5e7eb;
+    --rdfa-muted: #94a3b8;
+    --rdfa-accent: #60a5fa;
+    --rdfa-node-bg: #1e293b;
+    --rdfa-node-stroke: #cbd5e1;
+    --rdfa-arrow: #94a3b8;
+  }
+}
+
+.rdfa-player:fullscreen {
+  border-radius: 0;
+  border: none;
+}
+
+/* ---------- Stage ---------- */
+.rdfa-stage {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Couche arrière : flèches (derrière les nœuds). */
+.rdfa-arrow-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Couche avant : paquets mobiles, commentaires (devant les nœuds). */
+.rdfa-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ---------- Nœuds statiques ---------- */
+.rdfa-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 3;
+  max-width: 40%;
+  text-align: center;
+}
+
+.rdfa-node-visual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rdfa-node-icon {
+  width: 56px;
+  height: 56px;
+  color: var(--rdfa-node-stroke);
+}
+
+.rdfa-node-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.rdfa-node-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.rdfa-node-link:hover .rdfa-node-icon {
+  color: var(--rdfa-accent);
+}
+
+.rdfa-node-subicon {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 24px;
+  height: 24px;
+  padding: 2px;
+  border-radius: 50%;
+  background: var(--rdfa-surface);
+  border: 1px solid var(--rdfa-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.rdfa-node-subicon svg,
+.rdfa-node-subicon img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.rdfa-node-label {
+  font-size: 13px;
+  color: var(--rdfa-text);
+  line-height: 1.2;
+}
+
+/* ---------- Flèches ---------- */
+.rdfa-arrow-line {
+  stroke: var(--rdfa-arrow);
+  stroke-width: 2;
+  fill: none;
+}
+
+.rdfa-arrow-line[data-style='dotted'] {
+  stroke-dasharray: 2 6;
+  stroke-linecap: round;
+}
+
+.rdfa-arrow-line[data-style='dashed'] {
+  stroke-dasharray: 8 6;
+}
+
+.rdfa-arrow-head {
+  fill: var(--rdfa-arrow);
+}
+
+.rdfa-arrow-label {
+  fill: var(--rdfa-text);
+  font-size: 12px;
+  font-family: var(--rdfa-font);
+  paint-order: stroke;
+  stroke: var(--rdfa-bg);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+/* ---------- Paquets mobiles ---------- */
+.rdfa-packet {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: var(--rdfa-mono);
+  color: #fff;
+  /* Fond plein opaque + contour clair pour rester lisible au-dessus des nœuds/flèches. */
+  opacity: 1;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.rdfa-packet-http_packet {
+  background: var(--rdfa-packet-http);
+}
+
+.rdfa-packet-sql_request {
+  background: var(--rdfa-packet-sql);
+}
+
+.rdfa-packet-sql_response {
+  background: var(--rdfa-packet-sql-response);
+}
+
+.rdfa-packet-header {
+  font-weight: 600;
+}
+
+.rdfa-packet-body {
+  margin-top: 2px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rdfa-packet-body img {
+  display: block;
+  max-width: 120px;
+  max-height: 80px;
+  border-radius: 4px;
+}
+
+/* ---------- Loading (spinner) ---------- */
+.rdfa-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  z-index: 5;
+  border: 3px solid var(--rdfa-border);
+  border-top-color: var(--rdfa-accent);
+  border-radius: 50%;
+  animation: rdfa-spin 0.8s linear infinite;
+}
+
+@keyframes rdfa-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* ---------- Commentaire ---------- */
+.rdfa-comment {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  z-index: 6;
+  max-width: 220px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--rdfa-surface);
+  border: 1px solid var(--rdfa-border);
+  color: var(--rdfa-text);
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.rdfa-comment::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border-width: 7px 7px 0 7px;
+  border-style: solid;
+  border-color: var(--rdfa-surface) transparent transparent transparent;
+}
+
+/* ---------- set_content : terminal de code ---------- */
+.rdfa-content {
+  min-width: 200px;
+  max-width: 360px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--rdfa-border);
+  text-align: left;
+}
+
+/* Un nœud qui affiche du contenu n'est plus contraint en largeur. */
+.rdfa-node--content {
+  max-width: 70%;
+  z-index: 8;
+}
+
+.rdfa-window-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #e2e8f0;
+}
+
+.rdfa-player[data-theme='dark'] .rdfa-window-bar {
+  background: #334155;
+}
+
+.rdfa-window-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.rdfa-window-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.rdfa-window-dot:nth-child(1) {
+  background: #ff5f56;
+}
+.rdfa-window-dot:nth-child(2) {
+  background: #ffbd2e;
+}
+.rdfa-window-dot:nth-child(3) {
+  background: #27c93f;
+}
+
+.rdfa-window-url {
+  flex: 1;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--rdfa-surface);
+  color: var(--rdfa-muted);
+  font-size: 12px;
+  font-family: var(--rdfa-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdfa-content-body {
+  background: var(--rdfa-surface);
+  color: var(--rdfa-text);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.rdfa-content-body img {
+  max-width: 100%;
+  display: block;
+}
+
+.rdfa-terminal .rdfa-content-body,
+.rdfa-content-body.rdfa-code {
+  background: var(--rdfa-terminal-bg);
+  color: var(--rdfa-terminal-text);
+}
+
+.rdfa-content-body pre {
+  margin: 0;
+  font-family: var(--rdfa-mono);
+  white-space: pre;
+  tab-size: 2;
+}
+
+/* ---------- Coloration Prism (scopée) ---------- */
+.rdfa-code .token.comment,
+.rdfa-code .token.prolog,
+.rdfa-code .token.doctype,
+.rdfa-code .token.cdata {
+  color: #94a3b8;
+}
+.rdfa-code .token.punctuation {
+  color: #cbd5e1;
+}
+.rdfa-code .token.property,
+.rdfa-code .token.tag,
+.rdfa-code .token.boolean,
+.rdfa-code .token.number,
+.rdfa-code .token.constant,
+.rdfa-code .token.symbol,
+.rdfa-code .token.deleted {
+  color: #f472b6;
+}
+.rdfa-code .token.selector,
+.rdfa-code .token.attr-name,
+.rdfa-code .token.string,
+.rdfa-code .token.char,
+.rdfa-code .token.builtin,
+.rdfa-code .token.inserted {
+  color: #86efac;
+}
+.rdfa-code .token.operator,
+.rdfa-code .token.entity,
+.rdfa-code .token.url {
+  color: #fcd34d;
+}
+.rdfa-code .token.atrule,
+.rdfa-code .token.attr-value,
+.rdfa-code .token.keyword {
+  color: #93c5fd;
+}
+.rdfa-code .token.function,
+.rdfa-code .token.class-name {
+  color: #c4b5fd;
+}
+.rdfa-code .token.regex,
+.rdfa-code .token.important,
+.rdfa-code .token.variable {
+  color: #fdba74;
+}
+
+/* ---------- Contrôles ---------- */
+.rdfa-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--rdfa-surface);
+  border-top: 1px solid var(--rdfa-border);
+  z-index: 10;
+}
+
+.rdfa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rdfa-text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.rdfa-btn:hover {
+  background: var(--rdfa-bg);
+}
+
+.rdfa-btn:focus-visible {
+  outline: 2px solid var(--rdfa-accent);
+  outline-offset: 1px;
+}
+
+.rdfa-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rdfa-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.rdfa-spacer {
+  flex: 1;
+}
+
+.rdfa-time {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--rdfa-muted);
+  min-width: 84px;
+  text-align: right;
+}
+
+.rdfa-timeline {
+  flex: 1;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.rdfa-timeline-track {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--rdfa-border);
+}
+
+.rdfa-timeline-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--rdfa-accent);
+}
+
+.rdfa-timeline-step {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 9px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: var(--rdfa-muted);
+  opacity: 0.6;
+}
+
+.rdfa-timeline-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--rdfa-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- Overlay de debug ---------- */
+.rdfa-debug {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  max-width: 280px;
+  max-height: 60%;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #e2e8f0;
+  font-family: var(--rdfa-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.rdfa-debug b {
+  color: #93c5fd;
+}
+
+.rdfa-debug-row {
+  white-space: nowrap;
+}
+
+.rdfa-debug-row.is-active {
+  color: #86efac;
+}
+
+/* ---------- Placeholder SSR ---------- */
+.rdfa-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--rdfa-muted);
+  font-size: 14px;
+}

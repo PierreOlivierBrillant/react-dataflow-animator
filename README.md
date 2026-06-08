@@ -1,73 +1,89 @@
-# React + TypeScript + Vite
+# React DataFlow Animator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Composant React qui compile une **spécification JSON** en une **animation
+déterministe et navigable** de flux de données (client / serveur / SQL…).
+Pensé pour illustrer des architectures dans des cours et de la documentation
+(Docusaurus & co.).
 
-Currently, two official plugins are available:
+- 🎬 Lecteur intégré : lecture/pause, navigation par étapes, timeline cliquable, plein écran
+- 🧭 Placement automatique des nœuds (grilles linéaires ou disposition circulaire), **sans coordonnées**
+- ↔️ Anti-collision : voies parallèles automatiques pour les trajets bidirectionnels
+- ⏱️ Moteur déterministe (fonction pure du temps) → seek et SSR fiables, **zéro GSAP**
+- 🎨 Styles scopés + thèmes clair/sombre ; coloration syntaxique (Prism) remplaçable
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Installation
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install react-dataflow-animator
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+`react` et `react-dom` (≥ 18) sont des *peer dependencies*.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Utilisation
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```tsx
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import 'react-dataflow-animator/styles.css';
+
+const spec = {
+  is_navigable: true,
+  direction: 'left-to-right',
+  static_objects: [
+    { id: 'client', object_type: 'laptop', text: 'Navigateur', lane: 1 },
+    { id: 'api', object_type: 'server', text: 'API', subicon: 'node', lane: 2 },
+    { id: 'db', object_type: 'database', text: 'PostgreSQL', subicon: 'postgres', lane: 3 },
+  ],
+  dynamic_objects: [
+    { id: 'req', object_type: 'http_packet', packet_content: { header: 'GET /users' } },
+    { id: 'sql', object_type: 'sql_request', request_content: 'SELECT * FROM users' },
+  ],
+  actions: [
+    { action_type: 'move', object: 'req', from: 'client', to: 'api' },
+    { action_type: 'move', object: 'sql', from: 'api', to: 'db' },
+    { action_type: 'loading', object: 'db', duration: 800 },
+  ],
+};
+
+export default () => <DataFlowPlayer spec={spec} />;
 ```
+
+## Docusaurus
+
+Le composant est **SSR-safe** : il s'hydrate sans divergence et s'utilise
+directement dans un fichier `.mdx`. Importez le CSS une seule fois, par exemple dans
+`src/css/custom.css` :
+
+```css
+@import 'react-dataflow-animator/styles.css';
+```
+
+## Props principales
+
+| Prop | Type | Défaut | Description |
+|---|---|---|---|
+| `spec` | `DataFlowSpec` | — | La spécification à animer (**requis**) |
+| `height` | `number \| string` | `420` | Hauteur de la scène |
+| `autoPlay` | `boolean` | `false` | Démarre la lecture automatiquement |
+| `loop` | `boolean` | `false` | Rejoue en boucle |
+| `controls` | `boolean` | `spec.is_navigable` | Force l'affichage des contrôles |
+| `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Thème visuel |
+| `speed` | `number` | `1` | Vitesse de lecture |
+| `debug` | `boolean` | `false` | Overlay de débogage de la timeline |
+| `highlight` | `(code, lang) => string` | Prism | Coloration syntaxique personnalisée |
+
+La structure complète de `spec` est documentée par le **JSON Schema** exporté
+(`dataFlowSchema`) et dans [`docs/SPEC.md`](./docs/SPEC.md).
+
+## Développement
+
+```bash
+npm run dev        # site de démonstration (http://localhost:5173)
+npm run test       # tests du moteur (Vitest)
+npm run lint       # ESLint
+npm run build      # build de la librairie (dist/)
+npm run build:demo # build du site vitrine (dist-demo/)
+```
+
+## Licence
+
+MIT
