@@ -1,0 +1,18 @@
+---
+title: Timeline et étapes
+slug: /concepts/timeline
+---
+
+Les actions racines forment les étapes logiques du lecteur. La navigation précédent/suivant s’arrête sur des marques de timeline calculées par le moteur.
+
+## Points d’arrêt
+
+Un `move` crée typiquement un point d’arrêt à l’apparition de l’objet puis à son arrivée.
+
+## Synchronisation
+
+`wait_for` permet de démarrer une action à la fin d’une autre, utile pour modéliser une réponse asynchrone ou une phase de chargement.
+
+## Persistance visuelle
+
+`keep_until`, `keep_until_next` et `keep_until_end` prolongent la présence d’un élément à l’écran au-delà de son animation de base.

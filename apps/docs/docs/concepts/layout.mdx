@@ -1,0 +1,22 @@
+---
+title: Disposition
+slug: /concepts/layout
+---
+
+import { DemoPlayer, demosById } from '@site/src/site-content';
+
+La disposition repose sur `direction`, `lane`, `align_with` et le mode `circular`.
+
+## Grilles et lanes
+
+En mode `left-to-right`, la propriété `lane` contrôle la progression du flux et le moteur empile automatiquement les nœuds qui partagent la même lane.
+
+## Alignement transverse
+
+`align_with` permet d’aligner un nœud sur l’axe transverse d’un autre sans coordonnées explicites.
+
+## Disposition circulaire
+
+Le nœud marqué `is_main` est placé au centre, les autres autour.
+
+<DemoPlayer spec={demosById.circular.spec} />

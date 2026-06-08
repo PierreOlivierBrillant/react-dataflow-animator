@@ -1,0 +1,21 @@
+---
+id: intro
+title: Introduction
+slug: /intro
+---
+
+import { DemoPlayer, demosById } from '@site/src/site-content';
+
+React DataFlow Animator compile une spécification JSON en animation déterministe et navigable de flux de données.
+
+## Aperçu
+
+Vous décrivez des nœuds statiques, des objets dynamiques et une suite d’actions. Le moteur place les nœuds, trace les trajets et déroule la timeline sans coordonnées manuelles.
+
+<DemoPlayer spec={demosById.http.spec} />
+
+## Principes
+
+- Le temps est l’unique source de vérité, donc le seek et la navigation par étapes restent fiables.
+- La disposition est calculée automatiquement en linéaire ou en circulaire.
+- Le composant est SSR-safe et utilisable directement dans Docusaurus.

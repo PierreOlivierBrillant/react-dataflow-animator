@@ -1,0 +1,26 @@
+---
+id: installation
+title: Installation
+slug: /installation
+---
+
+```bash
+npm install react-dataflow-animator
+```
+
+`react` et `react-dom` en version 18 ou 19 sont requis comme peer dependencies.
+
+## Utilisation minimale
+
+```tsx
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import 'react-dataflow-animator/styles.css';
+
+export default function Example() {
+  return <DataFlowPlayer spec={spec} />;
+}
+```
+
+## Dans Docusaurus
+
+Importez le CSS une seule fois dans [src/css/custom.css](../src/css/custom.css) puis utilisez le composant dans n’importe quel fichier MDX.
