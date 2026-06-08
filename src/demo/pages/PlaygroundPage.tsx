@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { DataFlowPlayer, type DataFlowPlayerProps, type DataFlowSpec } from '../../lib';
+import { type DataFlowPlayerProps, type DataFlowSpec } from '../../lib';
+import { CodeEditor } from '../CodeEditor';
+import { DemoPlayer } from '../DemoPlayer';
 import { demos, demosById } from '../demos';
 import { navigate } from '../router';
 
@@ -78,16 +80,11 @@ export function PlaygroundPage({ demoId }: { demoId?: string }) {
               <option value="spacious">Spacieux</option>
             </select>
           </div>
-          <textarea
-            className="pg-textarea"
-            value={text}
-            spellCheck={false}
-            onChange={(e) => onChange(e.target.value)}
-          />
+          <CodeEditor value={text} onChange={onChange} language="json" />
           {error ? <div className="pg-error">Erreur : {error}</div> : null}
         </div>
         <div className="pg-preview">
-          <DataFlowPlayer
+          <DemoPlayer
             key={demoId ?? 'custom'}
             spec={spec}
             density={density}

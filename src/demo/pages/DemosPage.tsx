@@ -1,4 +1,5 @@
-import { DataFlowPlayer } from '../../lib';
+import { highlightCode } from '../../lib';
+import { DemoPlayer } from '../DemoPlayer';
 import { demos, type Demo } from '../demos';
 
 const categories: Demo['category'][] = ['Cas réels', 'Bases'];
@@ -28,13 +29,19 @@ export function DemosPage() {
                   </div>
                   <span className="cat-tag">{demo.category}</span>
                 </div>
-                <DataFlowPlayer spec={demo.spec} />
+                <DemoPlayer spec={demo.spec} />
                 <div className="card-actions">
                   <a href={`#/playground/${demo.id}`}>Ouvrir dans le playground →</a>
                 </div>
                 <details style={{ marginTop: 12 }}>
                   <summary>Voir la spécification JSON</summary>
-                  <pre className="code">{JSON.stringify(demo.spec, null, 2)}</pre>
+                  <pre className="code rdfa-code">
+                    <code
+                      dangerouslySetInnerHTML={{
+                        __html: highlightCode(JSON.stringify(demo.spec, null, 2), 'json'),
+                      }}
+                    />
+                  </pre>
                 </details>
               </div>
             ))}

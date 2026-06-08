@@ -65,9 +65,12 @@ export function Stage({
   // « Cellule » = plus petite distance entre deux nœuds (px). Elle pilote :
   //  - l'échelle globale (icônes/polices plus gros en plein écran, plus petits si serré) ;
   //  - la largeur max des panneaux/paquets (pour ne jamais déborder sur le voisin).
-  const { scale, maxW } = useMemo(() => {
+  const { scale, maxW, contentMaxW } = useMemo(() => {
     const ids = Object.keys(layout);
-    let cell = Math.min(width, height) * 0.5 || 220;
+    // Plus petite distance entre deux nœuds. NB : on part de +Infini pour ne pas
+    // plafonner artificiellement la cellule des layouts peu denses (sinon les
+    // panneaux deviennent inutilement étroits alors qu'il reste de la place).
+    let cell = Infinity;
     for (let i = 0; i < ids.length; i++) {
       for (let j = i + 1; j < ids.length; j++) {
         const a = layout[ids[i]];
@@ -76,12 +79,16 @@ export function Stage({
         if (d > 0) cell = Math.min(cell, d);
       }
     }
-    cell = clamp(cell, 96, 460);
+    if (!Number.isFinite(cell)) cell = Math.min(width, height) * 0.5 || 220; // <2 nœuds
+    cell = clamp(cell, 96, 520);
     const d = DENSITY[density];
     const baseScale = clamp(cell / 170, 0.72, 1.8);
     return {
       scale: clamp(baseScale * d.scale, 0.6, 2.4),
       maxW: Math.round(cell * d.maxw),
+      // Les panneaux set_content peuvent être plus larges que les paquets
+      // (un seul par nœud) → on utilise davantage l'espace disponible.
+      contentMaxW: Math.round(cell * 0.95),
     };
   }, [layout, width, height, density]);
   const bidir = useMemo(() => collectBidirectional(spec), [spec]);
@@ -120,6 +127,7 @@ export function Stage({
         {
           '--rdfa-scale': scale,
           '--rdfa-maxw': `${maxW}px`,
+          '--rdfa-content-maxw': `${contentMaxW}px`,
         } as CSSProperties
       }
     >

@@ -6,7 +6,8 @@ import {
   FiBox,
   FiZap,
 } from 'react-icons/fi';
-import { DataFlowPlayer, highlightCode, type DataFlowSpec } from '../../lib';
+import { highlightCode, type DataFlowSpec } from '../../lib';
+import { DemoPlayer } from '../DemoPlayer';
 import { demosById } from '../demos';
 
 const features = [
@@ -64,7 +65,7 @@ export function HomePage() {
         </h1>
         <p className="lead">
           Un composant React qui compile une description JSON en une animation
-          déterministe et navigable — idéal pour illustrer des architectures dans
+          déterministe et navigable. Idéal pour illustrer des architectures dans
           tes cours et ta documentation.
         </p>
         <div className="hero-cta">
@@ -76,7 +77,7 @@ export function HomePage() {
           </a>
         </div>
         <div className="hero-stage">
-          <DataFlowPlayer
+          <DemoPlayer
             spec={demosById.spa.spec}
             autoPlay
             loop
@@ -115,7 +116,7 @@ export function HomePage() {
           <pre className="code rdfa-code">
             <code dangerouslySetInnerHTML={{ __html: highlightCode(miniCode, 'jsx') }} />
           </pre>
-          <DataFlowPlayer spec={miniSpec} autoPlay loop controls={false} height={320} />
+          <DemoPlayer spec={miniSpec} autoPlay loop controls={false} height={320} />
         </div>
       </section>
     </div>

@@ -13,8 +13,9 @@
   color-scheme: light dark;
 }
 
+/* Thème sombre : préférence système tant qu'aucun choix explicite n'est fait… */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #0a0e1a;
     --surface: #111726;
     --surface-2: #161d2e;
@@ -25,6 +26,19 @@
     --accent-2: #22d3ee;
     --code-bg: #0b1120;
   }
+}
+
+/* …puis choix explicite via le toggle de l'en-tête. */
+:root[data-theme='dark'] {
+  --bg: #0a0e1a;
+  --surface: #111726;
+  --surface-2: #161d2e;
+  --border: #232b3e;
+  --text: #e7eaf3;
+  --muted: #9aa4bd;
+  --accent: #818cf8;
+  --accent-2: #22d3ee;
+  --code-bg: #0b1120;
 }
 
 * { box-sizing: border-box; }
@@ -101,6 +115,13 @@ pre.code {
 .nav-link:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
 .nav-link.active { color: var(--text); background: var(--surface-2); }
 .nav-spacer { flex: 1; }
+.nav-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; margin-right: 8px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: transparent; color: var(--text); cursor: pointer;
+}
+.nav-toggle:hover { border-color: var(--accent); background: var(--surface-2); }
 .nav-ghost {
   padding: 7px 14px; border: 1px solid var(--border); border-radius: 8px;
   color: var(--text); font-size: 14px; font-weight: 600;
@@ -237,12 +258,44 @@ details[open] > summary { margin-bottom: 8px; }
   padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--surface); color: var(--text); font-size: 14px; cursor: pointer;
 }
-.pg-textarea {
-  width: 100%; min-height: 460px; resize: vertical;
-  padding: 14px; border-radius: 10px; border: 1px solid var(--border);
-  background: var(--code-bg); color: #e2e8f0;
+/* Éditeur colorisé : pre (couleurs) sous textarea (transparent), métriques identiques. */
+.pg-code {
+  position: relative;
+  min-height: 460px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+.pg-code-layer {
+  margin: 0;
+  position: absolute;
+  inset: 0;
+  padding: 14px;
+  box-sizing: border-box;
+  border: 0;
   font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
-  font-size: 12.5px; line-height: 1.55; tab-size: 2;
+  font-size: 12.5px;
+  line-height: 1.55;
+  tab-size: 2;
+  white-space: pre;
+  word-wrap: normal;
+}
+.pg-code-pre {
+  overflow: hidden; /* défilement synchronisé via JS */
+  pointer-events: none;
+  color: #e2e8f0;
+}
+.pg-code-pre code {
+  font: inherit;
+}
+.pg-code-ta {
+  overflow: auto;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: #e2e8f0;
+  outline: none;
 }
 .pg-error {
   background: color-mix(in srgb, #ef4444 12%, transparent);
@@ -302,9 +355,20 @@ details[open] > summary { margin-bottom: 8px; }
 /* ---------- Footer ---------- */
 .footer {
   border-top: 1px solid var(--border);
-  padding: 28px 22px;
-  text-align: center;
+  padding: 24px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 18px;
   color: var(--muted);
   font-size: 14px;
 }
-.footer a { margin: 0 8px; }
+.footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.footer a:hover { color: var(--text); text-decoration: none; }
+.footer svg { width: 18px; height: 18px; }

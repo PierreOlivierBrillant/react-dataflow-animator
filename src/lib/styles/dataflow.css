@@ -302,8 +302,9 @@
 /* ---------- set_content : terminal de code ---------- */
 .rdfa-content {
   min-width: 0;
-  /* Plafonnée à la « cellule » pour ne pas déborder sur les nœuds voisins. */
-  max-width: var(--rdfa-maxw, 300px);
+  /* Plafonnée pour ne pas déborder sur les voisins, mais plus large que les
+     paquets (un seul panneau par nœud → on exploite l'espace disponible). */
+  max-width: var(--rdfa-content-maxw, var(--rdfa-maxw, 320px));
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
@@ -387,7 +388,9 @@
 .rdfa-content-body pre {
   margin: 0;
   font-family: var(--rdfa-mono);
-  white-space: pre;
+  /* Retour à la ligne plutôt que troncature horizontale du code. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   tab-size: 2;
 }
 
