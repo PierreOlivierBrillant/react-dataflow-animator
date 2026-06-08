@@ -6,7 +6,7 @@ import {
   FiBox,
   FiZap,
 } from 'react-icons/fi';
-import { DataFlowPlayer, type DataFlowSpec } from '../../lib';
+import { DataFlowPlayer, highlightCode, type DataFlowSpec } from '../../lib';
 import { demosById } from '../demos';
 
 const features = [
@@ -112,7 +112,9 @@ export function HomePage() {
           tracé et du timing.
         </p>
         <div className="home-split">
-          <pre className="code">{miniCode}</pre>
+          <pre className="code rdfa-code">
+            <code dangerouslySetInnerHTML={{ __html: highlightCode(miniCode, 'jsx') }} />
+          </pre>
           <DataFlowPlayer spec={miniSpec} autoPlay loop controls={false} height={320} />
         </div>
       </section>
