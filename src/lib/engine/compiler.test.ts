@@ -115,6 +115,17 @@ describe('compile — cycle de vie', () => {
     const c = timeline.clips.find((cl) => cl.id === 'C')!;
     expect(a.visibleUntilMs).toBe(c.startMs);
   });
+
+  it('keep_until_end maintient jusqu’à la fin de la chronologie', () => {
+    const { timeline } = compile(
+      specOf([
+        { action_type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 300, keep_until_end: true },
+        { action_type: 'move', id: 'B', object: 'p', from: 'a', to: 'b', duration: 300 },
+      ]),
+    );
+    const a = timeline.clips.find((c) => c.id === 'A')!;
+    expect(a.visibleUntilMs).toBe(timeline.durationMs);
+  });
 });
 
 describe('path shifting bidirectionnel', () => {

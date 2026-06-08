@@ -99,9 +99,10 @@
   width: 100%;
   min-height: 0;
   overflow: hidden;
-  /* Échelle modérée pour le texte des panneaux/commentaires : la police ne suit
-     pas l'échelle globale jusqu'à 1.8 (sinon le texte grossit trop et déborde). */
-  --rdfa-content-scale: clamp(0.85, var(--rdfa-scale, 1), 1.15);
+  /* Le texte des panneaux/commentaires suit l'échelle globale (comme les icônes) :
+     petit dans un petit canevas, grand en plein écran. Pour le CODE, le CodeBlock
+     réduit ensuite la police si besoin pour tenir sans retour à la ligne. */
+  --rdfa-content-scale: var(--rdfa-scale, 1);
 }
 
 /* Couche arrière : flèches (derrière les nœuds). */

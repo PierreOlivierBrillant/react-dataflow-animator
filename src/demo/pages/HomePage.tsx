@@ -38,7 +38,6 @@ function InstallBanner() {
         aria-label="Copier la commande d'installation"
       >
         {copied ? <FiCheck size={16} /> : <FiCopy size={16} />}
-        {copied ? 'Copié' : 'Copier'}
       </button>
     </div>
   );

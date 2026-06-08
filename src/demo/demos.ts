@@ -361,7 +361,7 @@ const signalr: DataFlowSpec = {
       action_type: 'comment',
       object: 'client',
       text: '1. Le client ouvre une connexion temps réel',
-      duration: 500,
+      duration: 1500,
     },
     {
       action_type: 'set_content',
@@ -385,8 +385,26 @@ const signalr: DataFlowSpec = {
     {
       action_type: 'comment',
       object: 'hub',
-      text: '2. Le hub garde la connexion ouverte',
-      duration: 500,
+      text: '2. Connexion établie',
+      duration: 1500,
+    },
+    {
+      action_type: 'parallel',
+      duration: 1000,
+      actions: [
+        {
+          action_type: 'arrow',
+          from: 'client',
+          to: 'hub',
+          style: 'dashed',
+        },
+        {
+          action_type: 'arrow',
+          from: 'hub',
+          to: 'client',
+          style: 'dashed',
+        },
+      ],
     },
     {
       action_type: 'set_content',
@@ -791,7 +809,11 @@ const spa: DataFlowSpec = {
       action_type: 'set_content',
       id: 'render',
       object: 'browser',
-      content: { content_type: 'text', url: 'https://mon-app.app/produits', content: '📦 12 produits affichés' },
+      content: {
+        content_type: 'text',
+        url: 'https://mon-app.app/produits',
+        content: '📦 12 produits affichés',
+      },
     },
     {
       action_type: 'comment',

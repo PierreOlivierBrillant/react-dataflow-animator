@@ -182,6 +182,10 @@ export const dataFlowSchema = {
           description:
             "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour move/loading, true pour arrow/comment/set_content.",
         },
+        keep_until_end: {
+          type: 'boolean',
+          description: "Si vrai, reste visible jusqu'à la fin de la chronologie.",
+        },
       },
     },
     action: {

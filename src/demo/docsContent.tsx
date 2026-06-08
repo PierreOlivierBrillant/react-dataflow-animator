@@ -334,6 +334,11 @@ export const docPages: DocPage[] = [
           ciblée (par ID) — utile pour garder une flèche ou un bloc de code à l’écran
           sur plusieurs étapes.
         </p>
+        <h2 id="keep-until-end">keep_until_end</h2>
+        <p>
+          Booléen : maintient l’élément visible jusqu’à la <strong>fin</strong> de la
+          chronologie.
+        </p>
       </>
     ),
   },

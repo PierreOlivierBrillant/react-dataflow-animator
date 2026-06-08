@@ -105,6 +105,7 @@ La timeline compile un tableau d'actions ordonnées. Voir
   l'apparition de la suivante).
 - **`keep_until_next`** : reste visible jusqu'au début de l'étape racine suivante
   (donc à travers la pause).
+- **`keep_until_end`** (booléen) : reste visible jusqu'à la fin de la chronologie.
   Défauts : `move` → `false` ; `arrow`/`comment`/`set_content` → `true` ; `loading` → `false`.
 
 ## 7. Site vitrine (GitHub Pages)

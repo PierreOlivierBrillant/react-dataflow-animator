@@ -133,6 +133,8 @@ export interface ActionBase {
    * Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`.
    */
   keep_until_next?: boolean;
+  /** Si vrai, reste visible jusqu'à la fin de la chronologie. */
+  keep_until_end?: boolean;
 }
 
 /** Déplace un objet dynamique de `from` vers `to`. */
