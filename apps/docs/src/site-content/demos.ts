@@ -738,6 +738,11 @@ const spa: DataFlowSpec = {
       },
     },
   ],
+  connections: [
+    { from: 'browser', to: 'web', style: 'dotted' },
+    { from: 'browser', to: 'api', style: 'dotted' },
+    { from: 'api', to: 'db', style: 'dotted' },
+  ],
   actions: [
     {
       action_type: 'comment',
