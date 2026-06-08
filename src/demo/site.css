@@ -87,8 +87,7 @@ pre.code {
 }
 .nav-brand:hover { text-decoration: none; }
 .nav-logo {
-  width: 26px; height: 26px; border-radius: 7px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  width: 28px; height: 28px; display: block; border-radius: 7px;
 }
 
 .nav-links { display: flex; gap: 4px; margin-left: 8px; }

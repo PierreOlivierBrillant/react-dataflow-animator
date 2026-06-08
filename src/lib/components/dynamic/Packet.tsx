@@ -5,6 +5,10 @@ export interface PacketProps {
   object: DynamicObject;
   x: number;
   y: number;
+  /** Opacité (fondu d'apparition/disparition). Défaut: 1. */
+  opacity?: number;
+  /** Échelle (léger « pop » à l'apparition/disparition). Défaut: 1. */
+  scale?: number;
 }
 
 function PacketInner({ object }: { object: DynamicObject }) {
@@ -42,11 +46,16 @@ function PacketInner({ object }: { object: DynamicObject }) {
   }
 }
 
-export function Packet({ object, x, y }: PacketProps) {
+export function Packet({ object, x, y, opacity = 1, scale = 1 }: PacketProps) {
   return (
     <div
       className={`rdfa-packet rdfa-packet-${object.object_type}`}
-      style={{ left: x, top: y }}
+      style={{
+        left: x,
+        top: y,
+        opacity,
+        transform: `translate(-50%, -50%) scale(${scale})`,
+      }}
     >
       <PacketInner object={object} />
     </div>

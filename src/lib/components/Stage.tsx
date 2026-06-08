@@ -6,6 +6,7 @@ import type {
   ObjectContent,
 } from '../types';
 import {
+  clamp,
   evaluate,
   easeInOutCubic,
   stepIndexAt,
@@ -14,6 +15,9 @@ import {
   type MoveClip,
   type Timeline,
 } from '../engine/timeline';
+
+/** Durée (ms) du fondu d'apparition/disparition des paquets. */
+const FADE_MS = 250;
 import { computeLayout } from '../engine/layout';
 import { connection, pointOnSegment } from '../engine/geometry';
 import { collectBidirectional, shiftFor } from '../engine/compiler';
@@ -135,7 +139,22 @@ export function Stage({ spec, timeline, t, highlight, debug }: StageProps) {
           if (!f || !tg || !obj) return null;
           const conn = connection(f, tg, clip.shift);
           const pt = pointOnSegment(conn.start, conn.end, easeInOutCubic(a.progress));
-          return <Packet key={clip.id} object={obj} x={pt.x} y={pt.y} />;
+          // Fondu : apparition pendant le hold de départ, disparition en fin de vie.
+          const inDur = clip.animStartMs - clip.startMs;
+          const fadeIn = inDur > 0 ? clamp((t - clip.startMs) / inDur, 0, 1) : 1;
+          const outStart = clip.visibleUntilMs - FADE_MS;
+          const fadeOut = t > outStart ? clamp((clip.visibleUntilMs - t) / FADE_MS, 0, 1) : 1;
+          const opacity = Math.min(fadeIn, fadeOut);
+          return (
+            <Packet
+              key={clip.id}
+              object={obj}
+              x={pt.x}
+              y={pt.y}
+              opacity={opacity}
+              scale={0.8 + 0.2 * opacity}
+            />
+          );
         })}
         {active.map((a) => {
           if (a.clip.kind !== 'comment') return null;

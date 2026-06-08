@@ -7,10 +7,11 @@ import { fileURLToPath } from 'node:url';
 //  - `vite build` : compile la LIBRAIRIE (mode lib) publiée sur npm.
 // Le site de démo a sa propre config de build : `vite.demo.config.ts`.
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  // Ne pas copier `public/` (favicon du site de démo) dans le paquet npm.
-  publicDir: false,
+  // En dev (`serve`), on sert `public/` (logo, favicon du site de démo).
+  // Au build de la LIB (`build`), on ne le copie pas dans le paquet npm.
+  publicDir: command === 'build' ? false : 'public',
   build: {
     lib: {
       entry: fileURLToPath(new URL('./src/lib/index.ts', import.meta.url)),
@@ -25,4 +26,4 @@ export default defineConfig({
       external: (id: string) => /^(react|react-dom|react-icons|prismjs)(\/|$)/.test(id),
     },
   },
-});
+}));

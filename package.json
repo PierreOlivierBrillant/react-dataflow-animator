@@ -14,10 +14,10 @@
     "visualization"
   ],
   "author": "Pierre-Olivier Brillant",
-  "homepage": "https://github.com/pobrillant/react-dataflow-animator",
+  "homepage": "https://github.com/PierreOlivierBrillant/react-dataflow-animator",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pobrillant/react-dataflow-animator.git"
+    "url": "https://github.com/PierreOlivierBrillant/react-dataflow-animator.git"
   },
   "main": "./dist/index.js",
   "module": "./dist/index.js",

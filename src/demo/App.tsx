@@ -5,7 +5,7 @@ import { DemosPage } from './pages/DemosPage';
 import { PlaygroundPage } from './pages/PlaygroundPage';
 import { DocsPage } from './pages/DocsPage';
 
-const GITHUB = 'https://github.com/pobrillant/react-dataflow-animator';
+const GITHUB = 'https://github.com/PierreOlivierBrillant/react-dataflow-animator';
 
 function Navbar({ page }: { page: string }) {
   const links = [
@@ -17,7 +17,13 @@ function Navbar({ page }: { page: string }) {
   return (
     <nav className="nav">
       <a className="nav-brand" href="#/">
-        <span className="nav-logo" />
+        <img
+          className="nav-logo"
+          src={`${import.meta.env.BASE_URL}logo.svg`}
+          alt="React DataFlow Animator"
+          width={28}
+          height={28}
+        />
         <span>DataFlow Animator</span>
       </a>
       <div className="nav-links">
