@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DataFlowPlayer, type DataFlowSpec } from '../../lib';
+import { DataFlowPlayer, type DataFlowPlayerProps, type DataFlowSpec } from '../../lib';
 import { demos, demosById } from '../demos';
 import { navigate } from '../router';
 
@@ -17,6 +17,9 @@ export function PlaygroundPage({ demoId }: { demoId?: string }) {
   const [text, setText] = useState(() => JSON.stringify(initial.spec, null, 2));
   const [spec, setSpec] = useState<DataFlowSpec>(initial.spec);
   const [error, setError] = useState<string | null>(null);
+  const [density, setDensity] = useState<NonNullable<DataFlowPlayerProps['density']>>(
+    'comfortable',
+  );
 
   const onChange = (value: string) => {
     setText(value);
@@ -62,6 +65,18 @@ export function PlaygroundPage({ demoId }: { demoId?: string }) {
             <button type="button" className="pg-btn" onClick={format}>
               Formater le JSON
             </button>
+            <select
+              className="pg-select"
+              value={density}
+              onChange={(e) =>
+                setDensity(e.target.value as NonNullable<DataFlowPlayerProps['density']>)
+              }
+              title="Densité visuelle"
+            >
+              <option value="compact">Compact</option>
+              <option value="comfortable">Confortable</option>
+              <option value="spacious">Spacieux</option>
+            </select>
           </div>
           <textarea
             className="pg-textarea"
@@ -72,7 +87,12 @@ export function PlaygroundPage({ demoId }: { demoId?: string }) {
           {error ? <div className="pg-error">Erreur : {error}</div> : null}
         </div>
         <div className="pg-preview">
-          <DataFlowPlayer key={demoId ?? 'custom'} spec={spec} height={460} />
+          <DataFlowPlayer
+            key={demoId ?? 'custom'}
+            spec={spec}
+            density={density}
+            height={460}
+          />
         </div>
       </div>
     </div>

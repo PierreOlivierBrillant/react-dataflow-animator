@@ -212,6 +212,12 @@ export interface DataFlowPlayerProps {
   controls?: boolean;
   /** Thème visuel. Défaut: 'auto'. */
   theme?: 'light' | 'dark' | 'auto';
+  /**
+   * Densité visuelle : ajuste la taille des éléments par rapport à l'espace
+   * disponible. 'compact' = plus petit/aéré, 'spacious' = plus gros.
+   * Défaut: 'comfortable'.
+   */
+  density?: 'compact' | 'comfortable' | 'spacious';
   /** Affiche l'overlay de debug de la timeline. Défaut: false. */
   debug?: boolean;
   /** Vitesse de lecture (1 = normal). Défaut: 1. */

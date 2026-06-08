@@ -50,6 +50,11 @@ conteneur (placement CSS pur). Voir [`src/lib/engine/layout.ts`](../src/lib/engi
 (techno connue, icône enregistrée **ou texte libre**), une `url` (rendant le nœud
 cliquable), et un `content` initial.
 
+**Mise à l'échelle responsive** : une « cellule » (plus petite distance entre deux
+nœuds, en px) pilote un facteur d'échelle global (`--rdfa-scale` : icônes/polices plus
+grandes en plein écran, plus petites si l'espace est serré) et plafonne la largeur des
+panneaux/paquets (`--rdfa-maxw`) pour qu'ils ne débordent jamais sur les voisins.
+
 ## 4. Routage et prévention des collisions
 
 Les connexions sont tracées entre les `BoundingClientRect` réels des nœuds (mesurés

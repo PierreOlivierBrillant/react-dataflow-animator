@@ -13,6 +13,9 @@ export interface StageGeometry {
   geometry: GeometryMap;
   /** Ratio largeur/hauteur du Stage. */
   aspect: number;
+  /** Dimensions mesurées du Stage (px). */
+  width: number;
+  height: number;
 }
 
 const useIsomorphicLayoutEffect =
@@ -26,12 +29,16 @@ export function useStageGeometry(signature: string): StageGeometry {
   const stageRef = useRef<HTMLDivElement>(null);
   const [geometry, setGeometry] = useState<GeometryMap>({});
   const [aspect, setAspect] = useState(1.6);
+  const [size, setSize] = useState({ width: 0, height: 0 });
 
   const measure = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return;
     const sr = stage.getBoundingClientRect();
-    if (sr.width > 0 && sr.height > 0) setAspect(sr.width / sr.height);
+    if (sr.width > 0 && sr.height > 0) {
+      setAspect(sr.width / sr.height);
+      setSize({ width: sr.width, height: sr.height });
+    }
 
     const map: GeometryMap = {};
     stage.querySelectorAll<HTMLElement>('[data-node-id]').forEach((el) => {
@@ -68,5 +75,5 @@ export function useStageGeometry(signature: string): StageGeometry {
     return () => ro.disconnect();
   }, [measure, signature]);
 
-  return { stageRef, geometry, aspect };
+  return { stageRef, geometry, aspect, width: size.width, height: size.height };
 }

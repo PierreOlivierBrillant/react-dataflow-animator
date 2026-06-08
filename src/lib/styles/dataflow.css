@@ -122,8 +122,8 @@
 }
 
 .rdfa-node-icon {
-  width: 56px;
-  height: 56px;
+  width: calc(56px * var(--rdfa-scale, 1));
+  height: calc(56px * var(--rdfa-scale, 1));
   color: var(--rdfa-node-stroke);
 }
 
@@ -146,10 +146,10 @@
 
 .rdfa-node-subicon {
   position: absolute;
-  right: -8px;
-  bottom: -8px;
-  width: 24px;
-  height: 24px;
+  right: calc(-6px * var(--rdfa-scale, 1));
+  bottom: calc(-6px * var(--rdfa-scale, 1));
+  width: calc(24px * var(--rdfa-scale, 1));
+  height: calc(24px * var(--rdfa-scale, 1));
   padding: 2px;
   border-radius: 50%;
   background: var(--rdfa-surface);
@@ -165,7 +165,7 @@
 }
 
 .rdfa-node-label {
-  font-size: 13px;
+  font-size: calc(13px * var(--rdfa-scale, 1));
   color: var(--rdfa-text);
   line-height: 1.2;
 }
@@ -173,7 +173,7 @@
 /* ---------- Flèches ---------- */
 .rdfa-arrow-line {
   stroke: var(--rdfa-arrow);
-  stroke-width: 2;
+  stroke-width: calc(2px * var(--rdfa-scale, 1));
   fill: none;
 }
 
@@ -192,7 +192,7 @@
 
 .rdfa-arrow-label {
   fill: var(--rdfa-text);
-  font-size: 12px;
+  font-size: calc(12px * var(--rdfa-scale, 1));
   font-family: var(--rdfa-font);
   paint-order: stroke;
   stroke: var(--rdfa-bg);
@@ -205,17 +205,20 @@
   position: absolute;
   transform: translate(-50%, -50%);
   z-index: 4;
-  padding: 6px 10px;
+  padding: calc(5px * var(--rdfa-scale, 1)) calc(9px * var(--rdfa-scale, 1));
   border-radius: 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--rdfa-scale, 1));
   font-family: var(--rdfa-mono);
   color: #fff;
   /* Fond plein opaque + contour clair pour rester lisible au-dessus des nœuds/flèches. */
   opacity: 1;
   border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
-  white-space: nowrap;
-  max-width: 220px;
+  /* Largeur plafonnée à la « cellule » pour ne pas déborder ; on autorise le retour
+     à la ligne plutôt qu'un débordement. */
+  max-width: calc(var(--rdfa-maxw, 220px) * 0.92);
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .rdfa-packet-http_packet {
@@ -254,10 +257,10 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 28px;
-  height: 28px;
+  width: calc(28px * var(--rdfa-scale, 1));
+  height: calc(28px * var(--rdfa-scale, 1));
   z-index: 5;
-  border: 3px solid var(--rdfa-border);
+  border: calc(3px * var(--rdfa-scale, 1)) solid var(--rdfa-border);
   border-top-color: var(--rdfa-accent);
   border-radius: 50%;
   animation: rdfa-spin 0.8s linear infinite;
@@ -274,13 +277,13 @@
   position: absolute;
   transform: translate(-50%, -100%);
   z-index: 6;
-  max-width: 220px;
+  max-width: max(140px, var(--rdfa-maxw, 220px));
   padding: 8px 12px;
   border-radius: 10px;
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);
   color: var(--rdfa-text);
-  font-size: 13px;
+  font-size: calc(13px * var(--rdfa-scale, 1));
   line-height: 1.35;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
@@ -298,8 +301,9 @@
 
 /* ---------- set_content : terminal de code ---------- */
 .rdfa-content {
-  min-width: 200px;
-  max-width: 360px;
+  min-width: 0;
+  /* Plafonnée à la « cellule » pour ne pas déborder sur les nœuds voisins. */
+  max-width: var(--rdfa-maxw, 300px);
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
@@ -352,7 +356,7 @@
   border-radius: 6px;
   background: var(--rdfa-surface);
   color: var(--rdfa-muted);
-  font-size: 12px;
+  font-size: calc(12px * var(--rdfa-scale, 1));
   font-family: var(--rdfa-mono);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -362,10 +366,10 @@
 .rdfa-content-body {
   background: var(--rdfa-surface);
   color: var(--rdfa-text);
-  padding: 12px 14px;
-  font-size: 13px;
+  padding: calc(10px * var(--rdfa-scale, 1)) calc(12px * var(--rdfa-scale, 1));
+  font-size: calc(12.5px * var(--rdfa-scale, 1));
   line-height: 1.5;
-  max-height: 320px;
+  max-height: calc(300px * var(--rdfa-scale, 1));
   overflow: auto;
 }
 

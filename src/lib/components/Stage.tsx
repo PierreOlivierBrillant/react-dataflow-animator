@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type {
   DataFlowSpec,
   DynamicObject,
@@ -15,9 +15,6 @@ import {
   type MoveClip,
   type Timeline,
 } from '../engine/timeline';
-
-/** Durée (ms) du fondu d'apparition/disparition des paquets. */
-const FADE_MS = 250;
 import { computeLayout } from '../engine/layout';
 import { connection, pointOnSegment } from '../engine/geometry';
 import { collectBidirectional, shiftFor } from '../engine/compiler';
@@ -26,15 +23,35 @@ import { StaticNode } from './nodes/StaticNode';
 import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
 
+/** Durée (ms) du fondu d'apparition/disparition des paquets. */
+const FADE_MS = 250;
+
+type Density = 'compact' | 'comfortable' | 'spacious';
+
+/** Réglages par densité : multiplicateur d'échelle et fraction de cellule (largeur max). */
+const DENSITY: Record<Density, { scale: number; maxw: number }> = {
+  compact: { scale: 0.82, maxw: 0.78 },
+  comfortable: { scale: 1, maxw: 0.86 },
+  spacious: { scale: 1.18, maxw: 0.92 },
+};
+
 export interface StageProps {
   spec: DataFlowSpec;
   timeline: Timeline;
   t: number;
   highlight: Highlighter;
+  density?: Density;
   debug?: boolean;
 }
 
-export function Stage({ spec, timeline, t, highlight, debug }: StageProps) {
+export function Stage({
+  spec,
+  timeline,
+  t,
+  highlight,
+  density = 'comfortable',
+  debug,
+}: StageProps) {
   const signature = useMemo(
     () =>
       `${spec.direction ?? 'left-to-right'}|` +
@@ -42,8 +59,31 @@ export function Stage({ spec, timeline, t, highlight, debug }: StageProps) {
     [spec],
   );
 
-  const { stageRef, geometry, aspect } = useStageGeometry(signature);
+  const { stageRef, geometry, aspect, width, height } = useStageGeometry(signature);
   const layout = useMemo(() => computeLayout(spec, { aspect }), [spec, aspect]);
+
+  // « Cellule » = plus petite distance entre deux nœuds (px). Elle pilote :
+  //  - l'échelle globale (icônes/polices plus gros en plein écran, plus petits si serré) ;
+  //  - la largeur max des panneaux/paquets (pour ne jamais déborder sur le voisin).
+  const { scale, maxW } = useMemo(() => {
+    const ids = Object.keys(layout);
+    let cell = Math.min(width, height) * 0.5 || 220;
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const a = layout[ids[i]];
+        const b = layout[ids[j]];
+        const d = Math.hypot((a.cx - b.cx) * width, (a.cy - b.cy) * height);
+        if (d > 0) cell = Math.min(cell, d);
+      }
+    }
+    cell = clamp(cell, 96, 460);
+    const d = DENSITY[density];
+    const baseScale = clamp(cell / 170, 0.72, 1.8);
+    return {
+      scale: clamp(baseScale * d.scale, 0.6, 2.4),
+      maxW: Math.round(cell * d.maxw),
+    };
+  }, [layout, width, height, density]);
   const bidir = useMemo(() => collectBidirectional(spec), [spec]);
   const dynamicById = useMemo(() => {
     const map: Record<string, DynamicObject> = {};
@@ -73,7 +113,16 @@ export function Stage({ spec, timeline, t, highlight, debug }: StageProps) {
   const connections = spec.connections ?? [];
 
   return (
-    <div className="rdfa-stage" ref={stageRef}>
+    <div
+      className="rdfa-stage"
+      ref={stageRef}
+      style={
+        {
+          '--rdfa-scale': scale,
+          '--rdfa-maxw': `${maxW}px`,
+        } as CSSProperties
+      }
+    >
       {/* Couche arrière : flèches */}
       <svg className="rdfa-arrow-svg">
         {connections.map((link, i) => {

@@ -34,6 +34,7 @@ export function DataFlowPlayer({
   loop = false,
   controls = true,
   theme = 'auto',
+  density = 'comfortable',
   debug = false,
   speed = 1,
   highlight,
@@ -84,6 +85,7 @@ export function DataFlowPlayer({
             timeline={timeline}
             t={clock.t}
             highlight={highlighter}
+            density={density}
             debug={debug}
           />
           {controls ? (

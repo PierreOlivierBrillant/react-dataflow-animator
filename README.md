@@ -66,6 +66,7 @@ directement dans un fichier `.mdx`. Importez le CSS une seule fois, par exemple 
 | `loop` | `boolean` | `false` | Rejoue en boucle |
 | `controls` | `boolean` | `true` | Affiche les contrôles de navigation |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Thème visuel |
+| `density` | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Densité/taille des éléments |
 | `speed` | `number` | `1` | Vitesse de lecture |
 | `debug` | `boolean` | `false` | Overlay de débogage de la timeline |
 | `highlight` | `(code, lang) => string` | Prism | Coloration syntaxique personnalisée |
