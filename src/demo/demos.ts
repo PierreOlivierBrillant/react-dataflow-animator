@@ -383,26 +383,27 @@ const signalr: DataFlowSpec = {
       duration: 800,
     },
     {
-      action_type: 'comment',
-      object: 'hub',
-      text: '2. Connexion établie',
-      duration: 1500,
-    },
-    {
       action_type: 'parallel',
       duration: 1000,
       actions: [
+        {
+          action_type: 'comment',
+          object: 'hub',
+          text: '2. Connexion établie',
+        },
         {
           action_type: 'arrow',
           from: 'client',
           to: 'hub',
           style: 'dashed',
+          keep_until_end: true,
         },
         {
           action_type: 'arrow',
           from: 'hub',
           to: 'client',
           style: 'dashed',
+          keep_until_end: true,
         },
       ],
     },
