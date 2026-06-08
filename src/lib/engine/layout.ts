@@ -24,11 +24,6 @@ export interface LayoutOptions {
   aspect?: number;
 }
 
-/** Les flèches statiques sont des connexions, pas des nœuds à placer. */
-function isPlaceable(obj: StaticObject): boolean {
-  return obj.object_type !== 'arrow';
-}
-
 /** Répartit n positions à intervalles réguliers avec marges aux extrémités. */
 function evenRatio(index: number, count: number): number {
   return (index + 1) / (count + 1);
@@ -108,7 +103,7 @@ export function computeLayout(
   options: LayoutOptions = {},
 ): LayoutMap {
   const direction = spec.direction ?? 'left-to-right';
-  const nodes = spec.static_objects.filter(isPlaceable);
+  const nodes = spec.static_objects;
   if (direction === 'circular') {
     return circularLayout(nodes, options.aspect ?? 1.6);
   }

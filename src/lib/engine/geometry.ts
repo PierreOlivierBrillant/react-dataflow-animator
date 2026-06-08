@@ -41,6 +41,12 @@ function radius(node: NodeGeom): number {
 /** Marge (px) laissée entre un nœud et le bout des flèches / paquets. */
 export const NODE_GAP = 8;
 
+/**
+ * Amplitude du décalage anti-collision, en fraction de la taille du nœud.
+ * Deux voies parallèles (shift +1 / -1) sont donc séparées de 2 × ce ratio.
+ */
+export const SHIFT_RATIO = 0.3;
+
 export interface Connection {
   start: Point;
   end: Point;
@@ -55,7 +61,7 @@ export interface Connection {
  *
  * - Rogne les extrémités pour qu'elles touchent le bord des nœuds (pas le centre).
  * - Applique le décalage perpendiculaire anti-collision : `shift` ∈ {-1, 0, +1}.
- *   L'amplitude vaut 15 % de la taille moyenne des nœuds (cf. spec §4).
+ *   L'amplitude vaut `SHIFT_RATIO` × la taille moyenne des nœuds.
  */
 export function connection(
   from: NodeGeom,
@@ -75,7 +81,7 @@ export function connection(
   const perp = { x: -unit.y * canon, y: unit.x * canon };
 
   const nodeSize = (from.width + to.width) / 2;
-  const offset = shift * 0.15 * nodeSize;
+  const offset = shift * SHIFT_RATIO * nodeSize;
 
   // Marge : les flèches/paquets s'arrêtent à quelques pixels du nœud.
   const start: Point = {

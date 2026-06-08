@@ -32,7 +32,7 @@ export function DataFlowPlayer({
   height = 420,
   autoPlay = false,
   loop = false,
-  controls,
+  controls = true,
   theme = 'auto',
   debug = false,
   speed = 1,
@@ -66,7 +66,6 @@ export function DataFlowPlayer({
     else void el.requestFullscreen?.();
   }, []);
 
-  const showControls = controls ?? !!spec.is_navigable;
   const heightValue = typeof height === 'number' ? `${height}px` : height;
 
   return (
@@ -87,7 +86,7 @@ export function DataFlowPlayer({
             highlight={highlighter}
             debug={debug}
           />
-          {showControls ? (
+          {controls ? (
             <Controls
               clock={clock}
               timeline={timeline}

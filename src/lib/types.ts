@@ -12,6 +12,7 @@ export type Direction =
   | 'bottom-to-top'
   | 'circular';
 
+/** Types de nœuds (apparence). Les flèches de décor vivent dans `connections`. */
 export type StaticObjectType =
   | 'desktop'
   | 'laptop'
@@ -21,12 +22,12 @@ export type StaticObjectType =
   | 'mobile'
   | 'user'
   | 'admin'
-  | 'users'
-  | 'arrow';
+  | 'users';
 
 export type DynamicObjectType = 'http_packet' | 'sql_request' | 'sql_response';
 
-export type LineStyle = 'full' | 'dotted' | 'dashed';
+/** Style de ligne (terminologie SVG/CSS). `full` est accepté en alias de `solid`. */
+export type LineStyle = 'solid' | 'dotted' | 'dashed';
 
 /** Modes de contenu pour `set_content` (action) et `content` (objet statique). */
 export type ContentType = 'image' | 'text' | 'code';
@@ -44,13 +45,10 @@ export interface StaticObject {
   object_type: StaticObjectType;
   /** Label affiché en dessous de l'objet. */
   text?: string;
-  /** (arrow) ID de l'objet source. */
-  from?: string;
-  /** (arrow) ID de l'objet destination. */
-  to?: string;
-  /** (arrow) Style de la ligne. */
-  style?: LineStyle;
-  /** Nom de l'icône de la technologie (ex: 'react', 'postgres', 'dotnet'). */
+  /**
+   * Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom
+   * d'une icône enregistrée, ou simple texte libre (ex: 'v2', 'API').
+   */
   subicon?: string;
   /** Rangée/colonne de placement (entier positif). Défaut: 1. */
   lane?: number;
@@ -60,6 +58,20 @@ export interface StaticObject {
   url?: string;
   /** Contenu initial affiché dans le nœud (terminal de code, fenêtre, etc.). */
   content?: ObjectContent;
+}
+
+/** Lien/flèche permanent (décor), affiché dès l'initialisation. */
+export interface Connection {
+  /** Identifiant optionnel. */
+  id?: string;
+  /** ID du nœud source. */
+  from: string;
+  /** ID du nœud destination. */
+  to: string;
+  /** Style de la ligne. Défaut: 'solid'. */
+  style?: LineStyle;
+  /** Texte médian optionnel. */
+  text?: string;
 }
 
 export interface PacketBody {
@@ -77,8 +89,6 @@ export interface PacketContent {
 export interface SqlResponse {
   /** Nombre de lignes retournées. */
   rows?: number;
-  /** Les données retournées. */
-  data?: unknown;
 }
 
 export interface DynamicObject {
@@ -100,43 +110,85 @@ export type ActionType =
   | 'set_content'
   | 'comment';
 
-export interface Action {
+/** Champs communs à toutes les actions (ordonnancement et cycle de vie). */
+export interface ActionBase {
   /** ID de l'action pour s'y référer (wait_for / keep_until). */
   id?: string;
-  action_type: ActionType;
-  /** (move/loading/set_content) ID de l'objet concerné. */
-  object?: string;
-  /** (move/arrow) ID de l'objet statique de départ. */
-  from?: string;
-  /** (move/arrow) ID de l'objet statique d'arrivée. */
-  to?: string;
-  /** Durée de l'animation en millisecondes. Défaut: 500. */
+  /** Durée de l'animation en ms (défaut: 500, 1200 pour loading). */
   duration?: number;
-  /** (arrow/comment) Texte à afficher. */
-  text?: string;
-  /** (arrow) Style de la ligne. */
-  style?: LineStyle;
-  /** (comment) ID de l'objet statique près duquel afficher le commentaire. */
-  next_to?: string;
-  /** (set_content) Contenu à injecter dans le nœud. */
-  content?: ObjectContent;
   /** ID d'une autre action : démarre à la fin de celle-ci. */
   wait_for?: string;
   /** ID d'une action future : reste visible jusqu'à son démarrage. */
   keep_until?: string;
-  /** Reste visible jusqu'à l'étape racine suivante. */
+  /**
+   * Reste visible jusqu'au début de l'étape racine suivante.
+   * Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`.
+   */
   keep_until_next?: boolean;
-  /** (parallel) Actions à exécuter simultanément. */
-  actions?: Action[];
 }
 
+/** Déplace un objet dynamique de `from` vers `to`. */
+export interface MoveAction extends ActionBase {
+  action_type: 'move';
+  /** ID de l'objet dynamique (paquet, requête…). */
+  object: string;
+  from: string;
+  to: string;
+}
+
+/** Trace une flèche animée entre deux nœuds. */
+export interface ArrowAction extends ActionBase {
+  action_type: 'arrow';
+  from: string;
+  to: string;
+  /** Texte médian. */
+  text?: string;
+  style?: LineStyle;
+}
+
+/** Exécute plusieurs actions au même instant. */
+export interface ParallelAction extends ActionBase {
+  action_type: 'parallel';
+  actions: Action[];
+}
+
+/** Affiche un spinner de chargement sur un nœud. */
+export interface LoadingAction extends ActionBase {
+  action_type: 'loading';
+  object: string;
+}
+
+/** Mute le contenu d'un nœud (code, texte, image). */
+export interface SetContentAction extends ActionBase {
+  action_type: 'set_content';
+  object: string;
+  content: ObjectContent;
+}
+
+/** Affiche une bulle de commentaire près d'un nœud. */
+export interface CommentAction extends ActionBase {
+  action_type: 'comment';
+  /** ID du nœud près duquel afficher le commentaire. */
+  object: string;
+  text: string;
+}
+
+/** Union discriminée des actions (par `action_type`). */
+export type Action =
+  | MoveAction
+  | ArrowAction
+  | ParallelAction
+  | LoadingAction
+  | SetContentAction
+  | CommentAction;
+
 export interface DataFlowSpec {
-  /** Affiche les contrôles de navigation du lecteur. Défaut: false. */
-  is_navigable?: boolean;
   /** Direction de placement automatique des objets statiques. Défaut: 'left-to-right'. */
   direction?: Direction;
   static_objects: StaticObject[];
   dynamic_objects: DynamicObject[];
+  /** Flèches/liens permanents (décor) affichés dès l'initialisation. */
+  connections?: Connection[];
   actions: Action[];
 }
 
@@ -156,9 +208,7 @@ export interface DataFlowPlayerProps {
   autoPlay?: boolean;
   /** Rejoue en boucle à la fin. Défaut: false. */
   loop?: boolean;
-  /**
-   * Force l'affichage des contrôles. Si non défini, suit `spec.is_navigable`.
-   */
+  /** Affiche les contrôles de navigation. Défaut: true. */
   controls?: boolean;
   /** Thème visuel. Défaut: 'auto'. */
   theme?: 'light' | 'dark' | 'auto';

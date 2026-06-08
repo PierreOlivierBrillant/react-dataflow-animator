@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { connection, pointOnSegment, type NodeGeom } from './geometry';
+import { connection, pointOnSegment, SHIFT_RATIO, type NodeGeom } from './geometry';
 
 const A: NodeGeom = { id: 'a', x: 0, y: 0, width: 40, height: 40 };
 const B: NodeGeom = { id: 'b', x: 200, y: 0, width: 40, height: 40 };
@@ -14,12 +14,13 @@ describe('connection', () => {
   });
 
   it('applique un décalage perpendiculaire selon shift', () => {
-    const up = connection(A, B, 1); // amplitude 0.15*40 = 6
-    expect(up.start.y).toBeCloseTo(6);
-    expect(up.end.y).toBeCloseTo(6);
+    const amp = SHIFT_RATIO * 40; // nodeSize = 40
+    const up = connection(A, B, 1);
+    expect(up.start.y).toBeCloseTo(amp);
+    expect(up.end.y).toBeCloseTo(amp);
 
     const down = connection(A, B, -1);
-    expect(down.start.y).toBeCloseTo(-6);
+    expect(down.start.y).toBeCloseTo(-amp);
   });
 
   it('place A→B et B→A sur des voies opposées (anti-superposition)', () => {

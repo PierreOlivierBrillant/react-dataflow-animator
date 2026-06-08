@@ -1,41 +1,66 @@
-import { useState } from 'react';
-import './demo.css';
+import './site.css';
+import { useRoute } from './router';
+import { HomePage } from './pages/HomePage';
 import { DemosPage } from './pages/DemosPage';
-import { InstallPage } from './pages/InstallPage';
-import { ApiDocsPage } from './pages/ApiDocsPage';
+import { PlaygroundPage } from './pages/PlaygroundPage';
+import { DocsPage } from './pages/DocsPage';
 
-const tabs = [
-  { id: 'demos', label: 'Démos', render: () => <DemosPage /> },
-  { id: 'install', label: 'Installation', render: () => <InstallPage /> },
-  { id: 'api', label: 'Documentation API', render: () => <ApiDocsPage /> },
-];
+const GITHUB = 'https://github.com/pobrillant/react-dataflow-animator';
+
+function Navbar({ page }: { page: string }) {
+  const links = [
+    { href: '#/', label: 'Accueil', page: 'home' },
+    { href: '#/demos', label: 'Démos', page: 'demos' },
+    { href: '#/playground', label: 'Playground', page: 'playground' },
+    { href: '#/docs', label: 'Documentation', page: 'docs' },
+  ];
+  return (
+    <nav className="nav">
+      <a className="nav-brand" href="#/">
+        <span className="nav-logo" />
+        <span>DataFlow Animator</span>
+      </a>
+      <div className="nav-links">
+        {links.map((l) => (
+          <a
+            key={l.href}
+            href={l.href}
+            className={`nav-link${page === l.page ? ' active' : ''}`}
+          >
+            {l.label}
+          </a>
+        ))}
+      </div>
+      <div className="nav-spacer" />
+      <a className="nav-ghost" href={GITHUB} target="_blank" rel="noreferrer">
+        GitHub ↗
+      </a>
+    </nav>
+  );
+}
 
 export default function App() {
-  const [active, setActive] = useState('demos');
-  const current = tabs.find((t) => t.id === active) ?? tabs[0];
-
+  const route = useRoute();
   return (
-    <div className="demo-app">
-      <header className="demo-header">
-        <h1>React DataFlow Animator</h1>
-        <p>
-          Animations déterministes de flux de données, pilotées par une
-          spécification JSON.
-        </p>
-      </header>
-      <nav className="demo-tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`demo-tab${tab.id === active ? ' is-active' : ''}`}
-            onClick={() => setActive(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-      <main>{current.render()}</main>
-    </div>
+    <>
+      <Navbar page={route.page} />
+      {route.page === 'home' && <HomePage />}
+      {route.page === 'demos' && <DemosPage />}
+      {route.page === 'playground' && (
+        <PlaygroundPage key={route.param ?? 'custom'} demoId={route.param} />
+      )}
+      {route.page === 'docs' && <DocsPage sectionId={route.param} />}
+      <footer className="footer">
+        <div>
+          React DataFlow Animator — MIT ·{' '}
+          <a href={GITHUB} target="_blank" rel="noreferrer">
+            GitHub
+          </a>
+          <a href="https://www.npmjs.com/package/react-dataflow-animator" target="_blank" rel="noreferrer">
+            npm
+          </a>
+        </div>
+      </footer>
+    </>
   );
 }

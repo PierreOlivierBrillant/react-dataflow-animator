@@ -23,7 +23,7 @@ le scrubbing, la navigation par étapes et le SSR triviaux et déterministes.
 
 ## 2. Le lecteur (DataFlowPlayer)
 
-Affiché si `spec.is_navigable` est vrai (ou prop `controls`) :
+Affiché selon la prop `controls` (défaut : `true`) :
 
 - **Barre de lecture** : timeline cliquable pour sauter à n'importe quel instant.
 - **Recommencer** : repart du début et relance la lecture.
@@ -47,7 +47,8 @@ conteneur (placement CSS pur). Voir [`src/lib/engine/layout.ts`](../src/lib/engi
 
 **Types de nœuds** : `desktop`, `laptop`, `client`, `server`, `database`, `mobile`,
 `user`, `admin`, `users`. Chaque nœud peut recevoir : un `text` (label), un `subicon`
-(badge techno), une `url` (rendant le nœud cliquable), et un `content` initial.
+(techno connue, icône enregistrée **ou texte libre**), une `url` (rendant le nœud
+cliquable), et un `content` initial.
 
 ## 4. Routage et prévention des collisions
 
@@ -56,9 +57,11 @@ côté client). Les flèches et paquets s'arrêtent à une **marge** de quelques
 nœud (`NODE_GAP`). Voir [`src/lib/engine/geometry.ts`](../src/lib/engine/geometry.ts).
 
 - **Décalage bidirectionnel (path shifting)** : le compilateur scanne toute la spec
-  (flèches statiques + actions `move`/`arrow`). Si un segment A↔B est utilisé dans les
-  deux sens, les deux trajets sont décalés perpendiculairement de ±15 % de la taille
-  du nœud ; le signe dépend de l'ordre alphabétique des id → deux voies parallèles.
+  (connexions permanentes + actions `move`/`arrow`). Si un segment A↔B est utilisé dans
+  les deux sens, les deux trajets sont décalés perpendiculairement (`SHIFT_RATIO` × la
+  taille du nœud) ; le signe dépend de l'ordre alphabétique des id → deux voies
+  parallèles. La perpendiculaire est calculée dans un repère canonique pour ne jamais
+  superposer A→B et B→A.
 
 ## 5. Moteur d'animation et actions
 
@@ -68,13 +71,13 @@ La timeline compile un tableau d'actions ordonnées. Voir
 1. **move** : déplace un objet dynamique (paquet/requête) de `from` vers `to` ;
    interpolation sur `duration` ms ; épouse la voie décalée si bidirectionnel.
 2. **arrow** : trace une ligne SVG entre deux nœuds (dessin progressif `x2/y2`).
-   Styles `full` / `dotted` / `dashed`, texte médian optionnel. Les flèches **statiques**
-   se déclarent comme `static_objects` de type `arrow` (décor permanent).
+   Styles `solid` / `dotted` / `dashed`, texte médian optionnel. Les flèches **permanentes**
+   (décor) se déclarent dans le tableau racine `connections` (affichées dès l'init).
 3. **parallel** : encapsule des actions enfants exécutées au même timestamp.
 4. **loading** : spinner attaché à un nœud cible (simule un traitement).
 5. **set_content** : mute le contenu d'un nœud ; mode `code` (terminal + coloration
    syntaxique Prism) ou `text` (fenêtre de navigateur factice) ou `image`.
-6. **comment** : bulle de texte en fondu près d'un nœud (`next_to`).
+6. **comment** : bulle de texte en fondu près d'un nœud (`object`).
 
 ## 6. Cycle de vie temporel
 
@@ -89,13 +92,20 @@ La timeline compile un tableau d'actions ordonnées. Voir
 
 ## 7. Site vitrine (GitHub Pages)
 
-`src/demo/` — onglets **Démos** (spécs d'exemple), **Installation**, **Documentation
-API** (générée depuis le JSON Schema). Buildé par `vite.demo.config.ts`.
+`src/demo/` — site à routeur (hash) : **Accueil**, **Démos** (galerie), **Playground**
+(éditeur live), **Documentation** (sidebar + TOC + référence API générée depuis le
+JSON Schema). Buildé par `vite.demo.config.ts`.
 
-## 8. Notes d'implémentation
+## 8. Notes d'implémentation et évolutions
 
-- Une référence manquante (`from`/`to`/`object` absent, id `wait_for` inconnu…) produit
-  un **avertissement non bloquant** (visible avec `debug`) plutôt qu'un crash.
-- Ajout vs spec initiale : champ `url` sur les nœuds (cliquables).
+- `is_navigable` a été **retiré de la spec** : la navigabilité est une prop `controls`.
+- Les flèches de décor ont migré de `static_objects` vers le tableau racine `connections`.
+- `comment` utilise `object` (et non plus `next_to`) pour cibler son nœud.
+- `style` : terminologie SVG/CSS `solid`/`dotted`/`dashed` (`full` toléré en alias).
+- `subicon` accepte du **texte libre** en plus des icônes (react-icons).
+- `response_content.data` retiré (jamais rendu) ; seul `rows` est affiché.
+- Actions modélisées en **union discriminée** (TS + `oneOf` schéma) → validation réelle.
+- Une référence manquante (champ requis absent, id `wait_for` inconnu…) produit un
+  **avertissement non bloquant** (visible avec `debug`) plutôt qu'un crash.
 - Coloration syntaxique : **Prism** (dépendance), remplaçable via la prop `highlight`.
 - Styles **scopés** sous `.rdfa-` + variables CSS (thèmes clair/sombre, prop `theme`).

@@ -72,18 +72,19 @@ describe('computeLayout — circular', () => {
     }
   });
 
-  it('exclut les flèches statiques du placement', () => {
+  it('place tous les nœuds statiques (les connexions ne sont pas des nœuds)', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
       static_objects: [
         { id: 'a', object_type: 'client', lane: 1 },
-        { id: 'arr', object_type: 'arrow', from: 'a', to: 'a' },
+        { id: 'b', object_type: 'server', lane: 2 },
       ],
+      connections: [{ from: 'a', to: 'b' }],
       dynamic_objects: [],
       actions: [],
     };
     const layout = computeLayout(spec);
     expect(layout.a).toBeDefined();
-    expect(layout.arr).toBeUndefined();
+    expect(layout.b).toBeDefined();
   });
 });

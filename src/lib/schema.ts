@@ -1,10 +1,8 @@
 /**
  * JSON Schema (draft-07) de la spécification DataFlow.
  *
- * Source de vérité unique pour :
- *  - la documentation d'API générée automatiquement (site vitrine, onglet « API ») ;
- *  - la validation légère / l'auto-complétion côté éditeur.
- *
+ * Source de vérité unique pour la documentation d'API générée et la validation.
+ * Les actions sont modélisées en union discriminée (`oneOf` sur `action_type`).
  * Les types TypeScript correspondants vivent dans `types.ts`.
  */
 export const dataFlowSchema = {
@@ -12,11 +10,6 @@ export const dataFlowSchema = {
   title: 'DataFlowSpec',
   type: 'object',
   properties: {
-    is_navigable: {
-      type: 'boolean',
-      description:
-        'Si vrai, affiche les contrôles de navigation dans le lecteur (Play/Pause, Précédent, Suivant, Barre de progression). (défaut: false)',
-    },
     direction: {
       type: 'string',
       enum: [
@@ -27,133 +20,22 @@ export const dataFlowSchema = {
         'circular',
       ],
       description:
-        "Direction générale de l'architecture pour le placement automatique des objets statiques. (défaut: 'left-to-right')",
+        "Direction de placement automatique des objets statiques. (défaut: 'left-to-right')",
     },
     static_objects: {
       type: 'array',
-      description:
-        'Les composants architecturaux fixes (serveurs, bases de données, clients).',
-      items: {
-        type: 'object',
-        properties: {
-          id: {
-            type: 'string',
-            description: "Identifiant unique de l'objet (ex: 'serveur_web').",
-          },
-          object_type: {
-            type: 'string',
-            enum: [
-              'desktop',
-              'laptop',
-              'client',
-              'server',
-              'database',
-              'mobile',
-              'user',
-              'admin',
-              'users',
-              'arrow',
-            ],
-            description: "Type de l'objet qui détermine son apparence.",
-          },
-          text: { type: 'string', description: "Label affiché en dessous de l'objet." },
-          from: { type: 'string', description: "(Pour arrow) ID de l'objet source." },
-          to: { type: 'string', description: "(Pour arrow) ID de l'objet destination." },
-          style: {
-            type: 'string',
-            enum: ['full', 'dotted', 'dashed'],
-            description: '(Pour arrow) Style de la ligne.',
-          },
-          subicon: {
-            type: 'string',
-            description:
-              "Nom de l'icône de la technologie (ex: 'react', 'postgres', 'dotnet', 'chrome', 'node').",
-          },
-          lane: {
-            type: 'number',
-            description:
-              'Rangée ou colonne sur laquelle placer l\'objet (entier positif, ex: 1, 2, 3). (défaut: 1)',
-          },
-          is_main: {
-            type: 'boolean',
-            description:
-              "Si direction est 'circular', marque l'objet comme étant le nœud central. (défaut: false)",
-          },
-          url: {
-            type: 'string',
-            description:
-              'URL rendant le nœud cliquable (ouvre dans un nouvel onglet).',
-          },
-          content: {
-            type: 'object',
-            description: 'Contenu initial affiché dans le nœud.',
-            properties: {
-              content_type: {
-                type: 'string',
-                enum: ['image', 'text', 'code'],
-              },
-              content: { type: 'string' },
-              language: {
-                type: 'string',
-                description:
-                  'Langage pour la coloration syntaxique (ex: javascript, json, sql).',
-              },
-            },
-          },
-        },
-        required: ['id', 'object_type'],
-      },
+      description: 'Les nœuds fixes (serveurs, bases de données, clients…).',
+      items: { $ref: '#/definitions/staticObject' },
     },
     dynamic_objects: {
       type: 'array',
       description: 'Les objets qui se déplaceront (paquets HTTP, requêtes SQL).',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'string', description: 'Identifiant unique du paquet.' },
-          object_type: {
-            type: 'string',
-            enum: ['http_packet', 'sql_request', 'sql_response'],
-            description: 'Type de paquet.',
-          },
-          request_content: {
-            type: 'string',
-            description: 'Requête textuelle (ex: pour sql_request).',
-          },
-          response_content: {
-            type: 'object',
-            description: 'Réponse (pour sql_response)',
-            properties: {
-              rows: { type: 'number', description: 'Nombre de lignes retournées' },
-              data: { type: 'object', description: 'Les données retournées' },
-            },
-          },
-          packet_content: {
-            type: 'object',
-            properties: {
-              header: {
-                type: 'string',
-                description: "En-tête visible dans le paquet (ex: 'GET /api').",
-              },
-              body: {
-                type: 'object',
-                properties: {
-                  content_type: {
-                    type: 'string',
-                    enum: ['text', 'image'],
-                    description: 'Type de contenu du body.',
-                  },
-                  content: {
-                    type: 'string',
-                    description: "Texte ou chemin d'image.",
-                  },
-                },
-              },
-            },
-          },
-        },
-        required: ['id', 'object_type'],
-      },
+      items: { $ref: '#/definitions/dynamicObject' },
+    },
+    connections: {
+      type: 'array',
+      description: 'Flèches/liens permanents (décor) affichés dès l\'initialisation.',
+      items: { $ref: '#/definitions/connection' },
     },
     actions: {
       type: 'array',
@@ -163,81 +45,221 @@ export const dataFlowSchema = {
   },
   required: ['static_objects', 'dynamic_objects', 'actions'],
   definitions: {
-    action: {
+    staticObject: {
       type: 'object',
+      title: 'StaticObject',
       properties: {
-        id: {
+        id: { type: 'string', description: "Identifiant unique (ex: 'serveur_web')." },
+        object_type: {
+          type: 'string',
+          enum: [
+            'desktop',
+            'laptop',
+            'client',
+            'server',
+            'database',
+            'mobile',
+            'user',
+            'admin',
+            'users',
+          ],
+          description: "Type du nœud (détermine son apparence).",
+        },
+        text: { type: 'string', description: "Label affiché sous le nœud." },
+        subicon: {
           type: 'string',
           description:
-            "ID de l'action pour s'y référer plus tard (ex: avec 'wait_for' ou 'keep_until').",
+            "Badge superposé : techno connue (ex: 'react', 'postgres'), icône enregistrée, ou texte libre (ex: 'v2').",
         },
-        action_type: {
-          type: 'string',
-          enum: ['move', 'arrow', 'parallel', 'loading', 'set_content', 'comment'],
-          description: "Type d'action.",
-        },
-        object: {
-          type: 'string',
-          description: "(Pour move/loading/set_content) L'ID de l'objet.",
-        },
-        from: {
-          type: 'string',
-          description: "(Pour move/arrow) L'ID de l'objet statique de départ.",
-        },
-        to: {
-          type: 'string',
-          description: "(Pour move/arrow) L'ID de l'objet statique d'arrivée.",
-        },
-        duration: {
+        lane: {
           type: 'number',
-          description: "Durée de l'animation en millisecondes (défaut: 500).",
+          description: 'Rangée/colonne de placement (entier positif). (défaut: 1)',
         },
-        text: { type: 'string', description: '(Pour arrow/comment) Texte à afficher.' },
-        style: {
+        is_main: {
+          type: 'boolean',
+          description: "(circular) Marque le nœud comme central. (défaut: false)",
+        },
+        url: { type: 'string', description: 'Rend le nœud cliquable (nouvel onglet).' },
+        content: { $ref: '#/definitions/content' },
+      },
+      required: ['id', 'object_type'],
+    },
+    connection: {
+      type: 'object',
+      title: 'Connection',
+      description: 'Flèche permanente entre deux nœuds.',
+      properties: {
+        id: { type: 'string' },
+        from: { type: 'string', description: "ID du nœud source." },
+        to: { type: 'string', description: "ID du nœud destination." },
+        style: { $ref: '#/definitions/lineStyle' },
+        text: { type: 'string', description: 'Texte médian optionnel.' },
+      },
+      required: ['from', 'to'],
+    },
+    dynamicObject: {
+      type: 'object',
+      title: 'DynamicObject',
+      properties: {
+        id: { type: 'string', description: 'Identifiant unique du paquet.' },
+        object_type: {
           type: 'string',
-          enum: ['full', 'dotted', 'dashed'],
-          description: '(Pour arrow) Style de la ligne.',
+          enum: ['http_packet', 'sql_request', 'sql_response'],
+          description: 'Type de paquet.',
         },
-        next_to: {
+        request_content: {
           type: 'string',
-          description:
-            "(Pour comment) L'ID de l'objet statique près duquel afficher le commentaire.",
+          description: 'Requête textuelle (ex: pour sql_request).',
         },
-        content: {
+        response_content: {
           type: 'object',
-          description: '(Pour set_content)',
+          description: 'Réponse (pour sql_response).',
           properties: {
-            content_type: { type: 'string', enum: ['image', 'text', 'code'] },
-            content: { type: 'string' },
-            language: {
-              type: 'string',
-              description:
-                'Langage pour la coloration syntaxique (ex: javascript, json, sql).',
+            rows: { type: 'number', description: 'Nombre de lignes retournées.' },
+          },
+        },
+        packet_content: {
+          type: 'object',
+          properties: {
+            header: { type: 'string', description: "En-tête (ex: 'GET /api')." },
+            body: {
+              type: 'object',
+              properties: {
+                content_type: { type: 'string', enum: ['text', 'image'] },
+                content: { type: 'string', description: "Texte ou chemin d'image." },
+              },
             },
           },
         },
+      },
+      required: ['id', 'object_type'],
+    },
+    content: {
+      type: 'object',
+      title: 'ObjectContent',
+      properties: {
+        content_type: { type: 'string', enum: ['image', 'text', 'code'] },
+        content: { type: 'string' },
+        language: {
+          type: 'string',
+          description: 'Langage pour la coloration syntaxique (ex: javascript, sql).',
+        },
+      },
+    },
+    lineStyle: {
+      type: 'string',
+      enum: ['solid', 'dotted', 'dashed'],
+      description: "Style de ligne. (défaut: 'solid'; 'full' accepté en alias)",
+    },
+    timing: {
+      // Champs communs à toutes les actions (documentés une fois).
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: "ID pour wait_for / keep_until." },
+        duration: {
+          type: 'number',
+          description: 'Durée en ms. (défaut: 500 ; 1200 pour loading)',
+        },
         wait_for: {
           type: 'string',
-          description:
-            "L'ID d'une autre action. Cette action ne commencera qu'après la fin de l'action spécifiée.",
+          description: "Démarre à la fin de l'action référencée (par ID).",
         },
         keep_until: {
           type: 'string',
-          description:
-            "L'ID d'une action future. L'élément restera visible jusqu'au début de cette action.",
+          description: "Reste visible jusqu'au début de l'action ciblée (par ID).",
         },
         keep_until_next: {
           type: 'boolean',
           description:
-            "Si vrai, l'élément reste visible jusqu'à l'étape racine suivante de la chronologie. (défaut: false pour 'move', true pour 'arrow' et 'comment')",
+            "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour move/loading, true pour arrow/comment/set_content.",
         },
+      },
+    },
+    action: {
+      oneOf: [
+        { $ref: '#/definitions/moveAction' },
+        { $ref: '#/definitions/arrowAction' },
+        { $ref: '#/definitions/parallelAction' },
+        { $ref: '#/definitions/loadingAction' },
+        { $ref: '#/definitions/setContentAction' },
+        { $ref: '#/definitions/commentAction' },
+      ],
+    },
+    moveAction: {
+      type: 'object',
+      title: 'move',
+      description: "Déplace un objet dynamique de `from` vers `to`.",
+      allOf: [{ $ref: '#/definitions/timing' }],
+      properties: {
+        action_type: { const: 'move' },
+        object: { type: 'string', description: "ID de l'objet dynamique." },
+        from: { type: 'string', description: 'ID du nœud de départ.' },
+        to: { type: 'string', description: "ID du nœud d'arrivée." },
+      },
+      required: ['action_type', 'object', 'from', 'to'],
+    },
+    arrowAction: {
+      type: 'object',
+      title: 'arrow',
+      description: 'Trace une flèche animée entre deux nœuds.',
+      allOf: [{ $ref: '#/definitions/timing' }],
+      properties: {
+        action_type: { const: 'arrow' },
+        from: { type: 'string' },
+        to: { type: 'string' },
+        text: { type: 'string', description: 'Texte médian.' },
+        style: { $ref: '#/definitions/lineStyle' },
+      },
+      required: ['action_type', 'from', 'to'],
+    },
+    parallelAction: {
+      type: 'object',
+      title: 'parallel',
+      description: 'Exécute plusieurs actions au même instant.',
+      allOf: [{ $ref: '#/definitions/timing' }],
+      properties: {
+        action_type: { const: 'parallel' },
         actions: {
           type: 'array',
-          description: '(Pour parallel) Liste d\'actions à exécuter en même temps.',
           items: { $ref: '#/definitions/action' },
         },
       },
-      required: ['action_type'],
+      required: ['action_type', 'actions'],
+    },
+    loadingAction: {
+      type: 'object',
+      title: 'loading',
+      description: 'Affiche un spinner de chargement sur un nœud.',
+      allOf: [{ $ref: '#/definitions/timing' }],
+      properties: {
+        action_type: { const: 'loading' },
+        object: { type: 'string', description: 'ID du nœud cible.' },
+      },
+      required: ['action_type', 'object'],
+    },
+    setContentAction: {
+      type: 'object',
+      title: 'set_content',
+      description: "Mute le contenu d'un nœud (code, texte, image).",
+      allOf: [{ $ref: '#/definitions/timing' }],
+      properties: {
+        action_type: { const: 'set_content' },
+        object: { type: 'string', description: 'ID du nœud muté.' },
+        content: { $ref: '#/definitions/content' },
+      },
+      required: ['action_type', 'object', 'content'],
+    },
+    commentAction: {
+      type: 'object',
+      title: 'comment',
+      description: 'Affiche une bulle de commentaire près d\'un nœud.',
+      allOf: [{ $ref: '#/definitions/timing' }],
+      properties: {
+        action_type: { const: 'comment' },
+        object: { type: 'string', description: 'ID du nœud de référence.' },
+        text: { type: 'string', description: 'Texte du commentaire.' },
+      },
+      required: ['action_type', 'object', 'text'],
     },
   },
 } as const;

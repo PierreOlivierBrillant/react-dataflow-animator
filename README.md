@@ -26,7 +26,6 @@ import { DataFlowPlayer } from 'react-dataflow-animator';
 import 'react-dataflow-animator/styles.css';
 
 const spec = {
-  is_navigable: true,
   direction: 'left-to-right',
   static_objects: [
     { id: 'client', object_type: 'laptop', text: 'Navigateur', lane: 1 },
@@ -65,7 +64,7 @@ directement dans un fichier `.mdx`. Importez le CSS une seule fois, par exemple 
 | `height` | `number \| string` | `420` | Hauteur de la scène |
 | `autoPlay` | `boolean` | `false` | Démarre la lecture automatiquement |
 | `loop` | `boolean` | `false` | Rejoue en boucle |
-| `controls` | `boolean` | `spec.is_navigable` | Force l'affichage des contrôles |
+| `controls` | `boolean` | `true` | Affiche les contrôles de navigation |
 | `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Thème visuel |
 | `speed` | `number` | `1` | Vitesse de lecture |
 | `debug` | `boolean` | `false` | Overlay de débogage de la timeline |

@@ -22,7 +22,7 @@ export function ArrowLine({
   from,
   to,
   shift = 0,
-  style = 'full',
+  style = 'solid',
   text,
   progress = 1,
 }: ArrowLineProps) {

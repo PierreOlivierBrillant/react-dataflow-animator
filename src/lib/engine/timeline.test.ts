@@ -32,7 +32,7 @@ const timeline: Timeline = {
       stepIndex: 0,
       fromId: 'a',
       toId: 'b',
-      style: 'full',
+      style: 'solid',
       shift: 0,
     },
   ],

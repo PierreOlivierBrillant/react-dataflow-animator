@@ -65,26 +65,25 @@ export function Stage({ spec, timeline, t, highlight, debug }: StageProps) {
     return set;
   }, [active]);
 
-  const nodes = spec.static_objects.filter((o) => o.object_type !== 'arrow');
-  const staticArrows = spec.static_objects.filter(
-    (o) => o.object_type === 'arrow' && o.from && o.to,
-  );
+  const nodes = spec.static_objects;
+  const connections = spec.connections ?? [];
 
   return (
     <div className="rdfa-stage" ref={stageRef}>
       {/* Couche arrière : flèches */}
       <svg className="rdfa-arrow-svg">
-        {staticArrows.map((o) => {
-          const f = geometry[o.from!];
-          const tg = geometry[o.to!];
+        {connections.map((link, i) => {
+          const f = geometry[link.from];
+          const tg = geometry[link.to];
           if (!f || !tg) return null;
           return (
             <ArrowLine
-              key={o.id}
+              key={link.id ?? `${link.from}-${link.to}-${i}`}
               from={f}
               to={tg}
-              shift={shiftFor(o.from!, o.to!, bidir)}
-              style={o.style}
+              shift={shiftFor(link.from, link.to, bidir)}
+              style={link.style}
+              text={link.text}
               progress={1}
             />
           );

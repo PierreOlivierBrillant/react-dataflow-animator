@@ -24,7 +24,7 @@ import {
   SiNginx,
   SiGraphql,
 } from 'react-icons/si';
-import { FaJava, FaAws, FaQuestion } from 'react-icons/fa';
+import { FaJava, FaAws } from 'react-icons/fa';
 
 /**
  * Sous-icônes technologiques (badge `subicon`), basées sur react-icons.
@@ -72,10 +72,37 @@ export function registerSubIcon(name: string, node: ReactNode): void {
   custom[name.toLowerCase()] = node;
 }
 
+/** Pastille de texte libre, pour les `subicon` qui ne sont pas des icônes connues. */
+function renderText(text: string): ReactNode {
+  const label = text.length > 4 ? text.slice(0, 4) : text;
+  const fontSize = label.length >= 4 ? 6 : label.length === 3 ? 7.5 : label.length === 2 ? 9 : 12;
+  return (
+    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+      <circle cx="12" cy="12" r="12" fill="#475569" />
+      <text
+        x="12"
+        y="12"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontFamily="var(--rdfa-font)"
+        fontWeight="700"
+        fontSize={fontSize}
+        fill="#ffffff"
+      >
+        {label}
+      </text>
+    </svg>
+  );
+}
+
+/**
+ * Résout un `subicon` : icône personnalisée enregistrée, sinon techno connue,
+ * sinon pastille de texte libre (ex: 'v2', 'API', 'JWT').
+ */
 export function getSubIcon(name: string): ReactNode {
   const key = name.toLowerCase();
   if (custom[key]) return custom[key];
-  const def = KNOWN[key] ?? { Icon: FaQuestion, color: '#64748b' };
-  const Icon = def.Icon;
-  return <Icon color={def.color} title={name} />;
+  const def = KNOWN[key];
+  if (def) return <def.Icon color={def.color} title={name} />;
+  return renderText(name);
 }

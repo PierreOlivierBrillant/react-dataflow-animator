@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DataFlowSpec } from '../types';
+import type { Action, DataFlowSpec } from '../types';
 import {
   APPEAR_HOLD,
   ARRIVE_HOLD,
@@ -73,7 +73,7 @@ describe('compile — ordonnancement', () => {
         {
           action_type: 'comment',
           id: 'C',
-          next_to: 'a',
+          object: 'a',
           text: 'x',
           duration: 100,
           wait_for: 'A',
@@ -108,7 +108,7 @@ describe('compile — cycle de vie', () => {
       specOf([
         { action_type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 300, keep_until: 'C' },
         { action_type: 'move', id: 'B', object: 'p', from: 'a', to: 'b', duration: 300 },
-        { action_type: 'comment', id: 'C', next_to: 'a', text: 'x', duration: 100 },
+        { action_type: 'comment', id: 'C', object: 'a', text: 'x', duration: 100 },
       ]),
     );
     const a = timeline.clips.find((c) => c.id === 'A')!;
@@ -163,7 +163,8 @@ describe('compile — points d’arrêt', () => {
 describe('compile — robustesse', () => {
   it('ignore une action incomplète et émet un warning', () => {
     const { timeline, warnings } = compile(
-      specOf([{ action_type: 'move', object: 'p', from: 'a' }]),
+      // Données volontairement incomplètes (to manquant) -> ignoré + warning.
+      specOf([{ action_type: 'move', object: 'p', from: 'a' } as unknown as Action]),
     );
     expect(timeline.clips).toHaveLength(0);
     expect(warnings.length).toBeGreaterThan(0);

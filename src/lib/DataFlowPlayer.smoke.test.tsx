@@ -7,7 +7,6 @@ import type { DataFlowSpec } from './types';
 afterEach(cleanup);
 
 const spec: DataFlowSpec = {
-  is_navigable: true,
   direction: 'left-to-right',
   static_objects: [
     { id: 'editor', object_type: 'laptop', text: 'IDE', subicon: 'typescript', lane: 1 },
