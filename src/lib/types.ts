@@ -37,6 +37,8 @@ export interface ObjectContent {
   content?: string;
   /** Langage pour la coloration syntaxique (ex: javascript, json, sql). */
   language?: string;
+  /** (mode `text`) URL affichée dans la barre d'adresse de la fenêtre. */
+  url?: string;
 }
 
 export interface StaticObject {
@@ -54,6 +56,11 @@ export interface StaticObject {
   lane?: number;
   /** (circular) Marque l'objet comme nœud central. Défaut: false. */
   is_main?: boolean;
+  /**
+   * Aligne ce nœud sur l'axe transverse d'un autre nœud (par ID) : utile pour
+   * aligner deux nœuds de lanes différentes. Ignoré en disposition circular.
+   */
+  align_with?: string;
   /** URL rendant le nœud cliquable (ouvre dans un nouvel onglet). */
   url?: string;
   /** Contenu initial affiché dans le nœud (terminal de code, fenêtre, etc.). */
@@ -108,7 +115,8 @@ export type ActionType =
   | 'parallel'
   | 'loading'
   | 'set_content'
-  | 'comment';
+  | 'comment'
+  | 'highlight';
 
 /** Champs communs à toutes les actions (ordonnancement et cycle de vie). */
 export interface ActionBase {
@@ -173,6 +181,13 @@ export interface CommentAction extends ActionBase {
   text: string;
 }
 
+/** Surligne un nœud statique ou une connexion (par ID). */
+export interface HighlightAction extends ActionBase {
+  action_type: 'highlight';
+  /** ID d'un nœud statique OU d'une connexion à surligner. */
+  object: string;
+}
+
 /** Union discriminée des actions (par `action_type`). */
 export type Action =
   | MoveAction
@@ -180,7 +195,8 @@ export type Action =
   | ParallelAction
   | LoadingAction
   | SetContentAction
-  | CommentAction;
+  | CommentAction
+  | HighlightAction;
 
 export interface DataFlowSpec {
   /** Direction de placement automatique des objets statiques. Défaut: 'left-to-right'. */

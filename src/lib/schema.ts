@@ -79,6 +79,11 @@ export const dataFlowSchema = {
           type: 'boolean',
           description: "(circular) Marque le nœud comme central. (défaut: false)",
         },
+        align_with: {
+          type: 'string',
+          description:
+            "Aligne ce nœud sur l'axe transverse d'un autre nœud (par ID), pour aligner deux lanes différentes.",
+        },
         url: { type: 'string', description: 'Rend le nœud cliquable (nouvel onglet).' },
         content: { $ref: '#/definitions/content' },
       },
@@ -144,6 +149,10 @@ export const dataFlowSchema = {
           type: 'string',
           description: 'Langage pour la coloration syntaxique (ex: javascript, sql).',
         },
+        url: {
+          type: 'string',
+          description: "(mode text) URL affichée dans la barre d'adresse.",
+        },
       },
     },
     lineStyle: {
@@ -183,6 +192,7 @@ export const dataFlowSchema = {
         { $ref: '#/definitions/loadingAction' },
         { $ref: '#/definitions/setContentAction' },
         { $ref: '#/definitions/commentAction' },
+        { $ref: '#/definitions/highlightAction' },
       ],
     },
     moveAction: {
@@ -260,6 +270,17 @@ export const dataFlowSchema = {
         text: { type: 'string', description: 'Texte du commentaire.' },
       },
       required: ['action_type', 'object', 'text'],
+    },
+    highlightAction: {
+      type: 'object',
+      title: 'highlight',
+      description: 'Surligne un nœud statique ou une connexion (par ID).',
+      allOf: [{ $ref: '#/definitions/timing' }],
+      properties: {
+        action_type: { const: 'highlight' },
+        object: { type: 'string', description: "ID d'un nœud statique ou d'une connexion." },
+      },
+      required: ['action_type', 'object'],
     },
   },
 } as const;

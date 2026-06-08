@@ -20,7 +20,8 @@
   --rdfa-terminal-bg: #1e293b;
   --rdfa-terminal-text: #e2e8f0;
   --rdfa-radius: 10px;
-  --rdfa-font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --rdfa-font:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --rdfa-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
 
   position: relative;
@@ -42,7 +43,11 @@
   box-sizing: border-box;
 }
 
-.rdfa-player[data-theme='dark'] {
+/* Thème sombre : explicite (theme="dark"), OU theme="auto" sous un ancêtre
+   `[data-theme='dark']` — c'est la convention de Docusaurus, donc le lecteur
+   suit automatiquement le toggle de thème du site hôte. */
+.rdfa-player[data-theme='dark'],
+[data-theme='dark'] .rdfa-player[data-theme='auto'] {
   --rdfa-bg: #0b1120;
   --rdfa-surface: #111827;
   --rdfa-border: #1f2937;
@@ -54,6 +59,7 @@
   --rdfa-arrow: #94a3b8;
 }
 
+/* theme="auto" sans hôte thématisé : on suit la préférence système. */
 @media (prefers-color-scheme: dark) {
   .rdfa-player[data-theme='auto'] {
     --rdfa-bg: #0b1120;
@@ -68,6 +74,19 @@
   }
 }
 
+/* Hôte explicitement clair (Docusaurus) : on force le clair même si l'OS est sombre. */
+[data-theme='light'] .rdfa-player[data-theme='auto'] {
+  --rdfa-bg: #f8fafc;
+  --rdfa-surface: #ffffff;
+  --rdfa-border: #e2e8f0;
+  --rdfa-text: #0f172a;
+  --rdfa-muted: #64748b;
+  --rdfa-accent: #2563eb;
+  --rdfa-node-bg: #ffffff;
+  --rdfa-node-stroke: #334155;
+  --rdfa-arrow: #475569;
+}
+
 .rdfa-player:fullscreen {
   border-radius: 0;
   border: none;
@@ -80,6 +99,9 @@
   width: 100%;
   min-height: 0;
   overflow: hidden;
+  /* Échelle modérée pour le texte des panneaux/commentaires : la police ne suit
+     pas l'échelle globale jusqu'à 1.8 (sinon le texte grossit trop et déborde). */
+  --rdfa-content-scale: clamp(0.85, var(--rdfa-scale, 1), 1.15);
 }
 
 /* Couche arrière : flèches (derrière les nœuds). */
@@ -93,12 +115,13 @@
   z-index: 1;
 }
 
-/* Couche avant : paquets mobiles, commentaires (devant les nœuds). */
+/* Couche avant : paquets mobiles, commentaires. Au-dessus de TOUT (y compris des
+   nœuds set_content en z-index 8) → un objet en mouvement est toujours au premier plan. */
 .rdfa-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 5;
+  z-index: 12;
 }
 
 /* ---------- Nœuds statiques ---------- */
@@ -168,6 +191,43 @@
   font-size: calc(13px * var(--rdfa-scale, 1));
   color: var(--rdfa-text);
   line-height: 1.2;
+}
+
+/* ---------- Surlignage (action highlight) ---------- */
+.rdfa-node--highlight .rdfa-node-icon {
+  color: var(--rdfa-accent);
+}
+.rdfa-node--highlight .rdfa-node-visual::after {
+  content: '';
+  position: absolute;
+  inset: -28%;
+  border-radius: 18px;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--rdfa-accent) 38%, transparent),
+    transparent
+  );
+  z-index: -1;
+  animation: rdfa-pulse 1.4s ease-in-out infinite;
+}
+
+.rdfa-arrow-line--highlight {
+  stroke: var(--rdfa-accent);
+  stroke-width: calc(3.5px * var(--rdfa-scale, 1));
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--rdfa-accent) 70%, transparent));
+}
+.rdfa-arrow-head--highlight {
+  fill: var(--rdfa-accent);
+}
+
+@keyframes rdfa-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* ---------- Flèches ---------- */
@@ -275,28 +335,37 @@
 /* ---------- Commentaire ---------- */
 .rdfa-comment {
   position: absolute;
-  transform: translate(-50%, -100%);
   z-index: 6;
-  max-width: max(140px, var(--rdfa-maxw, 220px));
+  max-width: clamp(140px, var(--rdfa-maxw, 220px), 280px);
   padding: 8px 12px;
   border-radius: 10px;
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);
   color: var(--rdfa-text);
-  font-size: calc(13px * var(--rdfa-scale, 1));
+  font-size: calc(13px * var(--rdfa-content-scale, 1));
   line-height: 1.35;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 
-.rdfa-comment::after {
-  content: '';
+/* Flèche de la bulle : positionnée dynamiquement (left inline) pour pointer le
+   nœud même quand la bulle est contrainte par un bord. */
+.rdfa-comment-tail {
   position: absolute;
-  left: 50%;
   bottom: -7px;
   transform: translateX(-50%);
+  width: 0;
+  height: 0;
   border-width: 7px 7px 0 7px;
   border-style: solid;
   border-color: var(--rdfa-surface) transparent transparent transparent;
+}
+
+/* Variante « sous le nœud » : flèche en haut, pointant vers le haut. */
+.rdfa-comment--below .rdfa-comment-tail {
+  top: -7px;
+  bottom: auto;
+  border-width: 0 7px 7px 7px;
+  border-color: transparent transparent var(--rdfa-surface) transparent;
 }
 
 /* ---------- set_content : terminal de code ---------- */
@@ -330,11 +399,6 @@
   background: #334155;
 }
 
-.rdfa-window-dots {
-  display: flex;
-  gap: 6px;
-}
-
 .rdfa-window-dot {
   width: 11px;
   height: 11px;
@@ -357,7 +421,7 @@
   border-radius: 6px;
   background: var(--rdfa-surface);
   color: var(--rdfa-muted);
-  font-size: calc(12px * var(--rdfa-scale, 1));
+  font-size: calc(12px * var(--rdfa-content-scale, 1));
   font-family: var(--rdfa-mono);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -367,10 +431,10 @@
 .rdfa-content-body {
   background: var(--rdfa-surface);
   color: var(--rdfa-text);
-  padding: calc(10px * var(--rdfa-scale, 1)) calc(12px * var(--rdfa-scale, 1));
-  font-size: calc(12.5px * var(--rdfa-scale, 1));
+  padding: calc(10px * var(--rdfa-content-scale, 1)) calc(12px * var(--rdfa-content-scale, 1));
+  font-size: calc(12.5px * var(--rdfa-content-scale, 1));
   line-height: 1.5;
-  max-height: calc(300px * var(--rdfa-scale, 1));
+  max-height: calc(320px * var(--rdfa-content-scale, 1));
   overflow: auto;
 }
 
@@ -388,9 +452,8 @@
 .rdfa-content-body pre {
   margin: 0;
   font-family: var(--rdfa-mono);
-  /* Retour à la ligne plutôt que troncature horizontale du code. */
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  /* Jamais de retour à la ligne : la police s'ajuste (CodeBlock) pour tenir. */
+  white-space: pre;
   tab-size: 2;
 }
 
@@ -464,7 +527,9 @@
   background: transparent;
   color: var(--rdfa-text);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .rdfa-btn:hover {

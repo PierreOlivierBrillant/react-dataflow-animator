@@ -25,8 +25,16 @@ export interface LayoutOptions {
 }
 
 /** Répartit n positions à intervalles réguliers avec marges aux extrémités. */
-function evenRatio(index: number, count: number): number {
-  return (index + 1) / (count + 1);
+/**
+ * Répartit `count` positions sur l'axe, étalées entre une marge `[m, 1-m]`.
+ * La marge `m` est plafonnée à 0,2 : pour peu d'éléments (2-3) on exploite
+ * l'espace disponible aux extrémités pour les éloigner davantage ; pour beaucoup
+ * d'éléments, on retombe sur la répartition `(i+1)/(count+1)` (marges plus fines).
+ */
+function spread(index: number, count: number): number {
+  if (count <= 1) return 0.5;
+  const m = Math.min(0.2, 1 / (count + 1));
+  return m + (1 - 2 * m) * (index / (count - 1));
 }
 
 function linearLayout(nodes: StaticObject[], direction: Direction): LayoutMap {
@@ -42,10 +50,10 @@ function linearLayout(nodes: StaticObject[], direction: Direction): LayoutMap {
 
   const map: LayoutMap = {};
   lanes.forEach((lane, laneOrder) => {
-    const main = evenRatio(laneOrder, lanes.length);
+    const main = spread(laneOrder, lanes.length);
     const members = byLane.get(lane)!;
     members.forEach((node, k) => {
-      const cross = evenRatio(k, members.length);
+      const cross = spread(k, members.length);
       let cx: number;
       let cy: number;
       switch (direction) {
@@ -98,6 +106,26 @@ function circularLayout(nodes: StaticObject[], aspect: number): LayoutMap {
   return map;
 }
 
+/**
+ * Applique `align_with` : aligne un nœud sur l'axe TRANSVERSE d'un autre
+ * (vertical si la direction est horizontale, et inversement).
+ */
+function applyAlignment(
+  map: LayoutMap,
+  nodes: StaticObject[],
+  direction: Direction,
+): void {
+  const horizontal = direction === 'left-to-right' || direction === 'right-to-left';
+  for (const node of nodes) {
+    if (!node.align_with) continue;
+    const self = map[node.id];
+    const target = map[node.align_with];
+    if (!self || !target) continue;
+    if (horizontal) self.cy = target.cy;
+    else self.cx = target.cx;
+  }
+}
+
 export function computeLayout(
   spec: DataFlowSpec,
   options: LayoutOptions = {},
@@ -107,5 +135,7 @@ export function computeLayout(
   if (direction === 'circular') {
     return circularLayout(nodes, options.aspect ?? 1.6);
   }
-  return linearLayout(nodes, direction);
+  const map = linearLayout(nodes, direction);
+  applyAlignment(map, nodes, direction);
+  return map;
 }

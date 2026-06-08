@@ -10,8 +10,12 @@ export interface StaticNodeProps {
   placement: NodePlacement;
   /** Contenu effectif (set_content actif, ou contenu initial du nœud). */
   content?: ObjectContent | null;
+  /** Opacité du contenu (fondu d'apparition/disparition de set_content). */
+  contentOpacity?: number;
   /** Spinner de chargement actif. */
   loading?: boolean;
+  /** Nœud surligné par une action highlight. */
+  highlighted?: boolean;
   highlight: Highlighter;
 }
 
@@ -19,7 +23,9 @@ export function StaticNode({
   object,
   placement,
   content,
+  contentOpacity = 1,
   loading,
+  highlighted,
   highlight,
 }: StaticNodeProps) {
   const visual: ReactNode = content ? (
@@ -34,6 +40,7 @@ export function StaticNode({
     </>
   );
 
+  const visualStyle = content ? { opacity: contentOpacity } : undefined;
   const inner = object.url ? (
     <a
       className="rdfa-node-link"
@@ -41,15 +48,24 @@ export function StaticNode({
       target="_blank"
       rel="noopener noreferrer"
     >
-      <span className="rdfa-node-visual">{visual}</span>
+      <span className="rdfa-node-visual" style={visualStyle}>
+        {visual}
+      </span>
     </a>
   ) : (
-    <span className="rdfa-node-visual">{visual}</span>
+    <span className="rdfa-node-visual" style={visualStyle}>
+      {visual}
+    </span>
   );
+
+  const cls =
+    'rdfa-node' +
+    (content ? ' rdfa-node--content' : '') +
+    (highlighted ? ' rdfa-node--highlight' : '');
 
   return (
     <div
-      className={`rdfa-node${content ? ' rdfa-node--content' : ''}`}
+      className={cls}
       data-node-id={object.id}
       style={{ left: `${placement.cx * 100}%`, top: `${placement.cy * 100}%` }}
     >

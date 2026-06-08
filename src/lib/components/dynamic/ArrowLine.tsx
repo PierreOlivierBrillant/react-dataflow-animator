@@ -14,6 +14,8 @@ export interface ArrowLineProps {
   text?: string;
   /** 1 pour une flèche statique (décor), interpolé pour une flèche dynamique. */
   progress?: number;
+  /** Surlignée par une action highlight. */
+  highlighted?: boolean;
 }
 
 const HEAD = 9;
@@ -25,6 +27,7 @@ export function ArrowLine({
   style = 'solid',
   text,
   progress = 1,
+  highlighted = false,
 }: ArrowLineProps) {
   const conn = connection(from, to, shift);
   const tipX = lerp(conn.start.x, conn.end.x, progress);
@@ -38,17 +41,20 @@ export function ArrowLine({
   const midX = (conn.start.x + conn.end.x) / 2;
   const midY = (conn.start.y + conn.end.y) / 2;
 
+  const lineCls = `rdfa-arrow-line${highlighted ? ' rdfa-arrow-line--highlight' : ''}`;
+  const headCls = `rdfa-arrow-head${highlighted ? ' rdfa-arrow-head--highlight' : ''}`;
+
   return (
     <g>
       <line
-        className="rdfa-arrow-line"
+        className={lineCls}
         data-style={style}
         x1={conn.start.x}
         y1={conn.start.y}
         x2={tipX}
         y2={tipY}
       />
-      {progress > 0.02 ? <polygon className="rdfa-arrow-head" points={head} /> : null}
+      {progress > 0.02 ? <polygon className={headCls} points={head} /> : null}
       {text ? (
         <text
           className="rdfa-arrow-label"

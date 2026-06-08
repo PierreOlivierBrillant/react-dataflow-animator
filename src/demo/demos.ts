@@ -681,6 +681,7 @@ const spa: DataFlowSpec = {
       object_type: 'database',
       text: 'BD',
       subicon: 'postgres',
+      align_with: 'api',
       lane: 3,
     },
   ],
@@ -744,6 +745,7 @@ const spa: DataFlowSpec = {
       object: 'browser',
       content: {
         content_type: 'text',
+        url: 'https://mon-app.app',
         content: "✅ SPA chargée (React) — prête à appeler l'API",
       },
       keep_until: 'render',
@@ -789,7 +791,7 @@ const spa: DataFlowSpec = {
       action_type: 'set_content',
       id: 'render',
       object: 'browser',
-      content: { content_type: 'text', content: '📦 12 produits affichés' },
+      content: { content_type: 'text', url: 'https://mon-app.app/produits', content: '📦 12 produits affichés' },
     },
     {
       action_type: 'comment',
@@ -797,6 +799,66 @@ const spa: DataFlowSpec = {
       text: '3. Rendu des données',
       duration: 400,
     },
+  ],
+};
+
+const highlightAlign: DataFlowSpec = {
+  direction: 'left-to-right',
+  static_objects: [
+    // `align_with` aligne Client et BD sur l'axe de l'API (lane 2, en haut),
+    // alors que Worker reste sur sa propre ligne.
+    {
+      id: 'client',
+      object_type: 'laptop',
+      text: 'Client',
+      subicon: 'react',
+      lane: 1,
+      align_with: 'api',
+    },
+    { id: 'api', object_type: 'server', text: 'API', subicon: 'node', lane: 2 },
+    {
+      id: 'worker',
+      object_type: 'server',
+      text: 'Worker',
+      subicon: 'dotnet',
+      lane: 2,
+    },
+    {
+      id: 'db',
+      object_type: 'database',
+      text: 'BD',
+      subicon: 'postgres',
+      lane: 3,
+      align_with: 'api',
+    },
+  ],
+  connections: [
+    { id: 'link', from: 'client', to: 'api', style: 'dotted' },
+    { from: 'api', to: 'db', style: 'dotted' },
+  ],
+  dynamic_objects: [
+    {
+      id: 'req',
+      object_type: 'http_packet',
+      packet_content: { header: 'GET /tasks' },
+    },
+  ],
+  actions: [
+    {
+      action_type: 'comment',
+      object: 'api',
+      text: 'On met l’API en évidence',
+      duration: 400,
+    },
+    { action_type: 'highlight', object: 'api', duration: 1200 },
+    {
+      action_type: 'move',
+      object: 'req',
+      from: 'client',
+      to: 'api',
+      duration: 800,
+    },
+    { action_type: 'highlight', object: 'link', duration: 1000 },
   ],
 };
 
@@ -832,6 +894,14 @@ export const demos: Demo[] = [
     description:
       'Mutation de nœuds : terminal de code colorisé puis fenêtre de navigateur.',
     spec: setContent,
+  },
+  {
+    id: 'highlight-align',
+    title: 'Surlignage & alignement',
+    category: 'Bases',
+    description:
+      'Action highlight (nœud et connexion) et option align_with pour aligner des nœuds de lanes différentes.',
+    spec: highlightAlign,
   },
   {
     id: 'signalr',

@@ -44,6 +44,8 @@ conteneur (placement CSS pur). Voir [`src/lib/engine/layout.ts`](../src/lib/engi
   sont répartis et centrés sur l'axe transverse. Espacement proportionnel au conteneur.
 - **Circulaire** (`circular`) : le nœud `is_main` est placé au centre ; les autres à
   équidistance sur un cercle (trigonométrie), ratio corrigé pour rester rond.
+- **`align_with`** : aligne un nœud sur l'axe transverse d'un autre (vertical si la
+  direction est horizontale) → aligner deux nœuds de lanes différentes.
 
 **Types de nœuds** : `desktop`, `laptop`, `client`, `server`, `database`, `mobile`,
 `user`, `admin`, `users`. Chaque nœud peut recevoir : un `text` (label), un `subicon`
@@ -54,6 +56,13 @@ cliquable), et un `content` initial.
 nœuds, en px) pilote un facteur d'échelle global (`--rdfa-scale` : icônes/polices plus
 grandes en plein écran, plus petites si l'espace est serré) et plafonne la largeur des
 panneaux/paquets (`--rdfa-maxw`) pour qu'ils ne débordent jamais sur les voisins.
+
+**Espacement & bornes** : pour peu de lanes, les nœuds s'étalent vers les bords pour
+utiliser l'espace disponible (distance maximale entre eux). Aucun élément ne sort du
+canevas : la largeur des panneaux tient compte des bords, et la position de chaque nœud
+est bornée selon sa taille mesurée (les commentaires basculent sous le nœud si besoin).
+La police des panneaux/commentaires suit l'échelle de façon modérée (max ~1.15×) pour
+ne pas déborder.
 
 ## 4. Routage et prévention des collisions
 
@@ -80,9 +89,12 @@ La timeline compile un tableau d'actions ordonnées. Voir
    (décor) se déclarent dans le tableau racine `connections` (affichées dès l'init).
 3. **parallel** : encapsule des actions enfants exécutées au même timestamp.
 4. **loading** : spinner attaché à un nœud cible (simule un traitement).
-5. **set_content** : mute le contenu d'un nœud ; mode `code` (terminal + coloration
-   syntaxique Prism) ou `text` (fenêtre de navigateur factice) ou `image`.
+5. **set_content** : mute le contenu d'un nœud. Mode `code` (terminal + coloration
+   Prism, **sans barre d'URL** ; le code ne revient jamais à la ligne, sa police
+   s'ajuste pour tenir), ou `text`/`image` (fenêtre de navigateur avec barre d'URL
+   paramétrable via `content.url`).
 6. **comment** : bulle de texte en fondu près d'un nœud (`object`).
+7. **highlight** : surligne (halo pulsé) un nœud statique ou une connexion (par `object` = id).
 
 ## 6. Cycle de vie temporel
 
@@ -114,3 +126,7 @@ JSON Schema). Buildé par `vite.demo.config.ts`.
   **avertissement non bloquant** (visible avec `debug`) plutôt qu'un crash.
 - Coloration syntaxique : **Prism** (dépendance), remplaçable via la prop `highlight`.
 - Styles **scopés** sous `.rdfa-` + variables CSS (thèmes clair/sombre, prop `theme`).
+- **Thème `auto` (défaut)** : suit `prefers-color-scheme` ET un ancêtre `[data-theme]`
+  (convention Docusaurus) → se synchronise avec le toggle de thème de l'hôte.
+- Les objets en mouvement (paquets) sont rendus **au premier plan** (au-dessus des
+  panneaux `set_content`). `set_content` apparaît/disparaît en **fondu**.

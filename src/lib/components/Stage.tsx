@@ -1,4 +1,10 @@
-import { useMemo, type CSSProperties } from 'react';
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import type {
   DataFlowSpec,
   DynamicObject,
@@ -12,19 +18,38 @@ import {
   stepIndexAt,
   type ArrowClip,
   type CommentClip,
+  type HighlightClip,
   type MoveClip,
   type Timeline,
 } from '../engine/timeline';
 import { computeLayout } from '../engine/layout';
-import { connection, pointOnSegment } from '../engine/geometry';
+import { connection, pointOnSegment, type NodeGeom } from '../engine/geometry';
 import { collectBidirectional, shiftFor } from '../engine/compiler';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { StaticNode } from './nodes/StaticNode';
 import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
 
-/** Durée (ms) du fondu d'apparition/disparition des paquets. */
+/** Durée (ms) du fondu d'apparition/disparition (paquets, contenus). */
 const FADE_MS = 250;
+
+/**
+ * Opacité d'un clip avec fondu : entrée pendant le hold d'apparition (ou sur
+ * FADE_MS s'il n'y en a pas), sortie sur FADE_MS avant la disparition.
+ */
+function clipOpacity(
+  clip: { startMs: number; animStartMs: number; visibleUntilMs: number },
+  t: number,
+): number {
+  const inDur = clip.animStartMs - clip.startMs;
+  const fadeIn =
+    inDur > 0
+      ? clamp((t - clip.startMs) / inDur, 0, 1)
+      : clamp((t - clip.startMs) / FADE_MS, 0, 1);
+  const outStart = clip.visibleUntilMs - FADE_MS;
+  const fadeOut = t > outStart ? clamp((clip.visibleUntilMs - t) / FADE_MS, 0, 1) : 1;
+  return Math.min(fadeIn, fadeOut);
+}
 
 type Density = 'compact' | 'comfortable' | 'spacious';
 
@@ -71,9 +96,13 @@ export function Stage({
     // plafonner artificiellement la cellule des layouts peu denses (sinon les
     // panneaux deviennent inutilement étroits alors qu'il reste de la place).
     let cell = Infinity;
+    // Distance horizontale au bord la plus faible (limite la largeur des panneaux
+    // pour qu'aucun ne sorte du canevas).
+    let minEdgeX = Infinity;
     for (let i = 0; i < ids.length; i++) {
+      const a = layout[ids[i]];
+      minEdgeX = Math.min(minEdgeX, Math.min(a.cx, 1 - a.cx) * width);
       for (let j = i + 1; j < ids.length; j++) {
-        const a = layout[ids[i]];
         const b = layout[ids[j]];
         const d = Math.hypot((a.cx - b.cx) * width, (a.cy - b.cy) * height);
         if (d > 0) cell = Math.min(cell, d);
@@ -81,14 +110,20 @@ export function Stage({
     }
     if (!Number.isFinite(cell)) cell = Math.min(width, height) * 0.5 || 220; // <2 nœuds
     cell = clamp(cell, 96, 520);
+    const edgeBudget = Number.isFinite(minEdgeX) ? 2 * minEdgeX : width || 320;
     const d = DENSITY[density];
-    const baseScale = clamp(cell / 170, 0.72, 1.8);
+    // L'échelle est limitée À LA FOIS par l'espace par élément (cell) ET par la
+    // taille absolue du stage (petit canevas → éléments plus petits).
+    const sizeScale = (Math.min(width, height) || 400) / 400;
+    const baseScale = clamp(Math.min(cell / 170, sizeScale), 0.5, 1.8);
     return {
-      scale: clamp(baseScale * d.scale, 0.6, 2.4),
+      scale: clamp(baseScale * d.scale, 0.45, 2.4),
       maxW: Math.round(cell * d.maxw),
-      // Les panneaux set_content peuvent être plus larges que les paquets
-      // (un seul par nœud) → on utilise davantage l'espace disponible.
-      contentMaxW: Math.round(cell * 0.95),
+      // Largeur max d'un panneau set_content : tient entre les voisins (cell) ET
+      // dans le canevas (bords) → jamais de débordement.
+      contentMaxW: Math.round(
+        Math.min(cell * 0.95, edgeBudget * 0.92, (width || 320) * 0.92),
+      ),
     };
   }, [layout, width, height, density]);
   const bidir = useMemo(() => collectBidirectional(spec), [spec]);
@@ -100,15 +135,20 @@ export function Stage({
 
   const active = useMemo(() => evaluate(timeline, t), [timeline, t]);
 
-  // Contenu effectif par nœud : contenu initial, puis set_content actif.
+  // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
+  // actif (avec fondu d'apparition/disparition).
   const contentByNode = useMemo(() => {
-    const map: Record<string, ObjectContent> = {};
-    for (const obj of spec.static_objects) if (obj.content) map[obj.id] = obj.content;
+    const map: Record<string, { content: ObjectContent; opacity: number }> = {};
+    for (const obj of spec.static_objects) {
+      if (obj.content) map[obj.id] = { content: obj.content, opacity: 1 };
+    }
     for (const a of active) {
-      if (a.clip.kind === 'set_content') map[a.clip.objectId] = a.clip.content;
+      if (a.clip.kind === 'set_content') {
+        map[a.clip.objectId] = { content: a.clip.content, opacity: clipOpacity(a.clip, t) };
+      }
     }
     return map;
-  }, [spec, active]);
+  }, [spec, active, t]);
 
   const loadingNodes = useMemo(() => {
     const set = new Set<string>();
@@ -116,8 +156,33 @@ export function Stage({
     return set;
   }, [active]);
 
+  // Cibles surlignées (nœuds statiques ou connexions) par l'action highlight.
+  const highlightedIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of active) {
+      if (a.clip.kind === 'highlight') set.add((a.clip as HighlightClip).targetId);
+    }
+    return set;
+  }, [active]);
+
   const nodes = spec.static_objects;
   const connections = spec.connections ?? [];
+
+  // Garantit qu'aucun nœud ne sort du canevas : on borne son centre selon sa
+  // taille mesurée (basé sur le ratio de layout, donc stable — pas de boucle).
+  const PLACEMENT_PAD = 6;
+  const placementOf = (id: string) => {
+    const base = layout[id];
+    if (!base) return undefined;
+    const g = geometry[id];
+    if (!g || !width || !height) return base;
+    const hwr = (g.width / 2 + PLACEMENT_PAD) / width;
+    const hhr = (g.height / 2 + PLACEMENT_PAD) / height;
+    return {
+      cx: 2 * hwr < 1 ? clamp(base.cx, hwr, 1 - hwr) : base.cx,
+      cy: 2 * hhr < 1 ? clamp(base.cy, hhr, 1 - hhr) : base.cy,
+    };
+  };
 
   return (
     <div
@@ -146,6 +211,7 @@ export function Stage({
               style={link.style}
               text={link.text}
               progress={1}
+              highlighted={!!link.id && highlightedIds.has(link.id)}
             />
           );
         })}
@@ -171,15 +237,17 @@ export function Stage({
 
       {/* Nœuds statiques */}
       {nodes.map((o) => {
-        const placement = layout[o.id];
+        const placement = placementOf(o.id);
         if (!placement) return null;
         return (
           <StaticNode
             key={o.id}
             object={o}
             placement={placement}
-            content={contentByNode[o.id] ?? null}
+            content={contentByNode[o.id]?.content ?? null}
+            contentOpacity={contentByNode[o.id]?.opacity ?? 1}
             loading={loadingNodes.has(o.id)}
+            highlighted={highlightedIds.has(o.id)}
             highlight={highlight}
           />
         );
@@ -196,12 +264,7 @@ export function Stage({
           if (!f || !tg || !obj) return null;
           const conn = connection(f, tg, clip.shift);
           const pt = pointOnSegment(conn.start, conn.end, easeInOutCubic(a.progress));
-          // Fondu : apparition pendant le hold de départ, disparition en fin de vie.
-          const inDur = clip.animStartMs - clip.startMs;
-          const fadeIn = inDur > 0 ? clamp((t - clip.startMs) / inDur, 0, 1) : 1;
-          const outStart = clip.visibleUntilMs - FADE_MS;
-          const fadeOut = t > outStart ? clamp((clip.visibleUntilMs - t) / FADE_MS, 0, 1) : 1;
-          const opacity = Math.min(fadeIn, fadeOut);
+          const opacity = clipOpacity(clip, t);
           return (
             <Packet
               key={clip.id}
@@ -219,18 +282,75 @@ export function Stage({
           const n = geometry[clip.nextToId];
           if (!n) return null;
           return (
-            <div
+            <CommentBubble
               key={clip.id}
-              className="rdfa-comment"
-              style={{ left: n.x, top: n.y - n.height / 2 - 8, opacity: a.progress }}
-            >
-              {clip.text}
-            </div>
+              node={n}
+              text={clip.text}
+              opacity={a.progress}
+              stageW={width}
+              stageH={height}
+            />
           );
         })}
       </div>
 
       {debug ? <DebugOverlay timeline={timeline} t={t} activeCount={active.length} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Bulle de commentaire qui se mesure et se borne dans le canevas sur les deux
+ * axes (au-dessus du nœud par défaut, en dessous sinon), avec une flèche qui
+ * pointe vers le nœud quelle que soit la position contrainte.
+ */
+function CommentBubble({
+  node,
+  text,
+  opacity,
+  stageW,
+  stageH,
+}: {
+  node: NodeGeom;
+  text: string;
+  opacity: number;
+  stageW: number;
+  stageH: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => setSize({ w: el.offsetWidth, h: el.offsetHeight }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const PAD = 8;
+  const nodeTop = node.y - node.height / 2;
+  const nodeBottom = node.y + node.height / 2;
+  const below = size.h > 0 && nodeTop - 8 - size.h < PAD;
+
+  let top = below ? nodeBottom + 8 : nodeTop - 8 - size.h;
+  if (size.h > 0 && stageH > 0) {
+    top = clamp(top, PAD, Math.max(PAD, stageH - size.h - PAD));
+  }
+  let left = node.x - size.w / 2;
+  if (size.w > 0 && stageW > 0) {
+    left = clamp(left, PAD, Math.max(PAD, stageW - size.w - PAD));
+  }
+  const tailX = size.w > 0 ? clamp(node.x - left, 14, size.w - 14) : size.w / 2;
+
+  return (
+    <div
+      ref={ref}
+      className={`rdfa-comment${below ? ' rdfa-comment--below' : ''}`}
+      style={{ left, top, opacity }}
+    >
+      {text}
+      <span className="rdfa-comment-tail" style={{ left: tailX }} />
     </div>
   );
 }

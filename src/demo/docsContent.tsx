@@ -130,6 +130,7 @@ const ACTION_DEFS = [
   'loadingAction',
   'setContentAction',
   'commentAction',
+  'highlightAction',
 ] as const;
 
 function ApiReference() {
@@ -256,6 +257,13 @@ export const docPages: DocPage[] = [
           <code className="inline">top-to-bottom</code> et{' '}
           <code className="inline">bottom-to-top</code> inversent/échangent les axes.
         </p>
+        <h2 id="alignement">Alignement entre lanes</h2>
+        <p>
+          <code className="inline">align_with</code> aligne un nœud sur l’axe
+          transverse d’un autre (vertical si la direction est horizontale) — utile
+          pour aligner deux nœuds de lanes différentes qui ne tomberaient pas
+          naturellement en face l’un de l’autre.
+        </p>
         <h2 id="circular">Disposition circulaire</h2>
         <p>
           En <code className="inline">circular</code>, le nœud{' '}
@@ -365,6 +373,7 @@ export const docPages: DocPage[] = [
           <li><strong>loading</strong> — spinner de chargement sur un nœud.</li>
           <li><strong>set_content</strong> — mute le contenu d’un nœud (code, texte, image).</li>
           <li><strong>comment</strong> — bulle de texte près d’un nœud.</li>
+          <li><strong>highlight</strong> — surligne un nœud statique ou une connexion (par ID).</li>
         </ul>
         <p>
           Voir la <a href="#/docs/api">référence API</a> pour les champs détaillés de

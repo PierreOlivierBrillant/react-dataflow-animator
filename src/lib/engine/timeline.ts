@@ -9,7 +9,13 @@ import type { LineStyle, ObjectContent } from '../types';
  * se contente d'avancer `t` (via requestAnimationFrame) et de re-rendre.
  */
 
-export type ClipKind = 'move' | 'arrow' | 'loading' | 'set_content' | 'comment';
+export type ClipKind =
+  | 'move'
+  | 'arrow'
+  | 'loading'
+  | 'set_content'
+  | 'comment'
+  | 'highlight';
 
 interface ClipBase {
   /** Identifiant unique du clip (= id d'action si fourni, sinon généré). */
@@ -66,12 +72,19 @@ export interface CommentClip extends ClipBase {
   text: string;
 }
 
+export interface HighlightClip extends ClipBase {
+  kind: 'highlight';
+  /** ID du nœud statique OU de la connexion à surligner. */
+  targetId: string;
+}
+
 export type Clip =
   | MoveClip
   | ArrowClip
   | LoadingClip
   | SetContentClip
-  | CommentClip;
+  | CommentClip
+  | HighlightClip;
 
 export interface Step {
   index: number;

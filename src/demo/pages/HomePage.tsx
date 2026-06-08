@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   FiClock,
   FiGrid,
@@ -5,10 +6,43 @@ import {
   FiPlayCircle,
   FiBox,
   FiZap,
+  FiCopy,
+  FiCheck,
 } from 'react-icons/fi';
 import { highlightCode, type DataFlowSpec } from '../../lib';
 import { DemoPlayer } from '../DemoPlayer';
 import { demosById } from '../demos';
+
+const INSTALL_CMD = 'npm i react-dataflow-animator';
+
+function InstallBanner() {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard?.writeText(INSTALL_CMD).then(
+      () => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1600);
+      },
+      () => {},
+    );
+  };
+  return (
+    <div className="install">
+      <code className="install-cmd">
+        <span className="install-prompt">$</span> {INSTALL_CMD}
+      </code>
+      <button
+        type="button"
+        className="install-copy"
+        onClick={copy}
+        aria-label="Copier la commande d'installation"
+      >
+        {copied ? <FiCheck size={16} /> : <FiCopy size={16} />}
+        {copied ? 'Copié' : 'Copier'}
+      </button>
+    </div>
+  );
+}
 
 const features = [
   { Icon: FiClock, title: 'Déterministe & navigable', text: 'Le temps est l’unique source de vérité : seek, étapes et scrubbing fiables, sans GSAP.' },
@@ -58,15 +92,13 @@ export function HomePage() {
   return (
     <div>
       <header className="hero">
-        <span className="hero-badge">React 18/19 · npm · MIT</span>
         <h1>
-          Anime tes <span className="grad">flux de données</span>
-          <br /> à partir d’une simple spec JSON
+          <span className="grad">React DataFlow Animator</span>
         </h1>
         <p className="lead">
           Un composant React qui compile une description JSON en une animation
           déterministe et navigable. Idéal pour illustrer des architectures dans
-          tes cours et ta documentation.
+          des démonstrations et de la documentation.
         </p>
         <div className="hero-cta">
           <a className="btn btn-primary" href="#/demos">
@@ -76,6 +108,7 @@ export function HomePage() {
             Lire la documentation
           </a>
         </div>
+        <InstallBanner />
         <div className="hero-stage">
           <DemoPlayer
             spec={demosById.spa.spec}
