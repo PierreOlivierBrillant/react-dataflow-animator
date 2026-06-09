@@ -37,13 +37,8 @@ function length(v: Point): number {
   return Math.hypot(v.x, v.y);
 }
 
-/** Rayon approximatif d'un nœud (pour faire toucher les flèches à ses bords). */
-function radius(node: NodeGeom): number {
-  return Math.min(node.width, node.height) / 2;
-}
-
 /** Marge (px) laissée entre un nœud et le bout des flèches / paquets. */
-export const NODE_GAP = 8;
+export const NODE_GAP = 14;
 
 /** Espacement (px) entre le bas du visuel et le haut du label (CSS gap). */
 export const LABEL_GAP = 6;
@@ -129,57 +124,70 @@ function segmentIntersectsRect(
 export function connection(
   from: NodeGeom,
   to: NodeGeom,
-  shift = 0,
-  obstacles?: NodeGeom[]
+  obstacles?: NodeGeom[],
+  startPortOffset = 0,
+  endPortOffset = 0
 ): Connection {
-  const c1 = center(from);
-  const c2 = center(to);
-  const raw = sub(c2, c1);
-  const len = length(raw) || 1;
-  const unit = { x: raw.x / len, y: raw.y / len }; // sens de parcours from -> to
+  const c1 = { x: from.x, y: from.y };
+  const c2 = { x: to.x, y: to.y };
 
-  // Perpendiculaire dans un repère CANONIQUE (indépendant du sens de parcours) :
-  // sinon, pour A->B et B->A, unit ET shift s'inversent tous les deux et le
-  // décalage s'annule -> les deux flèches se superposent. On fige donc la base.
-  const canon = from.id <= to.id ? 1 : -1;
-  const perp = { x: -unit.y * canon, y: unit.x * canon };
-
-  const nodeSize = (from.width + to.width) / 2;
-  const offset = shift * SHIFT_RATIO * nodeSize;
-
-  // Marge : les flèches/paquets s'arrêtent à quelques pixels du nœud.
-  const start: Point = {
-    x: c1.x + unit.x * (radius(from) + NODE_GAP) + perp.x * offset,
-    y: c1.y + unit.y * (radius(from) + NODE_GAP) + perp.y * offset,
+  const fromRect = {
+    x: from.x - from.width / 2 - NODE_GAP,
+    y: from.y - from.height / 2 - NODE_GAP,
+    w: from.width + 2 * NODE_GAP,
+    h: from.height + 2 * NODE_GAP,
   };
-  const end: Point = {
-    x: c2.x - unit.x * (radius(to) + NODE_GAP) + perp.x * offset,
-    y: c2.y - unit.y * (radius(to) + NODE_GAP) + perp.y * offset,
+  const toRect = {
+    x: to.x - to.width / 2 - NODE_GAP,
+    y: to.y - to.height / 2 - NODE_GAP,
+    w: to.width + 2 * NODE_GAP,
+    h: to.height + 2 * NODE_GAP,
   };
 
-  // Repousse start sous le label du nœud source si le point y tombe dedans.
-  const fromLb = labelBounds(from);
-  if (
-    fromLb &&
-    start.x >= fromLb.x &&
-    start.x <= fromLb.x + fromLb.w &&
-    start.y >= fromLb.y - 1 &&
-    start.y <= fromLb.y + fromLb.h + 1
-  ) {
-    start.y = fromLb.y + fromLb.h + NODE_GAP;
+  const dx = c2.x - c1.x;
+  const dy = c2.y - c1.y;
+  const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+
+  let startBase = { x: c1.x, y: c1.y };
+  if (isHorizontal) {
+    if (dx > 0) {
+      startBase.x = fromRect.x + fromRect.w;
+      startBase.y = c1.y + startPortOffset;
+    } else {
+      startBase.x = fromRect.x;
+      startBase.y = c1.y + startPortOffset;
+    }
+  } else {
+    if (dy > 0) {
+      startBase.x = c1.x + startPortOffset;
+      startBase.y = fromRect.y + fromRect.h;
+    } else {
+      startBase.x = c1.x + startPortOffset;
+      startBase.y = fromRect.y;
+    }
   }
 
-  // Repousse end sous le label du nœud destination si le point y tombe dedans.
-  const toLb = labelBounds(to);
-  if (
-    toLb &&
-    end.x >= toLb.x &&
-    end.x <= toLb.x + toLb.w &&
-    end.y >= toLb.y - 1 &&
-    end.y <= toLb.y + toLb.h + 1
-  ) {
-    end.y = toLb.y + toLb.h + NODE_GAP;
+  let endBase = { x: c2.x, y: c2.y };
+  if (isHorizontal) {
+    if (dx > 0) {
+      endBase.x = toRect.x;
+      endBase.y = c2.y + endPortOffset;
+    } else {
+      endBase.x = toRect.x + toRect.w;
+      endBase.y = c2.y + endPortOffset;
+    }
+  } else {
+    if (dy > 0) {
+      endBase.x = c2.x + endPortOffset;
+      endBase.y = toRect.y;
+    } else {
+      endBase.x = c2.x + endPortOffset;
+      endBase.y = toRect.y + toRect.h;
+    }
   }
+
+  const start: Point = startBase;
+  const end: Point = endBase;
 
   // Détecte le premier label tiers que le segment traverse et insère un waypoint
   // juste au-dessus pour le contourner.

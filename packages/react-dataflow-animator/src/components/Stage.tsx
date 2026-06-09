@@ -24,7 +24,6 @@ import {
 } from '../engine/timeline';
 import { computeLayout } from '../engine/layout';
 import { connection, pathTip, type NodeGeom } from '../engine/geometry';
-import { collectBidirectional, shiftFor } from '../engine/compiler';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { StaticNode } from './nodes/StaticNode';
 import { ArrowLine } from './dynamic/ArrowLine';
@@ -126,7 +125,6 @@ export function Stage({
       ),
     };
   }, [layout, width, height, density]);
-  const bidir = useMemo(() => collectBidirectional(spec), [spec]);
   const allNodes = useMemo(() => Object.values(geometry), [geometry]);
   const dynamicById = useMemo(() => {
     const map: Record<string, DynamicObject> = {};
@@ -135,6 +133,57 @@ export function Stage({
   }, [spec]);
 
   const active = useMemo(() => evaluate(timeline, t), [timeline, t]);
+
+  const { portOffsets, lineConnections } = useMemo(() => {
+    const allConnections: [string, string, string][] = [];
+    spec.connections?.forEach((c, i) => {
+      const key = c.id ?? `${c.from}|${c.to}|${i}`;
+      allConnections.push([key, c.from, c.to]);
+    });
+
+    const extractArrows = (actions: any[]) => {
+      actions.forEach((a, i) => {
+        if (a.action_type === 'arrow' && a.from && a.to) {
+          const key = a.id ?? `${a.from}|${a.to}|action_${i}`;
+          allConnections.push([key, a.from, a.to]);
+        } else if (a.action_type === 'parallel' && a.actions) {
+          extractArrows(a.actions);
+        }
+      });
+    };
+    if (spec.actions) extractArrows(spec.actions);
+
+    const uniqueConnections = [];
+    const seen = new Set();
+    for (const c of allConnections) {
+      if (!seen.has(c[0])) {
+        seen.add(c[0]);
+        uniqueConnections.push(c);
+      }
+    }
+
+    // On groupe par paire de nœuds (indépendamment de la direction)
+    const pairConnections: Record<string, [string, string, string][]> = {};
+    for (const c of uniqueConnections) {
+      const [, from, to] = c;
+      const pair = [from, to].sort().join('-');
+      if (!pairConnections[pair]) pairConnections[pair] = [];
+      pairConnections[pair].push(c);
+    }
+
+    const offsets: Record<string, { start: number; end: number }> = {};
+    for (const conns of Object.values(pairConnections)) {
+      // Pour chaque paire, on calcule les offsets
+      const total = conns.length;
+      conns.forEach(([key], i) => {
+        const offset = (i - (total - 1) / 2) * 30;
+        if (!offsets[key]) offsets[key] = { start: 0, end: 0 };
+        offsets[key].start = offset;
+        offsets[key].end = offset;
+      });
+    }
+    return { portOffsets: offsets, lineConnections: allConnections };
+  }, [spec, layout, width, height]);
 
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
   // actif (avec fondu d'apparition/disparition).
@@ -167,7 +216,6 @@ export function Stage({
   }, [active]);
 
   const nodes = spec.static_objects;
-  const connections = spec.connections ?? [];
 
   // Garantit qu'aucun nœud ne sort du canevas : on borne son centre selon sa
   // taille mesurée (basé sur le ratio de layout, donc stable — pas de boucle).
@@ -199,16 +247,20 @@ export function Stage({
     >
       {/* Couche arrière : flèches */}
       <svg className="rdfa-arrow-svg">
-        {connections.map((link, i) => {
+        {/* Lignes de base */}
+        {spec.connections?.map((link, i) => {
           const f = geometry[link.from];
           const tg = geometry[link.to];
           if (!f || !tg) return null;
+          const key = link.id ?? `${link.from}|${link.to}|${i}`;
+          const ports = portOffsets[key] ?? { start: 0, end: 0 };
           return (
             <ArrowLine
-              key={link.id ?? `${link.from}-${link.to}-${i}`}
+              key={key}
               from={f}
               to={tg}
-              shift={shiftFor(link.from, link.to, bidir)}
+              startPortOffset={ports.start}
+              endPortOffset={ports.end}
               style={link.style}
               text={link.text}
               progress={1}
@@ -223,12 +275,20 @@ export function Stage({
           const f = geometry[clip.fromId];
           const tg = geometry[clip.toId];
           if (!f || !tg) return null;
+
+          let lineKey = clip.id;
+          if (!portOffsets[lineKey]) {
+            const matchingLine = lineConnections.find(c => c[1] === clip.fromId && c[2] === clip.toId);
+            if (matchingLine) lineKey = matchingLine[0];
+          }
+          const ports = portOffsets[lineKey] ?? { start: 0, end: 0 };
           return (
             <ArrowLine
               key={clip.id}
               from={f}
               to={tg}
-              shift={clip.shift}
+              startPortOffset={ports.start}
+              endPortOffset={ports.end}
               style={clip.style}
               text={clip.text}
               progress={a.progress}
@@ -265,7 +325,7 @@ export function Stage({
           const tg = geometry[clip.toId];
           const obj = dynamicById[clip.objectId];
           if (!f || !tg || !obj) return null;
-          const conn = connection(f, tg, clip.shift, allNodes);
+          const conn = connection(f, tg, allNodes);
           const pt = pathTip(conn, easeInOutCubic(a.progress));
           const opacity = clipOpacity(clip, t);
           return (

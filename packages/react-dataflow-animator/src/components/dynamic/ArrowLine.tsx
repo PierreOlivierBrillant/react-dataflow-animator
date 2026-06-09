@@ -1,3 +1,4 @@
+
 import { connection, pathTip, visiblePath, type NodeGeom } from '../../engine/geometry';
 import type { LineStyle } from '../../types';
 
@@ -9,11 +10,12 @@ import type { LineStyle } from '../../types';
 export interface ArrowLineProps {
   from: NodeGeom;
   to: NodeGeom;
-  shift?: number;
+  startPortOffset?: number;
+  endPortOffset?: number;
   style?: LineStyle;
   text?: string;
   /** 1 pour une flèche statique (décor), interpolé pour une flèche dynamique. */
-  progress?: number;
+  progress: number;
   /** Surlignée par une action highlight. */
   highlighted?: boolean;
   /** Tous les nœuds du stage — pour éviter les labels lors du routage. */
@@ -25,14 +27,17 @@ const HEAD = 9;
 export function ArrowLine({
   from,
   to,
-  shift = 0,
+  startPortOffset = 0,
+  endPortOffset = 0,
   style = 'solid',
   text,
-  progress = 1,
-  highlighted = false,
+  progress,
+  highlighted,
   obstacles,
 }: ArrowLineProps) {
-  const conn = connection(from, to, shift, obstacles);
+  // L'animation est gérée par stroke-dasharray/stroke-dashoffset sur un
+  // Intersection et décalages géométriques (obstacles pris en compte)
+  const conn = connection(from, to, obstacles, startPortOffset, endPortOffset);
 
   // Position et angle de la pointe au paramètre `progress`.
   const tip = pathTip(conn, progress);

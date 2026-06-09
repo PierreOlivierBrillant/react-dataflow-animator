@@ -8,12 +8,12 @@ const INSTALL_COMMAND = 'npm install react-dataflow-animator';
 
 const features = [
   {
-    title: 'Package npm autonome',
-    text: 'La librairie est publiée séparément, avec son propre build, ses tests et son versioning indépendant du site.',
+    title: 'Placement automatique',
+    text: 'Grilles linéaires ou disposition circulaire - aucune -coordonnée (x, y) à fournir.',
   },
   {
-    title: 'Docusaurus intégré',
-    text: 'Les pages, les démos interactives et la documentation MDX cohabitent nativement dans un seul et même site.',
+    title: 'Lecteur intégré',
+    text: 'Lecture/Pause, navigation par étapes, ligne du temps cliquable et plein écran.',
   },
   {
     title: 'Démonstrations et playground inclus',
