@@ -1,7 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- module de contenu (données + rendu), pas un module HMR */
 import type { ReactNode } from 'react';
-import { dataFlowSchema } from 'react-dataflow-animator';
-import { DemoPlayer } from './DemoPlayer';
+import { DataFlowPlayer, dataFlowSchema } from 'react-dataflow-animator';
 import { demosById } from './demos';
 
 export interface DocPage {
@@ -205,7 +204,7 @@ export const docPages: DocPage[] = [
           <strong>actions</strong>. Le moteur place les nœuds, trace les
           connexions et joue les actions sur une chronologie.
         </p>
-        <DemoPlayer spec={demosById.http.spec} />
+        <DataFlowPlayer theme="auto" spec={demosById.clientServer.spec} />
         <h2 id="principes">Principes</h2>
         <ul>
           <li>Le temps est l’unique source de vérité (moteur déterministe, sans GSAP).</li>
@@ -270,7 +269,7 @@ export const docPages: DocPage[] = [
           <code className="inline">is_main</code> est au centre et les autres sont
           répartis sur un cercle.
         </p>
-        <DemoPlayer spec={demosById.circular.spec} />
+        <DataFlowPlayer theme="auto" spec={demosById.circular.spec} />
       </>
     ),
   },
@@ -359,7 +358,7 @@ export const docPages: DocPage[] = [
           le moteur décale automatiquement les trajets sur des voies parallèles pour
           éviter la superposition.
         </p>
-        <DemoPlayer spec={demosById.collision.spec} />
+        <DataFlowPlayer theme="auto" spec={demosById.collision.spec} />
       </>
     ),
   },

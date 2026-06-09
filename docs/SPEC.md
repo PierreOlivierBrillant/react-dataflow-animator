@@ -110,7 +110,7 @@ La timeline compile un tableau d'actions ordonnées. Voir
 
 ## 7. Site vitrine (GitHub Pages)
 
-`src/demo/` — site à routeur (hash) : **Accueil**, **Démos** (galerie), **Playground**
+`src/demo/` — site à routeur (hash) : **Accueil**, **Démonstrations** (galerie), **Terrain de jeu**
 (éditeur live), **Documentation** (sidebar + TOC + référence API générée depuis le
 JSON Schema). Buildé par `vite.demo.config.ts`.
 

@@ -4,7 +4,8 @@ title: Introduction
 slug: /intro
 ---
 
-import { DemoPlayer, demosById } from '@site/src/site-content';
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import { demosById } from '@site/src/site-content';
 
 React DataFlow Animator compile une spécification JSON en animation déterministe et navigable de flux de données.
 
@@ -12,7 +13,7 @@ React DataFlow Animator compile une spécification JSON en animation déterminis
 
 Vous décrivez des nœuds statiques, des objets dynamiques et une suite d’actions. Le moteur place les nœuds, trace les trajets et déroule la timeline sans coordonnées manuelles.
 
-<DemoPlayer spec={demosById.http.spec} />
+<DataFlowPlayer theme="auto" spec={demosById.clientServer.spec} />
 
 ## Principes
 

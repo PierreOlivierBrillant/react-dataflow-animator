@@ -44,7 +44,6 @@ const config = {
       },
       items: [
         { to: '/docs/intro', label: 'Documentation', position: 'left' },
-        { to: '/demos', label: 'Démos', position: 'left' },
         { to: '/playground', label: 'Playground', position: 'left' },
         {
           href: 'https://github.com/PierreOlivierBrillant/react-dataflow-animator',

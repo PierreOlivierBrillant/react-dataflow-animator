@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Layout from '@theme/Layout';
-import { type DataFlowPlayerProps, type DataFlowSpec } from 'react-dataflow-animator';
-import { CodeEditor, DemoPlayer, demos, demosById } from '../site-content';
+import { DataFlowPlayer, type DataFlowPlayerProps, type DataFlowSpec } from 'react-dataflow-animator';
+import { CodeEditor, demos, demosById } from '../site-content';
 
 function validate(value: string): DataFlowSpec {
   const parsed = JSON.parse(value);
@@ -62,11 +62,11 @@ export default function PlaygroundPage() {
   };
 
   return (
-    <Layout title="Playground" description="Éditeur interactif pour tester vos spécifications JSON.">
+    <Layout title="Terrain de jeu" description="Éditeur interactif pour tester vos spécifications JSON.">
       <main className="page-shell">
         <header className="section-head">
           <p className="eyebrow">Édition en direct</p>
-          <h1>Playground</h1>
+          <h1>Terrain de jeu</h1>
           <p>
             Édite la spécification JSON à gauche et l'animation se met à jour en temps réel à droite.
           </p>
@@ -95,7 +95,7 @@ export default function PlaygroundPage() {
             {error ? <p className="playground-error">Erreur: {error}</p> : null}
           </div>
           <div className="card-surface playground-preview">
-            <DemoPlayer key={demoId} spec={spec} density={density} height={460} />
+            <DataFlowPlayer theme="auto" key={demoId} spec={spec} density={density} height={460} />
           </div>
         </section>
       </main>
