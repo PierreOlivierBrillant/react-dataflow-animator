@@ -59,7 +59,6 @@ const config = {
           title: 'Site',
           items: [
             { label: 'Documentation', to: '/docs/intro' },
-            { label: 'Démos', to: '/demos' },
             { label: 'Playground', to: '/playground' },
           ],
         },
