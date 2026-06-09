@@ -148,7 +148,7 @@ export function connection(
   const dy = c2.y - c1.y;
   const isHorizontal = Math.abs(dx) >= Math.abs(dy);
 
-  let startBase = { x: c1.x, y: c1.y };
+  const startBase = { x: c1.x, y: c1.y };
   if (isHorizontal) {
     if (dx > 0) {
       startBase.x = fromRect.x + fromRect.w;
@@ -167,7 +167,7 @@ export function connection(
     }
   }
 
-  let endBase = { x: c2.x, y: c2.y };
+  const endBase = { x: c2.x, y: c2.y };
   if (isHorizontal) {
     if (dx > 0) {
       endBase.x = toRect.x;

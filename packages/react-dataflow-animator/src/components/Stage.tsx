@@ -10,6 +10,7 @@ import type {
   DynamicObject,
   Highlighter,
   ObjectContent,
+  Action,
 } from '../types';
 import {
   clamp,
@@ -141,7 +142,7 @@ export function Stage({
       allConnections.push([key, c.from, c.to]);
     });
 
-    const extractArrows = (actions: any[]) => {
+    const extractArrows = (actions: Action[]) => {
       actions.forEach((a, i) => {
         if (a.action_type === 'arrow' && a.from && a.to) {
           const key = a.id ?? `${a.from}|${a.to}|action_${i}`;
@@ -183,7 +184,7 @@ export function Stage({
       });
     }
     return { portOffsets: offsets, lineConnections: allConnections };
-  }, [spec, layout, width, height]);
+  }, [spec]);
 
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
   // actif (avec fondu d'apparition/disparition).
