@@ -23,7 +23,7 @@ import {
   type Timeline,
 } from '../engine/timeline';
 import { computeLayout } from '../engine/layout';
-import { connection, pointOnSegment, type NodeGeom } from '../engine/geometry';
+import { connection, pathTip, type NodeGeom } from '../engine/geometry';
 import { collectBidirectional, shiftFor } from '../engine/compiler';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { StaticNode } from './nodes/StaticNode';
@@ -127,6 +127,7 @@ export function Stage({
     };
   }, [layout, width, height, density]);
   const bidir = useMemo(() => collectBidirectional(spec), [spec]);
+  const allNodes = useMemo(() => Object.values(geometry), [geometry]);
   const dynamicById = useMemo(() => {
     const map: Record<string, DynamicObject> = {};
     for (const obj of spec.dynamic_objects) map[obj.id] = obj;
@@ -212,6 +213,7 @@ export function Stage({
               text={link.text}
               progress={1}
               highlighted={!!link.id && highlightedIds.has(link.id)}
+              obstacles={allNodes}
             />
           );
         })}
@@ -230,6 +232,7 @@ export function Stage({
               style={clip.style}
               text={clip.text}
               progress={a.progress}
+              obstacles={allNodes}
             />
           );
         })}
@@ -262,8 +265,8 @@ export function Stage({
           const tg = geometry[clip.toId];
           const obj = dynamicById[clip.objectId];
           if (!f || !tg || !obj) return null;
-          const conn = connection(f, tg, clip.shift);
-          const pt = pointOnSegment(conn.start, conn.end, easeInOutCubic(a.progress));
+          const conn = connection(f, tg, clip.shift, allNodes);
+          const pt = pathTip(conn, easeInOutCubic(a.progress));
           const opacity = clipOpacity(clip, t);
           return (
             <Packet

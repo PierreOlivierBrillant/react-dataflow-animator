@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import type { GeometryMap, NodeGeom } from '../engine/geometry';
 
 /**
@@ -55,6 +61,13 @@ export function useStageGeometry(signature: string): StageGeometry {
         width: r.width,
         height: r.height,
       };
+      // Mesure le label textuel (sous le visuel) pour le routage des flèches.
+      const labelEl = el.querySelector<HTMLElement>('.rdfa-node-label');
+      if (labelEl) {
+        const lr = labelEl.getBoundingClientRect();
+        node.labelH = lr.height;
+        node.labelW = lr.width;
+      }
       map[id] = node;
     });
     setGeometry(map);

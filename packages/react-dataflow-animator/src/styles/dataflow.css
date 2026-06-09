@@ -215,7 +215,9 @@
 .rdfa-arrow-line--highlight {
   stroke: var(--rdfa-accent);
   stroke-width: calc(3.5px * var(--rdfa-scale, 1));
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--rdfa-accent) 70%, transparent));
+  filter: drop-shadow(
+    0 0 4px color-mix(in srgb, var(--rdfa-accent) 70%, transparent)
+  );
 }
 .rdfa-arrow-head--highlight {
   fill: var(--rdfa-accent);
@@ -432,7 +434,8 @@
 .rdfa-content-body {
   background: var(--rdfa-surface);
   color: var(--rdfa-text);
-  padding: calc(10px * var(--rdfa-content-scale, 1)) calc(12px * var(--rdfa-content-scale, 1));
+  padding: calc(10px * var(--rdfa-content-scale, 1))
+    calc(12px * var(--rdfa-content-scale, 1));
   font-size: calc(12.5px * var(--rdfa-content-scale, 1));
   line-height: 1.5;
   max-height: calc(320px * var(--rdfa-content-scale, 1));
