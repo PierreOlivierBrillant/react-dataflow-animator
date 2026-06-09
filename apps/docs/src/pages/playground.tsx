@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '@theme/Layout';
-import { DataFlowPlayer, type DataFlowPlayerProps, type DataFlowSpec } from 'react-dataflow-animator';
+import { DataFlowPlayer, type DataFlowPlayerProps, type DataFlowSpec } from '../../../../packages/react-dataflow-animator/src';
 import { CodeEditor, demos, demosById } from '../site-content';
 
 function validate(value: string): DataFlowSpec {
@@ -93,9 +93,7 @@ export default function PlaygroundPage() {
             <CodeEditor value={text} onChange={onChange} language="json" />
             {error ? <p className="pg-error">Erreur: {error}</p> : null}
           </div>
-          <div className="pg-preview" style={{ background: 'var(--surface)', borderRadius: '10px', padding: '16px', border: '1px solid var(--border)' }}>
-            <DataFlowPlayer theme="auto" key={demoId} spec={spec} density={density} height={460} />
-          </div>
+          <DataFlowPlayer theme="auto" key={demoId} spec={spec} density={density} height={460} />
         </section>
       </main>
     </Layout>
