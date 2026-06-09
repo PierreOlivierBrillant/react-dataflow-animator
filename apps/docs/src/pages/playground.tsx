@@ -63,38 +63,37 @@ export default function PlaygroundPage() {
 
   return (
     <Layout title="Terrain de jeu" description="Éditeur interactif pour tester vos spécifications JSON.">
-      <main className="page-shell playground-page">
-        <header className="section-head">
-          <p className="eyebrow">Édition en direct</p>
-          <h1>Terrain de jeu</h1>
-          <p>
-            Édite la spécification JSON à gauche et l'animation se met à jour en temps réel à droite.
+      <main className="container">
+        <header className="section-head" style={{ marginBottom: '24px' }}>
+          <h1 className="section-title">Playground</h1>
+          <p className="section-sub">
+            Édite la spécification à gauche : l'animation se met à jour à droite en temps réel.
           </p>
         </header>
 
-        <section className="playground-shell">
-          <div className="card-surface playground-editor">
-            <div className="playground-toolbar">
-              <select value={demoId} onChange={(event) => setDemoId(event.target.value)}>
+        <section className="pg">
+          <div className="pg-editor">
+            <div className="pg-toolbar">
+              <select className="pg-select" value={demoId} onChange={(event) => setDemoId(event.target.value)}>
                 {demos.map((demo) => (
                   <option key={demo.id} value={demo.id}>
                     {demo.title}
                   </option>
                 ))}
               </select>
-              <button type="button" className="button button--sm button--primary" onClick={format}>
+              <button type="button" className="pg-btn" onClick={format}>
                 Formater le JSON
               </button>
-              <select value={density} onChange={(event) => setDensity(event.target.value as NonNullable<DataFlowPlayerProps['density']>)}>
+              <select className="pg-select" value={density} onChange={(event) => setDensity(event.target.value as NonNullable<DataFlowPlayerProps['density']>)}>
                 <option value="compact">Compact</option>
                 <option value="comfortable">Confortable</option>
                 <option value="spacious">Spacieux</option>
               </select>
             </div>
             <CodeEditor value={text} onChange={onChange} language="json" />
-            {error ? <p className="playground-error">Erreur: {error}</p> : null}
+            {error ? <p className="pg-error">Erreur: {error}</p> : null}
           </div>
-          <div className="card-surface playground-preview">
+          <div className="pg-preview" style={{ background: 'var(--surface)', borderRadius: '10px', padding: '16px', border: '1px solid var(--border)' }}>
             <DataFlowPlayer theme="auto" key={demoId} spec={spec} density={density} height={460} />
           </div>
         </section>

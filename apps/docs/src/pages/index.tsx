@@ -32,43 +32,47 @@ export default function Home() {
 
   return (
     <Layout title="Accueil" description="Animations de flux de données pour React et Docusaurus.">
-      <header className="hero-shell">
-        <div className="hero-copy">
-          <h1>React DataFlow Animator</h1>
-          <p className="hero-lead">
-            Un composant React qui compile une description JSON en une animation
+      <header className="hero">
+        <h1>
+          React <span className="grad">DataFlow Animator</span>
+        </h1>
+        <p className="lead">
+          Un composant React qui compile une description JSON en une animation
           déterministe et navigable. Idéal pour illustrer des architectures dans
           des démonstrations et de la documentation.
-          </p>
-          <div className="hero-actions">
-            <Link className="button button--primary button--lg" to="/docs/intro">
-              Ouvrir la documentation
-            </Link>
-            <Link className="button button--secondary button--lg" to="/playground">
-              Tester le playground
-            </Link>
-          </div>
-          <div className="install-banner">
-            <code>{INSTALL_COMMAND}</code>
-            <button type="button" className="button button--sm button--primary" onClick={copyInstall}>
-              {copied ? 'Copié' : 'Copier'}
-            </button>
-          </div>
+        </p>
+        <div className="hero-cta">
+          <Link className="btn btn-primary" to="/docs/intro">
+            Explorer les démos
+          </Link>
+          <Link className="btn btn-secondary" to="/playground">
+            Lire la documentation
+          </Link>
         </div>
-        <div className="hero-stage card-surface">
+        <div className="install">
+          <span className="install-cmd"><span className="install-prompt">$</span>npm i react-dataflow-animator</span>
+          <button type="button" className="install-copy" onClick={copyInstall}>
+            {copied ? 'Copié' : 'Copier'}
+          </button>
+        </div>
+        <div className="hero-stage">
           <DataFlowPlayer theme="auto" spec={demosById.spa.spec} autoPlay loop controls={false} height={360} />
         </div>
       </header>
 
-      <main className="page-shell">
-        <section className="feature-grid">
+      <main className="container">
+        <div className="features">
           {features.map((feature) => (
-            <article key={feature.title} className="card-surface feature-card">
-              <h2>{feature.title}</h2>
+            <div key={feature.title} className="feature">
+              <div className="feature-icon">
+                {/* Placeholder icon or standard icon since they aren't provided in index.tsx currently */}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+              </div>
+              <h3>{feature.title}</h3>
               <p>{feature.text}</p>
-            </article>
+            </div>
           ))}
-        </section>
+        </div>
       </main>
     </Layout>
   );
