@@ -98,7 +98,7 @@ export const spa: DataFlowSpec = {
       object: 'browser',
       content: {
         content_type: 'text',
-        url: 'https://mon-app.app',
+        url: 'https://mon.app',
         content: "✅ SPA chargée (React) — prête à appeler l'API",
       },
       keep_until: 'render',
@@ -146,7 +146,7 @@ export const spa: DataFlowSpec = {
       object: 'browser',
       content: {
         content_type: 'text',
-        url: 'https://mon-app.app/produits',
+        url: 'https://mon.app/produits',
         content: '📦 12 produits affichés',
       },
     },
