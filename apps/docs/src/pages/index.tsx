@@ -60,7 +60,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="container">
+      <main className="page-container">
         <div className="features">
           {features.map((feature) => (
             <div key={feature.title} className="feature">

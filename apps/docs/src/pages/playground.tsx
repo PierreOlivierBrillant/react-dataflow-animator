@@ -63,8 +63,8 @@ export default function PlaygroundPage() {
 
   return (
     <Layout title="Terrain de jeu" description="Éditeur interactif pour tester vos spécifications JSON.">
-      <main className="container">
-        <header className="section-head" style={{ marginBottom: '24px' }}>
+      <main className="playground-page">
+        <header className="section-head" style={{ maxWidth: '1080px', margin: '0 auto', padding: '40px 22px 24px' }}>
           <h1 className="section-title">Playground</h1>
           <p className="section-sub">
             Édite la spécification à gauche : l'animation se met à jour à droite en temps réel.
