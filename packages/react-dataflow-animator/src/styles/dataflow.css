@@ -19,6 +19,7 @@
   --rdfa-packet-sql-response: #059669;
   --rdfa-terminal-bg: #1e293b;
   --rdfa-terminal-text: #e2e8f0;
+  --rdfa-window-bg: #e2e8f0;
   --rdfa-radius: 10px;
   --rdfa-font:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -57,6 +58,7 @@
   --rdfa-node-bg: #1e293b;
   --rdfa-node-stroke: #cbd5e1;
   --rdfa-arrow: #94a3b8;
+  --rdfa-window-bg: #334155;
 }
 
 /* theme="auto" sans hôte thématisé : on suit la préférence système. */
@@ -71,6 +73,7 @@
     --rdfa-node-bg: #1e293b;
     --rdfa-node-stroke: #cbd5e1;
     --rdfa-arrow: #94a3b8;
+    --rdfa-window-bg: #334155;
   }
 }
 
@@ -85,6 +88,7 @@
   --rdfa-node-bg: #ffffff;
   --rdfa-node-stroke: #334155;
   --rdfa-arrow: #475569;
+  --rdfa-window-bg: #e2e8f0;
 }
 
 .rdfa-player:fullscreen {
@@ -395,11 +399,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #e2e8f0;
-}
-
-.rdfa-player[data-theme='dark'] .rdfa-window-bar {
-  background: #334155;
+  background: var(--rdfa-window-bg);
 }
 
 .rdfa-window-dot {
