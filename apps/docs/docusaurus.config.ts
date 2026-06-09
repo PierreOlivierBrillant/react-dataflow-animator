@@ -37,7 +37,7 @@ const config = {
   themeConfig: {
     image: 'img/logo.svg',
     navbar: {
-      title: 'DataFlow Animator',
+      title: 'React DataFlow Animator',
       logo: {
         alt: 'React DataFlow Animator',
         src: 'img/logo.svg',
