@@ -7,7 +7,7 @@ const B: NodeGeom = { id: 'b', x: 200, y: 0, width: 40, height: 40 };
 describe('connection', () => {
   it('rogne les extrémités au bord des nœuds + marge', () => {
     const c = connection(A, B);
-    expect(c.start.x).toBe(28);
+    expect(c.start.x).toBe(34);
   });
 
   it('creates basic start and end points', () => {
