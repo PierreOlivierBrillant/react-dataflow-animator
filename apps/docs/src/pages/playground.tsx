@@ -63,7 +63,7 @@ export default function PlaygroundPage() {
 
   return (
     <Layout title="Terrain de jeu" description="Éditeur interactif pour tester vos spécifications JSON.">
-      <main className="page-shell">
+      <main className="page-shell playground-page">
         <header className="section-head">
           <p className="eyebrow">Édition en direct</p>
           <h1>Terrain de jeu</h1>

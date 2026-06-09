@@ -172,6 +172,13 @@
   align-items: start;
 }
 
+.playground-page .playground-shell {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  box-sizing: border-box;
+  padding: 0 1rem;
+}
+
 .playground-editor select,
 .playground-editor button {
   border-radius: 999px;
