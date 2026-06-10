@@ -1,4 +1,4 @@
-import { DataFlowSpec } from 'react-dataflow-animator';
+import type { DataFlowSpec } from 'react-dataflow-animator';
 
 export const signalr: DataFlowSpec = {
   direction: 'left-to-right',

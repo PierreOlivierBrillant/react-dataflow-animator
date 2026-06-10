@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import Layout from '@theme/Layout';
-import { DataFlowPlayer, type DataFlowPlayerProps, type DataFlowSpec } from '../../../../packages/react-dataflow-animator/src';
-import { CodeEditor, demos, demosById } from '../site-content';
+import { DataFlowPlayer, type DataFlowSpec, type DataFlowPlayerProps, dataFlowSchema } from '../../../../packages/react-dataflow-animator/src';
+import { demos, demosById } from '../site-content/demos';
+import { motion } from "motion/react";
+import { Copy, Check, AlertCircle, ChevronDown, WrapText } from "lucide-react";
+import Editor from '@monaco-editor/react';
+
+/* ────────────── Utils ────────────── */
 
 function validate(value: string): DataFlowSpec {
   const parsed = JSON.parse(value);
@@ -22,79 +27,265 @@ function initialDemoId(): string {
   return id && demosById[id] ? id : demos[0].id;
 }
 
+/* ────────────── Component ────────────── */
+
 export default function PlaygroundPage() {
   const [demoId, setDemoId] = useState(initialDemoId);
-  const [text, setText] = useState(() => JSON.stringify(demosById[initialDemoId()].spec, null, 2));
-  const [spec, setSpec] = useState<DataFlowSpec>(() => demosById[initialDemoId()].spec);
-  const [error, setError] = useState<string | null>(null);
-  const [density, setDensity] = useState<NonNullable<DataFlowPlayerProps['density']>>('comfortable');
+  const [jsonText, setJsonText] = useState(() => JSON.stringify(demosById[initialDemoId()].spec, null, 2));
+  const [spec, setSpec] = useState<DataFlowSpec | null>(() => demosById[initialDemoId()].spec);
+  const [parseError, setParseError] = useState<string | null>(null);
+  
+  const [copied, setCopied] = useState(false);
+  const [density, setDensity] = useState<NonNullable<DataFlowPlayerProps['density']>>("comfortable");
 
+  // Resizing state
+  const [leftWidth, setLeftWidth] = useState(44);
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Synchronise url & initial state on load
   useEffect(() => {
-    const demo = demosById[demoId] ?? demos[0];
-    setText(JSON.stringify(demo.spec, null, 2));
-    setSpec(demo.spec);
-    setError(null);
-
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
-      url.searchParams.set('demo', demo.id);
+      url.searchParams.set('demo', demoId);
       window.history.replaceState({}, '', url);
     }
   }, [demoId]);
 
-  const onChange = (value: string) => {
-    setText(value);
-    try {
-      setSpec(validate(value));
-      setError(null);
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-    }
+  // Handle resizing
+  useEffect(() => {
+    if (!isResizing) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = (e.clientX / window.innerWidth) * 100;
+      setLeftWidth(Math.max(20, Math.min(newWidth, 80)));
+    };
+    const handleMouseUp = () => setIsResizing(false);
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.userSelect = 'none';
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
+  // Parse JSON whenever text changes (debounced)
+  useEffect(() => {
+    const tid = setTimeout(() => {
+      try {
+        const cfg = validate(jsonText);
+        setSpec(cfg);
+        setParseError(null);
+      } catch (e: any) {
+        setParseError(e.message ?? "JSON invalide");
+      }
+    }, 350);
+    return () => clearTimeout(tid);
+  }, [jsonText]);
+
+  const handleTemplateChange = (key: string) => {
+    setDemoId(key);
+    const demo = demosById[key] ?? demos[0];
+    setJsonText(JSON.stringify(demo.spec, null, 2));
+    setSpec(demo.spec);
+    setParseError(null);
   };
 
-  const format = () => {
+  const handleFormat = () => {
     try {
-      setText(JSON.stringify(validate(text), null, 2));
-      setError(null);
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : String(nextError));
-    }
+      setJsonText(JSON.stringify(JSON.parse(jsonText), null, 2));
+    } catch {}
   };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(jsonText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const monoSize = density === "compact" ? 11 : density === "spacious" ? 14 : 13;
 
   return (
-    <Layout title="Terrain de jeu" description="Éditeur interactif pour tester vos spécifications JSON.">
-      <main className="playground-page">
-        <header className="section-head" style={{ maxWidth: '1080px', margin: '0 auto', padding: '40px 22px 24px' }}>
-          <h1 className="section-title">Playground</h1>
-          <p className="section-sub">
-            Édite la spécification à gauche : l'animation se met à jour à droite en temps réel.
-          </p>
-        </header>
-
-        <section className="pg">
-          <div className="pg-editor">
-            <div className="pg-toolbar">
-              <select className="pg-select" value={demoId} onChange={(event) => setDemoId(event.target.value)}>
-                {demos.map((demo) => (
-                  <option key={demo.id} value={demo.id}>
-                    {demo.title}
-                  </option>
-                ))}
-              </select>
-              <button type="button" className="pg-btn" onClick={format}>
-                Formater le JSON
-              </button>
-              <select className="pg-select" value={density} onChange={(event) => setDensity(event.target.value as NonNullable<DataFlowPlayerProps['density']>)}>
-                <option value="compact">Compact</option>
-                <option value="comfortable">Confortable</option>
-                <option value="spacious">Spacieux</option>
-              </select>
-            </div>
-            <CodeEditor value={text} onChange={onChange} language="json" />
-            {error ? <p className="pg-error">Erreur: {error}</p> : null}
+    <Layout title="Playground" description="Éditeur interactif pour tester vos spécifications JSON.">
+      <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:dark]">
+        {/* Page header */}
+        <div className="flex-none px-6 py-4 border-b border-white/[.06] flex items-center gap-4">
+          <div>
+            <h1 className="text-white mb-0 font-heading text-xl font-bold leading-tight tracking-tight">
+              Playground
+            </h1>
+            <p className="text-xs mt-0.5 mb-0 text-white/35 font-sans">
+              Éditez la spec JSON à gauche — l'animation se met à jour en temps réel.
+            </p>
           </div>
-          <DataFlowPlayer theme="auto" key={demoId} spec={spec} density={density} height={460} />
-        </section>
+        </div>
+
+        {/* Body: editor | preview */}
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden relative">
+          {/* ─── LEFT: JSON Editor ─── */}
+          <div 
+            className="flex flex-col w-full md:min-w-[340px] flex-1 md:flex-none border-b md:border-b-0 overflow-hidden bg-surface-alt"
+            style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${leftWidth}%` : undefined }}
+          >
+            {/* Toolbar */}
+            <div className="flex-none flex items-center gap-2 px-3 py-2 border-b border-white/[.05] bg-white/[.015] flex-wrap">
+              {/* Template select */}
+              <div className="relative">
+                <select
+                  value={demoId}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-white/[.06] border border-white/[.09] text-white/75 font-sans"
+                >
+                  {demos.map((demo) => (
+                    <option key={demo.id} value={demo.id}>
+                      {demo.title}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={11}
+                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/30"
+                />
+              </div>
+
+              {/* Format */}
+              <button
+                onClick={handleFormat}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer bg-white/[.04] border border-white/[.08] text-white/50 font-sans"
+              >
+                <WrapText size={11} />
+                Formater
+              </button>
+
+              {/* Density */}
+              <div className="relative">
+                <select
+                  value={density}
+                  onChange={(e) => setDensity(e.target.value as NonNullable<DataFlowPlayerProps['density']>)}
+                  className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-white/[.04] border border-white/[.08] text-white/45 font-sans"
+                >
+                  <option value="compact">Compact</option>
+                  <option value="comfortable">Confortable</option>
+                  <option value="spacious">Spacieux</option>
+                </select>
+                <ChevronDown
+                  size={11}
+                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/30"
+                />
+              </div>
+
+              {/* Copy */}
+              <button
+                onClick={handleCopy}
+                className={`ml-auto p-1.5 rounded-lg transition-colors cursor-pointer bg-transparent border-none outline-none ${copied ? 'text-[#34d399]' : 'text-white/30'}`}
+                title="Copier"
+              >
+                {copied ? <Check size={13} /> : <Copy size={13} />}
+              </button>
+            </div>
+
+            {/* Editor area */}
+            <div className="relative flex-1 overflow-hidden">
+              <Editor
+                height="100%"
+                language="json"
+                theme="rdfa-dark"
+                value={jsonText}
+                onChange={(value) => setJsonText(value || '')}
+                beforeMount={(monaco) => {
+                  monaco.editor.defineTheme('rdfa-dark', {
+                    base: 'vs-dark',
+                    inherit: true,
+                    rules: [],
+                    colors: {
+                      'editor.background': '#0B0A10',
+                      'editor.lineHighlightBackground': '#ffffff0a',
+                    }
+                  });
+                  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                    validate: true,
+                    schemas: [
+                      {
+                        uri: "http://react-dataflow-animator/schema.json",
+                        fileMatch: ["*"],
+                        schema: dataFlowSchema as any,
+                      },
+                    ],
+                  });
+                }}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: monoSize,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  wordWrap: "on",
+                  scrollBeyondLastLine: false,
+                  lineNumbers: "on",
+                  renderLineHighlight: "none",
+                  hideCursorInOverviewRuler: true,
+                  scrollbar: {
+                    verticalScrollbarSize: 8,
+                    horizontalScrollbarSize: 8,
+                  },
+                  padding: { top: 16, bottom: 16 },
+                  overviewRulerBorder: false,
+                }}
+                loading={
+                  <div className="flex items-center justify-center w-full h-full text-white/30 text-sm font-sans">
+                    Chargement de l'éditeur...
+                  </div>
+                }
+              />
+            </div>
+
+            {/* Error bar */}
+            {parseError && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                className="flex-none flex items-start gap-2 px-3 py-2.5 text-xs bg-red-500/[.08] border-t border-red-500/20 text-red-300 font-mono text-[10px]"
+              >
+                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                <span className="break-all">{parseError}</span>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Resizer Handle (Desktop only) */}
+          <div
+            className={`hidden md:block w-[1.5px] hover:w-1.5 hover:-ml-[2px] hover:-mr-[2px] cursor-col-resize hover:bg-violet-500 transition-colors z-10 shrink-0 ${isResizing ? 'bg-violet-500 w-1.5 -ml-[2px] -mr-[2px]' : 'bg-white/[.06]'}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsResizing(true);
+            }}
+          />
+
+          {/* ─── RIGHT: Preview ─── */}
+          <div 
+            className="flex flex-col flex-1 overflow-hidden bg-surface-alt relative"
+            style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
+          >
+            <div className="flex-1 overflow-hidden relative bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(124,58,237,0.07)_0%,transparent_70%)]">
+              {spec ? (
+                <DataFlowPlayer
+                  spec={spec}
+                  theme="dark"
+                  controls={true}
+                  density={density}
+                  height="100%"
+                  className="w-full h-full rounded-none border-x-0 border-t-0 bg-transparent border-none"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center text-sm text-white/20 font-sans">
+                    Entrez une spec JSON valide pour voir l'animation.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </main>
     </Layout>
   );

@@ -34,14 +34,25 @@ const config = {
       },
     ],
   ],
+  plugins: [
+    function myTailwindPlugin() {
+      return {
+        name: 'docusaurus-tailwindcss',
+        configurePostCss(postcssOptions: { plugins: any[] }) {
+          postcssOptions.plugins.push(require('@tailwindcss/postcss'));
+          return postcssOptions;
+        },
+      };
+    },
+  ],
   themeConfig: {
+    colorMode: {
+      defaultMode: 'dark',
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
+    },
     image: 'img/logo.svg',
     navbar: {
-      title: 'React DataFlow Animator',
-      logo: {
-        alt: 'React DataFlow Animator',
-        src: 'img/logo.svg',
-      },
       items: [
         { to: '/docs/intro', label: 'Documentation', position: 'left' },
         { to: '/playground', label: 'Playground', position: 'left' },
@@ -56,14 +67,14 @@ const config = {
       style: 'dark',
       links: [
         {
-          title: 'Site',
+          title: 'SITE',
           items: [
             { label: 'Documentation', to: '/docs/intro' },
             { label: 'Playground', to: '/playground' },
           ],
         },
         {
-          title: 'Projet',
+          title: 'PROJET',
           items: [
             {
               label: 'npm',
@@ -76,7 +87,7 @@ const config = {
           ],
         },
       ],
-      copyright: `Copyright ${new Date().getFullYear()} Pierre-Olivier Brillant`,
+      copyright: `© ${new Date().getFullYear()} Pierre-Olivier Brillant. MIT License.`,
     },
     prism: {
       theme: prismThemes.github,

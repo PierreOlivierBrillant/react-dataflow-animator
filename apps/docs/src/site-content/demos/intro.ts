@@ -1,10 +1,10 @@
 import type { DataFlowSpec } from 'react-dataflow-animator';
 
-export const clientServer: DataFlowSpec = {
+export const intro: DataFlowSpec = {
   direction: 'left-to-right',
   static_objects: [
     {
-      id: 'browser',
+      id: 'static_object',
       object_type: 'laptop',
       text: 'Navigateur',
       subicon: 'chrome',

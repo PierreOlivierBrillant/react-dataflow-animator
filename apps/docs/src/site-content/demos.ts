@@ -3,6 +3,7 @@ import { signalr } from './demos/signalr';
 import { microservices } from './demos/microservices';
 import { spa } from './demos/spa';
 import { clientServer } from './demos/clientServer';
+import { intro } from './demos/intro';
 
 export interface Demo {
   id: string;
@@ -38,6 +39,13 @@ export const demos: Demo[] = [
     description:
       'Le navigateur charge le bundle depuis le serveur web, puis la SPA interroge le Web API et sa base.',
     spec: spa,
+  },
+  {
+    id: 'intro',
+    title: 'Introduction à React DataFlow Animator',
+    description:
+      'Explication des différentes composantes de la spécification JSON.',
+    spec: intro,
   },
 ];
 
