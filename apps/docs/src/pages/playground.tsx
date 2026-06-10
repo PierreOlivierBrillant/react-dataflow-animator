@@ -266,7 +266,7 @@ export default function PlaygroundPage() {
             className="flex flex-col flex-1 overflow-hidden bg-surface-alt relative"
             style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
           >
-            <div className="flex-1 overflow-hidden relative bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(124,58,237,0.07)_0%,transparent_70%)]">
+            <div className="flex-1 overflow-hidden relative bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,0.07)_0%,transparent_70%)]">
               {spec ? (
                 <DataFlowPlayer
                   spec={spec}
