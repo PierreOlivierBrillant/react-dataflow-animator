@@ -287,6 +287,7 @@ export function Stage({
               startPortOffset={ports.start}
               endPortOffset={ports.end}
               style={link.style}
+              arrowHead={link.arrowHead}
               text={link.text}
               progress={1}
               highlighted={!!link.id && highlightedIds.has(link.id)}
@@ -315,6 +316,7 @@ export function Stage({
               startPortOffset={ports.start}
               endPortOffset={ports.end}
               style={clip.style}
+              arrowHead={clip.arrowHead}
               text={clip.text}
               progress={a.progress}
               obstacles={allNodes}

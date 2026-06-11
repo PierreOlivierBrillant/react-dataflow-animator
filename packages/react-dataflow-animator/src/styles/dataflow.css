@@ -295,6 +295,17 @@
   stroke-dasharray: 8 6;
 }
 
+.rdfa-arrow-line[data-style='animated'] {
+  stroke-dasharray: 6 6;
+  animation: rdfa-march 0.5s linear infinite;
+}
+
+@keyframes rdfa-march {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
 .rdfa-arrow-head {
   fill: var(--rdfa-arrow);
 }

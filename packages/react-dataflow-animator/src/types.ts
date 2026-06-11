@@ -27,7 +27,7 @@ export type StaticObjectType =
 export type DynamicObjectType = 'http_packet' | 'sql_request' | 'sql_response';
 
 /** Style de ligne (terminologie SVG/CSS). `full` est accepté en alias de `solid`. */
-export type LineStyle = 'solid' | 'dotted' | 'dashed';
+export type LineStyle = 'solid' | 'dotted' | 'dashed' | 'animated';
 
 /** Modes de contenu pour `set_content` (action) et `content` (objet statique). */
 export type ContentType = 'image' | 'text' | 'code';
@@ -77,6 +77,8 @@ export interface Connection {
   to: string;
   /** Style de la ligne. Défaut: 'solid'. */
   style?: LineStyle;
+  /** Pointe de la flèche. Défaut: 'forward'. */
+  arrowHead?: 'forward' | 'backward' | 'both' | 'none';
   /** Texte médian optionnel. */
   text?: string;
 }
@@ -153,9 +155,9 @@ export interface ArrowAction extends ActionBase {
   action_type: 'arrow';
   from: string;
   to: string;
-  /** Texte médian. */
   text?: string;
   style?: LineStyle;
+  arrowHead?: 'forward' | 'backward' | 'both' | 'none';
 }
 
 /** Exécute plusieurs actions au même instant. */

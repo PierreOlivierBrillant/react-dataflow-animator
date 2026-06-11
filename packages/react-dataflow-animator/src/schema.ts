@@ -98,6 +98,11 @@ export const dataFlowSchema = {
         from: { type: 'string', description: "ID du nœud source." },
         to: { type: 'string', description: "ID du nœud destination." },
         style: { $ref: '#/definitions/lineStyle' },
+        arrowHead: {
+          type: 'string',
+          enum: ['forward', 'backward', 'both', 'none'],
+          description: "Pointe de la flèche. (défaut: 'forward')",
+        },
         text: { type: 'string', description: 'Texte médian optionnel.' },
       },
       required: ['from', 'to'],
@@ -158,7 +163,7 @@ export const dataFlowSchema = {
     },
     lineStyle: {
       type: 'string',
-      enum: ['solid', 'dotted', 'dashed'],
+      enum: ['solid', 'dotted', 'dashed', 'animated'],
       description: "Style de ligne. (défaut: 'solid'; 'full' accepté en alias)",
     },
     timing: {
@@ -224,6 +229,11 @@ export const dataFlowSchema = {
         to: { type: 'string' },
         text: { type: 'string', description: 'Texte médian.' },
         style: { $ref: '#/definitions/lineStyle' },
+        arrowHead: {
+          type: 'string',
+          enum: ['forward', 'backward', 'both', 'none'],
+          description: "Pointe de la flèche animée. (défaut: 'forward')",
+        },
       },
       required: ['action_type', 'from', 'to'],
     },
