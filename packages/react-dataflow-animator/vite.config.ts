@@ -11,6 +11,7 @@ export default defineConfig({
       fileName: 'index',
       cssFileName: 'style',
     },
+    emptyOutDir: false,
     sourcemap: true,
     rollupOptions: {
       external: (id: string) =>

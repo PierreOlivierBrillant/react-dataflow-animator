@@ -37,7 +37,7 @@
   ],
   "scripts": {
     "build": "tsc -b tsconfig.app.json tsconfig.node.json && vite build && tsc -p tsconfig.dts.json",
-    "dev": "vite",
+    "dev": "vite build --watch",
     "lint": "eslint src",
     "preview": "vite preview",
     "test": "vitest"

@@ -13,8 +13,11 @@
     "build": "npm run build -w react-dataflow-animator && npm run build -w @react-dataflow-animator/docs",
     "build:lib": "npm run build -w react-dataflow-animator",
     "build:docs": "npm run build -w @react-dataflow-animator/docs",
-    "dev": "npm run build -w react-dataflow-animator && npm run dev -w @react-dataflow-animator/docs",
+    "dev": "npm run build -w react-dataflow-animator && concurrently \"npm run dev -w react-dataflow-animator\" \"npm run dev -w @react-dataflow-animator/docs\"",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test -w react-dataflow-animator"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.3"
   }
 }
