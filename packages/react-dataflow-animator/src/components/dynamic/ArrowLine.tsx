@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { defineAnimatable, type AnimatableComponent } from '../../utils/animatable';
 import { connection, pathTip, visiblePath, type NodeGeom } from '../../engine/geometry';
 import type { LineStyle } from '../../types';
 
@@ -24,7 +24,7 @@ export interface ArrowLineProps {
 
 const HEAD = 9;
 
-export const ArrowLine = memo(function ArrowLine({
+export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(function ArrowLine({
   from,
   to,
   startPortOffset = 0,

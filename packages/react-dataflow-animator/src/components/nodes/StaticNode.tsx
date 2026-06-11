@@ -1,4 +1,5 @@
-import { memo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { defineAnimatable, type AnimatableComponent } from '../../utils/animatable';
 import type { Highlighter, ObjectContent, StaticObject } from '../../types';
 import type { NodePlacement } from '../../engine/layout';
 import { ContentPanel } from '../dynamic/ContentPanel';
@@ -19,7 +20,7 @@ export interface StaticNodeProps {
   highlight: Highlighter;
 }
 
-export const StaticNode = memo(function StaticNode({
+export const StaticNode: AnimatableComponent<StaticNodeProps> = defineAnimatable(function StaticNode({
   object,
   placement,
   content,

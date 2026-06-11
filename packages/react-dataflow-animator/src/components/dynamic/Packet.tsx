@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { defineAnimatable, type AnimatableComponent } from '../../utils/animatable';
 import type { DynamicObject } from '../../types';
 
 /** Paquet en mouvement (move). Positionné en absolu au point courant du trajet. */
@@ -12,53 +12,77 @@ export interface PacketProps {
   scale?: number;
 }
 
-function PacketInner({ object }: { object: DynamicObject }) {
-  switch (object.object_type) {
-    case 'http_packet': {
-      const header = object.packet_content?.header;
-      const body = object.packet_content?.body;
-      return (
-        <>
-          {header ? <div className="rdfa-packet-header">{header}</div> : null}
-          {body ? (
-            <div className="rdfa-packet-body">
-              {body.content_type === 'image' ? (
-                <img src={body.content} alt="" />
-              ) : (
-                body.content
-              )}
-            </div>
-          ) : null}
-        </>
-      );
-    }
-    case 'sql_request':
-      return <div className="rdfa-packet-header">{object.request_content ?? 'SQL'}</div>;
-    case 'sql_response': {
-      const rows = object.response_content?.rows;
-      return (
-        <div className="rdfa-packet-header">
-          {rows != null ? `▦ ${rows} ligne${rows > 1 ? 's' : ''}` : '▦ résultat'}
-        </div>
-      );
-    }
-    default:
-      return null;
-  }
-}
+// ---------------------------------------------------------------------------
+// SOUS-COMPOSANTS DE PAQUETS
+// ---------------------------------------------------------------------------
 
-export const Packet = memo(function Packet({ object, x, y, opacity = 1, scale = 1 }: PacketProps) {
+const HttpPacket = defineAnimatable<{ object: DynamicObject }>(({ object }) => {
+  const header = object.packet_content?.header;
+  const body = object.packet_content?.body;
   return (
-    <div
-      className={`rdfa-packet rdfa-packet-${object.object_type}`}
-      style={{
-        left: x,
-        top: y,
-        opacity,
-        transform: `translate(-50%, -50%) scale(${scale})`,
-      }}
-    >
-      <PacketInner object={object} />
+    <>
+      {header ? <div className="rdfa-packet-header">{header}</div> : null}
+      {body ? (
+        <div className="rdfa-packet-body">
+          {body.content_type === 'image' ? (
+            <img src={body.content} alt="" />
+          ) : (
+            body.content
+          )}
+        </div>
+      ) : null}
+    </>
+  );
+});
+
+const SqlRequestPacket = defineAnimatable<{ object: DynamicObject }>(({ object }) => {
+  return <div className="rdfa-packet-header">{object.request_content ?? 'SQL'}</div>;
+});
+
+const SqlResponsePacket = defineAnimatable<{ object: DynamicObject }>(({ object }) => {
+  const rows = object.response_content?.rows;
+  return (
+    <div className="rdfa-packet-header">
+      {rows != null ? `▦ ${rows} ligne${rows > 1 ? 's' : ''}` : '▦ résultat'}
     </div>
   );
 });
+
+// ---------------------------------------------------------------------------
+// REGISTRE DES PAQUETS
+// ---------------------------------------------------------------------------
+
+/**
+ * Registre de tous les types de paquets supportés.
+ * Grâce au type AnimatableComponent, TypeScript s'assure que tout nouveau
+ * composant ajouté ici est correctement optimisé avec React.memo().
+ */
+export const packetRegistry: Record<string, AnimatableComponent<{ object: DynamicObject }>> = {
+  http_packet: HttpPacket,
+  sql_request: SqlRequestPacket,
+  sql_response: SqlResponsePacket,
+};
+
+// ---------------------------------------------------------------------------
+// COMPOSANT PRINCIPAL
+// ---------------------------------------------------------------------------
+
+export const Packet: AnimatableComponent<PacketProps> = defineAnimatable(
+  function Packet({ object, x, y, opacity = 1, scale = 1 }: PacketProps) {
+    const SpecificPacket = packetRegistry[object.object_type];
+
+    return (
+      <div
+        className={`rdfa-packet rdfa-packet-${object.object_type}`}
+        style={{
+          left: x,
+          top: y,
+          opacity,
+          transform: `translate(-50%, -50%) scale(${scale})`,
+        }}
+      >
+        {SpecificPacket ? <SpecificPacket object={object} /> : null}
+      </div>
+    );
+  }
+);
