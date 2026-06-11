@@ -250,6 +250,7 @@ export function Stage({
           '--rdfa-scale': scale,
           '--rdfa-maxw': `${maxW}px`,
           '--rdfa-content-maxw': `${contentMaxW}px`,
+          visibility: width === 0 || height === 0 ? 'hidden' : 'visible',
         } as CSSProperties
       }
     >
@@ -418,7 +419,12 @@ const CommentBubble = memo(function CommentBubble({
     <div
       ref={ref}
       className={`rdfa-comment${below ? ' rdfa-comment--below' : ''}`}
-      style={{ left, top, opacity }}
+      style={{
+        left,
+        top,
+        opacity,
+        visibility: size.w === 0 || size.h === 0 ? 'hidden' : 'visible',
+      }}
     >
       {text}
       <span className="rdfa-comment-tail" style={{ left: tailX }} />
