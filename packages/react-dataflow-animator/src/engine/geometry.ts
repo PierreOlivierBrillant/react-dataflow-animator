@@ -131,17 +131,26 @@ export function connection(
   const c1 = { x: from.x, y: from.y };
   const c2 = { x: to.x, y: to.y };
 
+  const lbFrom = labelBounds(from);
+  const fromBottom = lbFrom
+    ? Math.max(from.y + from.height / 2, lbFrom.y + lbFrom.h)
+    : from.y + from.height / 2;
   const fromRect = {
     x: from.x - from.width / 2 - NODE_GAP,
     y: from.y - from.height / 2 - NODE_GAP,
     w: from.width + 2 * NODE_GAP,
-    h: from.height + 2 * NODE_GAP,
+    h: fromBottom - (from.y - from.height / 2) + 2 * NODE_GAP,
   };
+
+  const lbTo = labelBounds(to);
+  const toBottom = lbTo
+    ? Math.max(to.y + to.height / 2, lbTo.y + lbTo.h)
+    : to.y + to.height / 2;
   const toRect = {
     x: to.x - to.width / 2 - NODE_GAP,
     y: to.y - to.height / 2 - NODE_GAP,
     w: to.width + 2 * NODE_GAP,
-    h: to.height + 2 * NODE_GAP,
+    h: toBottom - (to.y - to.height / 2) + 2 * NODE_GAP,
   };
 
   const dx = c2.x - c1.x;
