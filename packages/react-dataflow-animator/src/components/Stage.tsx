@@ -18,6 +18,7 @@ import {
 } from '../engine/timeline';
 import { computeLayout } from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
+import { computePlacements } from '../engine/placements';
 import { connection, pathTip } from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { StaticNode } from './nodes/StaticNode';
@@ -249,25 +250,10 @@ export function Stage({
 
   // Garantit qu'aucun nœud ne sort du canevas : on borne son centre selon sa
   // taille mesurée (basé sur le ratio de layout, donc stable — pas de boucle).
-  const PLACEMENT_PAD = 6;
-  const placements = useMemo(() => {
-    const map: Record<string, { cx: number; cy: number }> = {};
-    for (const id of Object.keys(layout)) {
-      const base = layout[id];
-      const g = geometry[id];
-      if (!g || !width || !height) {
-        map[id] = base;
-        continue;
-      }
-      const hwr = (g.width / 2 + PLACEMENT_PAD) / width;
-      const hhr = (g.height / 2 + PLACEMENT_PAD) / height;
-      map[id] = {
-        cx: 2 * hwr < 1 ? clamp(base.cx, hwr, 1 - hwr) : base.cx,
-        cy: 2 * hhr < 1 ? clamp(base.cy, hhr, 1 - hhr) : base.cy,
-      };
-    }
-    return map;
-  }, [layout, geometry, width, height]);
+  const placements = useMemo(
+    () => computePlacements(layout, geometry, width, height),
+    [layout, geometry, width, height],
+  );
 
   return (
     <div
