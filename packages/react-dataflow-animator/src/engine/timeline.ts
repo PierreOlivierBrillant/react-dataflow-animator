@@ -93,6 +93,8 @@ export interface Step {
   endMs: number;
   /** ID de l'action racine, si fourni. */
   actionId?: string;
+  /** Sous-ensemble des clips actifs pendant cette étape (pré-calculé pour opti). */
+  activeClips?: Clip[];
 }
 
 export interface Timeline {
@@ -140,9 +142,33 @@ export function easeInOutCubic(t: number): number {
  * progression. Fonction pure et déterministe (le scrubbing arrière est gratuit).
  */
 export function evaluate(timeline: Timeline, tMs: number): ActiveClip[] {
+  // Optimisation O(K) : si les clips actifs ont été pré-calculés par étape
+  if (timeline.steps.length > 0) {
+    const stepIdx = stepIndexAt(timeline, tMs);
+    const step = timeline.steps[stepIdx];
+    if (step && step.activeClips) {
+      return evaluateSubset(step.activeClips, tMs);
+    }
+  }
+
   const active: ActiveClip[] = [];
-  for (const clip of timeline.clips) {
-    if (tMs < clip.startMs) continue; // pas encore apparu
+  
+  // Fallback O(log N + K) : recherche dichotomique pour trouver le dernier clip démarré
+  let low = 0;
+  let high = timeline.clips.length - 1;
+  let maxIdx = -1;
+  while (low <= high) {
+    const mid = (low + high) >>> 1;
+    if (timeline.clips[mid].startMs <= tMs) {
+      maxIdx = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  for (let i = 0; i <= maxIdx; i++) {
+    const clip = timeline.clips[i];
     // Borne supérieure INCLUSIVE : un élément reste visible à l'instant exact de
     // sa disparition (fin d'étape), pour que l'arrêt « Suivant » montre l'étape.
     if (tMs > clip.visibleUntilMs) continue; // déjà disparu
@@ -160,13 +186,37 @@ export function evaluate(timeline: Timeline, tMs: number): ActiveClip[] {
   return active;
 }
 
+function evaluateSubset(clips: Clip[], tMs: number): ActiveClip[] {
+  const active: ActiveClip[] = [];
+  for (let i = 0; i < clips.length; i++) {
+    const clip = clips[i];
+    if (tMs < clip.startMs || tMs > clip.visibleUntilMs) continue;
+    const duration = clip.endMs - clip.animStartMs;
+    const progress =
+      duration <= 0 ? 1 : clamp((tMs - clip.animStartMs) / duration, 0, 1);
+    active.push({
+      clip,
+      progress,
+      animating: tMs >= clip.animStartMs && tMs < clip.endMs,
+    });
+  }
+  return active;
+}
+
 /** Index de l'étape contenant `tMs` (la dernière étape dont le start <= t). */
 export function stepIndexAt(timeline: Timeline, tMs: number): number {
   const { steps } = timeline;
+  let low = 0;
+  let high = steps.length - 1;
   let idx = 0;
-  for (let i = 0; i < steps.length; i++) {
-    if (tMs >= steps[i].startMs) idx = i;
-    else break;
+  while (low <= high) {
+    const mid = (low + high) >>> 1;
+    if (tMs >= steps[mid].startMs) {
+      idx = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
   }
   return idx;
 }
