@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
 import Layout from '@theme/Layout';
-import { DataFlowPlayer, type DataFlowSpec, type DataFlowPlayerProps, dataFlowSchema } from '../../../../packages/react-dataflow-animator/src';
+import {
+  DataFlowPlayer,
+  type DataFlowSpec,
+  type DataFlowPlayerProps,
+  dataFlowSchema,
+} from '../../../../packages/react-dataflow-animator/src';
 import { demos, demosById } from '../site-content/demos';
-import { motion } from "motion/react";
-import { Copy, Check, AlertCircle, ChevronDown, WrapText } from "lucide-react";
+import { motion } from 'motion/react';
+import { Copy, Check, AlertCircle, ChevronDown, WrapText } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
 /* ────────────── Utils ────────────── */
@@ -31,12 +36,17 @@ function initialDemoId(): string {
 
 export default function PlaygroundPage() {
   const [demoId, setDemoId] = useState(initialDemoId);
-  const [jsonText, setJsonText] = useState(() => JSON.stringify(demosById[initialDemoId()].spec, null, 2));
-  const [spec, setSpec] = useState<DataFlowSpec | null>(() => demosById[initialDemoId()].spec);
+  const [jsonText, setJsonText] = useState(() =>
+    JSON.stringify(demosById[initialDemoId()].spec, null, 2)
+  );
+  const [spec, setSpec] = useState<DataFlowSpec | null>(
+    () => demosById[initialDemoId()].spec
+  );
   const [parseError, setParseError] = useState<string | null>(null);
-  
+
   const [copied, setCopied] = useState(false);
-  const [density, setDensity] = useState<NonNullable<DataFlowPlayerProps['density']>>("comfortable");
+  const [density, setDensity] =
+    useState<NonNullable<DataFlowPlayerProps['density']>>('comfortable');
 
   // Resizing state
   const [leftWidth, setLeftWidth] = useState(44);
@@ -79,7 +89,7 @@ export default function PlaygroundPage() {
         setSpec(cfg);
         setParseError(null);
       } catch (e: any) {
-        setParseError(e.message ?? "JSON invalide");
+        setParseError(e.message ?? 'JSON invalide');
       }
     }, 350);
     return () => clearTimeout(tid);
@@ -105,10 +115,14 @@ export default function PlaygroundPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const monoSize = density === "compact" ? 11 : density === "spacious" ? 14 : 13;
+  const monoSize =
+    density === 'compact' ? 11 : density === 'spacious' ? 14 : 13;
 
   return (
-    <Layout title="Playground" description="Éditeur interactif pour tester vos spécifications JSON.">
+    <Layout
+      title="Playground"
+      description="Éditeur interactif pour tester vos spécifications JSON."
+    >
       <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:dark]">
         {/* Page header */}
         <div className="flex-none px-6 py-4 border-b border-white/[.06] flex items-center gap-4">
@@ -117,7 +131,8 @@ export default function PlaygroundPage() {
               Playground
             </h1>
             <p className="text-xs mt-0.5 mb-0 text-white/35 font-sans">
-              Éditez la spec JSON à gauche — l'animation se met à jour en temps réel.
+              Éditez la spec JSON à gauche — l'animation se met à jour en temps
+              réel.
             </p>
           </div>
         </div>
@@ -125,9 +140,14 @@ export default function PlaygroundPage() {
         {/* Body: editor | preview */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden relative">
           {/* ─── LEFT: JSON Editor ─── */}
-          <div 
+          <div
             className="flex flex-col w-full md:min-w-[340px] flex-1 md:flex-none border-b md:border-b-0 overflow-hidden bg-surface-alt"
-            style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${leftWidth}%` : undefined }}
+            style={{
+              width:
+                typeof window !== 'undefined' && window.innerWidth >= 768
+                  ? `${leftWidth}%`
+                  : undefined,
+            }}
           >
             {/* Toolbar */}
             <div className="flex-none flex items-center gap-2 px-3 py-2 border-b border-white/[.05] bg-white/[.015] flex-wrap">
@@ -163,7 +183,13 @@ export default function PlaygroundPage() {
               <div className="relative">
                 <select
                   value={density}
-                  onChange={(e) => setDensity(e.target.value as NonNullable<DataFlowPlayerProps['density']>)}
+                  onChange={(e) =>
+                    setDensity(
+                      e.target.value as NonNullable<
+                        DataFlowPlayerProps['density']
+                      >
+                    )
+                  }
                   className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-white/[.04] border border-white/[.08] text-white/45 font-sans"
                 >
                   <option value="compact">Compact</option>
@@ -202,14 +228,14 @@ export default function PlaygroundPage() {
                     colors: {
                       'editor.background': '#0B0A10',
                       'editor.lineHighlightBackground': '#ffffff0a',
-                    }
+                    },
                   });
                   monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
                     validate: true,
                     schemas: [
                       {
-                        uri: "http://react-dataflow-animator/schema.json",
-                        fileMatch: ["*"],
+                        uri: 'http://react-dataflow-animator/schema.json',
+                        fileMatch: ['*'],
                         schema: dataFlowSchema as any,
                       },
                     ],
@@ -219,10 +245,10 @@ export default function PlaygroundPage() {
                   minimap: { enabled: false },
                   fontSize: monoSize,
                   fontFamily: "'JetBrains Mono', monospace",
-                  wordWrap: "on",
+                  wordWrap: 'on',
                   scrollBeyondLastLine: false,
-                  lineNumbers: "on",
-                  renderLineHighlight: "none",
+                  lineNumbers: 'on',
+                  renderLineHighlight: 'none',
                   hideCursorInOverviewRuler: true,
                   scrollbar: {
                     verticalScrollbarSize: 8,
@@ -243,7 +269,7 @@ export default function PlaygroundPage() {
             {parseError && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
+                animate={{ height: 'auto', opacity: 1 }}
                 className="flex-none flex items-start gap-2 px-3 py-2.5 text-xs bg-red-500/[.08] border-t border-red-500/20 text-red-300 font-mono text-[10px]"
               >
                 <AlertCircle size={12} className="mt-0.5 shrink-0" />
@@ -262,7 +288,7 @@ export default function PlaygroundPage() {
           />
 
           {/* ─── RIGHT: Preview ─── */}
-          <div 
+          <div
             className="flex flex-col flex-1 overflow-hidden bg-surface-alt relative"
             style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
           >

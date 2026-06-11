@@ -1,4 +1,7 @@
-import { defineAnimatable, type AnimatableComponent } from '../../utils/animatable';
+import {
+  defineAnimatable,
+  type AnimatableComponent,
+} from '../../utils/animatable';
 import type { DynamicObject, Highlighter } from '../../types';
 
 /** Paquet en mouvement (move). Positionné en absolu au point courant du trajet. */
@@ -17,12 +20,21 @@ export interface PacketProps {
 // SOUS-COMPOSANTS DE PAQUETS
 // ---------------------------------------------------------------------------
 
-const HttpPacket = defineAnimatable<{ object: DynamicObject; highlight?: Highlighter }>(({ object, highlight }) => {
+const HttpPacket = defineAnimatable<{
+  object: DynamicObject;
+  highlight?: Highlighter;
+}>(({ object, highlight }) => {
   const header = object.packet_content?.header;
   const body = object.packet_content?.body;
-  const renderedHeader = header && highlight
-    ? <div className="rdfa-packet-header rdfa-code" dangerouslySetInnerHTML={{ __html: highlight(header, 'http') }} />
-    : header ? <div className="rdfa-packet-header">{header}</div> : null;
+  const renderedHeader =
+    header && highlight ? (
+      <div
+        className="rdfa-packet-header rdfa-code"
+        dangerouslySetInnerHTML={{ __html: highlight(header, 'http') }}
+      />
+    ) : header ? (
+      <div className="rdfa-packet-header">{header}</div>
+    ) : null;
   return (
     <>
       {renderedHeader}
@@ -31,7 +43,12 @@ const HttpPacket = defineAnimatable<{ object: DynamicObject; highlight?: Highlig
           {body.content_type === 'image' ? (
             <img src={body.content} alt="" />
           ) : body.language && highlight && body.content ? (
-            <div className="rdfa-packet-surface rdfa-code" dangerouslySetInnerHTML={{ __html: highlight(body.content, body.language) }} />
+            <div
+              className="rdfa-packet-surface rdfa-code"
+              dangerouslySetInnerHTML={{
+                __html: highlight(body.content, body.language),
+              }}
+            />
           ) : (
             <div className="rdfa-packet-surface">{body.content}</div>
           )}
@@ -41,20 +58,34 @@ const HttpPacket = defineAnimatable<{ object: DynamicObject; highlight?: Highlig
   );
 });
 
-const SqlRequestPacket = defineAnimatable<{ object: DynamicObject; highlight?: Highlighter }>(({ object, highlight }) => {
+const SqlRequestPacket = defineAnimatable<{
+  object: DynamicObject;
+  highlight?: Highlighter;
+}>(({ object, highlight }) => {
   const code = object.request_content ?? 'SQL';
-  return highlight
-    ? <div className="rdfa-packet-header rdfa-code" dangerouslySetInnerHTML={{ __html: highlight(code, 'sql') }} />
-    : <div className="rdfa-packet-header">{code}</div>;
+  return highlight ? (
+    <div
+      className="rdfa-packet-header rdfa-code"
+      dangerouslySetInnerHTML={{ __html: highlight(code, 'sql') }}
+    />
+  ) : (
+    <div className="rdfa-packet-header">{code}</div>
+  );
 });
 
-const SqlResponsePacket = defineAnimatable<{ object: DynamicObject; highlight?: Highlighter }>(({ object }) => {
+const SqlResponsePacket = defineAnimatable<{
+  object: DynamicObject;
+  highlight?: Highlighter;
+}>(({ object }) => {
   const content = object.response_content;
   const rowsLegacy = content?.rows;
   const header = content?.header;
   const body = content?.body;
 
-  const defaultHeader = rowsLegacy != null ? `▦ ${rowsLegacy} ligne${rowsLegacy > 1 ? 's' : ''}` : '▦ résultat';
+  const defaultHeader =
+    rowsLegacy != null
+      ? `▦ ${rowsLegacy} ligne${rowsLegacy > 1 ? 's' : ''}`
+      : '▦ résultat';
   const displayedHeader = header || defaultHeader;
 
   return (
@@ -70,7 +101,9 @@ const SqlResponsePacket = defineAnimatable<{ object: DynamicObject; highlight?: 
                 {body.columns && (
                   <thead>
                     <tr>
-                      {body.columns.map((col, i) => <th key={i}>{col}</th>)}
+                      {body.columns.map((col, i) => (
+                        <th key={i}>{col}</th>
+                      ))}
                     </tr>
                   </thead>
                 )}
@@ -78,7 +111,9 @@ const SqlResponsePacket = defineAnimatable<{ object: DynamicObject; highlight?: 
                   <tbody>
                     {body.rows_data.map((row, i) => (
                       <tr key={i}>
-                        {row.map((cell, j) => <td key={j}>{cell}</td>)}
+                        {row.map((cell, j) => (
+                          <td key={j}>{cell}</td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -101,7 +136,10 @@ const SqlResponsePacket = defineAnimatable<{ object: DynamicObject; highlight?: 
  * Grâce au type AnimatableComponent, TypeScript s'assure que tout nouveau
  * composant ajouté ici est correctement optimisé avec React.memo().
  */
-export const packetRegistry: Record<string, AnimatableComponent<{ object: DynamicObject; highlight?: Highlighter }>> = {
+export const packetRegistry: Record<
+  string,
+  AnimatableComponent<{ object: DynamicObject; highlight?: Highlighter }>
+> = {
   http_packet: HttpPacket,
   sql_request: SqlRequestPacket,
   sql_response: SqlResponsePacket,
@@ -112,7 +150,14 @@ export const packetRegistry: Record<string, AnimatableComponent<{ object: Dynami
 // ---------------------------------------------------------------------------
 
 export const Packet: AnimatableComponent<PacketProps> = defineAnimatable(
-  function Packet({ object, x, y, opacity = 1, scale = 1, highlight }: PacketProps) {
+  function Packet({
+    object,
+    x,
+    y,
+    opacity = 1,
+    scale = 1,
+    highlight,
+  }: PacketProps) {
     const SpecificPacket = packetRegistry[object.object_type];
 
     return (
@@ -125,7 +170,9 @@ export const Packet: AnimatableComponent<PacketProps> = defineAnimatable(
           transform: `translate(-50%, -50%) scale(${scale})`,
         }}
       >
-        {SpecificPacket ? <SpecificPacket object={object} highlight={highlight} /> : null}
+        {SpecificPacket ? (
+          <SpecificPacket object={object} highlight={highlight} />
+        ) : null}
       </div>
     );
   }

@@ -29,12 +29,14 @@ export const dataFlowSchema = {
     },
     dynamic_objects: {
       type: 'array',
-      description: 'Les objets qui se déplaceront (paquets HTTP, requêtes SQL).',
+      description:
+        'Les objets qui se déplaceront (paquets HTTP, requêtes SQL).',
       items: { $ref: '#/definitions/dynamicObject' },
     },
     connections: {
       type: 'array',
-      description: 'Flèches/liens permanents (décor) affichés dès l\'initialisation.',
+      description:
+        "Flèches/liens permanents (décor) affichés dès l'initialisation.",
       items: { $ref: '#/definitions/connection' },
     },
     actions: {
@@ -49,7 +51,10 @@ export const dataFlowSchema = {
       type: 'object',
       title: 'StaticObject',
       properties: {
-        id: { type: 'string', description: "Identifiant unique (ex: 'serveur_web')." },
+        id: {
+          type: 'string',
+          description: "Identifiant unique (ex: 'serveur_web').",
+        },
         object_type: {
           type: 'string',
           enum: [
@@ -63,9 +68,9 @@ export const dataFlowSchema = {
             'admin',
             'users',
           ],
-          description: "Type du nœud (détermine son apparence).",
+          description: 'Type du nœud (détermine son apparence).',
         },
-        text: { type: 'string', description: "Label affiché sous le nœud." },
+        text: { type: 'string', description: 'Label affiché sous le nœud.' },
         subicon: {
           type: 'string',
           description:
@@ -73,18 +78,23 @@ export const dataFlowSchema = {
         },
         lane: {
           type: 'number',
-          description: 'Rangée/colonne de placement (entier positif). (défaut: 1)',
+          description:
+            'Rangée/colonne de placement (entier positif). (défaut: 1)',
         },
         is_main: {
           type: 'boolean',
-          description: "(circular) Marque le nœud comme central. (défaut: false)",
+          description:
+            '(circular) Marque le nœud comme central. (défaut: false)',
         },
         align_with: {
           type: 'string',
           description:
             "Aligne ce nœud sur l'axe transverse d'un autre nœud (par ID), pour aligner deux lanes différentes.",
         },
-        url: { type: 'string', description: 'Rend le nœud cliquable (nouvel onglet).' },
+        url: {
+          type: 'string',
+          description: 'Rend le nœud cliquable (nouvel onglet).',
+        },
         content: { $ref: '#/definitions/content' },
       },
       required: ['id', 'object_type'],
@@ -95,8 +105,8 @@ export const dataFlowSchema = {
       description: 'Flèche permanente entre deux nœuds.',
       properties: {
         id: { type: 'string' },
-        from: { type: 'string', description: "ID du nœud source." },
-        to: { type: 'string', description: "ID du nœud destination." },
+        from: { type: 'string', description: 'ID du nœud source.' },
+        to: { type: 'string', description: 'ID du nœud destination.' },
         style: { $ref: '#/definitions/lineStyle' },
         arrowHead: {
           type: 'string',
@@ -125,35 +135,48 @@ export const dataFlowSchema = {
           type: 'object',
           description: 'Réponse (pour sql_response).',
           properties: {
-            rows: { type: 'number', description: 'Nombre de lignes retournées.' },
-            header: { type: 'string', description: "En-tête optionnel." },
+            rows: {
+              type: 'number',
+              description: 'Nombre de lignes retournées.',
+            },
+            header: { type: 'string', description: 'En-tête optionnel.' },
             body: {
               type: 'object',
               properties: {
                 content_type: { type: 'string', enum: ['text', 'table'] },
-                content: { type: 'string', description: "Texte pur." },
+                content: { type: 'string', description: 'Texte pur.' },
                 columns: { type: 'array', items: { type: 'string' } },
                 rows_data: {
                   type: 'array',
                   items: {
                     type: 'array',
-                    items: { type: ['string', 'number'] }
-                  }
-                }
-              }
-            }
+                    items: { type: ['string', 'number'] },
+                  },
+                },
+              },
+            },
           },
         },
         packet_content: {
           type: 'object',
           properties: {
-            header: { type: 'string', description: "En-tête (ex: 'GET /api')." },
+            header: {
+              type: 'string',
+              description: "En-tête (ex: 'GET /api').",
+            },
             body: {
               type: 'object',
               properties: {
                 content_type: { type: 'string', enum: ['text', 'image'] },
-                content: { type: 'string', description: "Texte ou chemin d'image." },
-                language: { type: 'string', description: "Langage pour la coloration syntaxique du corps." },
+                content: {
+                  type: 'string',
+                  description: "Texte ou chemin d'image.",
+                },
+                language: {
+                  type: 'string',
+                  description:
+                    'Langage pour la coloration syntaxique du corps.',
+                },
               },
             },
           },
@@ -169,7 +192,8 @@ export const dataFlowSchema = {
         content: { type: 'string' },
         language: {
           type: 'string',
-          description: 'Langage pour la coloration syntaxique (ex: javascript, sql).',
+          description:
+            'Langage pour la coloration syntaxique (ex: javascript, sql).',
         },
         url: {
           type: 'string',
@@ -186,7 +210,7 @@ export const dataFlowSchema = {
       // Champs communs à toutes les actions (documentés une fois).
       type: 'object',
       properties: {
-        id: { type: 'string', description: "ID pour wait_for / keep_until." },
+        id: { type: 'string', description: 'ID pour wait_for / keep_until.' },
         duration: {
           type: 'number',
           description: 'Durée en ms. (défaut: 500 ; 1200 pour loading)',
@@ -197,7 +221,8 @@ export const dataFlowSchema = {
         },
         keep_until: {
           type: 'string',
-          description: "Reste visible jusqu'au début de l'action ciblée (par ID).",
+          description:
+            "Reste visible jusqu'au début de l'action ciblée (par ID).",
         },
         keep_until_next: {
           type: 'boolean',
@@ -206,7 +231,8 @@ export const dataFlowSchema = {
         },
         keep_until_end: {
           type: 'boolean',
-          description: "Si vrai, reste visible jusqu'à la fin de la chronologie.",
+          description:
+            "Si vrai, reste visible jusqu'à la fin de la chronologie.",
         },
       },
     },
@@ -224,7 +250,7 @@ export const dataFlowSchema = {
     moveAction: {
       type: 'object',
       title: 'move',
-      description: "Déplace un objet dynamique de `from` vers `to`.",
+      description: 'Déplace un objet dynamique de `from` vers `to`.',
       allOf: [{ $ref: '#/definitions/timing' }],
       properties: {
         action_type: { const: 'move' },
@@ -293,7 +319,7 @@ export const dataFlowSchema = {
     commentAction: {
       type: 'object',
       title: 'comment',
-      description: 'Affiche une bulle de commentaire près d\'un nœud.',
+      description: "Affiche une bulle de commentaire près d'un nœud.",
       allOf: [{ $ref: '#/definitions/timing' }],
       properties: {
         action_type: { const: 'comment' },
@@ -309,7 +335,10 @@ export const dataFlowSchema = {
       allOf: [{ $ref: '#/definitions/timing' }],
       properties: {
         action_type: { const: 'highlight' },
-        object: { type: 'string', description: "ID d'un nœud statique ou d'une connexion." },
+        object: {
+          type: 'string',
+          description: "ID d'un nœud statique ou d'une connexion.",
+        },
       },
       required: ['action_type', 'object'],
     },

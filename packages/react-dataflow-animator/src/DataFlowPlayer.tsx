@@ -41,16 +41,26 @@ export function DataFlowPlayer({
   fallback,
 }: DataFlowPlayerProps) {
   const { timeline, warnings } = useMemo(() => compile(spec), [spec]);
-  const clock = useClock({ durationMs: timeline.durationMs, speed, loop, autoPlay });
+  const clock = useClock({
+    durationMs: timeline.durationMs,
+    speed,
+    loop,
+    autoPlay,
+  });
   const highlighter = highlight ?? highlightCode;
 
   const rootRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // Vrai uniquement côté client (après hydratation), sans setState-in-effect.
-  const isClient = useSyncExternalStore(emptySubscribe, returnTrue, returnFalse);
+  const isClient = useSyncExternalStore(
+    emptySubscribe,
+    returnTrue,
+    returnFalse
+  );
 
   useEffect(() => {
-    if (debug && warnings.length) console.warn('[DataFlowAnimator]', ...warnings);
+    if (debug && warnings.length)
+      console.warn('[DataFlowAnimator]', ...warnings);
   }, [debug, warnings]);
 
   useEffect(() => {

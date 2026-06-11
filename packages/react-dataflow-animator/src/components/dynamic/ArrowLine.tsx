@@ -1,5 +1,13 @@
-import { defineAnimatable, type AnimatableComponent } from '../../utils/animatable';
-import { connection, pathTip, visiblePath, type NodeGeom } from '../../engine/geometry';
+import {
+  defineAnimatable,
+  type AnimatableComponent,
+} from '../../utils/animatable';
+import {
+  connection,
+  pathTip,
+  visiblePath,
+  type NodeGeom,
+} from '../../engine/geometry';
 import type { LineStyle } from '../../types';
 
 /**
@@ -25,69 +33,80 @@ export interface ArrowLineProps {
 
 const HEAD = 9;
 
-export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(function ArrowLine({
-  from,
-  to,
-  startPortOffset = 0,
-  endPortOffset = 0,
-  style = 'solid',
-  text,
-  progress,
-  highlighted,
-  obstacles,
-  arrowHead,
-}: ArrowLineProps) {
-  const headStyle = arrowHead ?? 'forward';
-  const renderForward = headStyle === 'forward' || headStyle === 'both';
-  const renderBackward = headStyle === 'backward' || headStyle === 'both';
+export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
+  function ArrowLine({
+    from,
+    to,
+    startPortOffset = 0,
+    endPortOffset = 0,
+    style = 'solid',
+    text,
+    progress,
+    highlighted,
+    obstacles,
+    arrowHead,
+  }: ArrowLineProps) {
+    const headStyle = arrowHead ?? 'forward';
+    const renderForward = headStyle === 'forward' || headStyle === 'both';
+    const renderBackward = headStyle === 'backward' || headStyle === 'both';
 
-  // L'animation est gérée par stroke-dasharray/stroke-dashoffset sur un
-  // Intersection et décalages géométriques (obstacles pris en compte)
-  const conn = connection(from, to, obstacles, startPortOffset, endPortOffset);
+    // L'animation est gérée par stroke-dasharray/stroke-dashoffset sur un
+    // Intersection et décalages géométriques (obstacles pris en compte)
+    const conn = connection(
+      from,
+      to,
+      obstacles,
+      startPortOffset,
+      endPortOffset
+    );
 
-  // Position et angle de la pointe au paramètre `progress`.
-  const tip = pathTip(conn, progress);
-  const ang = (tip.angleDeg * Math.PI) / 180;
-  const headFwd =
-    `${tip.x},${tip.y} ` +
-    `${tip.x - HEAD * Math.cos(ang - Math.PI / 6)},${tip.y - HEAD * Math.sin(ang - Math.PI / 6)} ` +
-    `${tip.x - HEAD * Math.cos(ang + Math.PI / 6)},${tip.y - HEAD * Math.sin(ang + Math.PI / 6)}`;
+    // Position et angle de la pointe au paramètre `progress`.
+    const tip = pathTip(conn, progress);
+    const ang = (tip.angleDeg * Math.PI) / 180;
+    const headFwd =
+      `${tip.x},${tip.y} ` +
+      `${tip.x - HEAD * Math.cos(ang - Math.PI / 6)},${tip.y - HEAD * Math.sin(ang - Math.PI / 6)} ` +
+      `${tip.x - HEAD * Math.cos(ang + Math.PI / 6)},${tip.y - HEAD * Math.sin(ang + Math.PI / 6)}`;
 
-  // Position de départ pour une flèche inversée
-  const startTip = pathTip(conn, 0);
-  const angStart = (startTip.angleDeg * Math.PI) / 180 + Math.PI;
-  const headBwd =
-    `${startTip.x},${startTip.y} ` +
-    `${startTip.x - HEAD * Math.cos(angStart - Math.PI / 6)},${startTip.y - HEAD * Math.sin(angStart - Math.PI / 6)} ` +
-    `${startTip.x - HEAD * Math.cos(angStart + Math.PI / 6)},${startTip.y - HEAD * Math.sin(angStart + Math.PI / 6)}`;
+    // Position de départ pour une flèche inversée
+    const startTip = pathTip(conn, 0);
+    const angStart = (startTip.angleDeg * Math.PI) / 180 + Math.PI;
+    const headBwd =
+      `${startTip.x},${startTip.y} ` +
+      `${startTip.x - HEAD * Math.cos(angStart - Math.PI / 6)},${startTip.y - HEAD * Math.sin(angStart - Math.PI / 6)} ` +
+      `${startTip.x - HEAD * Math.cos(angStart + Math.PI / 6)},${startTip.y - HEAD * Math.sin(angStart + Math.PI / 6)}`;
 
-  // Chemin visible (polyline) de start jusqu'à la pointe.
-  const pts = visiblePath(conn, progress);
-  const ptStr = pts.map((p) => `${p.x},${p.y}`).join(' ');
+    // Chemin visible (polyline) de start jusqu'à la pointe.
+    const pts = visiblePath(conn, progress);
+    const ptStr = pts.map((p) => `${p.x},${p.y}`).join(' ');
 
-  // Position du label de texte au milieu du chemin complet.
-  const mid = pathTip(conn, 0.5);
+    // Position du label de texte au milieu du chemin complet.
+    const mid = pathTip(conn, 0.5);
 
-  const lineCls = `rdfa-arrow-line${highlighted ? ' rdfa-arrow-line--highlight' : ''}`;
-  const headCls = `rdfa-arrow-head${highlighted ? ' rdfa-arrow-head--highlight' : ''}`;
+    const lineCls = `rdfa-arrow-line${highlighted ? ' rdfa-arrow-line--highlight' : ''}`;
+    const headCls = `rdfa-arrow-head${highlighted ? ' rdfa-arrow-head--highlight' : ''}`;
 
-  return (
-    <g>
-      <polyline className={lineCls} data-style={style} points={ptStr} />
-      {renderForward && progress > 0.02 ? <polygon className={headCls} points={headFwd} /> : null}
-      {renderBackward && progress > 0.02 ? <polygon className={headCls} points={headBwd} /> : null}
-      {text ? (
-        <text
-          className="rdfa-arrow-label"
-          x={mid.x}
-          y={mid.y - 6}
-          textAnchor="middle"
-          opacity={progress}
-        >
-          {text}
-        </text>
-      ) : null}
-    </g>
-  );
-});
-
+    return (
+      <g>
+        <polyline className={lineCls} data-style={style} points={ptStr} />
+        {renderForward && progress > 0.02 ? (
+          <polygon className={headCls} points={headFwd} />
+        ) : null}
+        {renderBackward && progress > 0.02 ? (
+          <polygon className={headCls} points={headBwd} />
+        ) : null}
+        {text ? (
+          <text
+            className="rdfa-arrow-label"
+            x={mid.x}
+            y={mid.y - 6}
+            textAnchor="middle"
+            opacity={progress}
+          >
+            {text}
+          </text>
+        ) : null}
+      </g>
+    );
+  }
+);

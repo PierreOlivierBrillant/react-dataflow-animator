@@ -35,8 +35,9 @@ interface SchemaNode {
   allOf?: readonly SchemaNode[];
 }
 
-const defs = (dataFlowSchema as unknown as { definitions: Record<string, SchemaNode> })
-  .definitions;
+const defs = (
+  dataFlowSchema as unknown as { definitions: Record<string, SchemaNode> }
+).definitions;
 const root = dataFlowSchema as unknown as SchemaNode;
 
 function refName(ref: string): string {
@@ -50,7 +51,8 @@ function typeLabel(node: SchemaNode): string {
   }
   if (node.const) return `"${node.const}"`;
   if (node.enum) return 'enum';
-  if (node.type === 'array') return `${node.items ? typeLabel(node.items) : 'any'}[]`;
+  if (node.type === 'array')
+    return `${node.items ? typeLabel(node.items) : 'any'}[]`;
   return node.type ?? 'object';
 }
 
@@ -136,16 +138,19 @@ export function ApiReference() {
   return (
     <>
       <p className="docs-lead">
-        Référence générée automatiquement depuis le JSON Schema exporté
-        (<code className="inline">dataFlowSchema</code>). <span className="api-req">*</span>{' '}
-        = requis.
+        Référence générée automatiquement depuis le JSON Schema exporté (
+        <code className="inline">dataFlowSchema</code>).{' '}
+        <span className="api-req">*</span> = requis.
       </p>
 
       <h2 id="api-dataflowspec">DataFlowSpec (racine)</h2>
       <PropsTable node={root} />
 
       <h2 id="api-staticobject">StaticObject</h2>
-      <p>Un nœud (serveur, base, client…). Placé automatiquement selon `direction`/`lane`.</p>
+      <p>
+        Un nœud (serveur, base, client…). Placé automatiquement selon
+        `direction`/`lane`.
+      </p>
       <PropsTable node={defs.staticObject} />
 
       <h2 id="api-connection">Connection</h2>
@@ -161,9 +166,11 @@ export function ApiReference() {
 
       <h2 id="api-actions">Actions</h2>
       <p>
-        Union discriminée sur <code className="inline">action_type</code>. Tous les
-        types partagent les champs de timing (<code className="inline">id</code>,{' '}
-        <code className="inline">duration</code>, <code className="inline">wait_for</code>,{' '}
+        Union discriminée sur <code className="inline">action_type</code>. Tous
+        les types partagent les champs de timing (
+        <code className="inline">id</code>,{' '}
+        <code className="inline">duration</code>,{' '}
+        <code className="inline">wait_for</code>,{' '}
         <code className="inline">keep_until</code>,{' '}
         <code className="inline">keep_until_next</code>).
       </p>
@@ -194,8 +201,8 @@ export const docPages: DocPage[] = [
     render: () => (
       <>
         <p className="docs-lead">
-          React DataFlow Animator compile une spécification JSON en une animation
-          déterministe et navigable de flux de données.
+          React DataFlow Animator compile une spécification JSON en une
+          animation déterministe et navigable de flux de données.
         </p>
         <h2 id="apercu">Aperçu</h2>
         <p>
@@ -207,7 +214,10 @@ export const docPages: DocPage[] = [
         <DataFlowPlayer theme="auto" spec={demosById.clientServer.spec} />
         <h2 id="principes">Principes</h2>
         <ul>
-          <li>Le temps est l’unique source de vérité (moteur déterministe, sans GSAP).</li>
+          <li>
+            Le temps est l’unique source de vérité (moteur déterministe, sans
+            GSAP).
+          </li>
           <li>Aucune coordonnée à fournir : placement automatique.</li>
           <li>SSR-safe : s’intègre directement dans Docusaurus.</li>
         </ul>
@@ -221,7 +231,9 @@ export const docPages: DocPage[] = [
     title: 'Installation',
     render: () => (
       <>
-        <p className="docs-lead">React 18 ou 19 est requis (peer dependency).</p>
+        <p className="docs-lead">
+          React 18 ou 19 est requis (peer dependency).
+        </p>
         <h2 id="npm">Installation npm</h2>
         <pre className="code">{install}</pre>
         <h2 id="utilisation">Utilisation</h2>
@@ -230,8 +242,8 @@ export const docPages: DocPage[] = [
         <p>
           Le composant est SSR-safe. Importe le CSS une fois (par ex. dans{' '}
           <code className="inline">src/css/custom.css</code>) puis utilise{' '}
-          <code className="inline">&lt;DataFlowPlayer /&gt;</code> dans n’importe quel
-          fichier <code className="inline">.mdx</code>.
+          <code className="inline">&lt;DataFlowPlayer /&gt;</code> dans
+          n’importe quel fichier <code className="inline">.mdx</code>.
         </p>
       </>
     ),
@@ -245,29 +257,32 @@ export const docPages: DocPage[] = [
       <>
         <p className="docs-lead">
           Les nœuds sont placés sans coordonnées, via{' '}
-          <code className="inline">direction</code> et <code className="inline">lane</code>.
+          <code className="inline">direction</code> et{' '}
+          <code className="inline">lane</code>.
         </p>
         <h2 id="lanes">Grilles & lanes</h2>
         <p>
-          En <code className="inline">left-to-right</code>, <code className="inline">lane</code>{' '}
-          est la colonne (la position le long du flux) ; plusieurs nœuds d’une même
-          lane sont empilés sur l’axe transverse. Les directions{' '}
+          En <code className="inline">left-to-right</code>,{' '}
+          <code className="inline">lane</code> est la colonne (la position le
+          long du flux) ; plusieurs nœuds d’une même lane sont empilés sur l’axe
+          transverse. Les directions{' '}
           <code className="inline">right-to-left</code>,{' '}
           <code className="inline">top-to-bottom</code> et{' '}
-          <code className="inline">bottom-to-top</code> inversent/échangent les axes.
+          <code className="inline">bottom-to-top</code> inversent/échangent les
+          axes.
         </p>
         <h2 id="alignement">Alignement entre lanes</h2>
         <p>
           <code className="inline">align_with</code> aligne un nœud sur l’axe
-          transverse d’un autre (vertical si la direction est horizontale) — utile
-          pour aligner deux nœuds de lanes différentes qui ne tomberaient pas
-          naturellement en face l’un de l’autre.
+          transverse d’un autre (vertical si la direction est horizontale) —
+          utile pour aligner deux nœuds de lanes différentes qui ne tomberaient
+          pas naturellement en face l’un de l’autre.
         </p>
         <h2 id="circular">Disposition circulaire</h2>
         <p>
           En <code className="inline">circular</code>, le nœud{' '}
-          <code className="inline">is_main</code> est au centre et les autres sont
-          répartis sur un cercle.
+          <code className="inline">is_main</code> est au centre et les autres
+          sont répartis sur un cercle.
         </p>
         <DataFlowPlayer theme="auto" spec={demosById.circular.spec} />
       </>
@@ -286,20 +301,22 @@ export const docPages: DocPage[] = [
         </p>
         <h2 id="arrets">Points d’arrêt</h2>
         <p>
-          La navigation Précédent/Suivant s’arrête sur des <strong>points
-          d’arrêt</strong> (marques de la timeline). Un <code className="inline">move</code>{' '}
-          en produit deux : à l’apparition du paquet et à son arrivée.
+          La navigation Précédent/Suivant s’arrête sur des{' '}
+          <strong>points d’arrêt</strong> (marques de la timeline). Un{' '}
+          <code className="inline">move</code> en produit deux : à l’apparition
+          du paquet et à son arrivée.
         </p>
         <h2 id="pause">Pause entre étapes</h2>
         <p>
-          Une courte pause sépare deux étapes pour que chaque arrêt montre l’étape
-          « posée » seule, sans chevaucher l’apparition de la suivante.
+          Une courte pause sépare deux étapes pour que chaque arrêt montre
+          l’étape « posée » seule, sans chevaucher l’apparition de la suivante.
         </p>
         <h2 id="wait-for">Synchronisation (wait_for)</h2>
         <p>
           Une action peut démarrer à la <em>fin</em> d’une autre via{' '}
           <code className="inline">wait_for</code> (par ID), pour des séquences
-          asynchrones (ex: attendre la fin d’un <code className="inline">loading</code>).
+          asynchrones (ex: attendre la fin d’un{' '}
+          <code className="inline">loading</code>).
         </p>
       </>
     ),
@@ -312,31 +329,39 @@ export const docPages: DocPage[] = [
     render: () => (
       <>
         <p className="docs-lead">
-          Par défaut, un élément temporaire disparaît à la fin de son animation. Deux
-          mécanismes prolongent sa visibilité.
+          Par défaut, un élément temporaire disparaît à la fin de son animation.
+          Deux mécanismes prolongent sa visibilité.
         </p>
         <h2 id="keep-until-next">keep_until_next</h2>
         <p>
-          Maintient l’élément visible jusqu’au <strong>début de l’étape racine
-          suivante</strong> (donc à travers la pause inter-étapes). Valeurs par défaut :
+          Maintient l’élément visible jusqu’au{' '}
+          <strong>début de l’étape racine suivante</strong> (donc à travers la
+          pause inter-étapes). Valeurs par défaut :
         </p>
         <ul>
-          <li><code className="inline">false</code> pour <code className="inline">move</code> et <code className="inline">loading</code> ;</li>
-          <li><code className="inline">true</code> pour <code className="inline">arrow</code>, <code className="inline">comment</code> et <code className="inline">set_content</code>.</li>
+          <li>
+            <code className="inline">false</code> pour{' '}
+            <code className="inline">move</code> et{' '}
+            <code className="inline">loading</code> ;
+          </li>
+          <li>
+            <code className="inline">true</code> pour{' '}
+            <code className="inline">arrow</code>,{' '}
+            <code className="inline">comment</code> et{' '}
+            <code className="inline">set_content</code>.
+          </li>
         </ul>
-        <p>
-          On peut toujours forcer la valeur explicitement dans l’action.
-        </p>
+        <p>On peut toujours forcer la valeur explicitement dans l’action.</p>
         <h2 id="keep-until">keep_until</h2>
         <p>
-          Maintient l’élément visible jusqu’au <strong>début</strong> de l’action
-          ciblée (par ID) — utile pour garder une flèche ou un bloc de code à l’écran
-          sur plusieurs étapes.
+          Maintient l’élément visible jusqu’au <strong>début</strong> de
+          l’action ciblée (par ID) — utile pour garder une flèche ou un bloc de
+          code à l’écran sur plusieurs étapes.
         </p>
         <h2 id="keep-until-end">keep_until_end</h2>
         <p>
-          Booléen : maintient l’élément visible jusqu’à la <strong>fin</strong> de la
-          chronologie.
+          Booléen : maintient l’élément visible jusqu’à la <strong>fin</strong>{' '}
+          de la chronologie.
         </p>
       </>
     ),
@@ -354,9 +379,9 @@ export const docPages: DocPage[] = [
         </p>
         <h2 id="path-shifting">Voies parallèles</h2>
         <p>
-          Quand un segment A↔B est emprunté dans les deux sens (flèches ou paquets),
-          le moteur décale automatiquement les trajets sur des voies parallèles pour
-          éviter la superposition.
+          Quand un segment A↔B est emprunté dans les deux sens (flèches ou
+          paquets), le moteur décale automatiquement les trajets sur des voies
+          parallèles pour éviter la superposition.
         </p>
         <DataFlowPlayer theme="auto" spec={demosById.collision.spec} />
       </>
@@ -371,17 +396,39 @@ export const docPages: DocPage[] = [
       <>
         <p className="docs-lead">Les six actions disponibles.</p>
         <ul>
-          <li><strong>move</strong> — déplace un objet dynamique de <code className="inline">from</code> vers <code className="inline">to</code>.</li>
-          <li><strong>arrow</strong> — trace une flèche animée (styles <code className="inline">solid</code>/<code className="inline">dotted</code>/<code className="inline">dashed</code>).</li>
-          <li><strong>parallel</strong> — exécute plusieurs actions au même instant.</li>
-          <li><strong>loading</strong> — spinner de chargement sur un nœud.</li>
-          <li><strong>set_content</strong> — mute le contenu d’un nœud (code, texte, image).</li>
-          <li><strong>comment</strong> — bulle de texte près d’un nœud.</li>
-          <li><strong>highlight</strong> — surligne un nœud statique ou une connexion (par ID).</li>
+          <li>
+            <strong>move</strong> — déplace un objet dynamique de{' '}
+            <code className="inline">from</code> vers{' '}
+            <code className="inline">to</code>.
+          </li>
+          <li>
+            <strong>arrow</strong> — trace une flèche animée (styles{' '}
+            <code className="inline">solid</code>/
+            <code className="inline">dotted</code>/
+            <code className="inline">dashed</code>).
+          </li>
+          <li>
+            <strong>parallel</strong> — exécute plusieurs actions au même
+            instant.
+          </li>
+          <li>
+            <strong>loading</strong> — spinner de chargement sur un nœud.
+          </li>
+          <li>
+            <strong>set_content</strong> — mute le contenu d’un nœud (code,
+            texte, image).
+          </li>
+          <li>
+            <strong>comment</strong> — bulle de texte près d’un nœud.
+          </li>
+          <li>
+            <strong>highlight</strong> — surligne un nœud statique ou une
+            connexion (par ID).
+          </li>
         </ul>
         <p>
-          Voir la <a href="#/docs/api">référence API</a> pour les champs détaillés de
-          chaque action.
+          Voir la <a href="#/docs/api">référence API</a> pour les champs
+          détaillés de chaque action.
         </p>
       </>
     ),

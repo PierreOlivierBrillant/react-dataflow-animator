@@ -34,7 +34,9 @@ function CodeBlock({ html }: { html: string }) {
       const avail = el.clientWidth;
       el.style.fontSize = applied;
       setFontPx(
-        avail > 0 && natural > avail + 1 ? Math.max(7, base * (avail / natural)) : undefined,
+        avail > 0 && natural > avail + 1
+          ? Math.max(7, base * (avail / natural))
+          : undefined
       );
     };
     const ro = new ResizeObserver(fit);
@@ -53,7 +55,10 @@ export function ContentPanel({ content, highlight }: ContentPanelProps) {
   const type = content.content_type ?? 'text';
 
   if (type === 'code') {
-    const html = highlight(content.content ?? '', content.language ?? 'plaintext');
+    const html = highlight(
+      content.content ?? '',
+      content.language ?? 'plaintext'
+    );
     return (
       <div className="rdfa-content rdfa-terminal">
         <div className="rdfa-content-body rdfa-code">

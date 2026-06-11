@@ -89,28 +89,28 @@ export function CustomNavbar() {
             >
               <div className="px-5 pb-5">
                 <div className="flex flex-col gap-1 pt-3">
-              {[
-                { label: 'Documentation', to: '/docs/intro' },
-                { label: 'Playground', to: '/playground' },
-              ].map(({ label, to }) => (
-                <Link
-                  key={label}
-                  to={to}
-                  className="px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {label}
-                </Link>
-              ))}
-              <a
-                href="https://github.com/PierreOlivierBrillant/react-dataflow-animator"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
-                onClick={() => setMobileOpen(false)}
-              >
-                <FaGithub size={15} /> Sources
-              </a>
+                  {[
+                    { label: 'Documentation', to: '/docs/intro' },
+                    { label: 'Playground', to: '/playground' },
+                  ].map(({ label, to }) => (
+                    <Link
+                      key={label}
+                      to={to}
+                      className="px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      {label}
+                    </Link>
+                  ))}
+                  <a
+                    href="https://github.com/PierreOlivierBrillant/react-dataflow-animator"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <FaGithub size={15} /> Sources
+                  </a>
                 </div>
               </div>
             </motion.div>

@@ -52,7 +52,7 @@ export function useClock(options: UseClockOptions): Clock {
       targetRef.current = null;
       setT(clamp(ms, 0, durationMs));
     },
-    [durationMs, setT],
+    [durationMs, setT]
   );
 
   const play = useCallback(() => {
@@ -87,7 +87,7 @@ export function useClock(options: UseClockOptions): Clock {
       targetRef.current = target;
       setPlaying(true);
     },
-    [durationMs, seek],
+    [durationMs, seek]
   );
 
   useEffect(() => {

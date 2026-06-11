@@ -117,9 +117,10 @@ function circularLayout(nodes: StaticObject[], aspect: number): LayoutMap {
 function applyAlignment(
   map: LayoutMap,
   nodes: StaticObject[],
-  direction: Direction,
+  direction: Direction
 ): void {
-  const horizontal = direction === 'left-to-right' || direction === 'right-to-left';
+  const horizontal =
+    direction === 'left-to-right' || direction === 'right-to-left';
   for (const node of nodes) {
     if (!node.align_with) continue;
     const self = map[node.id];
@@ -132,7 +133,7 @@ function applyAlignment(
 
 export function computeLayout(
   spec: DataFlowSpec,
-  options: LayoutOptions = {},
+  options: LayoutOptions = {}
 ): LayoutMap {
   const direction = spec.direction ?? 'left-to-right';
   const nodes = spec.static_objects;

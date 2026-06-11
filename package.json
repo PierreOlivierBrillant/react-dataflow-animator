@@ -16,9 +16,12 @@
     "dev": "npm run build -w react-dataflow-animator && concurrently \"npm run dev -w react-dataflow-animator\" \"npm run dev -w @react-dataflow-animator/docs\"",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test -w react-dataflow-animator",
-    "test:coverage": "npm run test:coverage -w react-dataflow-animator"
+    "test:coverage": "npm run test:coverage -w react-dataflow-animator",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,mdx,css}\"",
+    "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,css}\""
   },
   "devDependencies": {
-    "concurrently": "^10.0.3"
+    "concurrently": "^10.0.3",
+    "prettier": "^3.8.4"
   }
 }

@@ -15,10 +15,7 @@
       "@site/*": ["./*"],
       "@generated/*": ["./.docusaurus/*"]
     },
-    "types": [
-      "@docusaurus/module-type-aliases",
-      "@docusaurus/theme-classic"
-    ]
+    "types": ["@docusaurus/module-type-aliases", "@docusaurus/theme-classic"]
   },
   "include": ["src", "docs", "docusaurus.config.ts", "sidebars.ts"]
 }

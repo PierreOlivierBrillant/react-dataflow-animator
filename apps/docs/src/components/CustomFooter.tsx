@@ -64,9 +64,7 @@ function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
 function FooterCopyright({ copyright }: { copyright?: string }) {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-8 border-t border-white/5">
-      <p className="text-xs m-0 text-white/20 font-sans">
-        {copyright || ''}
-      </p>
+      <p className="text-xs m-0 text-white/20 font-sans">{copyright || ''}</p>
       <div className="flex items-center gap-4">
         <a
           href="https://github.com/PierreOlivierBrillant/react-dataflow-animator"

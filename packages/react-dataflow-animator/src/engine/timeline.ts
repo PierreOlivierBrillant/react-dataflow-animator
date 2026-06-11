@@ -153,7 +153,7 @@ export function evaluate(timeline: Timeline, tMs: number): ActiveClip[] {
   }
 
   const active: ActiveClip[] = [];
-  
+
   // Fallback O(log N + K) : recherche dichotomique pour trouver le dernier clip démarré
   let low = 0;
   let high = timeline.clips.length - 1;

@@ -12,7 +12,11 @@ export interface CodeEditorProps {
   language?: string;
 }
 
-export function CodeEditor({ value, onChange, language = 'json' }: CodeEditorProps) {
+export function CodeEditor({
+  value,
+  onChange,
+  language = 'json',
+}: CodeEditorProps) {
   const preRef = useRef<HTMLPreElement>(null);
 
   const onScroll = (e: UIEvent<HTMLTextAreaElement>) => {
@@ -24,8 +28,16 @@ export function CodeEditor({ value, onChange, language = 'json' }: CodeEditorPro
 
   return (
     <div className="pg-code">
-      <pre ref={preRef} className="pg-code-layer pg-code-pre rdfa-code" aria-hidden="true">
-        <code dangerouslySetInnerHTML={{ __html: highlightCode(value, language) + '\n' }} />
+      <pre
+        ref={preRef}
+        className="pg-code-layer pg-code-pre rdfa-code"
+        aria-hidden="true"
+      >
+        <code
+          dangerouslySetInnerHTML={{
+            __html: highlightCode(value, language) + '\n',
+          }}
+        />
       </pre>
       <textarea
         className="pg-code-layer pg-code-ta"

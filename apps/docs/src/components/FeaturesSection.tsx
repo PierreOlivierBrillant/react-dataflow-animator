@@ -1,49 +1,49 @@
-import React from "react";
-import { motion } from "motion/react";
-import { Zap, Layers, Code2, GitFork, Navigation, Palette } from "lucide-react";
+import React from 'react';
+import { motion } from 'motion/react';
+import { Zap, Layers, Code2, GitFork, Navigation, Palette } from 'lucide-react';
 
 const FEATURES = [
   {
     icon: Zap,
-    title: "Placement automatique",
+    title: 'Placement automatique',
     description:
-      "Définissez uniquement les lanes — la librairie positionne chaque nœud automatiquement, en left-to-right, circular ou top-to-bottom.",
-    color: "#fbbf24",
+      'Définissez uniquement les lanes — la librairie positionne chaque nœud automatiquement, en left-to-right, circular ou top-to-bottom.',
+    color: '#fbbf24',
   },
   {
     icon: Navigation,
-    title: "Lecteur intégré",
+    title: 'Lecteur intégré',
     description:
       "Lecture, pause, retour au début et navigation step-by-step. Vos utilisateurs contrôlent l'animation à leur propre rythme.",
-    color: "#60a5fa",
+    color: '#60a5fa',
   },
   {
     icon: Code2,
-    title: "Spec JSON simple",
+    title: 'Spec JSON simple',
     description:
       "Décrivez nœuds, connexions et actions dans un seul objet JSON. TypeScript first, avec un schéma complet pour l'autocomplétion.",
-    color: "#a78bfa",
+    color: '#a78bfa',
   },
   {
     icon: GitFork,
-    title: "Actions parallèles",
+    title: 'Actions parallèles',
     description:
-      "Lancez plusieurs animations simultanément avec le type `parallel`. Idéal pour illustrer des requêtes concurrentes ou microservices.",
-    color: "#34d399",
+      'Lancez plusieurs animations simultanément avec le type `parallel`. Idéal pour illustrer des requêtes concurrentes ou microservices.',
+    color: '#34d399',
   },
   {
     icon: Layers,
-    title: "Contenu riche",
+    title: 'Contenu riche',
     description:
       "Les nœuds peuvent afficher du code avec coloration syntaxique, du texte formaté ou des images. Le contenu mute en cours d'animation.",
-    color: "#f472b6",
+    color: '#f472b6',
   },
   {
     icon: Palette,
-    title: "Sous-icônes technos",
+    title: 'Sous-icônes technos',
     description:
       "Ajoutez un badge `subicon` pour afficher une technologie connue (React, PostgreSQL, Node…) ou n'importe quelle icône personnalisée.",
-    color: "#22d3ee",
+    color: '#22d3ee',
   },
 ];
 
@@ -68,7 +68,7 @@ export function FeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            Tout ce qu'il vous faut,{" "}
+            Tout ce qu'il vous faut,{' '}
             <span className="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
               rien de plus.
             </span>
@@ -85,7 +85,7 @@ export function FeaturesSection() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.06 }}
               whileHover={{
-                backgroundColor: "rgba(255,255,255,0.04)",
+                backgroundColor: 'rgba(255,255,255,0.04)',
                 borderColor: `${f.color}30`,
               }}
             >
@@ -96,7 +96,11 @@ export function FeaturesSection() {
                   border: `1px solid ${f.color}28`,
                 }}
               >
-                <f.icon size={18} style={{ color: f.color }} strokeWidth={1.6} />
+                <f.icon
+                  size={18}
+                  style={{ color: f.color }}
+                  strokeWidth={1.6}
+                />
               </div>
               <h3 className="text-white mb-2 font-heading font-semibold text-base leading-tight">
                 {f.title}

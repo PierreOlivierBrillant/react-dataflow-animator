@@ -9,17 +9,45 @@ afterEach(cleanup);
 const spec: DataFlowSpec = {
   direction: 'left-to-right',
   static_objects: [
-    { id: 'editor', object_type: 'laptop', text: 'IDE', subicon: 'typescript', lane: 1 },
-    { id: 'server', object_type: 'server', text: 'Serveur', subicon: 'node', lane: 2 },
+    {
+      id: 'editor',
+      object_type: 'laptop',
+      text: 'IDE',
+      subicon: 'typescript',
+      lane: 1,
+    },
+    {
+      id: 'server',
+      object_type: 'server',
+      text: 'Serveur',
+      subicon: 'node',
+      lane: 2,
+    },
   ],
-  dynamic_objects: [{ id: 'd', object_type: 'http_packet', packet_content: { header: 'GET /' } }],
+  dynamic_objects: [
+    {
+      id: 'd',
+      object_type: 'http_packet',
+      packet_content: { header: 'GET /' },
+    },
+  ],
   actions: [
     {
       action_type: 'set_content',
       object: 'editor',
-      content: { content_type: 'code', language: 'javascript', content: 'const add = (a, b) => a + b;' },
+      content: {
+        content_type: 'code',
+        language: 'javascript',
+        content: 'const add = (a, b) => a + b;',
+      },
     },
-    { action_type: 'move', object: 'd', from: 'editor', to: 'server', duration: 600 },
+    {
+      action_type: 'move',
+      object: 'd',
+      from: 'editor',
+      to: 'server',
+      duration: 600,
+    },
   ],
 };
 
@@ -41,7 +69,9 @@ describe('DataFlowPlayer (montage réel)', () => {
   });
 
   it('respecte controls=false', () => {
-    const { container } = render(<DataFlowPlayer spec={spec} controls={false} />);
+    const { container } = render(
+      <DataFlowPlayer spec={spec} controls={false} />
+    );
     expect(container.querySelector('.rdfa-controls')).toBeNull();
   });
 });

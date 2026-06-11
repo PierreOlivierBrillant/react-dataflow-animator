@@ -40,7 +40,7 @@ const FADE_MS = 250;
  */
 function clipOpacity(
   clip: { startMs: number; animStartMs: number; visibleUntilMs: number },
-  t: number,
+  t: number
 ): number {
   const inDur = clip.animStartMs - clip.startMs;
   const fadeIn =
@@ -48,7 +48,8 @@ function clipOpacity(
       ? clamp((t - clip.startMs) / inDur, 0, 1)
       : clamp((t - clip.startMs) / FADE_MS, 0, 1);
   const outStart = clip.visibleUntilMs - FADE_MS;
-  const fadeOut = t > outStart ? clamp((clip.visibleUntilMs - t) / FADE_MS, 0, 1) : 1;
+  const fadeOut =
+    t > outStart ? clamp((clip.visibleUntilMs - t) / FADE_MS, 0, 1) : 1;
   return Math.min(fadeIn, fadeOut);
 }
 
@@ -82,10 +83,11 @@ export function Stage({
     () =>
       `${spec.direction ?? 'left-to-right'}|` +
       spec.static_objects.map((o) => o.id).join(','),
-    [spec],
+    [spec]
   );
 
-  const { stageRef, geometry, aspect, width, height } = useStageGeometry(signature);
+  const { stageRef, geometry, aspect, width, height } =
+    useStageGeometry(signature);
   const layout = useMemo(() => computeLayout(spec, { aspect }), [spec, aspect]);
 
   // « Cellule » = plus petite distance entre deux nœuds (px). Elle pilote :
@@ -99,13 +101,13 @@ export function Stage({
 
     // Espace de base requis entre deux nœuds (pour laisser passer les paquets)
     // On le diminue légèrement pour autoriser une échelle plus généreuse.
-    const PAIR_W = 190; 
+    const PAIR_W = 190;
     const PAIR_H = 130;
 
     // Espace de base requis entre le centre d'un nœud et le bord du conteneur
     const EDGE_MARGIN_X = 60;
     const EDGE_MARGIN_Y = 60;
-    
+
     let maxAllowedScale = Infinity;
 
     for (let i = 0; i < ids.length; i++) {
@@ -125,22 +127,22 @@ export function Stage({
     }
 
     // Limite globale basée sur la taille absolue du conteneur.
-    // Cela empêche 2 nœuds solitaires de devenir monstrueusement grands 
+    // Cela empêche 2 nœuds solitaires de devenir monstrueusement grands
     // et garantit un rétrécissement fluide sur le playground.
     const sizeScale = Math.min((width || 800) / 700, (height || 500) / 350);
 
     const d = DENSITY[density];
     const targetScale = Math.min(maxAllowedScale, sizeScale) * d.scale;
-    
+
     // On borne pour éviter des extrêmes absolus
     const finalScale = clamp(targetScale, 0.3, 1.6);
 
     return {
       scale: finalScale,
-      // On fixe une largeur max généreuse pour les paquets, surtout depuis 
-      // l'ajout des tables SQL. S'ils sont plus larges que PAIR_W, ils déborderont 
+      // On fixe une largeur max généreuse pour les paquets, surtout depuis
+      // l'ajout des tables SQL. S'ils sont plus larges que PAIR_W, ils déborderont
       // légèrement sur les icônes des nœuds, ce qui est préférable au wrapping.
-      maxW: Math.max(PAIR_W, 320), 
+      maxW: Math.max(PAIR_W, 320),
       contentMaxW: Math.round((width || 320) * 0.95),
     };
   }, [layout, width, height, density]);
@@ -202,15 +204,23 @@ export function Stage({
       const isHorizontal = Math.abs(dx) >= Math.abs(dy);
 
       const faceFrom = isHorizontal
-        ? dx >= 0 ? `${from}|RIGHT` : `${from}|LEFT`
-        : dy >= 0 ? `${from}|BOTTOM` : `${from}|TOP`;
+        ? dx >= 0
+          ? `${from}|RIGHT`
+          : `${from}|LEFT`
+        : dy >= 0
+          ? `${from}|BOTTOM`
+          : `${from}|TOP`;
       const coordFrom = isHorizontal ? p2.cy : p2.cx;
       if (!nodeFaces[faceFrom]) nodeFaces[faceFrom] = [];
       nodeFaces[faceFrom].push({ pairKey: pairId, coord: coordFrom });
 
       const faceTo = isHorizontal
-        ? dx >= 0 ? `${to}|LEFT` : `${to}|RIGHT`
-        : dy >= 0 ? `${to}|TOP` : `${to}|BOTTOM`;
+        ? dx >= 0
+          ? `${to}|LEFT`
+          : `${to}|RIGHT`
+        : dy >= 0
+          ? `${to}|TOP`
+          : `${to}|BOTTOM`;
       const coordTo = isHorizontal ? p1.cy : p1.cx;
       if (!nodeFaces[faceTo]) nodeFaces[faceTo] = [];
       nodeFaces[faceTo].push({ pairKey: pairId, coord: coordTo });
@@ -239,11 +249,19 @@ export function Stage({
         const isHorizontal = Math.abs(dx) >= Math.abs(dy);
 
         const faceFrom = isHorizontal
-          ? dx >= 0 ? `${from}|RIGHT` : `${from}|LEFT`
-          : dy >= 0 ? `${from}|BOTTOM` : `${from}|TOP`;
+          ? dx >= 0
+            ? `${from}|RIGHT`
+            : `${from}|LEFT`
+          : dy >= 0
+            ? `${from}|BOTTOM`
+            : `${from}|TOP`;
         const faceTo = isHorizontal
-          ? dx >= 0 ? `${to}|LEFT` : `${to}|RIGHT`
-          : dy >= 0 ? `${to}|TOP` : `${to}|BOTTOM`;
+          ? dx >= 0
+            ? `${to}|LEFT`
+            : `${to}|RIGHT`
+          : dy >= 0
+            ? `${to}|TOP`
+            : `${to}|BOTTOM`;
 
         const fanOutStart = faceOffsets[faceFrom]?.[pairId] ?? 0;
         const fanOutEnd = faceOffsets[faceTo]?.[pairId] ?? 0;
@@ -267,7 +285,10 @@ export function Stage({
     }
     for (const a of active) {
       if (a.clip.kind === 'set_content') {
-        map[a.clip.objectId] = { content: a.clip.content, opacity: clipOpacity(a.clip, t) };
+        map[a.clip.objectId] = {
+          content: a.clip.content,
+          opacity: clipOpacity(a.clip, t),
+        };
       }
     }
     return map;
@@ -275,7 +296,8 @@ export function Stage({
 
   const loadingNodes = useMemo(() => {
     const set = new Set<string>();
-    for (const a of active) if (a.clip.kind === 'loading') set.add(a.clip.objectId);
+    for (const a of active)
+      if (a.clip.kind === 'loading') set.add(a.clip.objectId);
     return set;
   }, [active]);
 
@@ -283,7 +305,8 @@ export function Stage({
   const highlightedIds = useMemo(() => {
     const set = new Set<string>();
     for (const a of active) {
-      if (a.clip.kind === 'highlight') set.add((a.clip as HighlightClip).targetId);
+      if (a.clip.kind === 'highlight')
+        set.add((a.clip as HighlightClip).targetId);
     }
     return set;
   }, [active]);
@@ -359,7 +382,9 @@ export function Stage({
 
           let lineKey = clip.id;
           if (!portOffsets[lineKey]) {
-            const matchingLine = lineConnections.find(c => c[1] === clip.fromId && c[2] === clip.toId);
+            const matchingLine = lineConnections.find(
+              (c) => c[1] === clip.fromId && c[2] === clip.toId
+            );
             if (matchingLine) lineKey = matchingLine[0];
           }
           const ports = portOffsets[lineKey] ?? { start: 0, end: 0 };
@@ -440,7 +465,9 @@ export function Stage({
         })}
       </div>
 
-      {debug ? <DebugOverlay timeline={timeline} t={t} activeCount={active.length} /> : null}
+      {debug ? (
+        <DebugOverlay timeline={timeline} t={t} activeCount={active.length} />
+      ) : null}
     </div>
   );
 }
@@ -469,7 +496,9 @@ const CommentBubble = memo(function CommentBubble({
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => setSize({ w: el.offsetWidth, h: el.offsetHeight }));
+    const ro = new ResizeObserver(() =>
+      setSize({ w: el.offsetWidth, h: el.offsetHeight })
+    );
     ro.observe(el);
     return () => ro.disconnect();
   }, []);

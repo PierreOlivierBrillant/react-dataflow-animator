@@ -6,7 +6,10 @@ import { CtaSection } from '../components/CtaSection';
 
 export default function Home() {
   return (
-    <Layout title="Accueil" description="Animations de flux de données pour React et Docusaurus.">
+    <Layout
+      title="Accueil"
+      description="Animations de flux de données pour React et Docusaurus."
+    >
       <main className="min-h-screen relative z-0">
         <HeroSection />
         <DemoShowcase />

@@ -75,7 +75,14 @@ export function registerSubIcon(name: string, node: ReactNode): void {
 /** Pastille de texte libre, pour les `subicon` qui ne sont pas des icônes connues. */
 function renderText(text: string): ReactNode {
   const label = text.length > 4 ? text.slice(0, 4) : text;
-  const fontSize = label.length >= 4 ? 6 : label.length === 3 ? 7.5 : label.length === 2 ? 9 : 12;
+  const fontSize =
+    label.length >= 4
+      ? 6
+      : label.length === 3
+        ? 7.5
+        : label.length === 2
+          ? 9
+          : 12;
   return (
     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
       <circle cx="12" cy="12" r="12" fill="#475569" />

@@ -34,25 +34,26 @@ useClock (rAF) ──▶ t ─────┤
 
 ## Carte des modules (`src/lib/`)
 
-| Fichier | Rôle |
-|---|---|
-| `index.ts` | Exports publics |
-| `types.ts` | Types de la spec + props |
-| `schema.ts` | JSON Schema (alimente la doc API) |
-| `DataFlowPlayer.tsx` | Composant racine (compile + horloge + plein écran + thème) |
-| `engine/timeline.ts` | IR + `evaluate` (pur) + helpers d'étapes |
-| `engine/compiler.ts` | `spec.actions` → `Timeline` (parallel/wait_for/lifecycle/anti-collision) |
-| `engine/layout.ts` | Placement des nœuds (linéaire par lanes, circular) |
-| `engine/geometry.ts` | Points de connexion + path shifting |
-| `hooks/useClock.ts` | Horloge rAF (play/pause/seek/playTo) |
-| `hooks/useStageGeometry.ts` | Mesure des nœuds + ResizeObserver |
-| `highlight/highlight.ts` | Wrapper Prism (remplaçable) |
-| `components/…` | Rendu : `Stage`, `Controls`, nœuds, dynamiques (`Packet`, `ArrowLine`, `ContentPanel`) |
-| `styles/dataflow.css` | Styles scopés `.rdfa-` |
+| Fichier                     | Rôle                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `index.ts`                  | Exports publics                                                                        |
+| `types.ts`                  | Types de la spec + props                                                               |
+| `schema.ts`                 | JSON Schema (alimente la doc API)                                                      |
+| `DataFlowPlayer.tsx`        | Composant racine (compile + horloge + plein écran + thème)                             |
+| `engine/timeline.ts`        | IR + `evaluate` (pur) + helpers d'étapes                                               |
+| `engine/compiler.ts`        | `spec.actions` → `Timeline` (parallel/wait_for/lifecycle/anti-collision)               |
+| `engine/layout.ts`          | Placement des nœuds (linéaire par lanes, circular)                                     |
+| `engine/geometry.ts`        | Points de connexion + path shifting                                                    |
+| `hooks/useClock.ts`         | Horloge rAF (play/pause/seek/playTo)                                                   |
+| `hooks/useStageGeometry.ts` | Mesure des nœuds + ResizeObserver                                                      |
+| `highlight/highlight.ts`    | Wrapper Prism (remplaçable)                                                            |
+| `components/…`              | Rendu : `Stage`, `Controls`, nœuds, dynamiques (`Packet`, `ArrowLine`, `ContentPanel`) |
+| `styles/dataflow.css`       | Styles scopés `.rdfa-`                                                                 |
 
 ## Ajouter une nouvelle composante
 
 **Nouveau type d'action** (ex: `highlight_node`) :
+
 1. Ajouter le type dans `types.ts` (`ActionType`) et l'enum dans `schema.ts`.
 2. Ajouter une variante de clip dans `engine/timeline.ts` (union `Clip`) + son défaut
    de `keep_until_next` et sa durée dans `engine/compiler.ts`, et un `case` dans
