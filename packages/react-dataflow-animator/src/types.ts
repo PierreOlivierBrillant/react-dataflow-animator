@@ -85,6 +85,8 @@ export interface PacketBody {
   content_type?: 'text' | 'image';
   /** Texte ou chemin d'image. */
   content?: string;
+  /** Langage pour la coloration syntaxique du texte (optionnel). */
+  language?: string;
 }
 
 export interface PacketContent {

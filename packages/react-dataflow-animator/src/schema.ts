@@ -132,6 +132,7 @@ export const dataFlowSchema = {
               properties: {
                 content_type: { type: 'string', enum: ['text', 'image'] },
                 content: { type: 'string', description: "Texte ou chemin d'image." },
+                language: { type: 'string', description: "Langage pour la coloration syntaxique du corps." },
               },
             },
           },

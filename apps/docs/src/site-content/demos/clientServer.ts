@@ -30,8 +30,7 @@ export const clientServer: DataFlowSpec = {
       id: 'req',
       object_type: 'http_packet',
       packet_content: {
-        header: 'GET /users',
-        body: { content_type: 'text', content: 'Accept: application/json' },
+        header: 'GET /users\nAccept: application/json',
       },
     },
     {

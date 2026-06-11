@@ -37,7 +37,9 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> = defineAnimatable
       {object.subicon ? (
         <span className="rdfa-node-subicon">{getSubIcon(object.subicon)}</span>
       ) : null}
-      {loading ? <span className="rdfa-spinner" /> : null}
+      {loading ? (
+        <span className="rdfa-spinner" />
+      ) : null}
     </>
   );
 

@@ -25,6 +25,16 @@
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --rdfa-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
 
+  /* Prism colors (Light) */
+  --rdfa-code-comment: #64748b;
+  --rdfa-code-punct: #334155;
+  --rdfa-code-prop: #c026d3;
+  --rdfa-code-str: #16a34a;
+  --rdfa-code-op: #d97706;
+  --rdfa-code-kw: #2563eb;
+  --rdfa-code-func: #7c3aed;
+  --rdfa-code-var: #ea580c;
+
   position: relative;
   display: flex;
   flex-direction: column;
@@ -59,6 +69,16 @@
   --rdfa-node-stroke: #cbd5e1;
   --rdfa-arrow: #94a3b8;
   --rdfa-window-bg: #334155;
+
+  /* Prism colors (Dark) */
+  --rdfa-code-comment: #94a3b8;
+  --rdfa-code-punct: #cbd5e1;
+  --rdfa-code-prop: #f472b6;
+  --rdfa-code-str: #86efac;
+  --rdfa-code-op: #fcd34d;
+  --rdfa-code-kw: #93c5fd;
+  --rdfa-code-func: #c4b5fd;
+  --rdfa-code-var: #fdba74;
 }
 
 /* theme="auto" sans hôte thématisé : on suit la préférence système. */
@@ -74,6 +94,16 @@
     --rdfa-node-stroke: #cbd5e1;
     --rdfa-arrow: #94a3b8;
     --rdfa-window-bg: #334155;
+
+    /* Prism colors (Dark) */
+    --rdfa-code-comment: #94a3b8;
+    --rdfa-code-punct: #cbd5e1;
+    --rdfa-code-prop: #f472b6;
+    --rdfa-code-str: #86efac;
+    --rdfa-code-op: #fcd34d;
+    --rdfa-code-kw: #93c5fd;
+    --rdfa-code-func: #c4b5fd;
+    --rdfa-code-var: #fdba74;
   }
 }
 
@@ -89,6 +119,16 @@
   --rdfa-node-stroke: #334155;
   --rdfa-arrow: #475569;
   --rdfa-window-bg: #e2e8f0;
+
+  /* Prism colors (Light) */
+  --rdfa-code-comment: #64748b;
+  --rdfa-code-punct: #334155;
+  --rdfa-code-prop: #c026d3;
+  --rdfa-code-str: #16a34a;
+  --rdfa-code-op: #d97706;
+  --rdfa-code-kw: #2563eb;
+  --rdfa-code-func: #7c3aed;
+  --rdfa-code-var: #ea580c;
 }
 
 .rdfa-player:fullscreen {
@@ -174,15 +214,16 @@
 
 .rdfa-node-subicon {
   position: absolute;
-  right: calc(-6px * var(--rdfa-scale, 1));
-  bottom: calc(-6px * var(--rdfa-scale, 1));
-  width: calc(24px * var(--rdfa-scale, 1));
-  height: calc(24px * var(--rdfa-scale, 1));
+  right: calc(-3px * var(--rdfa-scale, 1));
+  bottom: calc(2px * var(--rdfa-scale, 1));
+  width: calc(25px * var(--rdfa-scale, 1));
+  height: calc(25px * var(--rdfa-scale, 1));
   padding: 2px;
   border-radius: 50%;
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  z-index: 6; /* Au-dessus du loading */
 }
 
 .rdfa-node-subicon svg,
@@ -196,6 +237,7 @@
   font-size: calc(13px * var(--rdfa-scale, 1));
   color: var(--rdfa-text);
   line-height: 1.2;
+  white-space: pre-wrap;
 }
 
 /* ---------- Surlignage (action highlight) ---------- */
@@ -276,36 +318,32 @@
   border-radius: 8px;
   font-size: calc(12px * var(--rdfa-scale, 1));
   font-family: var(--rdfa-mono);
-  color: #fff;
-  /* Fond plein opaque + contour clair pour rester lisible au-dessus des nœuds/flèches. */
-  opacity: 1;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  color: var(--rdfa-text);
+  background: var(--rdfa-surface);
+  border: 1px solid var(--rdfa-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   /* Largeur plafonnée à la « cellule » pour ne pas déborder ; on autorise le retour
      à la ligne plutôt qu'un débordement. */
   max-width: calc(var(--rdfa-maxw, 220px) * 0.92);
   overflow-wrap: anywhere;
-  text-align: center;
-}
-
-.rdfa-packet-http_packet {
-  background: var(--rdfa-packet-http);
-}
-
-.rdfa-packet-sql_request {
-  background: var(--rdfa-packet-sql);
-}
-
-.rdfa-packet-sql_response {
-  background: var(--rdfa-packet-sql-response);
+  text-align: left;
+  white-space: pre-wrap;
 }
 
 .rdfa-packet-header {
   font-weight: 600;
 }
 
-.rdfa-packet-body {
+.rdfa-packet-header.rdfa-code,
+.rdfa-packet-surface {
+  font-weight: 400; /* Reset font-weight for code */
   margin-top: 2px;
+}
+
+.rdfa-packet-body {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--rdfa-border);
   font-weight: 400;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -321,21 +359,20 @@
 /* ---------- Loading (spinner) ---------- */
 .rdfa-spinner {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: calc(28px * var(--rdfa-scale, 1));
-  height: calc(28px * var(--rdfa-scale, 1));
+  right: calc(-5px * var(--rdfa-scale, 1));
+  bottom: calc(0px * var(--rdfa-scale, 1));
+  width: calc(30px * var(--rdfa-scale, 1));
+  height: calc(30px * var(--rdfa-scale, 1));
   z-index: 5;
-  border: calc(3px * var(--rdfa-scale, 1)) solid var(--rdfa-border);
+  border: calc(4px * var(--rdfa-scale, 1)) solid var(--rdfa-border);
   border-top-color: var(--rdfa-accent);
   border-radius: 50%;
-  animation: rdfa-spin 0.8s linear infinite;
+  animation: rdfa-spin-corner 0.8s linear infinite;
 }
 
-@keyframes rdfa-spin {
+@keyframes rdfa-spin-corner {
   to {
-    transform: translate(-50%, -50%) rotate(360deg);
+    transform: rotate(360deg);
   }
 }
 
@@ -352,6 +389,7 @@
   font-size: calc(13px * var(--rdfa-content-scale, 1));
   line-height: 1.35;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  white-space: pre-wrap;
 }
 
 /* Flèche de la bulle : positionnée dynamiquement (left inline) pour pointer le
@@ -449,6 +487,16 @@
 
 .rdfa-terminal .rdfa-content-body,
 .rdfa-content-body.rdfa-code {
+  /* Terminal is always dark, force dark Prism colors */
+  --rdfa-code-comment: #94a3b8;
+  --rdfa-code-punct: #cbd5e1;
+  --rdfa-code-prop: #f472b6;
+  --rdfa-code-str: #86efac;
+  --rdfa-code-op: #fcd34d;
+  --rdfa-code-kw: #93c5fd;
+  --rdfa-code-func: #c4b5fd;
+  --rdfa-code-var: #fdba74;
+
   background: var(--rdfa-terminal-bg);
   color: var(--rdfa-terminal-text);
 }
@@ -466,10 +514,10 @@
 .rdfa-code .token.prolog,
 .rdfa-code .token.doctype,
 .rdfa-code .token.cdata {
-  color: #94a3b8;
+  color: var(--rdfa-code-comment);
 }
 .rdfa-code .token.punctuation {
-  color: #cbd5e1;
+  color: var(--rdfa-code-punct);
 }
 .rdfa-code .token.property,
 .rdfa-code .token.tag,
@@ -478,7 +526,7 @@
 .rdfa-code .token.constant,
 .rdfa-code .token.symbol,
 .rdfa-code .token.deleted {
-  color: #f472b6;
+  color: var(--rdfa-code-prop);
 }
 .rdfa-code .token.selector,
 .rdfa-code .token.attr-name,
@@ -486,26 +534,26 @@
 .rdfa-code .token.char,
 .rdfa-code .token.builtin,
 .rdfa-code .token.inserted {
-  color: #86efac;
+  color: var(--rdfa-code-str);
 }
 .rdfa-code .token.operator,
 .rdfa-code .token.entity,
 .rdfa-code .token.url {
-  color: #fcd34d;
+  color: var(--rdfa-code-op);
 }
 .rdfa-code .token.atrule,
 .rdfa-code .token.attr-value,
 .rdfa-code .token.keyword {
-  color: #93c5fd;
+  color: var(--rdfa-code-kw);
 }
 .rdfa-code .token.function,
 .rdfa-code .token.class-name {
-  color: #c4b5fd;
+  color: var(--rdfa-code-func);
 }
 .rdfa-code .token.regex,
 .rdfa-code .token.important,
 .rdfa-code .token.variable {
-  color: #fdba74;
+  color: var(--rdfa-code-var);
 }
 
 /* ---------- Contrôles ---------- */

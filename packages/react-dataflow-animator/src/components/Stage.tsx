@@ -345,6 +345,7 @@ export function Stage({
               y={pt.y}
               opacity={opacity}
               scale={0.8 + 0.2 * opacity}
+              highlight={highlight}
             />
           );
         })}
