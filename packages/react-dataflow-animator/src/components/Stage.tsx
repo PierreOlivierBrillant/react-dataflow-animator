@@ -1,11 +1,4 @@
-import {
-  memo,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-} from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type {
   DataFlowSpec,
   DynamicObject,
@@ -17,7 +10,6 @@ import {
   clamp,
   evaluate,
   easeInOutCubic,
-  stepIndexAt,
   type ArrowClip,
   type CommentClip,
   type HighlightClip,
@@ -25,11 +17,13 @@ import {
   type Timeline,
 } from '../engine/timeline';
 import { computeLayout } from '../engine/layout';
-import { connection, pathTip, type NodeGeom } from '../engine/geometry';
+import { connection, pathTip } from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { StaticNode } from './nodes/StaticNode';
 import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
+import { CommentBubble } from './CommentBubble';
+import { DebugOverlay } from './DebugOverlay';
 
 /** Durée (ms) du fondu d'apparition/disparition (paquets, contenus). */
 const FADE_MS = 250;
@@ -472,99 +466,3 @@ export function Stage({
   );
 }
 
-/**
- * Bulle de commentaire qui se mesure et se borne dans le canevas sur les deux
- * axes (au-dessus du nœud par défaut, en dessous sinon), avec une flèche qui
- * pointe vers le nœud quelle que soit la position contrainte.
- */
-const CommentBubble = memo(function CommentBubble({
-  node,
-  text,
-  opacity,
-  stageW,
-  stageH,
-}: {
-  node: NodeGeom;
-  text: string;
-  opacity: number;
-  stageW: number;
-  stageH: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ w: 0, h: 0 });
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() =>
-      setSize({ w: el.offsetWidth, h: el.offsetHeight })
-    );
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const PAD = 8;
-  const nodeTop = node.y - node.height / 2;
-  const nodeBottom = node.y + node.height / 2;
-  const below = size.h > 0 && nodeTop - 8 - size.h < PAD;
-
-  let top = below ? nodeBottom + 8 : nodeTop - 8 - size.h;
-  if (size.h > 0 && stageH > 0) {
-    top = clamp(top, PAD, Math.max(PAD, stageH - size.h - PAD));
-  }
-  let left = node.x - size.w / 2;
-  if (size.w > 0 && stageW > 0) {
-    left = clamp(left, PAD, Math.max(PAD, stageW - size.w - PAD));
-  }
-  const tailX = size.w > 0 ? clamp(node.x - left, 14, size.w - 14) : size.w / 2;
-
-  return (
-    <div
-      ref={ref}
-      className={`rdfa-comment${below ? ' rdfa-comment--below' : ''}`}
-      style={{
-        left,
-        top,
-        opacity,
-        visibility: size.w === 0 || size.h === 0 ? 'hidden' : 'visible',
-      }}
-    >
-      {text}
-      <span className="rdfa-comment-tail" style={{ left: tailX }} />
-    </div>
-  );
-});
-
-const DebugOverlay = memo(function DebugOverlay({
-  timeline,
-  t,
-  activeCount,
-}: {
-  timeline: Timeline;
-  t: number;
-  activeCount: number;
-}) {
-  const step = stepIndexAt(timeline, t);
-  return (
-    <div className="rdfa-debug">
-      <div>
-        <b>t</b> {Math.round(t)} / {Math.round(timeline.durationMs)} ms
-      </div>
-      <div>
-        <b>étape</b> {step + 1} / {timeline.steps.length} · <b>clips actifs</b>{' '}
-        {activeCount}
-      </div>
-      {timeline.clips.map((c) => {
-        const isActive = t >= c.startMs && t <= c.visibleUntilMs;
-        return (
-          <div
-            key={c.id}
-            className={`rdfa-debug-row${isActive ? ' is-active' : ''}`}
-          >
-            {c.kind} #{c.id} [{Math.round(c.startMs)}–{Math.round(c.endMs)}]
-          </div>
-        );
-      })}
-    </div>
-  );
-});
