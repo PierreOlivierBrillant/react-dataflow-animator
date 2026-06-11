@@ -189,19 +189,73 @@ export function Stage({
       pairConnections[pair].push(c);
     }
 
-    const offsets: Record<string, { start: number; end: number }> = {};
-    for (const conns of Object.values(pairConnections)) {
-      // Pour chaque paire, on calcule les offsets
-      const total = conns.length;
-      conns.forEach(([key], i) => {
-        const offset = (i - (total - 1) / 2) * 30;
-        if (!offsets[key]) offsets[key] = { start: 0, end: 0 };
-        offsets[key].start = offset;
-        offsets[key].end = offset;
+    // Calcul des faces de départ/arrivée pour chaque paire (fan-out)
+    const nodeFaces: Record<string, { pairKey: string; coord: number }[]> = {};
+    Object.keys(pairConnections).forEach((pairId) => {
+      const conns = pairConnections[pairId];
+      const [, from, to] = conns[0]; // On prend la première connexion comme référence
+      const p1 = layout[from] ?? { cx: 0.5, cy: 0.5 };
+      const p2 = layout[to] ?? { cx: 0.5, cy: 0.5 };
+      const dx = p2.cx - p1.cx;
+      const dy = p2.cy - p1.cy;
+      const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+
+      const faceFrom = isHorizontal
+        ? dx >= 0 ? `${from}|RIGHT` : `${from}|LEFT`
+        : dy >= 0 ? `${from}|BOTTOM` : `${from}|TOP`;
+      const coordFrom = isHorizontal ? p2.cy : p2.cx;
+      if (!nodeFaces[faceFrom]) nodeFaces[faceFrom] = [];
+      nodeFaces[faceFrom].push({ pairKey: pairId, coord: coordFrom });
+
+      const faceTo = isHorizontal
+        ? dx >= 0 ? `${to}|LEFT` : `${to}|RIGHT`
+        : dy >= 0 ? `${to}|TOP` : `${to}|BOTTOM`;
+      const coordTo = isHorizontal ? p1.cy : p1.cx;
+      if (!nodeFaces[faceTo]) nodeFaces[faceTo] = [];
+      nodeFaces[faceTo].push({ pairKey: pairId, coord: coordTo });
+    });
+
+    const faceOffsets: Record<string, Record<string, number>> = {};
+    for (const [face, items] of Object.entries(nodeFaces)) {
+      items.sort((a, b) => a.coord - b.coord);
+      const total = items.length;
+      faceOffsets[face] = {};
+      items.forEach((item, i) => {
+        faceOffsets[face][item.pairKey] = (i - (total - 1) / 2) * 30;
       });
     }
+
+    const offsets: Record<string, { start: number; end: number }> = {};
+    for (const [pairId, conns] of Object.entries(pairConnections)) {
+      const total = conns.length;
+      conns.forEach(([key, from, to], i) => {
+        const intraPairOffset = (i - (total - 1) / 2) * 30;
+
+        const p1 = layout[from] ?? { cx: 0.5, cy: 0.5 };
+        const p2 = layout[to] ?? { cx: 0.5, cy: 0.5 };
+        const dx = p2.cx - p1.cx;
+        const dy = p2.cy - p1.cy;
+        const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+
+        const faceFrom = isHorizontal
+          ? dx >= 0 ? `${from}|RIGHT` : `${from}|LEFT`
+          : dy >= 0 ? `${from}|BOTTOM` : `${from}|TOP`;
+        const faceTo = isHorizontal
+          ? dx >= 0 ? `${to}|LEFT` : `${to}|RIGHT`
+          : dy >= 0 ? `${to}|TOP` : `${to}|BOTTOM`;
+
+        const fanOutStart = faceOffsets[faceFrom]?.[pairId] ?? 0;
+        const fanOutEnd = faceOffsets[faceTo]?.[pairId] ?? 0;
+
+        offsets[key] = {
+          start: intraPairOffset + fanOutStart,
+          end: intraPairOffset + fanOutEnd,
+        };
+      });
+    }
+
     return { portOffsets: offsets, lineConnections: allConnections };
-  }, [spec]);
+  }, [spec, layout]);
 
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
   // actif (avec fondu d'apparition/disparition).
