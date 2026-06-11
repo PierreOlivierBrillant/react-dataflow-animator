@@ -112,15 +112,15 @@ sous `react-dataflow-animator` et `react-dataflow-animator/styles.css`.
 
 ## Tests et qualité
 
-| Commande (racine) | Effet |
-| --- | --- |
-| `npm run lint` | Lint des workspaces qui exposent un script lint |
-| `npm run format:check` | Vérifie le formatage Prettier |
-| `npm run format:write` | Applique Prettier |
-| `npm test` | Tests vitest de la lib |
-| `npm run test:coverage` | Tests + rapport de couverture |
-| `npm run deadcode` | knip — détection de code mort |
-| `npm run build` | Build complet (lib + docs) |
+| Commande (racine)       | Effet                                           |
+| ----------------------- | ----------------------------------------------- |
+| `npm run lint`          | Lint des workspaces qui exposent un script lint |
+| `npm run format:check`  | Vérifie le formatage Prettier                   |
+| `npm run format:write`  | Applique Prettier                               |
+| `npm test`              | Tests vitest de la lib                          |
+| `npm run test:coverage` | Tests + rapport de couverture                   |
+| `npm run deadcode`      | knip — détection de code mort                   |
+| `npm run build`         | Build complet (lib + docs)                      |
 
 Côté package, deux configurations vitest cohabitent : `vitest.config.ts`
 (unitaires, sous `src/**/*.test.{ts,tsx}`) et `vitest.integration.config.ts`

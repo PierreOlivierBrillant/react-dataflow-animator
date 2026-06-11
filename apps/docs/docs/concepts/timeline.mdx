@@ -65,11 +65,11 @@ Encapsule plusieurs actions exécutées au **même instant** :
 
 Chaque action accepte une `duration` (ms). Les défauts sont :
 
-| Type d'action | Défaut (ms) |
-| --- | --- |
-| `move`, `arrow`, `set_content`, `comment` | 500 |
-| `loading` | 1200 |
-| `highlight` | 600 |
+| Type d'action                             | Défaut (ms) |
+| ----------------------------------------- | ----------- |
+| `move`, `arrow`, `set_content`, `comment` | 500         |
+| `loading`                                 | 1200        |
+| `highlight`                               | 600         |
 
 ## Persistance visuelle
 
@@ -93,10 +93,10 @@ Reste visible jusqu'au **début** d'une action ciblée par `id` :
 Reste visible jusqu'au **début de l'étape racine suivante** (donc à travers
 la pause inter-étapes). Défauts par type d'action :
 
-| Type d'action | `keep_until_next` par défaut |
-| --- | --- |
-| `arrow`, `comment`, `set_content`, `highlight` | `true` |
-| `move`, `loading` | `false` |
+| Type d'action                                  | `keep_until_next` par défaut |
+| ---------------------------------------------- | ---------------------------- |
+| `arrow`, `comment`, `set_content`, `highlight` | `true`                       |
+| `move`, `loading`                              | `false`                      |
 
 ### `keep_until_end`
 

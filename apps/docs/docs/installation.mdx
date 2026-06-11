@@ -31,9 +31,7 @@ const spec = {
       packet_content: { header: 'GET /users' },
     },
   ],
-  actions: [
-    { action_type: 'move', object: 'req', from: 'browser', to: 'api' },
-  ],
+  actions: [{ action_type: 'move', object: 'req', from: 'browser', to: 'api' }],
 };
 
 export default function Example() {
@@ -84,8 +82,5 @@ afficher un placeholder pendant l'hydratation, utilisez la prop
 `fallback` :
 
 ```tsx
-<DataFlowPlayer
-  spec={spec}
-  fallback={<div>Chargement de l'animation…</div>}
-/>
+<DataFlowPlayer spec={spec} fallback={<div>Chargement de l'animation…</div>} />
 ```

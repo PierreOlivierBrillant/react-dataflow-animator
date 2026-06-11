@@ -77,18 +77,18 @@ et le SSR triviaux.
 
 ## Props principales du `<DataFlowPlayer>`
 
-| Prop | Type | Défaut | Description |
-| --- | --- | --- | --- |
-| `spec` | `DataFlowSpec` | — | La spécification à animer. |
-| `height` | `number \| string` | `420` | Hauteur de la scène. |
-| `autoPlay` | `boolean` | `false` | Démarre la lecture automatiquement. |
-| `loop` | `boolean` | `false` | Rejoue en boucle à la fin. |
-| `controls` | `boolean` | `true` | Affiche la barre de contrôles. |
-| `theme` | `'light' \| 'dark' \| 'auto'` | `'auto'` | Suit `prefers-color-scheme` et `[data-theme]` parent. |
-| `density` | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Échelle visuelle. |
-| `speed` | `number` | `1` | Vitesse de lecture. |
-| `highlight` | `Highlighter` | Prism | Remplacer la coloration syntaxique. |
-| `debug` | `boolean` | `false` | Overlay de debug de la timeline. |
+| Prop        | Type                                       | Défaut          | Description                                           |
+| ----------- | ------------------------------------------ | --------------- | ----------------------------------------------------- |
+| `spec`      | `DataFlowSpec`                             | —               | La spécification à animer.                            |
+| `height`    | `number \| string`                         | `420`           | Hauteur de la scène.                                  |
+| `autoPlay`  | `boolean`                                  | `false`         | Démarre la lecture automatiquement.                   |
+| `loop`      | `boolean`                                  | `false`         | Rejoue en boucle à la fin.                            |
+| `controls`  | `boolean`                                  | `true`          | Affiche la barre de contrôles.                        |
+| `theme`     | `'light' \| 'dark' \| 'auto'`              | `'auto'`        | Suit `prefers-color-scheme` et `[data-theme]` parent. |
+| `density`   | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Échelle visuelle.                                     |
+| `speed`     | `number`                                   | `1`             | Vitesse de lecture.                                   |
+| `highlight` | `Highlighter`                              | Prism           | Remplacer la coloration syntaxique.                   |
+| `debug`     | `boolean`                                  | `false`         | Overlay de debug de la timeline.                      |
 
 ## Extensibilité
 
