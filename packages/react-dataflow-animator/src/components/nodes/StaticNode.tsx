@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import type { Highlighter, ObjectContent, StaticObject } from '../../types';
 import type { NodePlacement } from '../../engine/layout';
 import { ContentPanel } from '../dynamic/ContentPanel';
@@ -19,7 +19,7 @@ export interface StaticNodeProps {
   highlight: Highlighter;
 }
 
-export function StaticNode({
+export const StaticNode = memo(function StaticNode({
   object,
   placement,
   content,
@@ -73,4 +73,4 @@ export function StaticNode({
       {object.text ? <span className="rdfa-node-label">{object.text}</span> : null}
     </div>
   );
-}
+});

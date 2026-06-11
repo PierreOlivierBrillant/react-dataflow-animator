@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { DynamicObject } from '../../types';
 
 /** Paquet en mouvement (move). Positionné en absolu au point courant du trajet. */
@@ -46,7 +47,7 @@ function PacketInner({ object }: { object: DynamicObject }) {
   }
 }
 
-export function Packet({ object, x, y, opacity = 1, scale = 1 }: PacketProps) {
+export const Packet = memo(function Packet({ object, x, y, opacity = 1, scale = 1 }: PacketProps) {
   return (
     <div
       className={`rdfa-packet rdfa-packet-${object.object_type}`}
@@ -60,4 +61,4 @@ export function Packet({ object, x, y, opacity = 1, scale = 1 }: PacketProps) {
       <PacketInner object={object} />
     </div>
   );
-}
+});

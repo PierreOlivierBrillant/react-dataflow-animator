@@ -1,4 +1,5 @@
 import {
+  memo,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -221,18 +222,24 @@ export function Stage({
   // Garantit qu'aucun nœud ne sort du canevas : on borne son centre selon sa
   // taille mesurée (basé sur le ratio de layout, donc stable — pas de boucle).
   const PLACEMENT_PAD = 6;
-  const placementOf = (id: string) => {
-    const base = layout[id];
-    if (!base) return undefined;
-    const g = geometry[id];
-    if (!g || !width || !height) return base;
-    const hwr = (g.width / 2 + PLACEMENT_PAD) / width;
-    const hhr = (g.height / 2 + PLACEMENT_PAD) / height;
-    return {
-      cx: 2 * hwr < 1 ? clamp(base.cx, hwr, 1 - hwr) : base.cx,
-      cy: 2 * hhr < 1 ? clamp(base.cy, hhr, 1 - hhr) : base.cy,
-    };
-  };
+  const placements = useMemo(() => {
+    const map: Record<string, { cx: number; cy: number }> = {};
+    for (const id of Object.keys(layout)) {
+      const base = layout[id];
+      const g = geometry[id];
+      if (!g || !width || !height) {
+        map[id] = base;
+        continue;
+      }
+      const hwr = (g.width / 2 + PLACEMENT_PAD) / width;
+      const hhr = (g.height / 2 + PLACEMENT_PAD) / height;
+      map[id] = {
+        cx: 2 * hwr < 1 ? clamp(base.cx, hwr, 1 - hwr) : base.cx,
+        cy: 2 * hhr < 1 ? clamp(base.cy, hhr, 1 - hhr) : base.cy,
+      };
+    }
+    return map;
+  }, [layout, geometry, width, height]);
 
   return (
     <div
@@ -301,7 +308,7 @@ export function Stage({
 
       {/* Nœuds statiques */}
       {nodes.map((o) => {
-        const placement = placementOf(o.id);
+        const placement = placements[o.id];
         if (!placement) return null;
         return (
           <StaticNode
@@ -368,7 +375,7 @@ export function Stage({
  * axes (au-dessus du nœud par défaut, en dessous sinon), avec une flèche qui
  * pointe vers le nœud quelle que soit la position contrainte.
  */
-function CommentBubble({
+const CommentBubble = memo(function CommentBubble({
   node,
   text,
   opacity,
@@ -417,9 +424,9 @@ function CommentBubble({
       <span className="rdfa-comment-tail" style={{ left: tailX }} />
     </div>
   );
-}
+});
 
-function DebugOverlay({
+const DebugOverlay = memo(function DebugOverlay({
   timeline,
   t,
   activeCount,
@@ -451,4 +458,4 @@ function DebugOverlay({
       })}
     </div>
   );
-}
+});

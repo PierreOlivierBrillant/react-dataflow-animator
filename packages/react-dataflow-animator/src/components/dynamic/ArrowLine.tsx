@@ -1,4 +1,4 @@
-
+import { memo } from 'react';
 import { connection, pathTip, visiblePath, type NodeGeom } from '../../engine/geometry';
 import type { LineStyle } from '../../types';
 
@@ -24,7 +24,7 @@ export interface ArrowLineProps {
 
 const HEAD = 9;
 
-export function ArrowLine({
+export const ArrowLine = memo(function ArrowLine({
   from,
   to,
   startPortOffset = 0,
@@ -77,5 +77,5 @@ export function ArrowLine({
       ) : null}
     </g>
   );
-}
+});
 
