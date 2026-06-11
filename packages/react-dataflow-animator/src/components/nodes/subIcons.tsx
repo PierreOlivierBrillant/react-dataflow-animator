@@ -24,7 +24,8 @@ import {
   SiNginx,
   SiGraphql,
 } from 'react-icons/si';
-import { FaJava, FaAws } from 'react-icons/fa';
+import { FaJava, FaAws, FaDatabase } from 'react-icons/fa';
+import { DiMsqlServer } from 'react-icons/di';
 
 /**
  * Sous-icônes technologiques (badge `subicon`), basées sur react-icons.
@@ -63,6 +64,8 @@ const KNOWN: Record<string, IconDef> = {
   nginx: { Icon: SiNginx, color: '#009639' },
   graphql: { Icon: SiGraphql, color: '#E10098' },
   aws: { Icon: FaAws, color: '#FF9900' },
+  mssql: { Icon: DiMsqlServer, color: '#CC2927' },
+  db: { Icon: FaDatabase, color: '#FFD700' },
 };
 
 const custom: Record<string, ReactNode> = {};
