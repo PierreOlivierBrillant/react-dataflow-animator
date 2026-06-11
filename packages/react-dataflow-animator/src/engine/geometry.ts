@@ -157,43 +157,32 @@ export function connection(
   const dy = c2.y - c1.y;
   const isHorizontal = Math.abs(dx) >= Math.abs(dy);
 
-  const startBase = { x: c1.x, y: c1.y };
+  const c1_s = { x: c1.x, y: c1.y };
+  const c2_s = { x: c2.x, y: c2.y };
+
   if (isHorizontal) {
-    if (dx > 0) {
-      startBase.x = fromRect.x + fromRect.w;
-      startBase.y = c1.y + startPortOffset;
-    } else {
-      startBase.x = fromRect.x;
-      startBase.y = c1.y + startPortOffset;
-    }
+    c1_s.y += startPortOffset;
+    c2_s.y += endPortOffset;
   } else {
-    if (dy > 0) {
-      startBase.x = c1.x + startPortOffset;
-      startBase.y = fromRect.y + fromRect.h;
-    } else {
-      startBase.x = c1.x + startPortOffset;
-      startBase.y = fromRect.y;
-    }
+    c1_s.x += startPortOffset;
+    c2_s.x += endPortOffset;
   }
 
-  const endBase = { x: c2.x, y: c2.y };
-  if (isHorizontal) {
-    if (dx > 0) {
-      endBase.x = toRect.x;
-      endBase.y = c2.y + endPortOffset;
-    } else {
-      endBase.x = toRect.x + toRect.w;
-      endBase.y = c2.y + endPortOffset;
-    }
-  } else {
-    if (dy > 0) {
-      endBase.x = c2.x + endPortOffset;
-      endBase.y = toRect.y;
-    } else {
-      endBase.x = c2.x + endPortOffset;
-      endBase.y = toRect.y + toRect.h;
-    }
-  }
+  const isectFrom = segmentIntersectsRect(c1_s, c2_s, fromRect);
+  const startBase = isectFrom
+    ? {
+        x: c1_s.x + (c2_s.x - c1_s.x) * isectFrom.tExit,
+        y: c1_s.y + (c2_s.y - c1_s.y) * isectFrom.tExit,
+      }
+    : c1_s;
+
+  const isectTo = segmentIntersectsRect(c1_s, c2_s, toRect);
+  const endBase = isectTo
+    ? {
+        x: c1_s.x + (c2_s.x - c1_s.x) * isectTo.tEntry,
+        y: c1_s.y + (c2_s.y - c1_s.y) * isectTo.tEntry,
+      }
+    : c2_s;
 
   const start: Point = startBase;
   const end: Point = endBase;
