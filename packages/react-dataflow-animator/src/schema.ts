@@ -126,6 +126,22 @@ export const dataFlowSchema = {
           description: 'Réponse (pour sql_response).',
           properties: {
             rows: { type: 'number', description: 'Nombre de lignes retournées.' },
+            header: { type: 'string', description: "En-tête optionnel." },
+            body: {
+              type: 'object',
+              properties: {
+                content_type: { type: 'string', enum: ['text', 'table'] },
+                content: { type: 'string', description: "Texte pur." },
+                columns: { type: 'array', items: { type: 'string' } },
+                rows_data: {
+                  type: 'array',
+                  items: {
+                    type: 'array',
+                    items: { type: ['string', 'number'] }
+                  }
+                }
+              }
+            }
           },
         },
         packet_content: {

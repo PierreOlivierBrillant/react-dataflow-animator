@@ -97,9 +97,23 @@ export interface PacketContent {
   body?: PacketBody;
 }
 
+export interface SqlResponseBody {
+  content_type?: 'text' | 'table';
+  /** Texte pur si content_type est 'text' */
+  content?: string;
+  /** Colonnes du tableau si content_type est 'table' */
+  columns?: string[];
+  /** Lignes de données si content_type est 'table' */
+  rows_data?: (string | number)[][];
+}
+
 export interface SqlResponse {
   /** Nombre de lignes retournées. */
   rows?: number;
+  /** En-tête optionnel visible dans le paquet. */
+  header?: string;
+  /** Corps de la réponse (texte pur ou tableau). */
+  body?: SqlResponseBody;
 }
 
 export interface DynamicObject {

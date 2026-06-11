@@ -370,6 +370,51 @@
   border-radius: 4px;
 }
 
+.rdfa-packet:has(.rdfa-sql-table-wrapper) {
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.rdfa-packet:has(.rdfa-sql-table-wrapper) .rdfa-packet-header {
+  padding-left: calc(9px * var(--rdfa-scale, 1));
+  padding-right: calc(9px * var(--rdfa-scale, 1));
+}
+
+.rdfa-packet-body:has(.rdfa-sql-table-wrapper) {
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+}
+
+.rdfa-player .rdfa-sql-table-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.rdfa-player .rdfa-sql-table {
+  display: table;
+  width: 100%;
+  margin-bottom: 0;
+  border-collapse: collapse;
+  font-size: calc(11px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  border-style: hidden;
+}
+
+.rdfa-player .rdfa-sql-table th,
+.rdfa-player .rdfa-sql-table td {
+  border: 1px solid var(--rdfa-border);
+  padding: 2px 6px;
+  text-align: left;
+}
+
+.rdfa-player .rdfa-sql-table th {
+  background: var(--rdfa-bg);
+  font-weight: 600;
+}
+
 /* ---------- Loading (spinner) ---------- */
 .rdfa-spinner {
   position: absolute;

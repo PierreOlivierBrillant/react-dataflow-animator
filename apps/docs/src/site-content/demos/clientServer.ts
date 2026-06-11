@@ -38,7 +38,21 @@ export const clientServer: DataFlowSpec = {
       object_type: 'sql_request',
       request_content: 'SELECT * FROM users',
     },
-    { id: 'rows', object_type: 'sql_response', response_content: { rows: 42 } },
+    {
+      id: 'rows',
+      object_type: 'sql_response',
+      response_content: {
+        header: '2 Lignes',
+        body: {
+          content_type: 'table',
+          columns: ['id', 'nom'],
+          rows_data: [
+            [1, 'Alice'],
+            [2, 'Bob'],
+          ],
+        },
+      },
+    },
     {
       id: 'res',
       object_type: 'http_packet',

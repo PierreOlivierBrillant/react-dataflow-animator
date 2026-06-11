@@ -49,11 +49,46 @@ const SqlRequestPacket = defineAnimatable<{ object: DynamicObject; highlight?: H
 });
 
 const SqlResponsePacket = defineAnimatable<{ object: DynamicObject; highlight?: Highlighter }>(({ object }) => {
-  const rows = object.response_content?.rows;
+  const content = object.response_content;
+  const rowsLegacy = content?.rows;
+  const header = content?.header;
+  const body = content?.body;
+
+  const defaultHeader = rowsLegacy != null ? `▦ ${rowsLegacy} ligne${rowsLegacy > 1 ? 's' : ''}` : '▦ résultat';
+  const displayedHeader = header || defaultHeader;
+
   return (
-    <div className="rdfa-packet-header">
-      {rows != null ? `▦ ${rows} ligne${rows > 1 ? 's' : ''}` : '▦ résultat'}
-    </div>
+    <>
+      <div className="rdfa-packet-header">{displayedHeader}</div>
+      {body && (
+        <div className="rdfa-packet-body">
+          {body.content_type === 'text' ? (
+            <div className="rdfa-packet-surface">{body.content}</div>
+          ) : body.content_type === 'table' ? (
+            <div className="rdfa-packet-surface rdfa-sql-table-wrapper">
+              <table className="rdfa-sql-table">
+                {body.columns && (
+                  <thead>
+                    <tr>
+                      {body.columns.map((col, i) => <th key={i}>{col}</th>)}
+                    </tr>
+                  </thead>
+                )}
+                {body.rows_data && (
+                  <tbody>
+                    {body.rows_data.map((row, i) => (
+                      <tr key={i}>
+                        {row.map((cell, j) => <td key={j}>{cell}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                )}
+              </table>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </>
   );
 });
 
