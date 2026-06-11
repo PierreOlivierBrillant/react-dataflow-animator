@@ -6,12 +6,92 @@ slug: /concepts/layout
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import { demosById } from '@site/src/site-content';
 
-La disposition repose sur `direction`, `lane`, `align_with` et le mode `circular`.
+La disposition des nœuds repose sur quatre concepts : `direction`, `lane`,
+`align_with`, et le mode `circular`. Vous ne fournissez **aucune
+coordonnée** — le moteur place chaque nœud en ratios relatifs au conteneur,
+ce qui rend l'animation responsive sans calcul manuel.
+
+## `direction`
+
+Cinq valeurs possibles pour `direction` (au niveau racine de la spec) :
+
+| Direction | Axe principal | Axe transverse |
+| --- | --- | --- |
+| `left-to-right` (défaut) | horizontal | vertical |
+| `right-to-left` | horizontal (inversé) | vertical |
+| `top-to-bottom` | vertical | horizontal |
+| `bottom-to-top` | vertical (inversé) | horizontal |
+| `circular` | autour d'un nœud central | — |
 
 ## Grilles et lanes
 
-En mode `left-to-right`, la propriété `lane` contrôle la progression du flux et le moteur empile automatiquement les nœuds qui partagent la même lane.
+En mode linéaire (les quatre premières directions), la propriété `lane`
+contrôle la position du nœud **le long du flux**. Les nœuds qui partagent
+la même `lane` sont **empilés** sur l'axe transverse.
 
-## Alignement transverse
+```ts
+{
+  direction: 'left-to-right',
+  static_objects: [
+    { id: 'web1', object_type: 'server', lane: 2 },
+    { id: 'web2', object_type: 'server', lane: 2 }, // même colonne que web1
+    { id: 'db',   object_type: 'database', lane: 3 },
+  ],
+}
+```
 
-`align_with` permet d’aligner un nœud sur l’axe transverse d’un autre sans coordonnées explicites.
+Quand peu de lanes sont définies (2-3), les nœuds s'étalent vers les bords
+du canevas ; au-delà, ils se resserrent vers le centre.
+
+## Alignement transverse (`align_with`)
+
+`align_with` permet d'aligner un nœud sur l'**axe transverse** d'un autre,
+identifié par son `id`. Pratique pour aligner deux nœuds de lanes
+différentes :
+
+```ts
+{
+  static_objects: [
+    { id: 'client', object_type: 'laptop', lane: 1 },
+    { id: 'api',    object_type: 'server', lane: 2 },
+    { id: 'cache',  object_type: 'database', lane: 3, align_with: 'api' },
+  ],
+}
+```
+
+Ignoré en mode `circular`.
+
+## Mode circulaire
+
+En `circular`, le nœud marqué `is_main: true` est placé au centre ; les
+autres sont répartis à équidistance sur un cercle :
+
+```ts
+{
+  direction: 'circular',
+  static_objects: [
+    { id: 'gateway', object_type: 'server', is_main: true },
+    { id: 'svc-a',   object_type: 'server' },
+    { id: 'svc-b',   object_type: 'server' },
+    { id: 'svc-c',   object_type: 'server' },
+  ],
+}
+```
+
+<DataFlowPlayer theme="auto" spec={demosById.microservices.spec} />
+
+## Mise à l'échelle responsive
+
+Le composant calcule une **« cellule »** (plus petite distance entre deux
+nœuds, en px) qui pilote :
+
+- un facteur d'échelle global (`--rdfa-scale`) : icônes et polices plus
+  grandes en plein écran, plus petites si l'espace est serré ;
+- la largeur maximale des panneaux et paquets (`--rdfa-maxw`) pour qu'ils
+  ne débordent jamais sur les voisins ;
+- la position de chaque nœud, bornée selon sa taille mesurée pour éviter
+  les débordements du canevas.
+
+La prop `density` (`'compact' | 'comfortable' | 'spacious'`) module ces
+réglages pour adapter le visuel à un contexte dense (sidebar) ou aéré
+(plein écran).

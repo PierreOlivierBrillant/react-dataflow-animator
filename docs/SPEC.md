@@ -1,9 +1,9 @@
 # Spécification fonctionnelle — React DataFlow Animator
 
 > Source de vérité fonctionnelle de la librairie. Le **JSON Schema** complet (types,
-> énumérations, valeurs par défaut) vit dans le code : [`src/lib/schema.ts`](../src/lib/schema.ts)
+> énumérations, valeurs par défaut) vit dans le code : [`packages/react-dataflow-animator/src/schema.ts`](../packages/react-dataflow-animator/src/schema.ts)
 > et alimente la page « Documentation API » du site. Les **types TypeScript**
-> correspondants sont dans [`src/lib/types.ts`](../src/lib/types.ts).
+> correspondants sont dans [`packages/react-dataflow-animator/src/types.ts`](../packages/react-dataflow-animator/src/types.ts).
 
 ## 1. Vue d'ensemble
 
@@ -37,7 +37,7 @@ Affiché selon la prop `controls` (défaut : `true`) :
 ## 3. Moteur de rendu spatial (Layout Engine)
 
 Positionne les nœuds **sans coordonnées (x, y) en entrée**, en ratios relatifs au
-conteneur (placement CSS pur). Voir [`src/lib/engine/layout.ts`](../src/lib/engine/layout.ts).
+conteneur (placement CSS pur). Voir [`packages/react-dataflow-animator/src/engine/layout.ts`](../packages/react-dataflow-animator/src/engine/layout.ts).
 
 - **Grilles linéaires** (`left-to-right`, `right-to-left`, `top-to-bottom`,
   `bottom-to-top`) : `lane` = position le long du flux ; les nœuds d'une même lane
@@ -68,7 +68,7 @@ ne pas déborder.
 
 Les connexions sont tracées entre les `BoundingClientRect` réels des nœuds (mesurés
 côté client). Les flèches et paquets s'arrêtent à une **marge** de quelques pixels du
-nœud (`NODE_GAP`). Voir [`src/lib/engine/geometry.ts`](../src/lib/engine/geometry.ts).
+nœud (`NODE_GAP`). Voir [`packages/react-dataflow-animator/src/engine/geometry.ts`](../packages/react-dataflow-animator/src/engine/geometry.ts).
 
 - **Décalage bidirectionnel (path shifting)** : le compilateur scanne toute la spec
   (connexions permanentes + actions `move`/`arrow`). Si un segment A↔B est utilisé dans
@@ -80,7 +80,7 @@ nœud (`NODE_GAP`). Voir [`src/lib/engine/geometry.ts`](../src/lib/engine/geomet
 ## 5. Moteur d'animation et actions
 
 La timeline compile un tableau d'actions ordonnées. Voir
-[`src/lib/engine/compiler.ts`](../src/lib/engine/compiler.ts).
+[`packages/react-dataflow-animator/src/engine/compiler.ts`](../packages/react-dataflow-animator/src/engine/compiler.ts).
 
 1. **move** : déplace un objet dynamique (paquet/requête) de `from` vers `to` ;
    interpolation sur `duration` ms ; épouse la voie décalée si bidirectionnel.
@@ -110,9 +110,11 @@ La timeline compile un tableau d'actions ordonnées. Voir
 
 ## 7. Site vitrine (GitHub Pages)
 
-`src/demo/` — site à routeur (hash) : **Accueil**, **Démonstrations** (galerie), **Terrain de jeu**
-(éditeur live), **Documentation** (sidebar + TOC + référence API générée depuis le
-JSON Schema). Buildé par `vite.demo.config.ts`.
+`apps/docs/` — site Docusaurus : **Accueil**, **Démonstrations** (galerie),
+**Terrain de jeu** (éditeur live), **Documentation** (intro, concepts,
+référence API générée depuis le JSON Schema). Buildé via
+`npm run build:docs` et déployé sur GitHub Pages par
+`.github/workflows/ci-cd.yml`.
 
 ## 8. Notes d'implémentation et évolutions
 

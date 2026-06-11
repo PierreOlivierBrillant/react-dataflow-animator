@@ -1,16 +1,117 @@
 ---
-title: Types d’actions
+title: Types d'actions
 slug: /reference/actions
 ---
 
-Les actions disponibles sont les suivantes.
+Sept types d'actions sont disponibles. Toutes partagent un jeu de champs
+communs ([cycle de vie](../concepts/timeline.mdx) : `id`, `duration`,
+`wait_for`, `keep_until`, `keep_until_next`, `keep_until_end`).
 
-- `move` déplace un objet dynamique de `from` vers `to`.
-- `arrow` dessine une flèche animée.
-- `parallel` exécute plusieurs actions simultanément.
-- `loading` affiche un état de chargement.
-- `set_content` remplace le contenu d’un nœud.
-- `comment` affiche une annotation textuelle.
-- `highlight` met en évidence un nœud ou une connexion.
+## `move`
 
-La page suivante détaille les champs disponibles pour chaque action via le JSON Schema exporté.
+Déplace un objet dynamique de `from` vers `to`.
+
+```ts
+{
+  action_type: 'move',
+  object: 'req',     // id d'un dynamic_object
+  from: 'browser',   // id d'un static_object
+  to: 'api',         // id d'un static_object
+  duration: 600,
+}
+```
+
+Produit deux points d'arrêt : apparition et arrivée. Par défaut, l'objet
+disparaît à la fin de son animation.
+
+## `arrow`
+
+Trace une flèche animée entre deux nœuds (dessin progressif).
+
+```ts
+{
+  action_type: 'arrow',
+  from: 'a',
+  to: 'b',
+  style: 'dashed',         // 'solid' | 'dotted' | 'dashed' | 'animated'
+  arrowHead: 'both',       // 'forward' | 'backward' | 'both' | 'none'
+  text: 'requête',
+}
+```
+
+Pour des flèches **permanentes** (décor affiché dès l'initialisation),
+utilisez plutôt le tableau racine `connections`.
+
+## `parallel`
+
+Encapsule des actions enfants exécutées au même instant.
+
+```ts
+{
+  action_type: 'parallel',
+  actions: [
+    { action_type: 'move', object: 'p1', from: 'a', to: 'b' },
+    { action_type: 'arrow', from: 'c', to: 'd' },
+  ],
+}
+```
+
+Les `wait_for` et `keep_until` à l'intérieur d'un `parallel` continuent de
+fonctionner normalement.
+
+## `loading`
+
+Affiche un spinner de chargement sur un nœud cible (simule un traitement).
+
+```ts
+{ action_type: 'loading', object: 'db', duration: 900 }
+```
+
+## `set_content`
+
+Mute le contenu d'un nœud. Trois modes :
+
+- **`code`** : terminal sombre avec coloration Prism, sans barre d'URL ; la
+  police s'ajuste pour faire tenir la ligne la plus longue sans wrap.
+- **`text`** : fenêtre de navigateur avec barre d'URL paramétrable.
+- **`image`** : image affichée dans une fenêtre.
+
+```ts
+{
+  action_type: 'set_content',
+  object: 'editor',
+  content: {
+    content_type: 'code',
+    language: 'javascript',
+    content: 'const add = (a, b) => a + b;',
+  },
+}
+```
+
+## `comment`
+
+Affiche une bulle de texte en fondu près d'un nœud.
+
+```ts
+{
+  action_type: 'comment',
+  object: 'browser',
+  text: 'L\'utilisateur clique',
+  duration: 400,
+}
+```
+
+## `highlight`
+
+Surligne (halo pulsé) un nœud statique **ou** une connexion permanente,
+identifiés par leur `id`.
+
+```ts
+{ action_type: 'highlight', object: 'db' }
+```
+
+## Référence complète
+
+Pour la liste exhaustive des champs (types, valeurs par défaut,
+contraintes), voir la [référence API](./api.mdx) générée à partir du
+JSON Schema.

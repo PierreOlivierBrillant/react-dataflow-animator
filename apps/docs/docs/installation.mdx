@@ -4,17 +4,37 @@ title: Installation
 slug: /installation
 ---
 
+## Installation
+
 ```bash
 npm install react-dataflow-animator
 ```
 
-`react` et `react-dom` en version 18 ou 19 sont requis comme peer dependencies.
+`react` et `react-dom` (≥ 18) sont attendus en `peerDependencies`.
 
 ## Utilisation minimale
 
 ```tsx
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import 'react-dataflow-animator/styles.css';
+
+const spec = {
+  direction: 'left-to-right',
+  static_objects: [
+    { id: 'browser', object_type: 'laptop', text: 'Navigateur', lane: 1 },
+    { id: 'api', object_type: 'server', text: 'API', lane: 2 },
+  ],
+  dynamic_objects: [
+    {
+      id: 'req',
+      object_type: 'http_packet',
+      packet_content: { header: 'GET /users' },
+    },
+  ],
+  actions: [
+    { action_type: 'move', object: 'req', from: 'browser', to: 'api' },
+  ],
+};
 
 export default function Example() {
   return <DataFlowPlayer spec={spec} />;
@@ -23,4 +43,49 @@ export default function Example() {
 
 ## Dans Docusaurus
 
-Importez le CSS une seule fois dans [src/css/custom.css](../src/css/custom.css) puis utilisez le composant dans n’importe quel fichier MDX.
+Importez le CSS une seule fois dans `src/css/custom.css` puis utilisez le
+composant dans n'importe quel fichier MDX :
+
+```css title="src/css/custom.css"
+@import 'react-dataflow-animator/styles.css';
+```
+
+```mdx title="docs/mon-article.mdx"
+import { DataFlowPlayer } from 'react-dataflow-animator';
+
+<DataFlowPlayer spec={spec} theme="auto" />
+```
+
+Le thème `auto` (défaut) suit `prefers-color-scheme` ET un ancêtre
+`[data-theme]` (convention Docusaurus), donc le composant se synchronise
+automatiquement avec le bouton de thème de l'hôte.
+
+## Dans Next.js (App Router)
+
+Le composant utilise `useState`/`useEffect` : marquez le fichier appelant
+comme client component.
+
+```tsx title="app/exemple/page.tsx"
+'use client';
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import 'react-dataflow-animator/styles.css';
+
+export default function Page() {
+  return <DataFlowPlayer spec={spec} />;
+}
+```
+
+## SSR et hydratation
+
+Le composant ne touche jamais au DOM pendant le rendu (mesure et horloge
+confinées à des effets). Aucun risque de divergence SSR ↔ client. Pour
+afficher un placeholder pendant l'hydratation, utilisez la prop
+`fallback` :
+
+```tsx
+<DataFlowPlayer
+  spec={spec}
+  fallback={<div>Chargement de l'animation…</div>}
+/>
+```

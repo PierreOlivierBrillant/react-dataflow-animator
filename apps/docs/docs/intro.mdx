@@ -7,17 +7,41 @@ slug: /intro
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import { demosById } from '@site/src/site-content';
 
-React DataFlow Animator compile une spécification JSON en animation déterministe et navigable de flux de données.
+`react-dataflow-animator` compile une spécification JSON en animation
+déterministe et navigable de flux de données.
 
 ## Aperçu
 
-Vous décrivez des objets statiques, des objets dynamiques (qui se déplacent entre les objets entre les objets statiques) et une suite d’actions.
-Le moteur place les noeuds, trace les trajets et déroule la timeline sans coordonnées manuelles.
+Vous décrivez :
+
+- des **objets statiques** (les nœuds : serveurs, clients, bases de données…) ;
+- des **objets dynamiques** (les payloads qui se déplaceront : paquets HTTP,
+  requêtes SQL…) ;
+- une suite d'**actions** (déplacements, flèches, commentaires, chargements…).
+
+Le moteur place les nœuds, trace les trajets et déroule la timeline sans
+qu'aucune coordonnée manuelle ne soit nécessaire.
 
 <DataFlowPlayer theme="auto" spec={demosById.clientServer.spec} />
 
 ## Principes
 
-- Le temps est l’unique source de vérité, donc le seek et la navigation par étapes restent fiables.
-- La disposition est calculée automatiquement en linéaire ou en circulaire.
-- Le composant est SSR-safe et utilisable directement dans Docusaurus.
+- **Le temps est l'unique source de vérité.** Le moteur compile la spec en une
+  chronologie pure : `t` (ms) → état visuel. Le seek arrière, la navigation
+  par étapes et le SSR sont triviaux et déterministes.
+- **Disposition automatique.** Linéaire (selon `direction` et `lane`) ou
+  `circular`. Aucune coordonnée à fournir.
+- **SSR-safe.** Aucun accès au DOM pendant le rendu — utilisable directement
+  dans Docusaurus, Next.js, ou tout site React.
+- **Extensible.** Icônes de nœuds, sous-icônes technos et coloration
+  syntaxique sont enregistrables / remplaçables.
+
+## Pour aller plus loin
+
+- [Installation](./installation.mdx) — démarrer en 5 lignes.
+- [Disposition](./concepts/layout.mdx) — comment les nœuds sont placés.
+- [Timeline et étapes](./concepts/timeline.mdx) — comment les actions se
+  chaînent et persistent.
+- [Types d'actions](./reference/actions.mdx) — `move`, `arrow`, `parallel`,
+  `loading`, `set_content`, `comment`, `highlight`.
+- [Référence API](./reference/api.mdx) — générée depuis le JSON Schema.

@@ -3,16 +3,105 @@ title: Timeline et étapes
 slug: /concepts/timeline
 ---
 
-Les actions racines forment les étapes logiques du lecteur. La navigation précédent/suivant s’arrête sur des marques de timeline calculées par le moteur.
+Le moteur compile votre tableau `actions` en une **chronologie pure** : à
+chaque instant `t` (ms), l'état visuel est déterminé par une fonction
+`evaluate(timeline, t)`. Le seek arrière, la navigation par étapes et le SSR
+en découlent gratuitement.
 
-## Points d’arrêt
+## Étapes logiques
 
-Un `move` crée typiquement un point d’arrêt à l’apparition de l’objet puis à son arrivée.
+Chaque action **racine** (au premier niveau de `actions`) constitue une
+**étape logique**. Les boutons « Précédent » / « Suivant » du lecteur
+naviguent d'une étape à l'autre.
 
-## Synchronisation
+Une courte pause (`STEP_GAP`) sépare deux étapes consécutives : l'arrêt
+« Suivant » montre ainsi l'étape « posée » seule, sans chevaucher
+l'apparition de la suivante.
 
-`wait_for` permet de démarrer une action à la fin d’une autre, utile pour modéliser une réponse asynchrone ou une phase de chargement.
+## Points d'arrêt
+
+Les actions produisent des **points d'arrêt** sur lesquels la navigation
+peut se caler :
+
+- Un `move` produit **deux** points : à l'apparition de l'objet à son
+  origine, puis à son arrivée à destination.
+- `arrow`, `loading`, `set_content`, `comment`, `highlight` produisent
+  **un** point : leur état « posé » à la fin de l'animation.
+
+## Synchronisation entre actions
+
+Trois mécanismes permettent de coordonner les actions :
+
+### `wait_for`
+
+L'action démarre à la **fin** d'une autre action référencée par son `id` :
+
+```ts
+{ action_type: 'loading', id: 'dbwork', object: 'db', duration: 900 },
+{
+  action_type: 'move',
+  object: 'rows',
+  from: 'db',
+  to: 'api',
+  wait_for: 'dbwork', // démarre quand le loading se termine
+},
+```
+
+### `parallel`
+
+Encapsule plusieurs actions exécutées au **même instant** :
+
+```ts
+{
+  action_type: 'parallel',
+  actions: [
+    { action_type: 'move', object: 'p1', from: 'a', to: 'b' },
+    { action_type: 'move', object: 'p2', from: 'c', to: 'd' },
+  ],
+}
+```
+
+### Durées personnalisées
+
+Chaque action accepte une `duration` (ms). Les défauts sont :
+
+| Type d'action | Défaut (ms) |
+| --- | --- |
+| `move`, `arrow`, `set_content`, `comment` | 500 |
+| `loading` | 1200 |
+| `highlight` | 600 |
 
 ## Persistance visuelle
 
-`keep_until`, `keep_until_next` et `keep_until_end` prolongent la présence d’un élément à l’écran au-delà de son animation de base.
+Par défaut, un élément animé reste visible un court instant après la fin de
+son animation (`ARRIVE_HOLD`) puis disparaît. Trois props prolongent cette
+présence :
+
+### `keep_until`
+
+Reste visible jusqu'au **début** d'une action ciblée par `id` :
+
+```ts
+{ action_type: 'arrow', id: 'A', from: 'a', to: 'b', keep_until: 'C' },
+{ action_type: 'move', object: 'p', from: 'a', to: 'b' },
+{ action_type: 'comment', id: 'C', object: 'a', text: 'fin' },
+// La flèche A reste affichée jusqu'au début du commentaire C.
+```
+
+### `keep_until_next`
+
+Reste visible jusqu'au **début de l'étape racine suivante** (donc à travers
+la pause inter-étapes). Défauts par type d'action :
+
+| Type d'action | `keep_until_next` par défaut |
+| --- | --- |
+| `arrow`, `comment`, `set_content`, `highlight` | `true` |
+| `move`, `loading` | `false` |
+
+### `keep_until_end`
+
+Reste visible jusqu'à la **fin** de la chronologie :
+
+```ts
+{ action_type: 'highlight', object: 'db', keep_until_end: true },
+```
