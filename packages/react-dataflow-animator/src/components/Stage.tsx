@@ -137,9 +137,10 @@ export function Stage({
 
     return {
       scale: finalScale,
-      // En liant maxW directement à PAIR_W, on garantit mathématiquement 
-      // que le paquet fait exactement la bonne largeur pour tenir entre 2 nœuds !
-      maxW: PAIR_W, 
+      // On fixe une largeur max généreuse pour les paquets, surtout depuis 
+      // l'ajout des tables SQL. S'ils sont plus larges que PAIR_W, ils déborderont 
+      // légèrement sur les icônes des nœuds, ce qui est préférable au wrapping.
+      maxW: Math.max(PAIR_W, 320), 
       contentMaxW: Math.round((width || 320) * 0.95),
     };
   }, [layout, width, height, density]);
