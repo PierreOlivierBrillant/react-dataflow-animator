@@ -93,38 +93,54 @@ export function Stage({
   //  - la largeur max des panneaux/paquets (pour ne jamais déborder sur le voisin).
   const { scale, maxW, contentMaxW } = useMemo(() => {
     const ids = Object.keys(layout);
-    // Plus petite distance entre deux nœuds. NB : on part de +Infini pour ne pas
-    // plafonner artificiellement la cellule des layouts peu denses (sinon les
-    // panneaux deviennent inutilement étroits alors qu'il reste de la place).
-    let cell = Infinity;
-    // Distance horizontale au bord la plus faible (limite la largeur des panneaux
-    // pour qu'aucun ne sorte du canevas).
-    let minEdgeX = Infinity;
+    if (ids.length === 0 || width === 0 || height === 0) {
+      return { scale: 1, maxW: 240, contentMaxW: 320 };
+    }
+
+    // Espace de base requis entre deux nœuds (pour laisser passer les paquets)
+    // On le diminue légèrement pour autoriser une échelle plus généreuse.
+    const PAIR_W = 190; 
+    const PAIR_H = 130;
+
+    // Espace de base requis entre le centre d'un nœud et le bord du conteneur
+    const EDGE_MARGIN_X = 60;
+    const EDGE_MARGIN_Y = 60;
+    
+    let maxAllowedScale = Infinity;
+
     for (let i = 0; i < ids.length; i++) {
       const a = layout[ids[i]];
-      minEdgeX = Math.min(minEdgeX, Math.min(a.cx, 1 - a.cx) * width);
+      const edgeX = Math.min(a.cx, 1 - a.cx) * width;
+      const edgeY = Math.min(a.cy, 1 - a.cy) * height;
+      maxAllowedScale = Math.min(maxAllowedScale, edgeX / EDGE_MARGIN_X);
+      maxAllowedScale = Math.min(maxAllowedScale, edgeY / EDGE_MARGIN_Y);
+
       for (let j = i + 1; j < ids.length; j++) {
         const b = layout[ids[j]];
-        const d = Math.hypot((a.cx - b.cx) * width, (a.cy - b.cy) * height);
-        if (d > 0) cell = Math.min(cell, d);
+        const dx = Math.abs(a.cx - b.cx) * width;
+        const dy = Math.abs(a.cy - b.cy) * height;
+        const pairScale = Math.max(dx / PAIR_W, dy / PAIR_H);
+        maxAllowedScale = Math.min(maxAllowedScale, pairScale);
       }
     }
-    if (!Number.isFinite(cell)) cell = Math.min(width, height) * 0.5 || 220; // <2 nœuds
-    cell = clamp(cell, 96, 520);
-    const edgeBudget = Number.isFinite(minEdgeX) ? 2 * minEdgeX : width || 320;
+
+    // Limite globale basée sur la taille absolue du conteneur.
+    // Cela empêche 2 nœuds solitaires de devenir monstrueusement grands 
+    // et garantit un rétrécissement fluide sur le playground.
+    const sizeScale = Math.min((width || 800) / 700, (height || 500) / 350);
+
     const d = DENSITY[density];
-    // L'échelle est limitée À LA FOIS par l'espace par élément (cell) ET par la
-    // taille absolue du stage (petit canevas → éléments plus petits).
-    const sizeScale = (Math.min(width, height) || 400) / 400;
-    const baseScale = clamp(Math.min(cell / 170, sizeScale), 0.5, 1.8);
+    const targetScale = Math.min(maxAllowedScale, sizeScale) * d.scale;
+    
+    // On borne pour éviter des extrêmes absolus
+    const finalScale = clamp(targetScale, 0.3, 1.6);
+
     return {
-      scale: clamp(baseScale * d.scale, 0.45, 2.4),
-      maxW: Math.round(cell * d.maxw),
-      // Largeur max d'un panneau set_content : tient entre les voisins (cell) ET
-      // dans le canevas (bords) → jamais de débordement.
-      contentMaxW: Math.round(
-        Math.min(cell * 0.95, edgeBudget * 0.92, (width || 320) * 0.92),
-      ),
+      scale: finalScale,
+      // En liant maxW directement à PAIR_W, on garantit mathématiquement 
+      // que le paquet fait exactement la bonne largeur pour tenir entre 2 nœuds !
+      maxW: PAIR_W, 
+      contentMaxW: Math.round((width || 320) * 0.95),
     };
   }, [layout, width, height, density]);
   const allNodes = useMemo(() => Object.values(geometry), [geometry]);

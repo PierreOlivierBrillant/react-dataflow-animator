@@ -234,7 +234,7 @@
 }
 
 .rdfa-node-label {
-  font-size: calc(13px * var(--rdfa-scale, 1));
+  font-size: calc(13px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
   color: var(--rdfa-text);
   line-height: 1.2;
   white-space: pre-wrap;
@@ -301,7 +301,7 @@
 
 .rdfa-arrow-label {
   fill: var(--rdfa-text);
-  font-size: calc(12px * var(--rdfa-scale, 1));
+  font-size: calc(12px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
   font-family: var(--rdfa-font);
   paint-order: stroke;
   stroke: var(--rdfa-bg);
@@ -316,15 +316,15 @@
   z-index: 4;
   padding: calc(5px * var(--rdfa-scale, 1)) calc(9px * var(--rdfa-scale, 1));
   border-radius: 8px;
-  font-size: calc(12px * var(--rdfa-scale, 1));
+  font-size: calc(12px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
   font-family: var(--rdfa-mono);
   color: var(--rdfa-text);
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  /* Largeur plafonnée à la « cellule » pour ne pas déborder ; on autorise le retour
-     à la ligne plutôt qu'un débordement. */
-  max-width: calc(var(--rdfa-maxw, 220px) * 0.92);
+  /* Largeur proportionnelle à l'échelle. L'algorithme de layout garantit qu'il
+     y a assez d'espace, donc le paquet rétrécit ou s'agrandit parfaitement. */
+  max-width: calc(var(--rdfa-maxw, 240px) * var(--rdfa-scale, 1) * 0.92);
   overflow-wrap: anywhere;
   text-align: left;
   white-space: pre-wrap;
@@ -380,13 +380,13 @@
 .rdfa-comment {
   position: absolute;
   z-index: 6;
-  max-width: clamp(140px, var(--rdfa-maxw, 220px), 280px);
+  max-width: calc(var(--rdfa-maxw, 240px) * var(--rdfa-content-scale, 1));
   padding: 8px 12px;
   border-radius: 10px;
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);
   color: var(--rdfa-text);
-  font-size: calc(13px * var(--rdfa-content-scale, 1));
+  font-size: calc(13px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
   line-height: 1.35;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
   white-space: pre-wrap;
@@ -462,7 +462,7 @@
   border-radius: 6px;
   background: var(--rdfa-surface);
   color: var(--rdfa-muted);
-  font-size: calc(12px * var(--rdfa-content-scale, 1));
+  font-size: calc(12px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
   font-family: var(--rdfa-mono);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -474,7 +474,7 @@
   color: var(--rdfa-text);
   padding: calc(10px * var(--rdfa-content-scale, 1))
     calc(12px * var(--rdfa-content-scale, 1));
-  font-size: calc(12.5px * var(--rdfa-content-scale, 1));
+  font-size: calc(12.5px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
   line-height: 1.5;
   max-height: calc(320px * var(--rdfa-content-scale, 1));
   overflow: auto;
