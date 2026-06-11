@@ -17,6 +17,7 @@ import {
   type Timeline,
 } from '../engine/timeline';
 import { computeLayout } from '../engine/layout';
+import { computeScale, type Density } from '../engine/scale';
 import { connection, pathTip } from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { StaticNode } from './nodes/StaticNode';
@@ -47,15 +48,6 @@ function clipOpacity(
   return Math.min(fadeIn, fadeOut);
 }
 
-type Density = 'compact' | 'comfortable' | 'spacious';
-
-/** Réglages par densité : multiplicateur d'échelle et fraction de cellule (largeur max). */
-const DENSITY: Record<Density, { scale: number; maxw: number }> = {
-  compact: { scale: 0.82, maxw: 0.78 },
-  comfortable: { scale: 1, maxw: 0.86 },
-  spacious: { scale: 1.18, maxw: 0.92 },
-};
-
 export interface StageProps {
   spec: DataFlowSpec;
   timeline: Timeline;
@@ -84,62 +76,10 @@ export function Stage({
     useStageGeometry(signature);
   const layout = useMemo(() => computeLayout(spec, { aspect }), [spec, aspect]);
 
-  // « Cellule » = plus petite distance entre deux nœuds (px). Elle pilote :
-  //  - l'échelle globale (icônes/polices plus gros en plein écran, plus petits si serré) ;
-  //  - la largeur max des panneaux/paquets (pour ne jamais déborder sur le voisin).
-  const { scale, maxW, contentMaxW } = useMemo(() => {
-    const ids = Object.keys(layout);
-    if (ids.length === 0 || width === 0 || height === 0) {
-      return { scale: 1, maxW: 240, contentMaxW: 320 };
-    }
-
-    // Espace de base requis entre deux nœuds (pour laisser passer les paquets)
-    // On le diminue légèrement pour autoriser une échelle plus généreuse.
-    const PAIR_W = 190;
-    const PAIR_H = 130;
-
-    // Espace de base requis entre le centre d'un nœud et le bord du conteneur
-    const EDGE_MARGIN_X = 60;
-    const EDGE_MARGIN_Y = 60;
-
-    let maxAllowedScale = Infinity;
-
-    for (let i = 0; i < ids.length; i++) {
-      const a = layout[ids[i]];
-      const edgeX = Math.min(a.cx, 1 - a.cx) * width;
-      const edgeY = Math.min(a.cy, 1 - a.cy) * height;
-      maxAllowedScale = Math.min(maxAllowedScale, edgeX / EDGE_MARGIN_X);
-      maxAllowedScale = Math.min(maxAllowedScale, edgeY / EDGE_MARGIN_Y);
-
-      for (let j = i + 1; j < ids.length; j++) {
-        const b = layout[ids[j]];
-        const dx = Math.abs(a.cx - b.cx) * width;
-        const dy = Math.abs(a.cy - b.cy) * height;
-        const pairScale = Math.max(dx / PAIR_W, dy / PAIR_H);
-        maxAllowedScale = Math.min(maxAllowedScale, pairScale);
-      }
-    }
-
-    // Limite globale basée sur la taille absolue du conteneur.
-    // Cela empêche 2 nœuds solitaires de devenir monstrueusement grands
-    // et garantit un rétrécissement fluide sur le playground.
-    const sizeScale = Math.min((width || 800) / 700, (height || 500) / 350);
-
-    const d = DENSITY[density];
-    const targetScale = Math.min(maxAllowedScale, sizeScale) * d.scale;
-
-    // On borne pour éviter des extrêmes absolus
-    const finalScale = clamp(targetScale, 0.3, 1.6);
-
-    return {
-      scale: finalScale,
-      // On fixe une largeur max généreuse pour les paquets, surtout depuis
-      // l'ajout des tables SQL. S'ils sont plus larges que PAIR_W, ils déborderont
-      // légèrement sur les icônes des nœuds, ce qui est préférable au wrapping.
-      maxW: Math.max(PAIR_W, 320),
-      contentMaxW: Math.round((width || 320) * 0.95),
-    };
-  }, [layout, width, height, density]);
+  const { scale, maxW, contentMaxW } = useMemo(
+    () => computeScale(layout, width, height, density),
+    [layout, width, height, density]
+  );
   const allNodes = useMemo(() => Object.values(geometry), [geometry]);
   const dynamicById = useMemo(() => {
     const map: Record<string, DynamicObject> = {};
@@ -465,4 +405,3 @@ export function Stage({
     </div>
   );
 }
-
