@@ -1,5 +1,13 @@
 # React DataFlow Animator Monorepo
 
+[![CI](https://github.com/PierreOlivierBrillant/react-dataflow-animator/actions/workflows/ci-cd.yml/badge.svg?branch=main)](https://github.com/PierreOlivierBrillant/react-dataflow-animator/actions/workflows/ci-cd.yml)
+[![npm version](https://img.shields.io/npm/v/react-dataflow-animator.svg)](https://www.npmjs.com/package/react-dataflow-animator)
+[![npm downloads](https://img.shields.io/npm/dm/react-dataflow-animator.svg)](https://www.npmjs.com/package/react-dataflow-animator)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/react-dataflow-animator)](https://bundlephobia.com/package/react-dataflow-animator)
+[![license](https://img.shields.io/npm/l/react-dataflow-animator.svg)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178c6)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-%3E%3D18-61dafb)](https://react.dev/)
+
 Le dépôt est maintenant structuré en **monorepo npm workspaces** pour séparer la librairie publiée et le site Docusaurus.
 
 ## Structure
