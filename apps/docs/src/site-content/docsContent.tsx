@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { DataFlowPlayer, dataFlowSchema } from 'react-dataflow-animator';
 import { demosById } from './demos';
 
-export interface DocPage {
+interface DocPage {
   id: string;
   label: string;
   group: string;

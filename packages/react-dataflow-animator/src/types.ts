@@ -97,7 +97,7 @@ export interface PacketContent {
   body?: PacketBody;
 }
 
-export interface SqlResponseBody {
+interface SqlResponseBody {
   content_type?: 'text' | 'table';
   /** Texte pur si content_type est 'text' */
   content?: string;
@@ -137,7 +137,7 @@ export type ActionType =
   | 'highlight';
 
 /** Champs communs à toutes les actions (ordonnancement et cycle de vie). */
-export interface ActionBase {
+interface ActionBase {
   /** ID de l'action pour s'y référer (wait_for / keep_until). */
   id?: string;
   /** Durée de l'animation en ms (défaut: 500, 1200 pour loading). */
@@ -156,7 +156,7 @@ export interface ActionBase {
 }
 
 /** Déplace un objet dynamique de `from` vers `to`. */
-export interface MoveAction extends ActionBase {
+interface MoveAction extends ActionBase {
   action_type: 'move';
   /** ID de l'objet dynamique (paquet, requête…). */
   object: string;
@@ -165,7 +165,7 @@ export interface MoveAction extends ActionBase {
 }
 
 /** Trace une flèche animée entre deux nœuds. */
-export interface ArrowAction extends ActionBase {
+interface ArrowAction extends ActionBase {
   action_type: 'arrow';
   from: string;
   to: string;
@@ -175,26 +175,26 @@ export interface ArrowAction extends ActionBase {
 }
 
 /** Exécute plusieurs actions au même instant. */
-export interface ParallelAction extends ActionBase {
+interface ParallelAction extends ActionBase {
   action_type: 'parallel';
   actions: Action[];
 }
 
 /** Affiche un spinner de chargement sur un nœud. */
-export interface LoadingAction extends ActionBase {
+interface LoadingAction extends ActionBase {
   action_type: 'loading';
   object: string;
 }
 
 /** Mute le contenu d'un nœud (code, texte, image). */
-export interface SetContentAction extends ActionBase {
+interface SetContentAction extends ActionBase {
   action_type: 'set_content';
   object: string;
   content: ObjectContent;
 }
 
 /** Affiche une bulle de commentaire près d'un nœud. */
-export interface CommentAction extends ActionBase {
+interface CommentAction extends ActionBase {
   action_type: 'comment';
   /** ID du nœud près duquel afficher le commentaire. */
   object: string;
@@ -202,7 +202,7 @@ export interface CommentAction extends ActionBase {
 }
 
 /** Surligne un nœud statique ou une connexion (par ID). */
-export interface HighlightAction extends ActionBase {
+interface HighlightAction extends ActionBase {
   action_type: 'highlight';
   /** ID d'un nœud statique OU d'une connexion à surligner. */
   object: string;

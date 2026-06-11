@@ -1,0 +1,34 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    "packages/react-dataflow-animator": {
+      "entry": ["src/index.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "apps/docs": {
+      "entry": [
+        "src/pages/**/*.tsx",
+        "src/site-content/index.ts",
+        "src/theme/**/*.tsx"
+      ],
+      "project": ["src/**/*.ts", "src/**/*.tsx"],
+      "ignore": ["src/site-content/demos/**"]
+    }
+  },
+  "ignore": [
+    "eslint.config.js",
+    "packages/react-dataflow-animator/src/css.d.ts",
+    "packages/react-dataflow-animator/src/highlight/prism-ambient.d.ts"
+  ],
+  "ignoreDependencies": [
+    "@docusaurus/theme-common",
+    "@eslint/js",
+    "autoprefixer",
+    "eslint-plugin-react-hooks",
+    "eslint-plugin-react-refresh",
+    "globals",
+    "postcss",
+    "tailwindcss",
+    "typescript-eslint"
+  ]
+}

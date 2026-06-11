@@ -127,7 +127,7 @@ interface NavLinkProps {
   exact?: boolean;
 }
 
-export function NavLink({ to, label, exact = false }: NavLinkProps) {
+function NavLink({ to, label, exact = false }: NavLinkProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 

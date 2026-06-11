@@ -6,7 +6,7 @@ import { highlightCode } from 'react-dataflow-animator';
  * `<textarea>` transparent (seul le caret est visible). Les deux partagent des
  * métriques identiques et leur défilement est synchronisé.
  */
-export interface CodeEditorProps {
+interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
   language?: string;

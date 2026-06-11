@@ -136,7 +136,7 @@ const SqlResponsePacket = defineAnimatable<{
  * Grâce au type AnimatableComponent, TypeScript s'assure que tout nouveau
  * composant ajouté ici est correctement optimisé avec React.memo().
  */
-export const packetRegistry: Record<
+const packetRegistry: Record<
   string,
   AnimatableComponent<{ object: DynamicObject; highlight?: Highlighter }>
 > = {

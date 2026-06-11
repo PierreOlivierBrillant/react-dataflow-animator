@@ -25,10 +25,6 @@ export interface NodeGeom {
 
 export type GeometryMap = Record<string, NodeGeom>;
 
-export function center(node: NodeGeom): Point {
-  return { x: node.x, y: node.y };
-}
-
 function sub(a: Point, b: Point): Point {
   return { x: a.x - b.x, y: a.y - b.y };
 }
@@ -38,16 +34,10 @@ function length(v: Point): number {
 }
 
 /** Marge (px) laissée entre un nœud et le bout des flèches / paquets. */
-export const NODE_GAP = 14;
+const NODE_GAP = 14;
 
 /** Espacement (px) entre le bas du visuel et le haut du label (CSS gap). */
-export const LABEL_GAP = 6;
-
-/**
- * Amplitude du décalage anti-collision, en fraction de la taille du nœud.
- * Deux voies parallèles (shift +1 / -1) sont donc séparées de 2 × ce ratio.
- */
-export const SHIFT_RATIO = 0.3;
+const LABEL_GAP = 6;
 
 export interface Connection {
   start: Point;
@@ -63,7 +53,7 @@ export interface Connection {
 /**
  * Bounding rect du label d'un nœud (sous le visuel), ou null si pas de label.
  */
-export function labelBounds(
+function labelBounds(
   node: NodeGeom
 ): { x: number; y: number; w: number; h: number } | null {
   if (!node.labelH || node.labelH <= 0) return null;
@@ -116,8 +106,6 @@ function segmentIntersectsRect(
  * Points de connexion entre deux nœuds.
  *
  * - Rogne les extrémités pour qu'elles touchent le bord des nœuds (pas le centre).
- * - Applique le décalage perpendiculaire anti-collision : `shift` ∈ {-1, 0, +1}.
- *   L'amplitude vaut `SHIFT_RATIO` × la taille moyenne des nœuds.
  * - `obstacles` : liste de tous les nœuds → repousse start/end hors des labels
  *   source/destination et insère un waypoint si le segment croise un label tiers.
  */

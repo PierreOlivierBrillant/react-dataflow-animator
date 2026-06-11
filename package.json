@@ -18,10 +18,12 @@
     "test": "npm run test -w react-dataflow-animator",
     "test:coverage": "npm run test:coverage -w react-dataflow-animator",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,mdx,css}\"",
-    "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,css}\""
+    "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,css}\"",
+    "deadcode": "knip"
   },
   "devDependencies": {
     "concurrently": "^10.0.3",
+    "knip": "^6.16.1",
     "prettier": "^3.8.4"
   }
 }
