@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { validateSpec } from './validateSpec';
 import { clientServer } from './demos/clientServer';
 
-describe('validateSpec', () => {
+describe('validateSpec — validation de schéma', () => {
   it('retourne un tableau vide pour une spec valide', () => {
     expect(validateSpec(clientServer)).toEqual([]);
   });
@@ -18,7 +18,6 @@ describe('validateSpec', () => {
     expect(errors.length).toBeGreaterThan(0);
     const err = errors.find((e) => e.path.includes('action_type'));
     expect(err).toBeDefined();
-    // Le message doit lister les valeurs acceptées (ex: "move", "arrow", …)
     expect(err!.message).toMatch(/valeurs acceptées/);
     expect(err!.message).toContain('"move"');
   });
@@ -58,5 +57,74 @@ describe('validateSpec', () => {
     expect(err).toBeDefined();
     expect(err!.message).toMatch(/type incorrect/);
     expect(err!.message).toContain('number');
+  });
+});
+
+describe('validateSpec — validation des références croisées', () => {
+  it('signale un ID dynamique inconnu dans move.object avec les IDs disponibles', () => {
+    const spec = {
+      ...clientServer,
+      actions: [
+        { action_type: 'move', object: 'ghost', from: 'browser', to: 'api' },
+      ],
+    };
+    const errors = validateSpec(spec);
+    const err = errors.find((e) => e.path === '/actions/0/object');
+    expect(err).toBeDefined();
+    expect(err!.message).toContain('"ghost"');
+    expect(err!.message).toMatch(/IDs disponibles/);
+    expect(err!.message).toContain('"req"');
+  });
+
+  it('signale un ID statique inconnu dans move.from avec les IDs disponibles', () => {
+    const spec = {
+      ...clientServer,
+      actions: [
+        { action_type: 'move', object: 'req', from: 'nowhere', to: 'api' },
+      ],
+    };
+    const errors = validateSpec(spec);
+    const err = errors.find((e) => e.path === '/actions/0/from');
+    expect(err).toBeDefined();
+    expect(err!.message).toContain('"nowhere"');
+    expect(err!.message).toContain('"browser"');
+  });
+
+  it('signale un ID inconnu dans connections.from', () => {
+    const spec = {
+      ...clientServer,
+      connections: [{ from: 'ghost', to: 'api' }],
+    };
+    const errors = validateSpec(spec);
+    const err = errors.find((e) => e.path === '/connections/0/from');
+    expect(err).toBeDefined();
+    expect(err!.message).toContain('"ghost"');
+    expect(err!.message).toContain('"browser"');
+  });
+
+  it("signale un wait_for qui pointe vers un ID d'action inexistant", () => {
+    const spec = {
+      ...clientServer,
+      actions: [
+        {
+          action_type: 'move',
+          object: 'req',
+          from: 'browser',
+          to: 'api',
+          wait_for: 'no_such_action',
+        },
+      ],
+    };
+    const errors = validateSpec(spec);
+    const err = errors.find((e) => e.path === '/actions/0/wait_for');
+    expect(err).toBeDefined();
+    expect(err!.message).toContain('"no_such_action"');
+  });
+
+  it('ne signale aucune erreur de référence pour la spec clientServer', () => {
+    const refErrors = validateSpec(clientServer).filter((e) =>
+      e.message.startsWith('ID inconnu')
+    );
+    expect(refErrors).toEqual([]);
   });
 });

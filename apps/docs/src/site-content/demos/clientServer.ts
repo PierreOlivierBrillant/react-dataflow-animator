@@ -95,6 +95,7 @@ export const clientServer: DataFlowSpec = {
       ],
     },
     {
+      id: 'dbwork',
       action_type: 'move',
       object: 'sql',
       from: 'api',

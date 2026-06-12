@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Layout from '@theme/Layout';
 import {
   DataFlowPlayer,
@@ -10,12 +10,72 @@ import { demos, demosById } from '../site-content/demos';
 import type { SpecError } from '../site-content/validateSpec';
 import { motion } from 'motion/react';
 import { Copy, Check, AlertCircle, ChevronDown, WrapText } from 'lucide-react';
-import Editor from '@monaco-editor/react';
+import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 
 function initialDemoId(): string {
   if (typeof window === 'undefined') return demos[0].id;
   const id = new URLSearchParams(window.location.search).get('demo');
   return id && demosById[id] ? id : demos[0].id;
+}
+
+// ─── Monaco cross-reference markers ──────────────────────────────────────────
+
+function getValueAtPath(obj: unknown, segments: string[]): unknown {
+  let current: unknown = obj;
+  for (const seg of segments) {
+    if (current === null || typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[seg];
+  }
+  return current;
+}
+
+function setMonacoRefMarkers(
+  errors: SpecError[],
+  parsed: unknown,
+  editor: Parameters<OnMount>[0] | null,
+  monacoInst: Monaco | null
+): void {
+  if (!editor || !monacoInst) return;
+  const model = editor.getModel();
+  if (!model) return;
+
+  const markers = errors
+    .filter((e) => e.message.startsWith('ID inconnu'))
+    .flatMap((err) => {
+      const segments = err.path.split('/').filter(Boolean);
+      if (segments.length === 0) return [];
+      const key = segments[segments.length - 1];
+      const value = getValueAtPath(parsed, segments);
+      if (typeof value !== 'string') return [];
+      const matches = model.findMatches(
+        `"${key}": "${value}"`,
+        false,
+        false,
+        false,
+        null,
+        false
+      );
+      return matches.map((m) => ({
+        severity: monacoInst.MarkerSeverity.Warning,
+        message: err.message,
+        startLineNumber: m.range.startLineNumber,
+        startColumn: m.range.startColumn,
+        endLineNumber: m.range.endLineNumber,
+        endColumn: m.range.endColumn,
+      }));
+    });
+
+  monacoInst.editor.setModelMarkers(model, 'validateSpec', markers);
+}
+
+function clearMonacoRefMarkers(
+  editor: Parameters<OnMount>[0] | null,
+  monacoInst: Monaco | null
+): void {
+  if (!editor || !monacoInst) return;
+  const model = editor.getModel();
+  if (!model) return;
+  monacoInst.editor.setModelMarkers(model, 'validateSpec', []);
 }
 
 /* ────────────── Component ────────────── */
@@ -32,6 +92,9 @@ export default function PlaygroundPage() {
 
   const [schemaErrors, setSchemaErrors] = useState<SpecError[]>([]);
   const [copied, setCopied] = useState(false);
+
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const monacoRef = useRef<Monaco | null>(null);
   const [density, setDensity] =
     useState<NonNullable<DataFlowPlayerProps['density']>>('comfortable');
 
@@ -78,12 +141,14 @@ export default function PlaygroundPage() {
         const msg = e instanceof Error ? e.message : '';
         setParseError(`JSON invalide : ${msg}`);
         setSchemaErrors([]);
+        clearMonacoRefMarkers(editorRef.current, monacoRef.current);
         return;
       }
       setParseError(null);
       const { validateSpec } = await import('../site-content/validateSpec');
       const errors = validateSpec(parsed);
       setSchemaErrors(errors);
+      setMonacoRefMarkers(errors, parsed, editorRef.current, monacoRef.current);
       if (errors.length === 0) {
         setSpec(parsed as DataFlowSpec);
       }
@@ -98,6 +163,7 @@ export default function PlaygroundPage() {
     setSpec(demo.spec);
     setParseError(null);
     setSchemaErrors([]);
+    clearMonacoRefMarkers(editorRef.current, monacoRef.current);
   };
 
   const handleFormat = () => {
@@ -217,6 +283,10 @@ export default function PlaygroundPage() {
                 theme="rdfa-dark"
                 value={jsonText}
                 onChange={(value) => setJsonText(value || '')}
+                onMount={(editor, monaco) => {
+                  editorRef.current = editor;
+                  monacoRef.current = monaco;
+                }}
                 beforeMount={(monaco) => {
                   monaco.editor.defineTheme('rdfa-dark', {
                     base: 'vs-dark',
