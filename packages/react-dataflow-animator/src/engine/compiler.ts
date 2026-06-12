@@ -87,12 +87,19 @@ interface Window {
   occupiedEndMs: number;
 }
 
-/** Compile une action et renvoie sa fenêtre temporelle. */
+/**
+ * Compile une action et renvoie sa fenêtre temporelle.
+ *
+ * @param minStartMs — plancher du startMs (utilisé pour les actions racines afin
+ *   que wait_for ne puisse que retarder, jamais remonter avant le début de l'étape).
+ *   Non transmis aux enfants de parallel, qui gardent la sémantique stricte.
+ */
 function compileAction(
   action: Action,
   baseStart: number,
   stepIndex: number,
-  ctx: Ctx
+  ctx: Ctx,
+  minStartMs = 0
 ): Window {
   // Résolution de wait_for (référence à une action déjà compilée).
   let startMs = baseStart;
@@ -104,12 +111,16 @@ function compileAction(
         `wait_for: action "${action.wait_for}" introuvable (ou définie plus tard).`
       );
   }
+  // Borne inférieure : une action racine ne peut pas commencer avant son étape,
+  // même si wait_for pointe vers une action très antérieure.
+  if (startMs < minStartMs) startMs = minStartMs;
 
   if (action.type === 'parallel') {
     const children = action.actions ?? [];
     let animEndMs = startMs;
     let occupiedEndMs = startMs;
     for (const child of children) {
+      // minStartMs non transmis : les enfants conservent la sémantique stricte.
       const r = compileAction(child, startMs, stepIndex, ctx);
       if (r.animEndMs > animEndMs) animEndMs = r.animEndMs;
       if (r.occupiedEndMs > occupiedEndMs) occupiedEndMs = r.occupiedEndMs;
@@ -266,7 +277,15 @@ export function compile(spec: DataFlowSpec): CompileResult {
   const lastIndex = spec.timeline.length - 1;
   spec.timeline.forEach((action, index) => {
     const stepStart = cursor;
-    const { occupiedEndMs } = compileAction(action, stepStart, index, ctx);
+    // stepStart passé comme minStartMs : wait_for ne peut que retarder l'action racine,
+    // jamais la faire démarrer avant le début de son étape.
+    const { occupiedEndMs } = compileAction(
+      action,
+      stepStart,
+      index,
+      ctx,
+      stepStart
+    );
     const stepEnd = Math.max(cursor, occupiedEndMs);
     steps.push({
       index,

@@ -87,7 +87,7 @@ describe('compile — ordonnancement', () => {
     expect(timeline.steps).toHaveLength(1);
   });
 
-  it(`décale via wait_for vers la fin de l'action référencée`, () => {
+  it(`wait_for sur action racine ne recule pas avant l'étape (clamped à stepStart)`, () => {
     const { timeline } = compile(
       specOf([
         { type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 1000 },
@@ -110,9 +110,10 @@ describe('compile — ordonnancement', () => {
       ])
     );
     const c = timeline.clips.find((cl) => cl.id === 'C')!;
-    // Sans wait_for, C démarrerait à 1200 ; avec, à la fin de A (1000).
-    expect(c.startMs).toBe(1000);
-    expect(c.endMs).toBe(1100);
+    const step2 = timeline.steps[2];
+    // A.endMs=1000 < step2.startMs → wait_for clamped : C démarre à step2.startMs.
+    expect(c.startMs).toBe(step2.startMs);
+    expect(c.endMs).toBe(step2.startMs + 100);
   });
 });
 
@@ -248,6 +249,92 @@ describe("compile — points d'arrêt", () => {
     expect(timeline.stops.length).toBe(3);
     // Triés.
     expect([...timeline.stops].sort((x, y) => x - y)).toEqual(timeline.stops);
+  });
+});
+
+describe("compile — wait_for sur action racine : borne au début de l'étape", () => {
+  it('clamp le startMs au stepStart quand wait_for référence une action antérieure', () => {
+    // 3 étapes ; étape 2 a wait_for vers l'action A de l'étape 0.
+    // step0: highlight A dur=100 → endMs=100, occupiedEnd=100, cursor→350
+    // step1: arrow B dur=100 → endMs=450, cursor→700
+    // step2: comment C wait_for='A' → ref.endMs=100 < stepStart=700 → clamped à 700
+    const { timeline } = compile(
+      specOf([
+        { type: 'highlight', id: 'A', object: 'a', duration: 100 },
+        { type: 'arrow', id: 'B', from: 'a', to: 'b', duration: 100 },
+        {
+          type: 'comment',
+          id: 'C',
+          object: 'a',
+          text: 'x',
+          duration: 100,
+          wait_for: 'A',
+        },
+      ])
+    );
+    const c = timeline.clips.find((cl) => cl.id === 'C')!;
+    const step2 = timeline.steps[2];
+    expect(c.startMs).toBe(step2.startMs);
+    expect(c.endMs).toBe(step2.startMs + 100);
+    // L'étape a une durée positive (endMs > startMs).
+    expect(step2.endMs).toBeGreaterThan(step2.startMs);
+  });
+
+  it('invariant : clip.startMs ≥ step.startMs pour toutes les actions racines', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'highlight', id: 'A', object: 'a', duration: 100 },
+        { type: 'arrow', id: 'B', from: 'a', to: 'b', duration: 100 },
+        {
+          type: 'comment',
+          id: 'C',
+          object: 'a',
+          text: 'x',
+          duration: 100,
+          wait_for: 'A',
+        },
+        {
+          type: 'loading',
+          id: 'D',
+          object: 'a',
+          duration: 200,
+          wait_for: 'B',
+        },
+      ])
+    );
+    for (const clip of timeline.clips) {
+      const step = timeline.steps[clip.stepIndex];
+      expect(clip.startMs).toBeGreaterThanOrEqual(step.startMs);
+    }
+  });
+
+  it("ne clamp pas les enfants d'un parallel (comportement conservé)", () => {
+    // A (étape 0, endMs=100) ; étape 1 = parallel dont un enfant a wait_for='A'.
+    // L'enfant reste à A.endMs=100 < parallel.startMs=350 (pas de clamp pour les enfants).
+    const { timeline } = compile(
+      specOf([
+        { type: 'highlight', id: 'A', object: 'a', duration: 100 },
+        {
+          type: 'parallel',
+          actions: [
+            {
+              type: 'comment',
+              id: 'C',
+              object: 'a',
+              text: 'x',
+              duration: 100,
+              wait_for: 'A',
+            },
+            { type: 'arrow', id: 'B', from: 'a', to: 'b', duration: 200 },
+          ],
+        },
+      ])
+    );
+    const c = timeline.clips.find((cl) => cl.id === 'C')!;
+    const step1 = timeline.steps[1];
+    // Enfant parallel : startMs = A.endMs = 100, antérieur au début du parallel.
+    expect(c.startMs).toBe(100);
+    expect(c.startMs).toBeLessThan(step1.startMs);
   });
 });
 

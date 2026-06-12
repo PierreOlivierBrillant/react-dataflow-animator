@@ -99,6 +99,14 @@ La timeline compile un tableau d'actions ordonnées. Voir
 ## 6. Cycle de vie temporel
 
 - **`wait_for`** : l'action démarre à la **fin** de l'action référencée (par id).
+  - _Sur une action racine_ (directement dans `timeline`) : `startMs` effectif =
+    `max(ref.endMs, stepStart)`. `wait_for` ne peut que **retarder** l'action,
+    jamais la faire démarrer avant le début de son propre step. Cette borne empêche
+    qu'un wait_for vers une action très antérieure produise un clip hors de sa plage
+    d'étape (step de durée nulle, navigation incorrecte).
+  - _Sur un enfant de `parallel`_ : sémantique stricte — `startMs = ref.endMs`,
+    sans plancher. Le clip peut alors démarrer avant le début du bloc parallel si la
+    référence est antérieure.
 - **`keep_until`** : reste visible jusqu'au **début** de l'action ciblée.
 - **Pause inter-étapes** (`STEP_GAP`) : une courte pause sépare deux étapes racines,
   pour que l'arrêt « Suivant » montre l'étape « posée » seule (sans chevaucher
