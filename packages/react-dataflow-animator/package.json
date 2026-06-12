@@ -27,7 +27,8 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./dist/style.css"
+    "./styles.css": "./dist/style.css",
+    "./schema.json": "./dist/schema.json"
   },
   "files": [
     "dist",
@@ -40,12 +41,14 @@
     "generate:schema": "node scripts/generate-schema.mjs",
     "check:schema": "node scripts/check-schema-is-fresh.mjs",
     "build": "npm run generate:schema && tsc -b tsconfig.app.json tsconfig.node.json && vite build && tsc -p tsconfig.dts.json",
+    "postbuild": "cp src/schema.generated.json dist/schema.json",
     "dev": "vite build --watch",
     "lint": "eslint src",
     "preview": "vite preview",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "smoke:export": "node scripts/smoke-export.mjs"
   },
   "peerDependencies": {
     "react": ">=18",

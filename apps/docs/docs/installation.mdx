@@ -74,6 +74,28 @@ export default function Page() {
 }
 ```
 
+## Auto-complétion JSON dans VS Code {#autocomplete-json-vscode}
+
+Ajoutez cette configuration dans `.vscode/settings.json` pour activer
+l'auto-complétion et la validation inline sur tous vos fichiers
+`*.dataflow.json` :
+
+```json title=".vscode/settings.json"
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["*.dataflow.json"],
+      "url": "./node_modules/react-dataflow-animator/schema.json"
+    }
+  ]
+}
+```
+
+Le même chemin fonctionne avec n'importe quel validateur compatible
+JSON Schema draft-07 (Ajv, ajv-cli, etc.). Si vous hébergez le schéma
+publiquement, il peut également être référencé depuis le
+[JSON Schema Store](https://www.schemastore.org/).
+
 ## SSR et hydratation
 
 Le composant ne touche jamais au DOM pendant le rendu (mesure et horloge

@@ -719,5 +719,6 @@
       "additionalProperties": false,
       "description": "Surligne un nœud statique ou une connexion (par ID)."
     }
-  }
+  },
+  "title": "DataFlowSpec"
 }

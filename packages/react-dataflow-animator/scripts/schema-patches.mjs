@@ -14,6 +14,8 @@
  * @returns {object} Le schéma muté.
  */
 export function applySchemaPatches(schema) {
+  schema.title = 'DataFlowSpec';
+
   for (const defName of ['ObjectContent', 'PacketBody']) {
     const def = schema.definitions?.[defName];
     if (def?.properties?.language?.anyOf) {
