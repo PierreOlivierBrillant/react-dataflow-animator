@@ -4,7 +4,6 @@ import type {
   DynamicObject,
   Highlighter,
   ObjectContent,
-  Action,
 } from '../types';
 import {
   clamp,
@@ -19,6 +18,10 @@ import {
 import { computeLayout } from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
 import { computePlacements } from '../engine/placements';
+import {
+  collectArrowConnections,
+  computePortOffsets,
+} from '../engine/portOffsets';
 import { connection, pathTip } from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { StaticNode } from './nodes/StaticNode';
@@ -90,126 +93,14 @@ export function Stage({
 
   const active = useMemo(() => evaluate(timeline, t), [timeline, t]);
 
-  const { portOffsets, lineConnections } = useMemo(() => {
-    const allConnections: [string, string, string][] = [];
-    spec.connections?.forEach((c, i) => {
-      const key = c.id ?? `${c.from}|${c.to}|${i}`;
-      allConnections.push([key, c.from, c.to]);
-    });
-
-    const extractArrows = (actions: Action[]) => {
-      actions.forEach((a, i) => {
-        if (a.action_type === 'arrow' && a.from && a.to) {
-          const key = a.id ?? `${a.from}|${a.to}|action_${i}`;
-          allConnections.push([key, a.from, a.to]);
-        } else if (a.action_type === 'parallel' && a.actions) {
-          extractArrows(a.actions);
-        }
-      });
-    };
-    if (spec.actions) extractArrows(spec.actions);
-
-    const uniqueConnections = [];
-    const seen = new Set();
-    for (const c of allConnections) {
-      if (!seen.has(c[0])) {
-        seen.add(c[0]);
-        uniqueConnections.push(c);
-      }
-    }
-
-    // On groupe par paire de nœuds (indépendamment de la direction)
-    const pairConnections: Record<string, [string, string, string][]> = {};
-    for (const c of uniqueConnections) {
-      const [, from, to] = c;
-      const pair = [from, to].sort().join('-');
-      if (!pairConnections[pair]) pairConnections[pair] = [];
-      pairConnections[pair].push(c);
-    }
-
-    // Calcul des faces de départ/arrivée pour chaque paire (fan-out)
-    const nodeFaces: Record<string, { pairKey: string; coord: number }[]> = {};
-    Object.keys(pairConnections).forEach((pairId) => {
-      const conns = pairConnections[pairId];
-      const [, from, to] = conns[0]; // On prend la première connexion comme référence
-      const p1 = layout[from] ?? { cx: 0.5, cy: 0.5 };
-      const p2 = layout[to] ?? { cx: 0.5, cy: 0.5 };
-      const dx = p2.cx - p1.cx;
-      const dy = p2.cy - p1.cy;
-      const isHorizontal = Math.abs(dx) >= Math.abs(dy);
-
-      const faceFrom = isHorizontal
-        ? dx >= 0
-          ? `${from}|RIGHT`
-          : `${from}|LEFT`
-        : dy >= 0
-          ? `${from}|BOTTOM`
-          : `${from}|TOP`;
-      const coordFrom = isHorizontal ? p2.cy : p2.cx;
-      if (!nodeFaces[faceFrom]) nodeFaces[faceFrom] = [];
-      nodeFaces[faceFrom].push({ pairKey: pairId, coord: coordFrom });
-
-      const faceTo = isHorizontal
-        ? dx >= 0
-          ? `${to}|LEFT`
-          : `${to}|RIGHT`
-        : dy >= 0
-          ? `${to}|TOP`
-          : `${to}|BOTTOM`;
-      const coordTo = isHorizontal ? p1.cy : p1.cx;
-      if (!nodeFaces[faceTo]) nodeFaces[faceTo] = [];
-      nodeFaces[faceTo].push({ pairKey: pairId, coord: coordTo });
-    });
-
-    const faceOffsets: Record<string, Record<string, number>> = {};
-    for (const [face, items] of Object.entries(nodeFaces)) {
-      items.sort((a, b) => a.coord - b.coord);
-      const total = items.length;
-      faceOffsets[face] = {};
-      items.forEach((item, i) => {
-        faceOffsets[face][item.pairKey] = (i - (total - 1) / 2) * 30;
-      });
-    }
-
-    const offsets: Record<string, { start: number; end: number }> = {};
-    for (const [pairId, conns] of Object.entries(pairConnections)) {
-      const total = conns.length;
-      conns.forEach(([key, from, to], i) => {
-        const intraPairOffset = (i - (total - 1) / 2) * 30;
-
-        const p1 = layout[from] ?? { cx: 0.5, cy: 0.5 };
-        const p2 = layout[to] ?? { cx: 0.5, cy: 0.5 };
-        const dx = p2.cx - p1.cx;
-        const dy = p2.cy - p1.cy;
-        const isHorizontal = Math.abs(dx) >= Math.abs(dy);
-
-        const faceFrom = isHorizontal
-          ? dx >= 0
-            ? `${from}|RIGHT`
-            : `${from}|LEFT`
-          : dy >= 0
-            ? `${from}|BOTTOM`
-            : `${from}|TOP`;
-        const faceTo = isHorizontal
-          ? dx >= 0
-            ? `${to}|LEFT`
-            : `${to}|RIGHT`
-          : dy >= 0
-            ? `${to}|TOP`
-            : `${to}|BOTTOM`;
-
-        const fanOutStart = faceOffsets[faceFrom]?.[pairId] ?? 0;
-        const fanOutEnd = faceOffsets[faceTo]?.[pairId] ?? 0;
-
-        offsets[key] = {
-          start: intraPairOffset + fanOutStart,
-          end: intraPairOffset + fanOutEnd,
-        };
-      });
-    }
-
-    return { portOffsets: offsets, lineConnections: allConnections };
-  }, [spec, layout]);
+  const lineConnections = useMemo(
+    () => collectArrowConnections(spec),
+    [spec]
+  );
+  const portOffsets = useMemo(
+    () => computePortOffsets(lineConnections, layout),
+    [lineConnections, layout]
+  );
 
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
   // actif (avec fondu d'apparition/disparition).
@@ -252,7 +143,7 @@ export function Stage({
   // taille mesurée (basé sur le ratio de layout, donc stable — pas de boucle).
   const placements = useMemo(
     () => computePlacements(layout, geometry, width, height),
-    [layout, geometry, width, height],
+    [layout, geometry, width, height]
   );
 
   return (
@@ -303,9 +194,9 @@ export function Stage({
           let lineKey = clip.id;
           if (!portOffsets[lineKey]) {
             const matchingLine = lineConnections.find(
-              (c) => c[1] === clip.fromId && c[2] === clip.toId
+              (c) => c.from === clip.fromId && c.to === clip.toId
             );
-            if (matchingLine) lineKey = matchingLine[0];
+            if (matchingLine) lineKey = matchingLine.key;
           }
           const ports = portOffsets[lineKey] ?? { start: 0, end: 0 };
           return (

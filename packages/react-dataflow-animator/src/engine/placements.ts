@@ -8,7 +8,7 @@ export function computePlacements(
   geometry: GeometryMap,
   width: number,
   height: number,
-  pad: number = PLACEMENT_PAD,
+  pad: number = PLACEMENT_PAD
 ): Record<string, { cx: number; cy: number }> {
   const map: Record<string, { cx: number; cy: number }> = {};
   for (const id of Object.keys(layout)) {
