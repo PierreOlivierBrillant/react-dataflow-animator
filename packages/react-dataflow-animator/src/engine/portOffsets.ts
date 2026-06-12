@@ -11,22 +11,39 @@ export interface ConnectionRef {
 
 /**
  * Collecte toutes les connexions référencées dans la spec (connections
- * permanentes + actions arrow, récursion dans les parallèles) et les
- * déduplique par clé (id explicite ou composé `from|to|index`).
+ * permanentes + actions arrow + actions move, récursion dans les parallèles).
+ *
+ * Règle de déduplication :
+ * - Connexions statiques et arrows : déduplication par clé (id ou composé).
+ * - Moves : une direction donnée (from→to) n'est ajoutée que si aucune
+ *   connexion statique ou arrow ne couvre déjà ce sens ; le move réutilise
+ *   alors cette entrée via le fallback by-from/to de Stage.tsx. Cela garantit
+ *   qu'un move et une arrow sur le même trajet partagent le même portOffset.
  */
 export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
   const all: ConnectionRef[] = [];
+  const keysSeen = new Set<string>(); // déduplication par clé (existant)
+  const directedSeen = new Set<string>(); // "from|to" : priorité connexions/arrows sur moves
 
+  // Passe 1 : connexions statiques et arrows (établissent les directions prioritaires).
   spec.connections?.forEach((c, i) => {
     const key = c.id ?? `${c.from}|${c.to}|${i}`;
-    all.push({ key, from: c.from, to: c.to });
+    if (!keysSeen.has(key)) {
+      keysSeen.add(key);
+      all.push({ key, from: c.from, to: c.to });
+      directedSeen.add(`${c.from}|${c.to}`);
+    }
   });
 
   const extractArrows = (actions: Action[]) => {
     actions.forEach((a, i) => {
       if (a.type === 'arrow' && a.from && a.to) {
         const key = a.id ?? `${a.from}|${a.to}|action_${i}`;
-        all.push({ key, from: a.from, to: a.to });
+        if (!keysSeen.has(key)) {
+          keysSeen.add(key);
+          all.push({ key, from: a.from, to: a.to });
+          directedSeen.add(`${a.from}|${a.to}`);
+        }
       } else if (a.type === 'parallel' && a.actions) {
         extractArrows(a.actions);
       }
@@ -34,15 +51,27 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
   };
   if (spec.timeline) extractArrows(spec.timeline);
 
-  const seen = new Set<string>();
-  const unique: ConnectionRef[] = [];
-  for (const c of all) {
-    if (!seen.has(c.key)) {
-      seen.add(c.key);
-      unique.push(c);
-    }
-  }
-  return unique;
+  // Passe 2 : moves (ajoutés seulement si la direction n'est pas déjà couverte).
+  const extractMoves = (actions: Action[]) => {
+    actions.forEach((a, i) => {
+      if (a.type === 'move' && a.from && a.to) {
+        const dk = `${a.from}|${a.to}`;
+        if (!directedSeen.has(dk)) {
+          directedSeen.add(dk);
+          const key = a.id ?? `${a.from}|${a.to}|move_${i}`;
+          if (!keysSeen.has(key)) {
+            keysSeen.add(key);
+            all.push({ key, from: a.from, to: a.to });
+          }
+        }
+      } else if (a.type === 'parallel' && a.actions) {
+        extractMoves(a.actions);
+      }
+    });
+  };
+  if (spec.timeline) extractMoves(spec.timeline);
+
+  return all;
 }
 
 /**

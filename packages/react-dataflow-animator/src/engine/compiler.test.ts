@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Action, DataFlowSpec } from '../types';
-import {
-  APPEAR_HOLD,
-  ARRIVE_HOLD,
-  collectBidirectional,
-  compile,
-  shiftFor,
-  STEP_GAP,
-} from './compiler';
+import { APPEAR_HOLD, ARRIVE_HOLD, compile, STEP_GAP } from './compiler';
 
 const nodes: DataFlowSpec['nodes'] = [
   { id: 'a', type: 'client' },
@@ -229,30 +222,6 @@ describe('compile — cycle de vie', () => {
     // Un clip sans keep_until_end ne doit pas avoir keepEnd à true.
     const m = timeline.clips.find((c) => c.id === 'M')!;
     expect(m.keepEnd).toBeFalsy();
-  });
-});
-
-describe('path shifting bidirectionnel', () => {
-  it('détecte A↔B et attribue des voies opposées', () => {
-    const spec = specOf([
-      { type: 'move', object: 'p', from: 'a', to: 'b' },
-      { type: 'move', object: 'p', from: 'b', to: 'a' },
-    ]);
-    const bidir = collectBidirectional(spec);
-    expect(shiftFor('a', 'b', bidir)).toBe(1);
-    expect(shiftFor('b', 'a', bidir)).toBe(-1);
-
-    const { timeline } = compile(spec);
-    const shifts = timeline.clips.map((c) => (c.kind === 'move' ? c.shift : 0));
-    expect(shifts).toContain(1);
-    expect(shifts).toContain(-1);
-  });
-
-  it('ne décale pas un segment unidirectionnel', () => {
-    const bidir = collectBidirectional(
-      specOf([{ type: 'move', object: 'p', from: 'a', to: 'b' }])
-    );
-    expect(shiftFor('a', 'b', bidir)).toBe(0);
   });
 });
 

@@ -248,7 +248,21 @@ export function Stage({
           const tg = geometry[clip.toId];
           const obj = dynamicById[clip.objectId];
           if (!f || !tg || !obj) return null;
-          const conn = connection(f, tg, allNodes);
+          let moveKey = clip.id;
+          if (!portOffsets[moveKey]) {
+            const matchingLine = lineConnections.find(
+              (c) => c.from === clip.fromId && c.to === clip.toId
+            );
+            if (matchingLine) moveKey = matchingLine.key;
+          }
+          const movePorts = portOffsets[moveKey] ?? { start: 0, end: 0 };
+          const conn = connection(
+            f,
+            tg,
+            allNodes,
+            movePorts.start,
+            movePorts.end
+          );
           const pt = pathTip(conn, easeInOutCubic(a.progress));
           const opacity = clipOpacity(clip, t);
           return (

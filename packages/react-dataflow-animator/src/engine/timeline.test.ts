@@ -20,7 +20,6 @@ const timeline: Timeline = {
       fromId: 'a',
       toId: 'b',
       style: 'solid',
-      shift: 0,
     },
     {
       id: 'm',
@@ -33,7 +32,6 @@ const timeline: Timeline = {
       objectId: 'p',
       fromId: 'a',
       toId: 'b',
-      shift: 0,
     },
   ],
   steps: [

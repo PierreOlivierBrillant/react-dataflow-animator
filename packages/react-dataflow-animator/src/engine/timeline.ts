@@ -41,8 +41,6 @@ export interface MoveClip extends ClipBase {
   objectId: string;
   fromId: string;
   toId: string;
-  /** Voie de décalage anti-collision : -1, 0 ou +1. */
-  shift: number;
 }
 
 export interface ArrowClip extends ClipBase {
@@ -52,7 +50,6 @@ export interface ArrowClip extends ClipBase {
   style: LineStyle;
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   text?: string;
-  shift: number;
 }
 
 export interface LoadingClip extends ClipBase {

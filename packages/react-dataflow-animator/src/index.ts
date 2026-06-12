@@ -44,7 +44,7 @@ export { registerSubIcon, getSubIcon } from './components/nodes/subIcons';
 export { highlightCode, escapeHtml } from './highlight/highlight';
 
 // Moteur (API avancée : compilation et évaluation de la timeline).
-export { compile, collectBidirectional, shiftFor } from './engine/compiler';
+export { compile } from './engine/compiler';
 export type { CompileResult } from './engine/compiler';
 export {
   evaluate,
