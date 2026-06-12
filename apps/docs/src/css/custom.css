@@ -278,6 +278,30 @@ footer__link-item > svg {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Erreurs de validation de schéma dans le playground */
+.rdfa-playground-errors {
+  background: rgba(239, 68, 68, 0.08);
+  border-top: 1px solid rgba(239, 68, 68, 0.2);
+  list-style: none;
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #fca5a5;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.rdfa-playground-errors li {
+  padding: 1px 0;
+}
+
+.rdfa-playground-errors-path {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: #f87171;
+  font-size: 10px;
+}
+
 /* Playground React Dataflow Animator Overrides */
 .rdfa-controls {
   background: transparent !important;

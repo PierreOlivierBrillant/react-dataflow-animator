@@ -14,7 +14,8 @@
       "entry": [
         "src/pages/**/*.tsx",
         "src/site-content/index.ts",
-        "src/theme/**/*.tsx"
+        "src/theme/**/*.tsx",
+        "src/**/*.test.{ts,tsx}"
       ],
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     }

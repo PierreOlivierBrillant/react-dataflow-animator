@@ -7,24 +7,10 @@ import {
   dataFlowSchema,
 } from '../../../../packages/react-dataflow-animator/src';
 import { demos, demosById } from '../site-content/demos';
+import type { SpecError } from '../site-content/validateSpec';
 import { motion } from 'motion/react';
 import { Copy, Check, AlertCircle, ChevronDown, WrapText } from 'lucide-react';
 import Editor from '@monaco-editor/react';
-
-/* ────────────── Utils ────────────── */
-
-function validate(value: string): DataFlowSpec {
-  const parsed = JSON.parse(value);
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('La racine doit être un objet JSON.');
-  }
-  for (const key of ['static_objects', 'dynamic_objects', 'actions'] as const) {
-    if (!Array.isArray(parsed[key])) {
-      throw new Error(`"${key}" doit être un tableau.`);
-    }
-  }
-  return parsed as DataFlowSpec;
-}
 
 function initialDemoId(): string {
   if (typeof window === 'undefined') return demos[0].id;
@@ -44,6 +30,7 @@ export default function PlaygroundPage() {
   );
   const [parseError, setParseError] = useState<string | null>(null);
 
+  const [schemaErrors, setSchemaErrors] = useState<SpecError[]>([]);
   const [copied, setCopied] = useState(false);
   const [density, setDensity] =
     useState<NonNullable<DataFlowPlayerProps['density']>>('comfortable');
@@ -81,15 +68,24 @@ export default function PlaygroundPage() {
     };
   }, [isResizing]);
 
-  // Parse JSON whenever text changes (debounced)
+  // Parse JSON + validation schema (debounced)
   useEffect(() => {
-    const tid = setTimeout(() => {
+    const tid = setTimeout(async () => {
+      let parsed: unknown;
       try {
-        const cfg = validate(jsonText);
-        setSpec(cfg);
-        setParseError(null);
-      } catch (e: any) {
-        setParseError(e.message ?? 'JSON invalide');
+        parsed = JSON.parse(jsonText);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : '';
+        setParseError(`JSON invalide : ${msg}`);
+        setSchemaErrors([]);
+        return;
+      }
+      setParseError(null);
+      const { validateSpec } = await import('../site-content/validateSpec');
+      const errors = validateSpec(parsed);
+      setSchemaErrors(errors);
+      if (errors.length === 0) {
+        setSpec(parsed as DataFlowSpec);
       }
     }, 350);
     return () => clearTimeout(tid);
@@ -101,6 +97,7 @@ export default function PlaygroundPage() {
     setJsonText(JSON.stringify(demo.spec, null, 2));
     setSpec(demo.spec);
     setParseError(null);
+    setSchemaErrors([]);
   };
 
   const handleFormat = () => {
@@ -310,6 +307,25 @@ export default function PlaygroundPage() {
                 </div>
               )}
             </div>
+            {schemaErrors.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                className="flex-none overflow-hidden"
+              >
+                <ul className="rdfa-playground-errors">
+                  {schemaErrors.map((err, i) => (
+                    <li key={i}>
+                      <span className="rdfa-playground-errors-path">
+                        {err.path}
+                      </span>
+                      {' — '}
+                      {err.message}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
           </div>
         </div>
       </main>

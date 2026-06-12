@@ -6,7 +6,8 @@
     "build": "docusaurus build",
     "clear": "docusaurus clear",
     "dev": "docusaurus start",
-    "serve": "docusaurus serve"
+    "serve": "docusaurus serve",
+    "test": "vitest run"
   },
   "dependencies": {
     "@docusaurus/core": "^3.9.2",
@@ -23,8 +24,11 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
+    "ajv": "^8.17",
+    "ajv-formats": "^3.0",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.15",
-    "tailwindcss": "^4.3.0"
+    "tailwindcss": "^4.3.0",
+    "vitest": "^3.2.4"
   }
 }
