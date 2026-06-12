@@ -99,8 +99,8 @@ export function Stage({
 
   const lineConnections = useMemo(() => collectArrowConnections(spec), [spec]);
   const portOffsets = useMemo(
-    () => computePortOffsets(lineConnections, layout),
-    [lineConnections, layout]
+    () => computePortOffsets(lineConnections, layout, aspect),
+    [lineConnections, layout, aspect]
   );
 
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content

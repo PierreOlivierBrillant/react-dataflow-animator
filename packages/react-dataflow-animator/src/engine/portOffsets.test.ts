@@ -190,6 +190,28 @@ describe('computePortOffsets', () => {
     expect(result['ab'].start).not.toBeCloseTo(result['ac'].start);
   });
 
+  it('aspect 3:1 — dx=0.3 dy=0.4 est horizontal en pixels, vertical en ratios', () => {
+    // A→B : dx=0.3, dy=0.4 → |dy|>|dx| en ratios (vertical) mais |0.3×3|=0.9>0.4 en pixels (horizontal)
+    // A→C : dx=0.3, dy=-0.2 → horizontal dans les deux cas (face A|RIGHT)
+    // Avec aspect=3, A→B rejoint A→C sur la face A|RIGHT → fan-out → ac.start ≠ 0
+    // Sans aspect (=1), A→B va sur A|BOTTOM → ac seul sur A|RIGHT → ac.start = 0
+    const connections = [
+      { key: 'ab1', from: 'A', to: 'B' },
+      { key: 'ab2', from: 'A', to: 'B' },
+      { key: 'ac', from: 'A', to: 'C' },
+    ];
+    const layout = {
+      A: { cx: 0.2, cy: 0.5 },
+      B: { cx: 0.5, cy: 0.9 },
+      C: { cx: 0.5, cy: 0.3 },
+    };
+    const withAspect = computePortOffsets(connections, layout, 3);
+    expect(withAspect['ac'].start).toBeCloseTo(-PORT_SPACING / 2);
+
+    const withoutAspect = computePortOffsets(connections, layout);
+    expect(withoutAspect['ac'].start).toBeCloseTo(0);
+  });
+
   it('connexion vers un id absent du layout → ne plante pas (utilise 0.5/0.5)', () => {
     const connections = [{ key: 'k1', from: 'A', to: 'MISSING' }];
     const layout = { A: { cx: 0.2, cy: 0.5 } };
