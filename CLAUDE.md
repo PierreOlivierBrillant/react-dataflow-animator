@@ -44,13 +44,8 @@ npm run lint             # ESLint sur tous les workspaces
 npm run deadcode         # knip : code mort / exports inutilisés
 npm run test:coverage    # vitest + seuils de couverture
 npm run build            # build lib + site (typecheck inclus)
-```
-
-Si la modification touche au moteur (compiler, timeline, geometry, layout)
-ou aux démos, exécute aussi :
-
-```bash
 npm run test:integration -w react-dataflow-animator
+
 ```
 
 ### Que faire en cas d'échec

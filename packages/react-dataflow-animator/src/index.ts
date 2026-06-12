@@ -24,6 +24,7 @@ export type {
   LineStyle,
   ContentType,
   Highlighter,
+  HighlightLanguage,
 } from './types';
 
 // JSON Schema (pour la doc d'API / la validation).

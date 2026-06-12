@@ -69,7 +69,7 @@
         },
         "subicon": {
           "type": "string",
-          "description": "Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom d'une icône enregistrée, ou simple texte libre (ex: 'v2', 'API')."
+          "description": "Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API')."
         },
         "lane": {
           "type": "number",
@@ -123,8 +123,8 @@
           "type": "string"
         },
         "language": {
-          "type": "string",
-          "description": "Langage pour la coloration syntaxique (ex: javascript, json, sql)."
+          "description": "Langage pour la coloration syntaxique. Valeurs reconnues : voir  {@link  HighlightLanguage } .",
+          "$ref": "#/definitions/HighlightLanguage"
         },
         "url": {
           "type": "string",
@@ -141,6 +141,32 @@
         "code"
       ],
       "description": "Modes de contenu pour `set_content` (action) et `content` (objet statique)."
+    },
+    "HighlightLanguage": {
+      "type": "string",
+      "enum": [
+        "javascript",
+        "js",
+        "typescript",
+        "ts",
+        "json",
+        "sql",
+        "bash",
+        "sh",
+        "shell",
+        "python",
+        "py",
+        "csharp",
+        "cs",
+        "html",
+        "xml",
+        "markup",
+        "css",
+        "jsx",
+        "tsx",
+        "http"
+      ],
+      "description": "Langages supportés par le moteur de coloration syntaxique (Prism)."
     },
     "DynamicObject": {
       "type": "object",
@@ -261,8 +287,8 @@
           "description": "Texte ou chemin d'image."
         },
         "language": {
-          "type": "string",
-          "description": "Langage pour la coloration syntaxique du texte (optionnel)."
+          "description": "Langage pour la coloration syntaxique du texte (optionnel). Valeurs reconnues : voir  {@link  HighlightLanguage } .",
+          "$ref": "#/definitions/HighlightLanguage"
         }
       },
       "additionalProperties": false
@@ -353,7 +379,9 @@
         },
         "duration": {
           "type": "number",
-          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
         },
         "wait_for": {
           "type": "string",
@@ -404,7 +432,9 @@
         },
         "duration": {
           "type": "number",
-          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
         },
         "wait_for": {
           "type": "string",
@@ -465,7 +495,9 @@
         },
         "duration": {
           "type": "number",
-          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
         },
         "wait_for": {
           "type": "string",
@@ -510,7 +542,9 @@
         },
         "duration": {
           "type": "number",
-          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
         },
         "wait_for": {
           "type": "string",
@@ -552,7 +586,9 @@
         },
         "duration": {
           "type": "number",
-          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
         },
         "wait_for": {
           "type": "string",
@@ -598,7 +634,9 @@
         },
         "duration": {
           "type": "number",
-          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
         },
         "wait_for": {
           "type": "string",
@@ -645,7 +683,9 @@
         },
         "duration": {
           "type": "number",
-          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
         },
         "wait_for": {
           "type": "string",

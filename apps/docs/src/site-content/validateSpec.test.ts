@@ -60,6 +60,136 @@ describe('validateSpec — validation de schéma', () => {
   });
 });
 
+describe('validateSpec — duration, subicon, language', () => {
+  it('signale une duration négative', () => {
+    const spec = {
+      ...clientServer,
+      actions: [
+        {
+          action_type: 'move',
+          object: 'req',
+          from: 'browser',
+          to: 'api',
+          duration: -100,
+        },
+      ],
+    };
+    const errors = validateSpec(spec);
+    const err = errors.find((e) => e.path.includes('duration'));
+    expect(err).toBeDefined();
+    expect(err!.message).toMatch(/minimum/);
+  });
+
+  it('signale une duration nulle', () => {
+    const spec = {
+      ...clientServer,
+      actions: [
+        {
+          action_type: 'move',
+          object: 'req',
+          from: 'browser',
+          to: 'api',
+          duration: 0,
+        },
+      ],
+    };
+    const errors = validateSpec(spec);
+    const err = errors.find((e) => e.path.includes('duration'));
+    expect(err).toBeDefined();
+    expect(err!.message).toMatch(/minimum/);
+  });
+
+  it('signale une duration non entière', () => {
+    const spec = {
+      ...clientServer,
+      actions: [
+        {
+          action_type: 'move',
+          object: 'req',
+          from: 'browser',
+          to: 'api',
+          duration: 1.5,
+        },
+      ],
+    };
+    const errors = validateSpec(spec);
+    const err = errors.find((e) => e.path.includes('duration'));
+    expect(err).toBeDefined();
+    expect(err!.message).toMatch(/entier/);
+  });
+
+  it("n'émet pas d'erreur pour une duration entière positive", () => {
+    const spec = {
+      ...clientServer,
+      actions: [
+        {
+          action_type: 'move',
+          object: 'req',
+          from: 'browser',
+          to: 'api',
+          duration: 500,
+        },
+      ],
+    };
+    const errors = validateSpec(spec);
+    expect(errors.filter((e) => e.path.includes('duration'))).toEqual([]);
+  });
+
+  it('signale un language inconnu dans packet_content', () => {
+    const spec = {
+      ...clientServer,
+      dynamic_objects: [
+        {
+          id: 'req',
+          object_type: 'http_packet',
+          packet_content: {
+            body: { content_type: 'text', content: 'code', language: 'rust' },
+          },
+        },
+      ],
+    };
+    const errors = validateSpec(spec);
+    const err = errors.find(
+      (e) => e.path.includes('language') || e.message.includes('rust')
+    );
+    expect(err).toBeDefined();
+    expect(err!.message).toMatch(/valeurs acceptées|valeur invalide/);
+  });
+
+  it("n'émet pas d'erreur pour un language supporté", () => {
+    const spec = {
+      ...clientServer,
+      dynamic_objects: [
+        {
+          id: 'req',
+          object_type: 'http_packet',
+          packet_content: {
+            body: {
+              content_type: 'text',
+              content: 'code',
+              language: 'typescript',
+            },
+          },
+        },
+      ],
+    };
+    const errors = validateSpec(spec);
+    expect(errors.filter((e) => e.path.includes('language'))).toEqual([]);
+  });
+
+  it("n'émet pas d'erreur pour un subicon libre (texte)", () => {
+    const spec = {
+      ...clientServer,
+      static_objects: [
+        { id: 'browser', object_type: 'laptop', lane: 1, subicon: 'v2' },
+      ],
+    };
+    expect(
+      validateSpec(spec).filter((e) => e.path.includes('subicon'))
+    ).toEqual([]);
+  });
+});
+
 describe('validateSpec — validation des références croisées', () => {
   it('signale un ID dynamique inconnu dans move.object avec les IDs disponibles', () => {
     const spec = {

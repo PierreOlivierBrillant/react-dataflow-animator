@@ -100,14 +100,34 @@ function formatSingle(e: ErrorObject): SpecError {
   switch (e.keyword) {
     case 'enum': {
       const { allowedValues } = e.params as { allowedValues: unknown[] };
+      const shown = allowedValues.slice(0, 8);
+      const rest = allowedValues.length - shown.length;
+      const list = shown.map((v) => `"${v}"`).join(', ');
       return {
         path,
-        message: `valeur invalide — valeurs acceptées : ${allowedValues.map((v) => `"${v}"`).join(', ')}`,
+        message:
+          rest > 0
+            ? `valeur invalide — valeurs acceptées : ${list}, … (+${rest} autres)`
+            : `valeur invalide — valeurs acceptées : ${list}`,
       };
     }
     case 'type': {
       const { type } = e.params as { type: string };
       return { path, message: `type incorrect — attendu : ${type}` };
+    }
+    case 'minimum': {
+      const { limit } = e.params as { comparison: string; limit: number };
+      return { path, message: `valeur trop petite — minimum : ${limit}` };
+    }
+    case 'multipleOf': {
+      const { multipleOf } = e.params as { multipleOf: number };
+      return {
+        path,
+        message:
+          multipleOf === 1
+            ? 'doit être un entier'
+            : `doit être un multiple de ${multipleOf}`,
+      };
     }
     default:
       return { path, message: e.message ?? 'erreur inconnue' };

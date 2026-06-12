@@ -32,11 +32,34 @@ export type LineStyle = 'solid' | 'dotted' | 'dashed' | 'animated';
 /** Modes de contenu pour `set_content` (action) et `content` (objet statique). */
 export type ContentType = 'image' | 'text' | 'code';
 
+/** Langages supportés par le moteur de coloration syntaxique (Prism). */
+export type HighlightLanguage =
+  | 'javascript'
+  | 'js'
+  | 'typescript'
+  | 'ts'
+  | 'json'
+  | 'sql'
+  | 'bash'
+  | 'sh'
+  | 'shell'
+  | 'python'
+  | 'py'
+  | 'csharp'
+  | 'cs'
+  | 'html'
+  | 'xml'
+  | 'markup'
+  | 'css'
+  | 'jsx'
+  | 'tsx'
+  | 'http';
+
 export interface ObjectContent {
   content_type?: ContentType;
   content?: string;
-  /** Langage pour la coloration syntaxique (ex: javascript, json, sql). */
-  language?: string;
+  /** Langage pour la coloration syntaxique. Valeurs reconnues : voir {@link HighlightLanguage}. */
+  language?: HighlightLanguage | (string & {});
   /** (mode `text`) URL affichée dans la barre d'adresse de la fenêtre. */
   url?: string;
 }
@@ -48,8 +71,8 @@ export interface StaticObject {
   /** Label affiché en dessous de l'objet. */
   text?: string;
   /**
-   * Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom
-   * d'une icône enregistrée, ou simple texte libre (ex: 'v2', 'API').
+   * Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'),
+   * nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API').
    */
   subicon?: string;
   /** Rangée/colonne de placement (entier positif). Défaut: 1. */
@@ -87,8 +110,8 @@ export interface PacketBody {
   content_type?: 'text' | 'image';
   /** Texte ou chemin d'image. */
   content?: string;
-  /** Langage pour la coloration syntaxique du texte (optionnel). */
-  language?: string;
+  /** Langage pour la coloration syntaxique du texte (optionnel). Valeurs reconnues : voir {@link HighlightLanguage}. */
+  language?: HighlightLanguage | (string & {});
 }
 
 export interface PacketContent {
@@ -140,7 +163,11 @@ export type ActionType =
 interface ActionBase {
   /** ID de l'action pour s'y référer (wait_for / keep_until). */
   id?: string;
-  /** Durée de l'animation en ms (défaut: 500, 1200 pour loading). */
+  /**
+   * Durée de l'animation en ms (défaut: 500, 1200 pour loading).
+   * @minimum 1
+   * @multipleOf 1
+   */
   duration?: number;
   /** ID d'une autre action : démarre à la fin de celle-ci. */
   wait_for?: string;
