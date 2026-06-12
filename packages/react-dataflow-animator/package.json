@@ -28,11 +28,13 @@
       "import": "./dist/index.js"
     },
     "./styles.css": "./dist/style.css",
-    "./schema.json": "./dist/schema.json"
+    "./schema.json": "./dist/schema.json",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": [
     "**/*.css"
@@ -53,14 +55,6 @@
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": false
-    },
-    "react-dom": {
-      "optional": false
-    }
   },
   "dependencies": {
     "prismjs": "^1.30.0",

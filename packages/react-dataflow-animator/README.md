@@ -17,6 +17,11 @@ npm install react-dataflow-animator
 
 `react` et `react-dom` (≥ 18) sont attendus en `peerDependencies`.
 
+> **ESM uniquement.** Ce package ne fournit pas d'entrée CommonJS. Votre
+> bundler (Vite, Next.js, esbuild…) doit supporter les modules ES. Node.js
+> ≥ 12 avec `"type": "module"` ou un flag `--input-type=module` est requis
+> pour les usages hors bundler.
+
 ## Utilisation
 
 ```tsx
