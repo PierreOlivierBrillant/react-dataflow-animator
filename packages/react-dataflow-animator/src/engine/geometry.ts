@@ -25,14 +25,6 @@ export interface NodeGeom {
 
 export type GeometryMap = Record<string, NodeGeom>;
 
-function sub(a: Point, b: Point): Point {
-  return { x: a.x - b.x, y: a.y - b.y };
-}
-
-function length(v: Point): number {
-  return Math.hypot(v.x, v.y);
-}
-
 /** Marge (px) laissée entre un nœud et le bout des flèches / paquets. */
 const NODE_GAP = 14;
 
@@ -46,8 +38,6 @@ export interface Connection {
   waypoints?: Point[];
   /** Angle du dernier segment en degrés (utile pour orienter une pointe de flèche). */
   angleDeg: number;
-  /** Longueur du segment tracé (après rognage aux bords). */
-  length: number;
 }
 
 /**
@@ -188,8 +178,18 @@ export function connection(
       const isect = segmentIntersectsRect(start, end, lb);
       if (isect !== null && isect.tEntry < firstT && isect.tEntry > 1e-10) {
         firstT = isect.tEntry;
-        const xAt = start.x + (end.x - start.x) * isect.tEntry;
-        bestWp = { x: xAt, y: lb.y - NODE_GAP };
+        if (isHorizontal) {
+          const xAt = start.x + (end.x - start.x) * isect.tEntry;
+          bestWp = { x: xAt, y: lb.y - NODE_GAP };
+        } else {
+          // Segment quasi-vertical : contourner latéralement plutôt que de
+          // rebrousser vers le haut, ce qui produit un détour non naturel.
+          const yAt = start.y + (end.y - start.y) * isect.tEntry;
+          bestWp = {
+            x: start.x <= obs.x ? lb.x - NODE_GAP : lb.x + lb.w + NODE_GAP,
+            y: yAt,
+          };
+        }
       }
     }
     if (bestWp) waypoints = [bestWp];
@@ -205,7 +205,6 @@ export function connection(
     end,
     waypoints,
     angleDeg,
-    length: length(sub(end, start)),
   };
 }
 
