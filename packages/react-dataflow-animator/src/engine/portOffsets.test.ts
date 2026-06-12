@@ -41,10 +41,7 @@ describe('collectArrowConnections', () => {
     };
     const result = collectArrowConnections(spec);
     expect(result).toHaveLength(2);
-    expect(result.map((c) => `${c.from}->${c.to}`)).toEqual([
-      'X->Y',
-      'Y->Z',
-    ]);
+    expect(result.map((c) => `${c.from}->${c.to}`)).toEqual(['X->Y', 'Y->Z']);
   });
 });
 

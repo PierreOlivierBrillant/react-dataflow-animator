@@ -56,7 +56,7 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
  */
 export function computePortOffsets(
   connections: ConnectionRef[],
-  layout: Record<string, { cx: number; cy: number }>,
+  layout: Record<string, { cx: number; cy: number }>
 ): Record<string, { start: number; end: number }> {
   // On groupe par paire de nœuds (indépendamment de la direction)
   const pairConnections: Record<string, ConnectionRef[]> = {};

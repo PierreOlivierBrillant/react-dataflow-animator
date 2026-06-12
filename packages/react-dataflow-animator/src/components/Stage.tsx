@@ -93,10 +93,7 @@ export function Stage({
 
   const active = useMemo(() => evaluate(timeline, t), [timeline, t]);
 
-  const lineConnections = useMemo(
-    () => collectArrowConnections(spec),
-    [spec]
-  );
+  const lineConnections = useMemo(() => collectArrowConnections(spec), [spec]);
   const portOffsets = useMemo(
     () => computePortOffsets(lineConnections, layout),
     [lineConnections, layout]
