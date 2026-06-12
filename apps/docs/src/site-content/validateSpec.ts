@@ -30,7 +30,7 @@ function formatErrors(errors: ErrorObject[]): SpecError[] {
   );
 
   // Regrouper les erreurs "const" par chemin pour détecter les unions
-  // discriminées (ex. : 7 branches anyOf avec action_type: { const: … }).
+  // discriminées (ex. : 7 branches anyOf avec type: { const: … }).
   const constByPath = new Map<string, string[]>();
   for (const e of useful) {
     if (e.keyword === 'const') {
@@ -142,27 +142,22 @@ function checkRefs(input: unknown): SpecError[] {
   if (!input || typeof input !== 'object') return [];
   const spec = input as AnyRecord;
 
-  const staticIds = collectIds(spec.static_objects);
-  const dynamicIds = collectIds(spec.dynamic_objects);
+  const staticIds = collectIds(spec.nodes);
+  const dynamicIds = collectIds(spec.packets);
   const connectionIds = collectIds(spec.connections);
-  const actionIds = collectActionIds(spec.actions);
+  const actionIds = collectActionIds(spec.timeline);
 
   const errors: SpecError[] = [];
 
   // align_with référence un autre static_object
-  if (Array.isArray(spec.static_objects)) {
-    for (let i = 0; i < spec.static_objects.length; i++) {
-      const obj = spec.static_objects[i] as AnyRecord;
-      checkRef(
-        `/static_objects/${i}/align_with`,
-        obj.align_with,
-        staticIds,
-        errors
-      );
+  if (Array.isArray(spec.nodes)) {
+    for (let i = 0; i < spec.nodes.length; i++) {
+      const obj = spec.nodes[i] as AnyRecord;
+      checkRef(`/nodes/${i}/align_with`, obj.align_with, staticIds, errors);
     }
   }
 
-  // connections.from / .to référencent des static_objects
+  // connections.from / .to référencent des nodes
   if (Array.isArray(spec.connections)) {
     for (let i = 0; i < spec.connections.length; i++) {
       const conn = spec.connections[i] as AnyRecord;
@@ -171,10 +166,10 @@ function checkRefs(input: unknown): SpecError[] {
     }
   }
 
-  if (Array.isArray(spec.actions)) {
+  if (Array.isArray(spec.timeline)) {
     walkActions(
-      spec.actions,
-      '/actions',
+      spec.timeline,
+      '/timeline',
       staticIds,
       dynamicIds,
       connectionIds,
@@ -204,7 +199,7 @@ function walkActions(
     checkRef(`${p}/wait_for`, a.wait_for, actionIds, errors);
     checkRef(`${p}/keep_until`, a.keep_until, actionIds, errors);
 
-    switch (a.action_type) {
+    switch (a.type) {
       case 'move':
         checkRef(`${p}/object`, a.object, dynamicIds, errors);
         checkRef(`${p}/from`, a.from, staticIds, errors);
@@ -283,7 +278,7 @@ function collectActionIds(actions: unknown): Set<string> {
       if (!a || typeof a !== 'object') continue;
       const action = a as AnyRecord;
       if (typeof action.id === 'string') ids.add(action.id);
-      if (action.action_type === 'parallel') walk(action.actions);
+      if (action.type === 'parallel') walk(action.actions);
     }
   }
   walk(actions);

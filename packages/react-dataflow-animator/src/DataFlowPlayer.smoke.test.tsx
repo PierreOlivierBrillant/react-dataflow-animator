@@ -8,32 +8,32 @@ afterEach(cleanup);
 
 const spec: DataFlowSpec = {
   direction: 'left-to-right',
-  static_objects: [
+  nodes: [
     {
       id: 'editor',
-      object_type: 'laptop',
+      type: 'laptop',
       text: 'IDE',
-      subicon: 'typescript',
+      icon: 'typescript',
       lane: 1,
     },
     {
       id: 'server',
-      object_type: 'server',
+      type: 'server',
       text: 'Serveur',
-      subicon: 'node',
+      icon: 'node',
       lane: 2,
     },
   ],
-  dynamic_objects: [
+  packets: [
     {
       id: 'd',
-      object_type: 'http_packet',
+      kind: 'http_packet',
       packet_content: { header: 'GET /' },
     },
   ],
-  actions: [
+  timeline: [
     {
-      action_type: 'set_content',
+      type: 'set_content',
       object: 'editor',
       content: {
         content_type: 'code',
@@ -42,7 +42,7 @@ const spec: DataFlowSpec = {
       },
     },
     {
-      action_type: 'move',
+      type: 'move',
       object: 'd',
       from: 'editor',
       to: 'server',

@@ -48,7 +48,7 @@ export interface ArrowClip extends ClipBase {
   fromId: string;
   toId: string;
   style: LineStyle;
-  arrowHead?: 'forward' | 'backward' | 'both' | 'none';
+  arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   text?: string;
   shift: number;
 }

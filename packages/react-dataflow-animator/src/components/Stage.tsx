@@ -1,7 +1,7 @@
 import { useMemo, type CSSProperties } from 'react';
 import type {
   DataFlowSpec,
-  DynamicObject,
+  Packet as PacketSpec,
   Highlighter,
   ObjectContent,
 } from '../types';
@@ -72,7 +72,7 @@ export function Stage({
   const signature = useMemo(
     () =>
       `${spec.direction ?? 'left-to-right'}|` +
-      spec.static_objects.map((o) => o.id).join(','),
+      spec.nodes.map((o) => o.id).join(','),
     [spec]
   );
 
@@ -86,8 +86,8 @@ export function Stage({
   );
   const allNodes = useMemo(() => Object.values(geometry), [geometry]);
   const dynamicById = useMemo(() => {
-    const map: Record<string, DynamicObject> = {};
-    for (const obj of spec.dynamic_objects) map[obj.id] = obj;
+    const map: Record<string, PacketSpec> = {};
+    for (const obj of spec.packets) map[obj.id] = obj;
     return map;
   }, [spec]);
 
@@ -103,7 +103,7 @@ export function Stage({
   // actif (avec fondu d'apparition/disparition).
   const contentByNode = useMemo(() => {
     const map: Record<string, { content: ObjectContent; opacity: number }> = {};
-    for (const obj of spec.static_objects) {
+    for (const obj of spec.nodes) {
       if (obj.content) map[obj.id] = { content: obj.content, opacity: 1 };
     }
     for (const a of active) {
@@ -134,7 +134,7 @@ export function Stage({
     return set;
   }, [active]);
 
-  const nodes = spec.static_objects;
+  const nodes = spec.nodes;
 
   // Garantit qu'aucun nœud ne sort du canevas : on borne son centre selon sa
   // taille mesurée (basé sur le ratio de layout, donc stable — pas de boucle).
@@ -173,7 +173,7 @@ export function Stage({
               startPortOffset={ports.start}
               endPortOffset={ports.end}
               style={link.style}
-              arrowHead={link.arrowHead}
+              arrow_head={link.arrow_head}
               text={link.text}
               progress={1}
               highlighted={!!link.id && highlightedIds.has(link.id)}
@@ -204,7 +204,7 @@ export function Stage({
               startPortOffset={ports.start}
               endPortOffset={ports.end}
               style={clip.style}
-              arrowHead={clip.arrowHead}
+              arrow_head={clip.arrow_head}
               text={clip.text}
               progress={a.progress}
               obstacles={allNodes}

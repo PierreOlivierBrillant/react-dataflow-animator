@@ -2,48 +2,48 @@ import type { DataFlowSpec } from 'react-dataflow-animator';
 
 export const signalr: DataFlowSpec = {
   direction: 'left-to-right',
-  static_objects: [
+  nodes: [
     {
       id: 'client',
-      object_type: 'laptop',
+      type: 'laptop',
       text: 'Navigateur',
-      subicon: 'typescript',
+      icon: 'typescript',
       lane: 1,
     },
     {
       id: 'hub',
-      object_type: 'server',
+      type: 'server',
       text: 'SignalR Hub',
-      subicon: 'csharp',
+      icon: 'csharp',
       lane: 2,
     },
   ],
-  dynamic_objects: [
+  packets: [
     {
       id: 'handshake',
-      object_type: 'http_packet',
+      kind: 'http_packet',
       packet_content: { header: 'WebSocket ⇄' },
     },
     {
       id: 'send',
-      object_type: 'http_packet',
+      kind: 'http_packet',
       packet_content: { header: 'SendMessage("Salut")' },
     },
     {
       id: 'recv',
-      object_type: 'http_packet',
+      kind: 'http_packet',
       packet_content: { header: 'ReceiveMessage' },
     },
   ],
-  actions: [
+  timeline: [
     {
-      action_type: 'comment',
+      type: 'comment',
       object: 'client',
       text: '1. Le client ouvre une connexion temps réel',
       duration: 1500,
     },
     {
-      action_type: 'set_content',
+      type: 'set_content',
       id: 'clientCode',
       object: 'client',
       content: {
@@ -55,30 +55,30 @@ export const signalr: DataFlowSpec = {
       keep_until: 'end',
     },
     {
-      action_type: 'move',
+      type: 'move',
       object: 'handshake',
       from: 'client',
       to: 'hub',
       duration: 800,
     },
     {
-      action_type: 'parallel',
+      type: 'parallel',
       duration: 1000,
       actions: [
         {
-          action_type: 'comment',
+          type: 'comment',
           object: 'hub',
           text: '2. Connexion établie',
         },
         {
-          action_type: 'arrow',
+          type: 'arrow',
           from: 'client',
           to: 'hub',
           style: 'dashed',
           keep_until_end: true,
         },
         {
-          action_type: 'arrow',
+          type: 'arrow',
           from: 'hub',
           to: 'client',
           style: 'dashed',
@@ -87,7 +87,7 @@ export const signalr: DataFlowSpec = {
       ],
     },
     {
-      action_type: 'set_content',
+      type: 'set_content',
       id: 'hubCode',
       object: 'hub',
       content: {
@@ -99,26 +99,26 @@ export const signalr: DataFlowSpec = {
       keep_until: 'end',
     },
     {
-      action_type: 'comment',
+      type: 'comment',
       object: 'client',
       text: '3. Le client envoie un message',
       duration: 500,
     },
     {
-      action_type: 'move',
+      type: 'move',
       object: 'send',
       from: 'client',
       to: 'hub',
       duration: 800,
     },
     {
-      action_type: 'comment',
+      type: 'comment',
       object: 'hub',
       text: '4. Le hub diffuse à tous (full duplex)',
       duration: 500,
     },
     {
-      action_type: 'move',
+      type: 'move',
       id: 'end',
       object: 'recv',
       from: 'hub',

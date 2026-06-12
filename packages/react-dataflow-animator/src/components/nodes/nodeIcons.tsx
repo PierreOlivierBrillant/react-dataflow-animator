@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import type { StaticObjectType } from '../../types';
+import type { NodeType } from '../../types';
 
 /**
- * Registre des icônes de nœuds (par `object_type`). SVG inline, en `currentColor`
+ * Registre des icônes de nœuds (par `type`). SVG inline, en `currentColor`
  * (la couleur suit le thème). Extensible via `registerNodeIcon`.
  */
 
@@ -21,7 +21,7 @@ const svg = (children: ReactNode): ReactNode => (
   </svg>
 );
 
-const icons: Partial<Record<StaticObjectType, ReactNode>> = {
+const icons: Partial<Record<NodeType, ReactNode>> = {
   desktop: svg(
     <>
       <rect x="2.5" y="4" width="19" height="12" rx="1.5" />
@@ -91,6 +91,6 @@ export function registerNodeIcon(type: string, node: ReactNode): void {
   (icons as Record<string, ReactNode>)[type] = node;
 }
 
-export function getNodeIcon(type: StaticObjectType): ReactNode {
+export function getNodeIcon(type: NodeType): ReactNode {
   return icons[type] ?? fallback;
 }

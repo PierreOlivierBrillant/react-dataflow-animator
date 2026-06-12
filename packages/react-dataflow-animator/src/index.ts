@@ -9,9 +9,9 @@ export { DataFlowPlayer } from './DataFlowPlayer';
 export type {
   DataFlowSpec,
   DataFlowPlayerProps,
-  StaticObject,
+  Node,
   Connection,
-  DynamicObject,
+  Packet,
   Action,
   ActionType,
   ObjectContent,
@@ -19,12 +19,17 @@ export type {
   PacketBody,
   SqlResponse,
   Direction,
-  StaticObjectType,
-  DynamicObjectType,
+  NodeType,
+  PacketKind,
   LineStyle,
   ContentType,
   Highlighter,
   HighlightLanguage,
+  // Aliases rétro-compatibles (supprimés en v2)
+  StaticObject,
+  StaticObjectType,
+  DynamicObject,
+  DynamicObjectType,
 } from './types';
 
 // JSON Schema (pour la doc d'API / la validation).

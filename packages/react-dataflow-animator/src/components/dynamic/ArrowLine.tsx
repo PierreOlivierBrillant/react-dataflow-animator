@@ -21,7 +21,7 @@ export interface ArrowLineProps {
   startPortOffset?: number;
   endPortOffset?: number;
   style?: LineStyle;
-  arrowHead?: 'forward' | 'backward' | 'both' | 'none';
+  arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   text?: string;
   /** 1 pour une flèche statique (décor), interpolé pour une flèche dynamique. */
   progress: number;
@@ -44,9 +44,9 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     progress,
     highlighted,
     obstacles,
-    arrowHead,
+    arrow_head,
   }: ArrowLineProps) {
-    const headStyle = arrowHead ?? 'forward';
+    const headStyle = arrow_head ?? 'forward';
     const renderForward = headStyle === 'forward' || headStyle === 'both';
     const renderBackward = headStyle === 'backward' || headStyle === 'both';
 

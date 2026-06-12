@@ -20,18 +20,18 @@ import 'react-dataflow-animator/styles.css';
 
 const spec = {
   direction: 'left-to-right',
-  static_objects: [
-    { id: 'browser', object_type: 'laptop', text: 'Navigateur', lane: 1 },
-    { id: 'api', object_type: 'server', text: 'API', lane: 2 },
+  nodes: [
+    { id: 'browser', type: 'laptop', text: 'Navigateur', lane: 1 },
+    { id: 'api', type: 'server', text: 'API', lane: 2 },
   ],
-  dynamic_objects: [
+  packets: [
     {
       id: 'req',
-      object_type: 'http_packet',
+      kind: 'http_packet',
       packet_content: { header: 'GET /users' },
     },
   ],
-  actions: [{ action_type: 'move', object: 'req', from: 'browser', to: 'api' }],
+  timeline: [{ type: 'move', object: 'req', from: 'browser', to: 'api' }],
 };
 
 export default function Example() {

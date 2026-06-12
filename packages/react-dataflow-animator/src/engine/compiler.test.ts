@@ -9,16 +9,14 @@ import {
   STEP_GAP,
 } from './compiler';
 
-const nodes: DataFlowSpec['static_objects'] = [
-  { id: 'a', object_type: 'client' },
-  { id: 'b', object_type: 'server' },
+const nodes: DataFlowSpec['nodes'] = [
+  { id: 'a', type: 'client' },
+  { id: 'b', type: 'server' },
 ];
-const packets: DataFlowSpec['dynamic_objects'] = [
-  { id: 'p', object_type: 'http_packet' },
-];
+const packets: DataFlowSpec['packets'] = [{ id: 'p', kind: 'http_packet' }];
 
-function specOf(actions: DataFlowSpec['actions']): DataFlowSpec {
-  return { static_objects: nodes, dynamic_objects: packets, actions };
+function specOf(timeline: DataFlowSpec['timeline']): DataFlowSpec {
+  return { nodes, packets, timeline };
 }
 
 describe('compile — ordonnancement', () => {
@@ -26,7 +24,7 @@ describe('compile — ordonnancement', () => {
     const { timeline } = compile(
       specOf([
         {
-          action_type: 'move',
+          type: 'move',
           id: 'm1',
           object: 'p',
           from: 'a',
@@ -34,7 +32,7 @@ describe('compile — ordonnancement', () => {
           duration: 500,
         },
         {
-          action_type: 'move',
+          type: 'move',
           id: 'm2',
           object: 'p',
           from: 'a',
@@ -64,10 +62,10 @@ describe('compile — ordonnancement', () => {
     const { timeline } = compile(
       specOf([
         {
-          action_type: 'parallel',
+          type: 'parallel',
           actions: [
             {
-              action_type: 'move',
+              type: 'move',
               id: 'x',
               object: 'p',
               from: 'a',
@@ -75,7 +73,7 @@ describe('compile — ordonnancement', () => {
               duration: 400,
             },
             {
-              action_type: 'arrow',
+              type: 'arrow',
               id: 'y',
               from: 'a',
               to: 'b',
@@ -99,9 +97,9 @@ describe('compile — ordonnancement', () => {
   it('décale via wait_for vers la fin de l’action référencée', () => {
     const { timeline } = compile(
       specOf([
-        { action_type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 1000 },
+        { type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 1000 },
         {
-          action_type: 'move',
+          type: 'move',
           id: 'B',
           object: 'p',
           from: 'a',
@@ -109,7 +107,7 @@ describe('compile — ordonnancement', () => {
           duration: 200,
         },
         {
-          action_type: 'comment',
+          type: 'comment',
           id: 'C',
           object: 'a',
           text: 'x',
@@ -129,9 +127,9 @@ describe('compile — cycle de vie', () => {
   it('move disparaît à la fin, arrow persiste jusqu’à l’étape suivante', () => {
     const { timeline } = compile(
       specOf([
-        { action_type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 300 },
+        { type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 300 },
         {
-          action_type: 'move',
+          type: 'move',
           id: 'B',
           object: 'p',
           from: 'a',
@@ -152,7 +150,7 @@ describe('compile — cycle de vie', () => {
     const { timeline } = compile(
       specOf([
         {
-          action_type: 'arrow',
+          type: 'arrow',
           id: 'A',
           from: 'a',
           to: 'b',
@@ -160,7 +158,7 @@ describe('compile — cycle de vie', () => {
           keep_until: 'C',
         },
         {
-          action_type: 'move',
+          type: 'move',
           id: 'B',
           object: 'p',
           from: 'a',
@@ -168,7 +166,7 @@ describe('compile — cycle de vie', () => {
           duration: 300,
         },
         {
-          action_type: 'comment',
+          type: 'comment',
           id: 'C',
           object: 'a',
           text: 'x',
@@ -185,7 +183,7 @@ describe('compile — cycle de vie', () => {
     const { timeline } = compile(
       specOf([
         {
-          action_type: 'arrow',
+          type: 'arrow',
           id: 'A',
           from: 'a',
           to: 'b',
@@ -193,7 +191,7 @@ describe('compile — cycle de vie', () => {
           keep_until_end: true,
         },
         {
-          action_type: 'move',
+          type: 'move',
           id: 'B',
           object: 'p',
           from: 'a',
@@ -210,8 +208,8 @@ describe('compile — cycle de vie', () => {
 describe('path shifting bidirectionnel', () => {
   it('détecte A↔B et attribue des voies opposées', () => {
     const spec = specOf([
-      { action_type: 'move', object: 'p', from: 'a', to: 'b' },
-      { action_type: 'move', object: 'p', from: 'b', to: 'a' },
+      { type: 'move', object: 'p', from: 'a', to: 'b' },
+      { type: 'move', object: 'p', from: 'b', to: 'a' },
     ]);
     const bidir = collectBidirectional(spec);
     expect(shiftFor('a', 'b', bidir)).toBe(1);
@@ -225,7 +223,7 @@ describe('path shifting bidirectionnel', () => {
 
   it('ne décale pas un segment unidirectionnel', () => {
     const bidir = collectBidirectional(
-      specOf([{ action_type: 'move', object: 'p', from: 'a', to: 'b' }])
+      specOf([{ type: 'move', object: 'p', from: 'a', to: 'b' }])
     );
     expect(shiftFor('a', 'b', bidir)).toBe(0);
   });
@@ -235,9 +233,9 @@ describe('compile — points d’arrêt', () => {
   it('un move produit deux arrêts (apparition + arrivée), une flèche un seul', () => {
     const { timeline } = compile(
       specOf([
-        { action_type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 300 },
+        { type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 300 },
         {
-          action_type: 'move',
+          type: 'move',
           id: 'B',
           object: 'p',
           from: 'a',
@@ -261,9 +259,7 @@ describe('compile — robustesse', () => {
   it('ignore une action incomplète et émet un warning', () => {
     const { timeline, warnings } = compile(
       // Données volontairement incomplètes (to manquant) -> ignoré + warning.
-      specOf([
-        { action_type: 'move', object: 'p', from: 'a' } as unknown as Action,
-      ])
+      specOf([{ type: 'move', object: 'p', from: 'a' } as unknown as Action])
     );
     expect(timeline.clips).toHaveLength(0);
     expect(warnings.length).toBeGreaterThan(0);

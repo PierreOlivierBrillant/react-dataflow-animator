@@ -32,10 +32,10 @@ la même `lane` sont **empilés** sur l'axe transverse.
 ```ts
 {
   direction: 'left-to-right',
-  static_objects: [
-    { id: 'web1', object_type: 'server', lane: 2 },
-    { id: 'web2', object_type: 'server', lane: 2 }, // même colonne que web1
-    { id: 'db',   object_type: 'database', lane: 3 },
+  nodes: [
+    { id: 'web1', type: 'server', lane: 2 },
+    { id: 'web2', type: 'server', lane: 2 }, // même colonne que web1
+    { id: 'db',   type: 'database', lane: 3 },
   ],
 }
 ```
@@ -51,10 +51,10 @@ différentes :
 
 ```ts
 {
-  static_objects: [
-    { id: 'client', object_type: 'laptop', lane: 1 },
-    { id: 'api',    object_type: 'server', lane: 2 },
-    { id: 'cache',  object_type: 'database', lane: 3, align_with: 'api' },
+  nodes: [
+    { id: 'client', type: 'laptop', lane: 1 },
+    { id: 'api',    type: 'server', lane: 2 },
+    { id: 'cache',  type: 'database', lane: 3, align_with: 'api' },
   ],
 }
 ```
@@ -63,17 +63,17 @@ Ignoré en mode `circular`.
 
 ## Mode circulaire
 
-En `circular`, le nœud marqué `is_main: true` est placé au centre ; les
+En `circular`, le nœud marqué `main: true` est placé au centre ; les
 autres sont répartis à équidistance sur un cercle :
 
 ```ts
 {
   direction: 'circular',
-  static_objects: [
-    { id: 'gateway', object_type: 'server', is_main: true },
-    { id: 'svc-a',   object_type: 'server' },
-    { id: 'svc-b',   object_type: 'server' },
-    { id: 'svc-c',   object_type: 'server' },
+  nodes: [
+    { id: 'gateway', type: 'server', main: true },
+    { id: 'svc-a',   type: 'server' },
+    { id: 'svc-b',   type: 'server' },
+    { id: 'svc-c',   type: 'server' },
   ],
 }
 ```

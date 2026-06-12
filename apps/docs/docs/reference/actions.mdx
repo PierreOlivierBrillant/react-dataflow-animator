@@ -13,10 +13,10 @@ Déplace un objet dynamique de `from` vers `to`.
 
 ```ts
 {
-  action_type: 'move',
-  object: 'req',     // id d'un dynamic_object
-  from: 'browser',   // id d'un static_object
-  to: 'api',         // id d'un static_object
+  type: 'move',
+  object: 'req',     // id d'un packet
+  from: 'browser',   // id d'un node
+  to: 'api',         // id d'un node
   duration: 600,
 }
 ```
@@ -30,11 +30,11 @@ Trace une flèche animée entre deux nœuds (dessin progressif).
 
 ```ts
 {
-  action_type: 'arrow',
+  type: 'arrow',
   from: 'a',
   to: 'b',
   style: 'dashed',         // 'solid' | 'dotted' | 'dashed' | 'animated'
-  arrowHead: 'both',       // 'forward' | 'backward' | 'both' | 'none'
+  arrow_head: 'both',      // 'forward' | 'backward' | 'both' | 'none'
   text: 'requête',
 }
 ```
@@ -48,10 +48,10 @@ Encapsule des actions enfants exécutées au même instant.
 
 ```ts
 {
-  action_type: 'parallel',
+  type: 'parallel',
   actions: [
-    { action_type: 'move', object: 'p1', from: 'a', to: 'b' },
-    { action_type: 'arrow', from: 'c', to: 'd' },
+    { type: 'move', object: 'p1', from: 'a', to: 'b' },
+    { type: 'arrow', from: 'c', to: 'd' },
   ],
 }
 ```
@@ -64,7 +64,7 @@ fonctionner normalement.
 Affiche un spinner de chargement sur un nœud cible (simule un traitement).
 
 ```ts
-{ action_type: 'loading', object: 'db', duration: 900 }
+{ type: 'loading', object: 'db', duration: 900 }
 ```
 
 ## `set_content`
@@ -78,7 +78,7 @@ Mute le contenu d'un nœud. Trois modes :
 
 ```ts
 {
-  action_type: 'set_content',
+  type: 'set_content',
   object: 'editor',
   content: {
     content_type: 'code',
@@ -94,7 +94,7 @@ Affiche une bulle de texte en fondu près d'un nœud.
 
 ```ts
 {
-  action_type: 'comment',
+  type: 'comment',
   object: 'browser',
   text: 'L\'utilisateur clique',
   duration: 400,
@@ -107,7 +107,7 @@ Surligne (halo pulsé) un nœud statique **ou** une connexion permanente,
 identifiés par leur `id`.
 
 ```ts
-{ action_type: 'highlight', object: 'db' }
+{ type: 'highlight', object: 'db' }
 ```
 
 ## Référence complète

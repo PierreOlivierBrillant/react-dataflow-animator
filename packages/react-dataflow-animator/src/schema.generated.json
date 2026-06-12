@@ -7,18 +7,18 @@
       "properties": {
         "direction": {
           "$ref": "#/definitions/Direction",
-          "description": "Direction de placement automatique des objets statiques. Défaut: 'left-to-right'."
+          "description": "Direction de placement automatique des nœuds. Défaut: 'left-to-right'."
         },
-        "static_objects": {
+        "nodes": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/StaticObject"
+            "$ref": "#/definitions/Node"
           }
         },
-        "dynamic_objects": {
+        "packets": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/DynamicObject"
+            "$ref": "#/definitions/Packet"
           }
         },
         "connections": {
@@ -28,7 +28,7 @@
           },
           "description": "Flèches/liens permanents (décor) affichés dès l'initialisation."
         },
-        "actions": {
+        "timeline": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Action"
@@ -36,9 +36,9 @@
         }
       },
       "required": [
-        "static_objects",
-        "dynamic_objects",
-        "actions"
+        "nodes",
+        "packets",
+        "timeline"
       ],
       "additionalProperties": false
     },
@@ -53,21 +53,21 @@
       ],
       "description": "Types TypeScript de la spécification DataFlow. Ils reflètent le JSON schema exposé dans `schema.ts` (utilisé par la page Doc API)."
     },
-    "StaticObject": {
+    "Node": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Identifiant unique de l'objet (ex: 'serveur_web')."
+          "description": "Identifiant unique du nœud (ex: 'serveur_web')."
         },
-        "object_type": {
-          "$ref": "#/definitions/StaticObjectType"
+        "type": {
+          "$ref": "#/definitions/NodeType"
         },
         "text": {
           "type": "string",
-          "description": "Label affiché en dessous de l'objet."
+          "description": "Label affiché en dessous du nœud."
         },
-        "subicon": {
+        "icon": {
           "type": "string",
           "description": "Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API')."
         },
@@ -75,9 +75,9 @@
           "type": "number",
           "description": "Rangée/colonne de placement (entier positif). Défaut: 1."
         },
-        "is_main": {
+        "main": {
           "type": "boolean",
-          "description": "(circular) Marque l'objet comme nœud central. Défaut: false."
+          "description": "(circular) Marque le nœud comme nœud central. Défaut: false."
         },
         "align_with": {
           "type": "string",
@@ -94,11 +94,11 @@
       },
       "required": [
         "id",
-        "object_type"
+        "type"
       ],
       "additionalProperties": false
     },
-    "StaticObjectType": {
+    "NodeType": {
       "type": "string",
       "enum": [
         "desktop",
@@ -168,15 +168,15 @@
       ],
       "description": "Langages supportés par le moteur de coloration syntaxique (Prism)."
     },
-    "DynamicObject": {
+    "Packet": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
           "description": "Identifiant unique du paquet."
         },
-        "object_type": {
-          "$ref": "#/definitions/DynamicObjectType"
+        "kind": {
+          "$ref": "#/definitions/PacketKind"
         },
         "request_content": {
           "type": "string",
@@ -192,11 +192,11 @@
       },
       "required": [
         "id",
-        "object_type"
+        "kind"
       ],
       "additionalProperties": false
     },
-    "DynamicObjectType": {
+    "PacketKind": {
       "type": "string",
       "enum": [
         "http_packet",
@@ -312,7 +312,7 @@
           "$ref": "#/definitions/LineStyle",
           "description": "Style de la ligne. Défaut: 'solid'."
         },
-        "arrowHead": {
+        "arrow_head": {
           "type": "string",
           "enum": [
             "forward",
@@ -368,7 +368,7 @@
           "$ref": "#/definitions/HighlightAction"
         }
       ],
-      "description": "Union discriminée des actions (par `action_type`)."
+      "description": "Union discriminée des actions (par `type`)."
     },
     "MoveAction": {
       "type": "object",
@@ -399,13 +399,13 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
-        "action_type": {
+        "type": {
           "type": "string",
           "const": "move"
         },
         "object": {
           "type": "string",
-          "description": "ID de l'objet dynamique (paquet, requête…)."
+          "description": "ID du paquet à déplacer."
         },
         "from": {
           "type": "string"
@@ -415,13 +415,13 @@
         }
       },
       "required": [
-        "action_type",
+        "type",
         "object",
         "from",
         "to"
       ],
       "additionalProperties": false,
-      "description": "Déplace un objet dynamique de `from` vers `to`."
+      "description": "Déplace un paquet de `from` vers `to`."
     },
     "ArrowAction": {
       "type": "object",
@@ -452,7 +452,7 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
-        "action_type": {
+        "type": {
           "type": "string",
           "const": "arrow"
         },
@@ -468,7 +468,7 @@
         "style": {
           "$ref": "#/definitions/LineStyle"
         },
-        "arrowHead": {
+        "arrow_head": {
           "type": "string",
           "enum": [
             "forward",
@@ -479,7 +479,7 @@
         }
       },
       "required": [
-        "action_type",
+        "type",
         "from",
         "to"
       ],
@@ -515,7 +515,7 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
-        "action_type": {
+        "type": {
           "type": "string",
           "const": "parallel"
         },
@@ -527,7 +527,7 @@
         }
       },
       "required": [
-        "action_type",
+        "type",
         "actions"
       ],
       "additionalProperties": false,
@@ -562,7 +562,7 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
-        "action_type": {
+        "type": {
           "type": "string",
           "const": "loading"
         },
@@ -571,7 +571,7 @@
         }
       },
       "required": [
-        "action_type",
+        "type",
         "object"
       ],
       "additionalProperties": false,
@@ -606,7 +606,7 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
-        "action_type": {
+        "type": {
           "type": "string",
           "const": "set_content"
         },
@@ -618,7 +618,7 @@
         }
       },
       "required": [
-        "action_type",
+        "type",
         "object",
         "content"
       ],
@@ -654,7 +654,7 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
-        "action_type": {
+        "type": {
           "type": "string",
           "const": "comment"
         },
@@ -667,7 +667,7 @@
         }
       },
       "required": [
-        "action_type",
+        "type",
         "object",
         "text"
       ],
@@ -703,7 +703,7 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
-        "action_type": {
+        "type": {
           "type": "string",
           "const": "highlight"
         },
@@ -713,7 +713,7 @@
         }
       },
       "required": [
-        "action_type",
+        "type",
         "object"
       ],
       "additionalProperties": false,

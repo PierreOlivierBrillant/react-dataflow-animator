@@ -7,28 +7,28 @@ describe('validateSpec — validation de schéma', () => {
     expect(validateSpec(clientServer)).toEqual([]);
   });
 
-  it('signale un action_type inconnu avec la liste des valeurs acceptées', () => {
+  it("signale un type d'action inconnu avec la liste des valeurs acceptées", () => {
     const spec = {
       ...clientServer,
-      actions: [
-        { action_type: 'mov', object: 'req', from: 'browser', to: 'api' },
-      ],
+      timeline: [{ type: 'mov', object: 'req', from: 'browser', to: 'api' }],
     };
     const errors = validateSpec(spec);
     expect(errors.length).toBeGreaterThan(0);
-    const err = errors.find((e) => e.path.includes('action_type'));
+    const err = errors.find((e) => e.path.includes('type'));
     expect(err).toBeDefined();
     expect(err!.message).toMatch(/valeurs acceptées/);
     expect(err!.message).toContain('"move"');
   });
 
-  it('signale un object_type invalide avec la liste des valeurs acceptées', () => {
+  it('signale un type de nœud invalide avec la liste des valeurs acceptées', () => {
     const spec = {
       ...clientServer,
-      static_objects: [{ id: 'x', object_type: 'pc', lane: 1 }],
+      nodes: [{ id: 'x', type: 'pc', lane: 1 }],
     };
     const errors = validateSpec(spec);
-    const err = errors.find((e) => e.path.includes('object_type'));
+    const err = errors.find(
+      (e) => e.path.includes('/nodes') && e.path.includes('type')
+    );
     expect(err).toBeDefined();
     expect(err!.message).toMatch(/valeurs acceptées/);
     expect(err!.message).toContain('"laptop"');
@@ -37,10 +37,10 @@ describe('validateSpec — validation de schéma', () => {
   it('signale un champ required manquant avec le nom du champ', () => {
     const spec = {
       ...clientServer,
-      static_objects: [{ object_type: 'laptop', lane: 1 }],
+      nodes: [{ type: 'laptop', lane: 1 }],
     };
     const errors = validateSpec(spec);
-    const err = errors.find((e) => e.path.startsWith('/static_objects'));
+    const err = errors.find((e) => e.path.startsWith('/nodes'));
     expect(err).toBeDefined();
     expect(err!.message).toContain('"id"');
   });
@@ -48,11 +48,11 @@ describe('validateSpec — validation de schéma', () => {
   it('signale un type incorrect avec le type attendu', () => {
     const spec = {
       ...clientServer,
-      static_objects: [{ id: 'x', object_type: 'laptop', lane: '1' }],
+      nodes: [{ id: 'x', type: 'laptop', lane: '1' }],
     };
     const errors = validateSpec(spec);
     const err = errors.find(
-      (e) => e.path.includes('/static_objects') && e.path.includes('lane')
+      (e) => e.path.includes('/nodes') && e.path.includes('lane')
     );
     expect(err).toBeDefined();
     expect(err!.message).toMatch(/type incorrect/);
@@ -60,13 +60,13 @@ describe('validateSpec — validation de schéma', () => {
   });
 });
 
-describe('validateSpec — duration, subicon, language', () => {
+describe('validateSpec — duration, icon, language', () => {
   it('signale une duration négative', () => {
     const spec = {
       ...clientServer,
-      actions: [
+      timeline: [
         {
-          action_type: 'move',
+          type: 'move',
           object: 'req',
           from: 'browser',
           to: 'api',
@@ -83,9 +83,9 @@ describe('validateSpec — duration, subicon, language', () => {
   it('signale une duration nulle', () => {
     const spec = {
       ...clientServer,
-      actions: [
+      timeline: [
         {
-          action_type: 'move',
+          type: 'move',
           object: 'req',
           from: 'browser',
           to: 'api',
@@ -102,9 +102,9 @@ describe('validateSpec — duration, subicon, language', () => {
   it('signale une duration non entière', () => {
     const spec = {
       ...clientServer,
-      actions: [
+      timeline: [
         {
-          action_type: 'move',
+          type: 'move',
           object: 'req',
           from: 'browser',
           to: 'api',
@@ -121,9 +121,9 @@ describe('validateSpec — duration, subicon, language', () => {
   it("n'émet pas d'erreur pour une duration entière positive", () => {
     const spec = {
       ...clientServer,
-      actions: [
+      timeline: [
         {
-          action_type: 'move',
+          type: 'move',
           object: 'req',
           from: 'browser',
           to: 'api',
@@ -138,10 +138,10 @@ describe('validateSpec — duration, subicon, language', () => {
   it('signale un language inconnu dans packet_content', () => {
     const spec = {
       ...clientServer,
-      dynamic_objects: [
+      packets: [
         {
           id: 'req',
-          object_type: 'http_packet',
+          kind: 'http_packet',
           packet_content: {
             body: { content_type: 'text', content: 'code', language: 'rust' },
           },
@@ -159,10 +159,10 @@ describe('validateSpec — duration, subicon, language', () => {
   it("n'émet pas d'erreur pour un language supporté", () => {
     const spec = {
       ...clientServer,
-      dynamic_objects: [
+      packets: [
         {
           id: 'req',
-          object_type: 'http_packet',
+          kind: 'http_packet',
           packet_content: {
             body: {
               content_type: 'text',
@@ -177,16 +177,14 @@ describe('validateSpec — duration, subicon, language', () => {
     expect(errors.filter((e) => e.path.includes('language'))).toEqual([]);
   });
 
-  it("n'émet pas d'erreur pour un subicon libre (texte)", () => {
+  it("n'émet pas d'erreur pour une icône libre (texte)", () => {
     const spec = {
       ...clientServer,
-      static_objects: [
-        { id: 'browser', object_type: 'laptop', lane: 1, subicon: 'v2' },
-      ],
+      nodes: [{ id: 'browser', type: 'laptop', lane: 1, icon: 'v2' }],
     };
-    expect(
-      validateSpec(spec).filter((e) => e.path.includes('subicon'))
-    ).toEqual([]);
+    expect(validateSpec(spec).filter((e) => e.path.includes('icon'))).toEqual(
+      []
+    );
   });
 });
 
@@ -194,12 +192,10 @@ describe('validateSpec — validation des références croisées', () => {
   it('signale un ID dynamique inconnu dans move.object avec les IDs disponibles', () => {
     const spec = {
       ...clientServer,
-      actions: [
-        { action_type: 'move', object: 'ghost', from: 'browser', to: 'api' },
-      ],
+      timeline: [{ type: 'move', object: 'ghost', from: 'browser', to: 'api' }],
     };
     const errors = validateSpec(spec);
-    const err = errors.find((e) => e.path === '/actions/0/object');
+    const err = errors.find((e) => e.path === '/timeline/0/object');
     expect(err).toBeDefined();
     expect(err!.message).toContain('"ghost"');
     expect(err!.message).toMatch(/IDs disponibles/);
@@ -209,12 +205,10 @@ describe('validateSpec — validation des références croisées', () => {
   it('signale un ID statique inconnu dans move.from avec les IDs disponibles', () => {
     const spec = {
       ...clientServer,
-      actions: [
-        { action_type: 'move', object: 'req', from: 'nowhere', to: 'api' },
-      ],
+      timeline: [{ type: 'move', object: 'req', from: 'nowhere', to: 'api' }],
     };
     const errors = validateSpec(spec);
-    const err = errors.find((e) => e.path === '/actions/0/from');
+    const err = errors.find((e) => e.path === '/timeline/0/from');
     expect(err).toBeDefined();
     expect(err!.message).toContain('"nowhere"');
     expect(err!.message).toContain('"browser"');
@@ -235,9 +229,9 @@ describe('validateSpec — validation des références croisées', () => {
   it("signale un wait_for qui pointe vers un ID d'action inexistant", () => {
     const spec = {
       ...clientServer,
-      actions: [
+      timeline: [
         {
-          action_type: 'move',
+          type: 'move',
           object: 'req',
           from: 'browser',
           to: 'api',
@@ -246,7 +240,7 @@ describe('validateSpec — validation des références croisées', () => {
       ],
     };
     const errors = validateSpec(spec);
-    const err = errors.find((e) => e.path === '/actions/0/wait_for');
+    const err = errors.find((e) => e.path === '/timeline/0/wait_for');
     expect(err).toBeDefined();
     expect(err!.message).toContain('"no_such_action"');
   });

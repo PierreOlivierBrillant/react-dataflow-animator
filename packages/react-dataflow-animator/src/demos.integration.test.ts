@@ -10,7 +10,7 @@ function collectIds(actions: Action[]): Set<string> {
   const ids = new Set<string>();
   for (const a of actions) {
     if (a.id) ids.add(a.id);
-    if (a.action_type === 'parallel') {
+    if (a.type === 'parallel') {
       for (const id of collectIds(a.actions)) ids.add(id);
     }
   }
@@ -22,7 +22,7 @@ function collectRefs(actions: Action[]): string[] {
   for (const a of actions) {
     if (a.wait_for) refs.push(a.wait_for);
     if (a.keep_until) refs.push(a.keep_until);
-    if (a.action_type === 'parallel') {
+    if (a.type === 'parallel') {
       const childRefs = collectRefs(a.actions);
       for (const ref of childRefs) refs.push(ref);
     }
@@ -59,8 +59,8 @@ describe.each(demos)('demo %s', (name, spec) => {
   (broken ? it.fails : it)(
     'tous les actionIds référencés (wait_for, keep_until) existent',
     () => {
-      const allIds = collectIds(spec.actions);
-      const allRefs = collectRefs(spec.actions);
+      const allIds = collectIds(spec.timeline);
+      const allRefs = collectRefs(spec.timeline);
       for (const ref of allRefs) {
         expect(
           allIds.has(ref),

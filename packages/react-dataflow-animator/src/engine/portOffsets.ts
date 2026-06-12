@@ -24,15 +24,15 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
 
   const extractArrows = (actions: Action[]) => {
     actions.forEach((a, i) => {
-      if (a.action_type === 'arrow' && a.from && a.to) {
+      if (a.type === 'arrow' && a.from && a.to) {
         const key = a.id ?? `${a.from}|${a.to}|action_${i}`;
         all.push({ key, from: a.from, to: a.to });
-      } else if (a.action_type === 'parallel' && a.actions) {
+      } else if (a.type === 'parallel' && a.actions) {
         extractArrows(a.actions);
       }
     });
   };
-  if (spec.actions) extractArrows(spec.actions);
+  if (spec.timeline) extractArrows(spec.timeline);
 
   const seen = new Set<string>();
   const unique: ConnectionRef[] = [];

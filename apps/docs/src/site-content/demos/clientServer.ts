@@ -2,49 +2,49 @@ import type { DataFlowSpec } from 'react-dataflow-animator';
 
 export const clientServer: DataFlowSpec = {
   direction: 'left-to-right',
-  static_objects: [
+  nodes: [
     {
       id: 'browser',
-      object_type: 'laptop',
+      type: 'laptop',
       text: 'Navigateur',
-      subicon: 'chrome',
+      icon: 'chrome',
       lane: 1,
     },
     {
       id: 'api',
-      object_type: 'server',
+      type: 'server',
       text: 'Serveur Web',
-      subicon: 'dotnet',
+      icon: 'dotnet',
       lane: 2,
     },
     {
       id: 'db',
-      object_type: 'database',
+      type: 'database',
       text: 'Base de données',
-      subicon: 'mssql',
+      icon: 'mssql',
       lane: 3,
     },
   ],
   connections: [
-    { from: 'browser', to: 'api', arrowHead: 'both', style: 'dashed' },
-    { from: 'api', to: 'db', arrowHead: 'both', style: 'dashed' },
+    { from: 'browser', to: 'api', arrow_head: 'both', style: 'dashed' },
+    { from: 'api', to: 'db', arrow_head: 'both', style: 'dashed' },
   ],
-  dynamic_objects: [
+  packets: [
     {
       id: 'req',
-      object_type: 'http_packet',
+      kind: 'http_packet',
       packet_content: {
         header: 'GET /users\nAccept: application/json',
       },
     },
     {
       id: 'sql',
-      object_type: 'sql_request',
+      kind: 'sql_request',
       request_content: 'SELECT * FROM users',
     },
     {
       id: 'rows',
-      object_type: 'sql_response',
+      kind: 'sql_response',
       response_content: {
         header: '2 Lignes',
         body: {
@@ -59,7 +59,7 @@ export const clientServer: DataFlowSpec = {
     },
     {
       id: 'res',
-      object_type: 'http_packet',
+      kind: 'http_packet',
       packet_content: {
         header: '200 OK',
         body: {
@@ -70,25 +70,25 @@ export const clientServer: DataFlowSpec = {
       },
     },
   ],
-  actions: [
+  timeline: [
     {
-      action_type: 'comment',
+      type: 'comment',
       object: 'browser',
       text: "L'utilisateur ouvre la page, la requête HTTP est envoyée au serveur",
       duration: 1500,
     },
     {
-      action_type: 'parallel',
+      type: 'parallel',
       actions: [
         {
-          action_type: 'move',
+          type: 'move',
           object: 'req',
           from: 'browser',
           to: 'api',
           duration: 900,
         },
         {
-          action_type: 'loading',
+          type: 'loading',
           object: 'browser',
           keep_until: 'display_html',
         },
@@ -96,14 +96,14 @@ export const clientServer: DataFlowSpec = {
     },
     {
       id: 'dbwork',
-      action_type: 'move',
+      type: 'move',
       object: 'sql',
       from: 'api',
       to: 'db',
       duration: 700,
     },
     {
-      action_type: 'move',
+      type: 'move',
       object: 'rows',
       from: 'db',
       to: 'api',
@@ -111,18 +111,19 @@ export const clientServer: DataFlowSpec = {
       wait_for: 'dbwork',
     },
     {
-      action_type: 'move',
+      type: 'move',
       object: 'res',
       from: 'api',
       to: 'browser',
     },
     {
-      action_type: 'parallel',
+      type: 'parallel',
       actions: [
         {
           id: 'display_html',
-          action_type: 'set_content',
+          type: 'set_content',
           object: 'browser',
+          keep_until_end: true,
           content: {
             url: 'exemple.com/users',
             content_type: 'text',
@@ -130,9 +131,10 @@ export const clientServer: DataFlowSpec = {
           },
         },
         {
-          action_type: 'comment',
+          type: 'comment',
           object: 'browser',
           text: 'Page affichée 🎉',
+          keep_until_end: true,
         },
       ],
     },

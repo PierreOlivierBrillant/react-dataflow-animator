@@ -6,13 +6,13 @@ describe('computeLayout — linéaire', () => {
   it('left-to-right : lane croissante = x croissant', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
-      static_objects: [
-        { id: 'a', object_type: 'client', lane: 1 },
-        { id: 'b', object_type: 'server', lane: 2 },
-        { id: 'c', object_type: 'database', lane: 3 },
+      nodes: [
+        { id: 'a', type: 'client', lane: 1 },
+        { id: 'b', type: 'server', lane: 2 },
+        { id: 'c', type: 'database', lane: 3 },
       ],
-      dynamic_objects: [],
-      actions: [],
+      packets: [],
+      timeline: [],
     };
     const layout = computeLayout(spec);
     expect(layout.a.cx).toBeLessThan(layout.b.cx);
@@ -24,12 +24,12 @@ describe('computeLayout — linéaire', () => {
   it('empile les nœuds d’une même lane sur l’axe transverse', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
-      static_objects: [
-        { id: 'a', object_type: 'user', lane: 1 },
-        { id: 'b', object_type: 'user', lane: 1 },
+      nodes: [
+        { id: 'a', type: 'user', lane: 1 },
+        { id: 'b', type: 'user', lane: 1 },
       ],
-      dynamic_objects: [],
-      actions: [],
+      packets: [],
+      timeline: [],
     };
     const layout = computeLayout(spec);
     expect(layout.a.cx).toBeCloseTo(layout.b.cx);
@@ -39,12 +39,12 @@ describe('computeLayout — linéaire', () => {
   it('top-to-bottom : lane croissante = y croissant', () => {
     const spec: DataFlowSpec = {
       direction: 'top-to-bottom',
-      static_objects: [
-        { id: 'a', object_type: 'client', lane: 1 },
-        { id: 'b', object_type: 'server', lane: 2 },
+      nodes: [
+        { id: 'a', type: 'client', lane: 1 },
+        { id: 'b', type: 'server', lane: 2 },
       ],
-      dynamic_objects: [],
-      actions: [],
+      packets: [],
+      timeline: [],
     };
     const layout = computeLayout(spec);
     expect(layout.a.cy).toBeLessThan(layout.b.cy);
@@ -52,17 +52,17 @@ describe('computeLayout — linéaire', () => {
 });
 
 describe('computeLayout — circular', () => {
-  it('place is_main au centre et les autres autour', () => {
+  it('place main au centre et les autres autour', () => {
     const spec: DataFlowSpec = {
       direction: 'circular',
-      static_objects: [
-        { id: 'hub', object_type: 'server', is_main: true },
-        { id: 'n1', object_type: 'client' },
-        { id: 'n2', object_type: 'client' },
-        { id: 'n3', object_type: 'client' },
+      nodes: [
+        { id: 'hub', type: 'server', main: true },
+        { id: 'n1', type: 'client' },
+        { id: 'n2', type: 'client' },
+        { id: 'n3', type: 'client' },
       ],
-      dynamic_objects: [],
-      actions: [],
+      packets: [],
+      timeline: [],
     };
     const layout = computeLayout(spec, { aspect: 1 });
     expect(layout.hub).toEqual({ cx: 0.5, cy: 0.5 });
@@ -75,13 +75,13 @@ describe('computeLayout — circular', () => {
   it('place tous les nœuds statiques (les connexions ne sont pas des nœuds)', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
-      static_objects: [
-        { id: 'a', object_type: 'client', lane: 1 },
-        { id: 'b', object_type: 'server', lane: 2 },
+      nodes: [
+        { id: 'a', type: 'client', lane: 1 },
+        { id: 'b', type: 'server', lane: 2 },
       ],
       connections: [{ from: 'a', to: 'b' }],
-      dynamic_objects: [],
-      actions: [],
+      packets: [],
+      timeline: [],
     };
     const layout = computeLayout(spec);
     expect(layout.a).toBeDefined();

@@ -32,26 +32,26 @@ import 'react-dataflow-animator/styles.css';
 
 const spec = {
   direction: 'left-to-right',
-  static_objects: [
-    { id: 'browser', object_type: 'laptop', text: 'Navigateur', lane: 1 },
-    { id: 'api', object_type: 'server', text: 'API', lane: 2 },
-    { id: 'db', object_type: 'database', text: 'PostgreSQL', lane: 3 },
+  nodes: [
+    { id: 'browser', type: 'laptop', text: 'Navigateur', lane: 1 },
+    { id: 'api', type: 'server', text: 'API', lane: 2 },
+    { id: 'db', type: 'database', text: 'PostgreSQL', lane: 3 },
   ],
-  dynamic_objects: [
+  packets: [
     {
       id: 'req',
-      object_type: 'http_packet',
+      kind: 'http_packet',
       packet_content: { header: 'GET /users' },
     },
     {
       id: 'sql',
-      object_type: 'sql_request',
+      kind: 'sql_request',
       request_content: 'SELECT * FROM users',
     },
   ],
-  actions: [
-    { action_type: 'move', object: 'req', from: 'browser', to: 'api' },
-    { action_type: 'move', object: 'sql', from: 'api', to: 'db' },
+  timeline: [
+    { type: 'move', object: 'req', from: 'browser', to: 'api' },
+    { type: 'move', object: 'sql', from: 'api', to: 'db' },
   ],
 };
 
@@ -64,11 +64,11 @@ export default function Example() {
 
 Une **spec** décrit trois choses :
 
-1. **`static_objects`** — les nœuds du diagramme (serveurs, clients, bases…).
+1. **`nodes`** — les nœuds du diagramme (serveurs, clients, bases…).
    Placement automatique selon `direction` (linéaire ou `circular`) et `lane`.
-2. **`dynamic_objects`** — les payloads qui circuleront entre nœuds
+2. **`packets`** — les payloads qui circuleront entre nœuds
    (paquets HTTP, requêtes/réponses SQL).
-3. **`actions`** — la chronologie : `move`, `arrow`, `parallel`, `loading`,
+3. **`timeline`** — la chronologie : `move`, `arrow`, `parallel`, `loading`,
    `set_content`, `comment`, `highlight`.
 
 Le moteur compile la spec en une chronologie déterministe : le temps `t` (ms)

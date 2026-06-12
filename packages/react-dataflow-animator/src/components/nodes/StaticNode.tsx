@@ -3,14 +3,14 @@ import {
   defineAnimatable,
   type AnimatableComponent,
 } from '../../utils/animatable';
-import type { Highlighter, ObjectContent, StaticObject } from '../../types';
+import type { Highlighter, ObjectContent, Node } from '../../types';
 import type { NodePlacement } from '../../engine/layout';
 import { ContentPanel } from '../dynamic/ContentPanel';
 import { getNodeIcon } from './nodeIcons';
 import { getSubIcon } from './subIcons';
 
 export interface StaticNodeProps {
-  object: StaticObject;
+  object: Node;
   placement: NodePlacement;
   /** Contenu effectif (set_content actif, ou contenu initial du nœud). */
   content?: ObjectContent | null;
@@ -37,13 +37,9 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       <ContentPanel content={content} highlight={highlight} />
     ) : (
       <>
-        <span className="rdfa-node-icon">
-          {getNodeIcon(object.object_type)}
-        </span>
-        {object.subicon ? (
-          <span className="rdfa-node-subicon">
-            {getSubIcon(object.subicon)}
-          </span>
+        <span className="rdfa-node-icon">{getNodeIcon(object.type)}</span>
+        {object.icon ? (
+          <span className="rdfa-node-subicon">{getSubIcon(object.icon)}</span>
         ) : null}
         {loading ? <span className="rdfa-spinner" /> : null}
       </>

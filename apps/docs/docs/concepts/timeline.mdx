@@ -3,14 +3,14 @@ title: Timeline et étapes
 slug: /concepts/timeline
 ---
 
-Le moteur compile votre tableau `actions` en une **chronologie pure** : à
+Le moteur compile votre tableau `timeline` en une **chronologie pure** : à
 chaque instant `t` (ms), l'état visuel est déterminé par une fonction
 `evaluate(timeline, t)`. Le seek arrière, la navigation par étapes et le SSR
 en découlent gratuitement.
 
 ## Étapes logiques
 
-Chaque action **racine** (au premier niveau de `actions`) constitue une
+Chaque action **racine** (au premier niveau de `timeline`) constitue une
 **étape logique**. Les boutons « Précédent » / « Suivant » du lecteur
 naviguent d'une étape à l'autre.
 
@@ -37,9 +37,9 @@ Trois mécanismes permettent de coordonner les actions :
 L'action démarre à la **fin** d'une autre action référencée par son `id` :
 
 ```ts
-{ action_type: 'loading', id: 'dbwork', object: 'db', duration: 900 },
+{ type: 'loading', id: 'dbwork', object: 'db', duration: 900 },
 {
-  action_type: 'move',
+  type: 'move',
   object: 'rows',
   from: 'db',
   to: 'api',
@@ -53,10 +53,10 @@ Encapsule plusieurs actions exécutées au **même instant** :
 
 ```ts
 {
-  action_type: 'parallel',
+  type: 'parallel',
   actions: [
-    { action_type: 'move', object: 'p1', from: 'a', to: 'b' },
-    { action_type: 'move', object: 'p2', from: 'c', to: 'd' },
+    { type: 'move', object: 'p1', from: 'a', to: 'b' },
+    { type: 'move', object: 'p2', from: 'c', to: 'd' },
   ],
 }
 ```
@@ -82,9 +82,9 @@ présence :
 Reste visible jusqu'au **début** d'une action ciblée par `id` :
 
 ```ts
-{ action_type: 'arrow', id: 'A', from: 'a', to: 'b', keep_until: 'C' },
-{ action_type: 'move', object: 'p', from: 'a', to: 'b' },
-{ action_type: 'comment', id: 'C', object: 'a', text: 'fin' },
+{ type: 'arrow', id: 'A', from: 'a', to: 'b', keep_until: 'C' },
+{ type: 'move', object: 'p', from: 'a', to: 'b' },
+{ type: 'comment', id: 'C', object: 'a', text: 'fin' },
 // La flèche A reste affichée jusqu'au début du commentaire C.
 ```
 
@@ -103,5 +103,5 @@ la pause inter-étapes). Défauts par type d'action :
 Reste visible jusqu'à la **fin** de la chronologie :
 
 ```ts
-{ action_type: 'highlight', object: 'db', keep_until_end: true },
+{ type: 'highlight', object: 'db', keep_until_end: true },
 ```

@@ -146,37 +146,36 @@ export function ApiReference() {
       <h2 id="api-dataflowspec">DataFlowSpec (racine)</h2>
       <PropsTable node={root} />
 
-      <h2 id="api-staticobject">StaticObject</h2>
+      <h2 id="api-node">Node</h2>
       <p>
         Un nœud (serveur, base, client…). Placé automatiquement selon
         `direction`/`lane`.
       </p>
-      <PropsTable node={defs.StaticObject} />
+      <PropsTable node={defs.Node} />
 
       <h2 id="api-connection">Connection</h2>
       <p>Flèche permanente (décor) entre deux nœuds.</p>
       <PropsTable node={defs.Connection} />
 
-      <h2 id="api-dynamicobject">DynamicObject</h2>
-      <p>Un paquet/objet déplaçable, référencé par une action `move`.</p>
-      <PropsTable node={defs.DynamicObject} />
+      <h2 id="api-packet">Packet</h2>
+      <p>Un paquet déplaçable, référencé par une action `move`.</p>
+      <PropsTable node={defs.Packet} />
 
       <h2 id="api-content">ObjectContent</h2>
       <PropsTable node={defs.ObjectContent} />
 
       <h2 id="api-actions">Actions</h2>
       <p>
-        Union discriminée sur <code className="inline">action_type</code>. Tous
-        les types partagent les champs de timing (
-        <code className="inline">id</code>,{' '}
-        <code className="inline">duration</code>,{' '}
+        Union discriminée sur <code className="inline">type</code>. Tous les
+        types partagent les champs de timing (<code className="inline">id</code>
+        , <code className="inline">duration</code>,{' '}
         <code className="inline">wait_for</code>,{' '}
         <code className="inline">keep_until</code>,{' '}
         <code className="inline">keep_until_next</code>).
       </p>
       {ACTION_DEFS.map((key) => {
         const node = defs[key];
-        const actionTypeName = node.properties?.['action_type']?.const ?? key;
+        const actionTypeName = node.properties?.['type']?.const ?? key;
         return (
           <div key={key}>
             <h3 id={`api-${key}`}>{actionTypeName}</h3>
@@ -282,8 +281,8 @@ export const docPages: DocPage[] = [
         <h2 id="circular">Disposition circulaire</h2>
         <p>
           En <code className="inline">circular</code>, le nœud{' '}
-          <code className="inline">is_main</code> est au centre et les autres
-          sont répartis sur un cercle.
+          <code className="inline">main</code> est au centre et les autres sont
+          répartis sur un cercle.
         </p>
         <DataFlowPlayer theme="auto" spec={demosById.circular.spec} />
       </>

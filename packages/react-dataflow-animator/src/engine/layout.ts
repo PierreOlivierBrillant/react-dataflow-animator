@@ -1,4 +1,4 @@
-import type { DataFlowSpec, Direction, StaticObject } from '../types';
+import type { DataFlowSpec, Direction, Node } from '../types';
 
 /**
  * Moteur de disposition spatiale : calcule la position de chaque nœud statique
@@ -37,9 +37,9 @@ function spread(index: number, count: number): number {
   return m + (1 - 2 * m) * (index / (count - 1));
 }
 
-function linearLayout(nodes: StaticObject[], direction: Direction): LayoutMap {
+function linearLayout(nodes: Node[], direction: Direction): LayoutMap {
   // Regroupement par lane (défaut: 1), lanes triées en ordre croissant.
-  const byLane = new Map<number, StaticObject[]>();
+  const byLane = new Map<number, Node[]>();
   for (const node of nodes) {
     const lane = node.lane ?? 1;
     const list = byLane.get(lane);
@@ -85,9 +85,9 @@ function linearLayout(nodes: StaticObject[], direction: Direction): LayoutMap {
   return map;
 }
 
-function circularLayout(nodes: StaticObject[], aspect: number): LayoutMap {
+function circularLayout(nodes: Node[], aspect: number): LayoutMap {
   const map: LayoutMap = {};
-  const mainNode = nodes.find((n) => n.is_main);
+  const mainNode = nodes.find((n) => n.main);
   const ring = nodes.filter((n) => n !== mainNode);
 
   if (mainNode) map[mainNode.id] = { cx: 0.5, cy: 0.5 };
@@ -116,7 +116,7 @@ function circularLayout(nodes: StaticObject[], aspect: number): LayoutMap {
  */
 function applyAlignment(
   map: LayoutMap,
-  nodes: StaticObject[],
+  nodes: Node[],
   direction: Direction
 ): void {
   const horizontal =
@@ -136,7 +136,7 @@ export function computeLayout(
   options: LayoutOptions = {}
 ): LayoutMap {
   const direction = spec.direction ?? 'left-to-right';
-  const nodes = spec.static_objects;
+  const nodes = spec.nodes;
   if (direction === 'circular') {
     return circularLayout(nodes, options.aspect ?? 1.6);
   }

@@ -13,7 +13,7 @@ export type Direction =
   | 'circular';
 
 /** Types de nœuds (apparence). Les flèches de décor vivent dans `connections`. */
-export type StaticObjectType =
+export type NodeType =
   | 'desktop'
   | 'laptop'
   | 'client'
@@ -24,7 +24,7 @@ export type StaticObjectType =
   | 'admin'
   | 'users';
 
-export type DynamicObjectType = 'http_packet' | 'sql_request' | 'sql_response';
+export type PacketKind = 'http_packet' | 'sql_request' | 'sql_response';
 
 /** Style de ligne (terminologie SVG/CSS). `full` est accepté en alias de `solid`. */
 export type LineStyle = 'solid' | 'dotted' | 'dashed' | 'animated';
@@ -64,21 +64,21 @@ export interface ObjectContent {
   url?: string;
 }
 
-export interface StaticObject {
-  /** Identifiant unique de l'objet (ex: 'serveur_web'). */
+export interface Node {
+  /** Identifiant unique du nœud (ex: 'serveur_web'). */
   id: string;
-  object_type: StaticObjectType;
-  /** Label affiché en dessous de l'objet. */
+  type: NodeType;
+  /** Label affiché en dessous du nœud. */
   text?: string;
   /**
    * Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'),
    * nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API').
    */
-  subicon?: string;
+  icon?: string;
   /** Rangée/colonne de placement (entier positif). Défaut: 1. */
   lane?: number;
-  /** (circular) Marque l'objet comme nœud central. Défaut: false. */
-  is_main?: boolean;
+  /** (circular) Marque le nœud comme nœud central. Défaut: false. */
+  main?: boolean;
   /**
    * Aligne ce nœud sur l'axe transverse d'un autre nœud (par ID) : utile pour
    * aligner deux nœuds de lanes différentes. Ignoré en disposition circular.
@@ -101,7 +101,7 @@ export interface Connection {
   /** Style de la ligne. Défaut: 'solid'. */
   style?: LineStyle;
   /** Pointe de la flèche. Défaut: 'forward'. */
-  arrowHead?: 'forward' | 'backward' | 'both' | 'none';
+  arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   /** Texte médian optionnel. */
   text?: string;
 }
@@ -139,10 +139,10 @@ export interface SqlResponse {
   body?: SqlResponseBody;
 }
 
-export interface DynamicObject {
+export interface Packet {
   /** Identifiant unique du paquet. */
   id: string;
-  object_type: DynamicObjectType;
+  kind: PacketKind;
   /** Requête textuelle (ex: pour sql_request). */
   request_content?: string;
   /** Réponse (pour sql_response). */
@@ -182,10 +182,10 @@ interface ActionBase {
   keep_until_end?: boolean;
 }
 
-/** Déplace un objet dynamique de `from` vers `to`. */
+/** Déplace un paquet de `from` vers `to`. */
 interface MoveAction extends ActionBase {
-  action_type: 'move';
-  /** ID de l'objet dynamique (paquet, requête…). */
+  type: 'move';
+  /** ID du paquet à déplacer. */
   object: string;
   from: string;
   to: string;
@@ -193,36 +193,36 @@ interface MoveAction extends ActionBase {
 
 /** Trace une flèche animée entre deux nœuds. */
 interface ArrowAction extends ActionBase {
-  action_type: 'arrow';
+  type: 'arrow';
   from: string;
   to: string;
   text?: string;
   style?: LineStyle;
-  arrowHead?: 'forward' | 'backward' | 'both' | 'none';
+  arrow_head?: 'forward' | 'backward' | 'both' | 'none';
 }
 
 /** Exécute plusieurs actions au même instant. */
 interface ParallelAction extends ActionBase {
-  action_type: 'parallel';
+  type: 'parallel';
   actions: Action[];
 }
 
 /** Affiche un spinner de chargement sur un nœud. */
 interface LoadingAction extends ActionBase {
-  action_type: 'loading';
+  type: 'loading';
   object: string;
 }
 
 /** Mute le contenu d'un nœud (code, texte, image). */
 interface SetContentAction extends ActionBase {
-  action_type: 'set_content';
+  type: 'set_content';
   object: string;
   content: ObjectContent;
 }
 
 /** Affiche une bulle de commentaire près d'un nœud. */
 interface CommentAction extends ActionBase {
-  action_type: 'comment';
+  type: 'comment';
   /** ID du nœud près duquel afficher le commentaire. */
   object: string;
   text: string;
@@ -230,12 +230,12 @@ interface CommentAction extends ActionBase {
 
 /** Surligne un nœud statique ou une connexion (par ID). */
 interface HighlightAction extends ActionBase {
-  action_type: 'highlight';
+  type: 'highlight';
   /** ID d'un nœud statique OU d'une connexion à surligner. */
   object: string;
 }
 
-/** Union discriminée des actions (par `action_type`). */
+/** Union discriminée des actions (par `type`). */
 export type Action =
   | MoveAction
   | ArrowAction
@@ -246,13 +246,13 @@ export type Action =
   | HighlightAction;
 
 export interface DataFlowSpec {
-  /** Direction de placement automatique des objets statiques. Défaut: 'left-to-right'. */
+  /** Direction de placement automatique des nœuds. Défaut: 'left-to-right'. */
   direction?: Direction;
-  static_objects: StaticObject[];
-  dynamic_objects: DynamicObject[];
+  nodes: Node[];
+  packets: Packet[];
   /** Flèches/liens permanents (décor) affichés dès l'initialisation. */
   connections?: Connection[];
-  actions: Action[];
+  timeline: Action[];
 }
 
 /** Fonction de coloration syntaxique : code source -> HTML. */
@@ -290,3 +290,13 @@ export interface DataFlowPlayerProps {
   /** Contenu rendu pendant le SSR / avant hydratation (placeholder). */
   fallback?: ReactNode;
 }
+
+// ─── Aliases rétro-compatibles (supprimés en v2) ─────────────────────────────
+/** @deprecated Utiliser {@link Node} à la place. */
+export type StaticObject = Node;
+/** @deprecated Utiliser {@link NodeType} à la place. */
+export type StaticObjectType = NodeType;
+/** @deprecated Utiliser {@link Packet} à la place. */
+export type DynamicObject = Packet;
+/** @deprecated Utiliser {@link PacketKind} à la place. */
+export type DynamicObjectType = PacketKind;

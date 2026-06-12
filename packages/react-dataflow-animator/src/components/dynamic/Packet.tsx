@@ -2,11 +2,11 @@ import {
   defineAnimatable,
   type AnimatableComponent,
 } from '../../utils/animatable';
-import type { DynamicObject, Highlighter } from '../../types';
+import type { Packet as PacketSpec, Highlighter } from '../../types';
 
 /** Paquet en mouvement (move). Positionné en absolu au point courant du trajet. */
 export interface PacketProps {
-  object: DynamicObject;
+  object: PacketSpec;
   x: number;
   y: number;
   /** Opacité (fondu d'apparition/disparition). Défaut: 1. */
@@ -21,7 +21,7 @@ export interface PacketProps {
 // ---------------------------------------------------------------------------
 
 const HttpPacket = defineAnimatable<{
-  object: DynamicObject;
+  object: PacketSpec;
   highlight?: Highlighter;
 }>(({ object, highlight }) => {
   const header = object.packet_content?.header;
@@ -59,7 +59,7 @@ const HttpPacket = defineAnimatable<{
 });
 
 const SqlRequestPacket = defineAnimatable<{
-  object: DynamicObject;
+  object: PacketSpec;
   highlight?: Highlighter;
 }>(({ object, highlight }) => {
   const code = object.request_content ?? 'SQL';
@@ -74,7 +74,7 @@ const SqlRequestPacket = defineAnimatable<{
 });
 
 const SqlResponsePacket = defineAnimatable<{
-  object: DynamicObject;
+  object: PacketSpec;
   highlight?: Highlighter;
 }>(({ object }) => {
   const content = object.response_content;
@@ -138,7 +138,7 @@ const SqlResponsePacket = defineAnimatable<{
  */
 const packetRegistry: Record<
   string,
-  AnimatableComponent<{ object: DynamicObject; highlight?: Highlighter }>
+  AnimatableComponent<{ object: PacketSpec; highlight?: Highlighter }>
 > = {
   http_packet: HttpPacket,
   sql_request: SqlRequestPacket,
@@ -158,11 +158,11 @@ export const Packet: AnimatableComponent<PacketProps> = defineAnimatable(
     scale = 1,
     highlight,
   }: PacketProps) {
-    const SpecificPacket = packetRegistry[object.object_type];
+    const SpecificPacket = packetRegistry[object.kind];
 
     return (
       <div
-        className={`rdfa-packet rdfa-packet-${object.object_type}`}
+        className={`rdfa-packet rdfa-packet-${object.kind}`}
         style={{
           left: x,
           top: y,

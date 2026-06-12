@@ -7,9 +7,9 @@ import {
 import type { DataFlowSpec } from '../types';
 
 const BASE_SPEC: DataFlowSpec = {
-  static_objects: [],
-  dynamic_objects: [],
-  actions: [],
+  nodes: [],
+  packets: [],
+  timeline: [],
 };
 
 describe('collectArrowConnections', () => {
@@ -29,12 +29,12 @@ describe('collectArrowConnections', () => {
   it('parcourt récursivement les actions parallel', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
-      actions: [
+      timeline: [
         {
-          action_type: 'parallel',
+          type: 'parallel',
           actions: [
-            { action_type: 'arrow', from: 'X', to: 'Y' },
-            { action_type: 'arrow', from: 'Y', to: 'Z' },
+            { type: 'arrow', from: 'X', to: 'Y' },
+            { type: 'arrow', from: 'Y', to: 'Z' },
           ],
         },
       ],
