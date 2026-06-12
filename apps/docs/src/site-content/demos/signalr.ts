@@ -1,21 +1,32 @@
 import type { DataFlowSpec } from 'react-dataflow-animator';
 
 export const signalr: DataFlowSpec = {
-  direction: 'left-to-right',
+  direction: 'circular',
   nodes: [
     {
-      id: 'client',
+      id: 'client1',
       type: 'laptop',
-      text: 'Navigateur',
-      icon: 'typescript',
-      lane: 1,
+      text: 'Client 1',
+      icon: 'react',
+    },
+    {
+      id: 'client2',
+      type: 'laptop',
+      text: 'Client 2',
+      icon: 'react',
+    },
+    {
+      id: 'client3',
+      type: 'laptop',
+      text: 'Client 3',
+      icon: 'react',
     },
     {
       id: 'hub',
       type: 'server',
       text: 'SignalR Hub',
       icon: 'csharp',
-      lane: 2,
+      main: true,
     },
   ],
   packets: [
@@ -38,14 +49,14 @@ export const signalr: DataFlowSpec = {
   timeline: [
     {
       type: 'comment',
-      object: 'client',
-      text: '1. Le client ouvre une connexion temps réel',
+      object: 'client1',
+      text: '1. Le client demande au serveur pour ouvrir une connexion',
       duration: 1500,
     },
     {
       type: 'set_content',
       id: 'clientCode',
-      object: 'client',
+      object: 'client1',
       content: {
         type: 'code',
         language: 'typescript',
@@ -57,13 +68,13 @@ export const signalr: DataFlowSpec = {
     {
       type: 'move',
       object: 'handshake',
-      from: 'client',
+      from: 'client1',
       to: 'hub',
-      duration: 800,
+      duration: 1500,
     },
     {
       type: 'parallel',
-      duration: 1000,
+      duration: 1500,
       actions: [
         {
           type: 'comment',
@@ -72,7 +83,7 @@ export const signalr: DataFlowSpec = {
         },
         {
           type: 'arrow',
-          from: 'client',
+          from: 'client1',
           to: 'hub',
           style: 'dashed',
           keep_until_end: true,
@@ -80,7 +91,7 @@ export const signalr: DataFlowSpec = {
         {
           type: 'arrow',
           from: 'hub',
-          to: 'client',
+          to: 'client1',
           style: 'dashed',
           keep_until_end: true,
         },
@@ -100,14 +111,14 @@ export const signalr: DataFlowSpec = {
     },
     {
       type: 'comment',
-      object: 'client',
+      object: 'client1',
       text: '3. Le client envoie un message',
       duration: 500,
     },
     {
       type: 'move',
       object: 'send',
-      from: 'client',
+      from: 'client1',
       to: 'hub',
       duration: 800,
     },
@@ -122,7 +133,7 @@ export const signalr: DataFlowSpec = {
       id: 'end',
       object: 'recv',
       from: 'hub',
-      to: 'client',
+      to: 'client1',
       duration: 800,
     },
   ],
