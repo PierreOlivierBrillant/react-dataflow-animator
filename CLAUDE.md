@@ -76,9 +76,34 @@ X`, écris en commentaire pourquoi.
   qui paraphrase la ligne suivante ne l'est pas.
 - **SSR-safe** : aucun accès `window` / `document` / `requestAnimationFrame`
   hors d'un `useEffect` ou `useLayoutEffect`. Vérifie avant de proposer.
-- **Spec et types liés** : si tu modifies `types.ts`, vérifie que
-  `schema.ts` reflète le même changement (deux sources de vérité
-  aujourd'hui).
+- **Spec et types liés** : le schéma JSON est GÉNÉRÉ depuis `types.ts`
+  (`npm run generate:schema`, vérifié par `check:schema`). Si tu modifies
+  `types.ts`, régénère le schéma — ne l'édite jamais à la main. NB : le patch
+  de `scripts/schema-patches.mjs` rend le schéma plus strict que les types TS
+  pour `language` (voulu).
+
+## Points de vigilance (issus de revues de code)
+
+Pièges déjà rencontrés dans ce dépôt — vérifie-les quand tu touches la zone
+concernée (le détail des cas est dans `todo.md` tant qu'il existe) :
+
+- **Pas de champ d'IR mort** : toute donnée calculée par le compilateur doit
+  être consommée par le rendu, sinon supprimée. N'exporte pas d'API non
+  branchée.
+- **Mesure DOM** : la `signature` de `useStageGeometry` doit refléter TOUT
+  champ de spec qui influence la _position_ des nœuds — un ResizeObserver ne
+  voit que les redimensionnements, pas les déplacements.
+- **Unités cohérentes en géométrie** : les décisions horizontal/vertical et les
+  offsets se prennent en pixels mesurés, pas en ratios 0..1 (ou alors en
+  corrigeant par l'aspect du Stage). Deux modules qui décident différemment se
+  contredisent sur les stages non carrés.
+- **Boucles rAF** : plafonne le delta de temps (onglet inactif → `dt` énorme au
+  retour).
+- **Chemins doubles** : si une fonction a un chemin optimisé et un fallback
+  (ex. `evaluate`), un test doit prouver leur équivalence — le chemin de prod
+  n'est pas forcément celui que les tests exercent.
+- **Publication npm** : avant tout `npm publish`, vérifie le tarball avec
+  `npm pack --dry-run` (LICENSE présent, `files`/`exports` corrects).
 
 ## Scripts disponibles (référence rapide)
 
