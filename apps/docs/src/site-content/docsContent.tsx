@@ -38,7 +38,7 @@ interface SchemaNode {
 const defs = (
   dataFlowSchema as unknown as { definitions: Record<string, SchemaNode> }
 ).definitions;
-const root = dataFlowSchema as unknown as SchemaNode;
+const root = defs.DataFlowSpec;
 
 function refName(ref: string): string {
   return ref.replace('#/definitions/', '');
@@ -125,13 +125,13 @@ function PropsTable({ node }: { node: SchemaNode }) {
 }
 
 const ACTION_DEFS = [
-  'moveAction',
-  'arrowAction',
-  'parallelAction',
-  'loadingAction',
-  'setContentAction',
-  'commentAction',
-  'highlightAction',
+  'MoveAction',
+  'ArrowAction',
+  'ParallelAction',
+  'LoadingAction',
+  'SetContentAction',
+  'CommentAction',
+  'HighlightAction',
 ] as const;
 
 export function ApiReference() {
@@ -151,18 +151,18 @@ export function ApiReference() {
         Un nœud (serveur, base, client…). Placé automatiquement selon
         `direction`/`lane`.
       </p>
-      <PropsTable node={defs.staticObject} />
+      <PropsTable node={defs.StaticObject} />
 
       <h2 id="api-connection">Connection</h2>
       <p>Flèche permanente (décor) entre deux nœuds.</p>
-      <PropsTable node={defs.connection} />
+      <PropsTable node={defs.Connection} />
 
       <h2 id="api-dynamicobject">DynamicObject</h2>
       <p>Un paquet/objet déplaçable, référencé par une action `move`.</p>
-      <PropsTable node={defs.dynamicObject} />
+      <PropsTable node={defs.DynamicObject} />
 
       <h2 id="api-content">ObjectContent</h2>
-      <PropsTable node={defs.content} />
+      <PropsTable node={defs.ObjectContent} />
 
       <h2 id="api-actions">Actions</h2>
       <p>
@@ -176,9 +176,10 @@ export function ApiReference() {
       </p>
       {ACTION_DEFS.map((key) => {
         const node = defs[key];
+        const actionTypeName = node.properties?.['action_type']?.const ?? key;
         return (
           <div key={key}>
-            <h3 id={`api-${key}`}>{node.title}</h3>
+            <h3 id={`api-${key}`}>{actionTypeName}</h3>
             {node.description ? <p>{node.description}</p> : null}
             <PropsTable node={node} />
           </div>

@@ -1,0 +1,683 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/DataFlowSpec",
+  "definitions": {
+    "DataFlowSpec": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "$ref": "#/definitions/Direction",
+          "description": "Direction de placement automatique des objets statiques. Défaut: 'left-to-right'."
+        },
+        "static_objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/StaticObject"
+          }
+        },
+        "dynamic_objects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DynamicObject"
+          }
+        },
+        "connections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Connection"
+          },
+          "description": "Flèches/liens permanents (décor) affichés dès l'initialisation."
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Action"
+          }
+        }
+      },
+      "required": [
+        "static_objects",
+        "dynamic_objects",
+        "actions"
+      ],
+      "additionalProperties": false
+    },
+    "Direction": {
+      "type": "string",
+      "enum": [
+        "left-to-right",
+        "right-to-left",
+        "top-to-bottom",
+        "bottom-to-top",
+        "circular"
+      ],
+      "description": "Types TypeScript de la spécification DataFlow. Ils reflètent le JSON schema exposé dans `schema.ts` (utilisé par la page Doc API)."
+    },
+    "StaticObject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifiant unique de l'objet (ex: 'serveur_web')."
+        },
+        "object_type": {
+          "$ref": "#/definitions/StaticObjectType"
+        },
+        "text": {
+          "type": "string",
+          "description": "Label affiché en dessous de l'objet."
+        },
+        "subicon": {
+          "type": "string",
+          "description": "Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom d'une icône enregistrée, ou simple texte libre (ex: 'v2', 'API')."
+        },
+        "lane": {
+          "type": "number",
+          "description": "Rangée/colonne de placement (entier positif). Défaut: 1."
+        },
+        "is_main": {
+          "type": "boolean",
+          "description": "(circular) Marque l'objet comme nœud central. Défaut: false."
+        },
+        "align_with": {
+          "type": "string",
+          "description": "Aligne ce nœud sur l'axe transverse d'un autre nœud (par ID) : utile pour aligner deux nœuds de lanes différentes. Ignoré en disposition circular."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL rendant le nœud cliquable (ouvre dans un nouvel onglet)."
+        },
+        "content": {
+          "$ref": "#/definitions/ObjectContent",
+          "description": "Contenu initial affiché dans le nœud (terminal de code, fenêtre, etc.)."
+        }
+      },
+      "required": [
+        "id",
+        "object_type"
+      ],
+      "additionalProperties": false
+    },
+    "StaticObjectType": {
+      "type": "string",
+      "enum": [
+        "desktop",
+        "laptop",
+        "client",
+        "server",
+        "database",
+        "mobile",
+        "user",
+        "admin",
+        "users"
+      ],
+      "description": "Types de nœuds (apparence). Les flèches de décor vivent dans `connections`."
+    },
+    "ObjectContent": {
+      "type": "object",
+      "properties": {
+        "content_type": {
+          "$ref": "#/definitions/ContentType"
+        },
+        "content": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string",
+          "description": "Langage pour la coloration syntaxique (ex: javascript, json, sql)."
+        },
+        "url": {
+          "type": "string",
+          "description": "(mode `text`) URL affichée dans la barre d'adresse de la fenêtre."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ContentType": {
+      "type": "string",
+      "enum": [
+        "image",
+        "text",
+        "code"
+      ],
+      "description": "Modes de contenu pour `set_content` (action) et `content` (objet statique)."
+    },
+    "DynamicObject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifiant unique du paquet."
+        },
+        "object_type": {
+          "$ref": "#/definitions/DynamicObjectType"
+        },
+        "request_content": {
+          "type": "string",
+          "description": "Requête textuelle (ex: pour sql_request)."
+        },
+        "response_content": {
+          "$ref": "#/definitions/SqlResponse",
+          "description": "Réponse (pour sql_response)."
+        },
+        "packet_content": {
+          "$ref": "#/definitions/PacketContent"
+        }
+      },
+      "required": [
+        "id",
+        "object_type"
+      ],
+      "additionalProperties": false
+    },
+    "DynamicObjectType": {
+      "type": "string",
+      "enum": [
+        "http_packet",
+        "sql_request",
+        "sql_response"
+      ]
+    },
+    "SqlResponse": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "type": "number",
+          "description": "Nombre de lignes retournées."
+        },
+        "header": {
+          "type": "string",
+          "description": "En-tête optionnel visible dans le paquet."
+        },
+        "body": {
+          "$ref": "#/definitions/SqlResponseBody",
+          "description": "Corps de la réponse (texte pur ou tableau)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "SqlResponseBody": {
+      "type": "object",
+      "properties": {
+        "content_type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "table"
+          ]
+        },
+        "content": {
+          "type": "string",
+          "description": "Texte pur si content_type est 'text'"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Colonnes du tableau si content_type est 'table'"
+        },
+        "rows_data": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "number"
+              ]
+            }
+          },
+          "description": "Lignes de données si content_type est 'table'"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PacketContent": {
+      "type": "object",
+      "properties": {
+        "header": {
+          "type": "string",
+          "description": "En-tête visible dans le paquet (ex: 'GET /api')."
+        },
+        "body": {
+          "$ref": "#/definitions/PacketBody"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PacketBody": {
+      "type": "object",
+      "properties": {
+        "content_type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "image"
+          ]
+        },
+        "content": {
+          "type": "string",
+          "description": "Texte ou chemin d'image."
+        },
+        "language": {
+          "type": "string",
+          "description": "Langage pour la coloration syntaxique du texte (optionnel)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Connection": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifiant optionnel."
+        },
+        "from": {
+          "type": "string",
+          "description": "ID du nœud source."
+        },
+        "to": {
+          "type": "string",
+          "description": "ID du nœud destination."
+        },
+        "style": {
+          "$ref": "#/definitions/LineStyle",
+          "description": "Style de la ligne. Défaut: 'solid'."
+        },
+        "arrowHead": {
+          "type": "string",
+          "enum": [
+            "forward",
+            "backward",
+            "both",
+            "none"
+          ],
+          "description": "Pointe de la flèche. Défaut: 'forward'."
+        },
+        "text": {
+          "type": "string",
+          "description": "Texte médian optionnel."
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "description": "Lien/flèche permanent (décor), affiché dès l'initialisation."
+    },
+    "LineStyle": {
+      "type": "string",
+      "enum": [
+        "solid",
+        "dotted",
+        "dashed",
+        "animated"
+      ],
+      "description": "Style de ligne (terminologie SVG/CSS). `full` est accepté en alias de `solid`."
+    },
+    "Action": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MoveAction"
+        },
+        {
+          "$ref": "#/definitions/ArrowAction"
+        },
+        {
+          "$ref": "#/definitions/ParallelAction"
+        },
+        {
+          "$ref": "#/definitions/LoadingAction"
+        },
+        {
+          "$ref": "#/definitions/SetContentAction"
+        },
+        {
+          "$ref": "#/definitions/CommentAction"
+        },
+        {
+          "$ref": "#/definitions/HighlightAction"
+        }
+      ],
+      "description": "Union discriminée des actions (par `action_type`)."
+    },
+    "MoveAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "action_type": {
+          "type": "string",
+          "const": "move"
+        },
+        "object": {
+          "type": "string",
+          "description": "ID de l'objet dynamique (paquet, requête…)."
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_type",
+        "object",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "description": "Déplace un objet dynamique de `from` vers `to`."
+    },
+    "ArrowAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "action_type": {
+          "type": "string",
+          "const": "arrow"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/definitions/LineStyle"
+        },
+        "arrowHead": {
+          "type": "string",
+          "enum": [
+            "forward",
+            "backward",
+            "both",
+            "none"
+          ]
+        }
+      },
+      "required": [
+        "action_type",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false,
+      "description": "Trace une flèche animée entre deux nœuds."
+    },
+    "ParallelAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "action_type": {
+          "type": "string",
+          "const": "parallel"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Action"
+          }
+        }
+      },
+      "required": [
+        "action_type",
+        "actions"
+      ],
+      "additionalProperties": false,
+      "description": "Exécute plusieurs actions au même instant."
+    },
+    "LoadingAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "action_type": {
+          "type": "string",
+          "const": "loading"
+        },
+        "object": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_type",
+        "object"
+      ],
+      "additionalProperties": false,
+      "description": "Affiche un spinner de chargement sur un nœud."
+    },
+    "SetContentAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "action_type": {
+          "type": "string",
+          "const": "set_content"
+        },
+        "object": {
+          "type": "string"
+        },
+        "content": {
+          "$ref": "#/definitions/ObjectContent"
+        }
+      },
+      "required": [
+        "action_type",
+        "object",
+        "content"
+      ],
+      "additionalProperties": false,
+      "description": "Mute le contenu d'un nœud (code, texte, image)."
+    },
+    "CommentAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "action_type": {
+          "type": "string",
+          "const": "comment"
+        },
+        "object": {
+          "type": "string",
+          "description": "ID du nœud près duquel afficher le commentaire."
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_type",
+        "object",
+        "text"
+      ],
+      "additionalProperties": false,
+      "description": "Affiche une bulle de commentaire près d'un nœud."
+    },
+    "HighlightAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading)."
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "action_type": {
+          "type": "string",
+          "const": "highlight"
+        },
+        "object": {
+          "type": "string",
+          "description": "ID d'un nœud statique OU d'une connexion à surligner."
+        }
+      },
+      "required": [
+        "action_type",
+        "object"
+      ],
+      "additionalProperties": false,
+      "description": "Surligne un nœud statique ou une connexion (par ID)."
+    }
+  }
+}

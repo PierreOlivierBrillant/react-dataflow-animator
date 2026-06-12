@@ -19,7 +19,8 @@
     "test:coverage": "npm run test:coverage -w react-dataflow-animator",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,mdx,css}\"",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,css}\"",
-    "deadcode": "knip"
+    "deadcode": "knip",
+    "check:schema": "npm run check:schema -w react-dataflow-animator"
   },
   "devDependencies": {
     "concurrently": "^10.0.3",

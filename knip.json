@@ -2,8 +2,13 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     "packages/react-dataflow-animator": {
-      "entry": ["src/index.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
-      "project": ["src/**/*.ts", "src/**/*.tsx"]
+      "entry": [
+        "src/index.ts",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "scripts/*.mjs"
+      ],
+      "project": ["src/**/*.ts", "src/**/*.tsx", "scripts/*.mjs"]
     },
     "apps/docs": {
       "entry": [
@@ -11,8 +16,7 @@
         "src/site-content/index.ts",
         "src/theme/**/*.tsx"
       ],
-      "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignore": ["src/site-content/demos/**"]
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
     }
   },
   "ignore": [

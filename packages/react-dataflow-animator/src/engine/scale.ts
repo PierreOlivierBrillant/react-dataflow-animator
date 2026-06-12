@@ -2,12 +2,12 @@ import { clamp } from './timeline';
 
 export type Density = 'compact' | 'comfortable' | 'spacious';
 
-export const PAIR_W = 190;
-export const PAIR_H = 130;
-export const EDGE_MARGIN_X = 60;
-export const EDGE_MARGIN_Y = 60;
+const PAIR_W = 190;
+const PAIR_H = 130;
+const EDGE_MARGIN_X = 60;
+const EDGE_MARGIN_Y = 60;
 
-export const DENSITY: Record<Density, { scale: number; maxw: number }> = {
+const DENSITY: Record<Density, { scale: number; maxw: number }> = {
   compact: { scale: 0.82, maxw: 0.78 },
   comfortable: { scale: 1, maxw: 0.86 },
   spacious: { scale: 1.18, maxw: 0.92 },
