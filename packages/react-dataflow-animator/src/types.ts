@@ -73,6 +73,11 @@ export interface Node {
   /** Label affiché en dessous du nœud. */
   text?: string;
   /**
+   * Visibilité initiale du nœud. Défaut: true.
+   * Un nœud caché peut être affiché via l'action `set_visible`.
+   */
+  visible?: boolean;
+  /**
    * Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'),
    * nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API').
    */
@@ -159,7 +164,8 @@ export type ActionType =
   | 'loading'
   | 'set_content'
   | 'comment'
-  | 'highlight';
+  | 'highlight'
+  | 'set_visible';
 
 /** Champs communs à toutes les actions (ordonnancement et cycle de vie). */
 interface ActionBase {
@@ -251,6 +257,15 @@ interface HighlightAction extends ActionBase {
   object: string;
 }
 
+/** Affiche ou cache un nœud statique avec un fondu. */
+interface SetVisibleAction extends ActionBase {
+  type: 'set_visible';
+  /** ID du nœud à afficher ou cacher. */
+  object: string;
+  /** true = afficher, false = cacher. */
+  visible: boolean;
+}
+
 /** Union discriminée des actions (par `type`). */
 export type Action =
   | MoveAction
@@ -259,7 +274,8 @@ export type Action =
   | LoadingAction
   | SetContentAction
   | CommentAction
-  | HighlightAction;
+  | HighlightAction
+  | SetVisibleAction;
 
 export interface DataFlowSpec {
   /** Direction de placement automatique des nœuds. Défaut: 'left-to-right'. */

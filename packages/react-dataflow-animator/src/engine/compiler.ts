@@ -7,6 +7,7 @@ import type {
   LoadingClip,
   MoveClip,
   SetContentClip,
+  SetVisibleClip,
   Step,
   Timeline,
 } from './timeline';
@@ -41,6 +42,7 @@ const DEFAULT_DURATION: Record<ActionType, number> = {
   comment: 500,
   highlight: 600,
   parallel: 0,
+  set_visible: 300,
 };
 
 // Défaut de `keep_until_next` par type d'action (cf. schema).
@@ -51,6 +53,7 @@ const DEFAULT_KEEP_NEXT: Partial<Record<ActionType, boolean>> = {
   set_content: true,
   highlight: true,
   loading: false,
+  set_visible: false,
 };
 
 /** Normalise le style de ligne (accepte l'alias historique `full`). */
@@ -250,6 +253,30 @@ function compileAction(
         targetId: action.object,
       };
       push(clip);
+      break;
+    }
+    case 'set_visible': {
+      if (!action.object) {
+        ctx.warnings.push(`set_visible "${id}": object requis.`);
+        break;
+      }
+      const clip: SetVisibleClip = {
+        ...base,
+        kind: 'set_visible',
+        objectId: action.object,
+        visible: action.visible,
+        // keepEnd forcé à true : l'état de visibilité persiste jusqu'à la fin de la
+        // chronologie pour que Stage puisse interroger le clip à tout instant.
+        keepEnd: true,
+      };
+      ctx.pending.push({
+        clip,
+        keepUntil: undefined,
+        keepNext: false,
+        keepEnd: true,
+        stepIndex,
+      });
+      if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
       break;
     }
     default: {

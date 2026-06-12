@@ -67,6 +67,10 @@
           "type": "string",
           "description": "Label affiché en dessous du nœud."
         },
+        "visible": {
+          "type": "boolean",
+          "description": "Visibilité initiale du nœud. Défaut: true. Un nœud caché peut être affiché via l'action `set_visible`."
+        },
         "icon": {
           "type": "string",
           "description": "Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API')."
@@ -366,6 +370,9 @@
         },
         {
           "$ref": "#/definitions/HighlightAction"
+        },
+        {
+          "$ref": "#/definitions/SetVisibleAction"
         }
       ],
       "description": "Union discriminée des actions (par `type`)."
@@ -802,6 +809,68 @@
       ],
       "additionalProperties": false,
       "description": "Surligne un nœud statique ou une connexion (par ID)."
+    },
+    "SetVisibleAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "type": {
+          "type": "string",
+          "const": "set_visible"
+        },
+        "object": {
+          "type": "string",
+          "description": "ID du nœud à afficher ou cacher."
+        },
+        "visible": {
+          "type": "boolean",
+          "description": "true = afficher, false = cacher."
+        }
+      },
+      "required": [
+        "type",
+        "object",
+        "visible"
+      ],
+      "additionalProperties": false,
+      "description": "Affiche ou cache un nœud statique avec un fondu."
     }
   },
   "title": "DataFlowSpec"

@@ -348,3 +348,50 @@ describe('compile — robustesse', () => {
     expect(warnings.length).toBeGreaterThan(0);
   });
 });
+
+describe('compile — set_visible', () => {
+  it('produit un clip set_visible avec keepEnd=true et visibleUntilMs=durationMs', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'set_visible', id: 'SV', object: 'a', visible: true },
+        { type: 'arrow', id: 'AR', from: 'a', to: 'b', duration: 300 },
+      ])
+    );
+    const sv = timeline.clips.find((c) => c.id === 'SV')!;
+    expect(sv.kind).toBe('set_visible');
+    expect(sv.keepEnd).toBe(true);
+    expect(sv.visibleUntilMs).toBe(timeline.durationMs);
+  });
+
+  it('un set_visible visible=false a bien le champ visible=false', () => {
+    const { timeline } = compile(
+      specOf([{ type: 'set_visible', id: 'SV', object: 'a', visible: false }])
+    );
+    const sv = timeline.clips.find((c) => c.id === 'SV')!;
+    expect((sv as import('./timeline').SetVisibleClip).visible).toBe(false);
+  });
+
+  it('émet un warning si object est absent', () => {
+    const { timeline, warnings } = compile(
+      specOf([{ type: 'set_visible', visible: true } as unknown as Action])
+    );
+    expect(timeline.clips).toHaveLength(0);
+    expect(warnings.some((w) => w.includes('set_visible'))).toBe(true);
+  });
+
+  it('deux set_visible successifs pour le même nœud sont tous deux dans les clips', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'set_visible', id: 'HIDE', object: 'a', visible: false },
+        { type: 'set_visible', id: 'SHOW', object: 'a', visible: true },
+      ])
+    );
+    expect(timeline.clips.filter((c) => c.kind === 'set_visible')).toHaveLength(
+      2
+    );
+    // Les deux persistent jusqu'à la fin.
+    for (const c of timeline.clips.filter((c) => c.kind === 'set_visible')) {
+      expect(c.visibleUntilMs).toBe(timeline.durationMs);
+    }
+  });
+});

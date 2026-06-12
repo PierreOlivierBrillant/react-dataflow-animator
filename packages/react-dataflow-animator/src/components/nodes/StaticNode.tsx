@@ -21,6 +21,8 @@ export interface StaticNodeProps {
   /** Nœud surligné par une action highlight. */
   highlighted?: boolean;
   highlight: Highlighter;
+  /** Opacité globale du nœud (fondu show/hide de set_visible). */
+  opacity?: number;
 }
 
 export const StaticNode: AnimatableComponent<StaticNodeProps> =
@@ -32,6 +34,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     loading,
     highlighted,
     highlight,
+    opacity,
   }: StaticNodeProps) {
     const visual: ReactNode = content ? (
       <ContentPanel content={content} highlight={highlight} />
@@ -75,6 +78,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
         style={{
           left: `${placement.cx * 100}%`,
           top: `${placement.cy * 100}%`,
+          opacity,
         }}
       >
         {inner}

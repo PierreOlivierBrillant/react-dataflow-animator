@@ -12,6 +12,7 @@ import {
   type CommentClip,
   type HighlightClip,
   type MoveClip,
+  type SetVisibleClip,
   type Timeline,
 } from '../engine/timeline';
 import { computeLayout } from '../engine/layout';
@@ -89,6 +90,23 @@ export function Stage({
         content: a.clip.content,
         opacity: clipOpacity(a.clip, t),
       };
+    }
+  }
+
+  // Opacité de visibilité par nœud : 0 = caché, 1 = visible, intermédiaire = fondu.
+  // Initialisé depuis `node.visible` puis mis à jour par les clips set_visible actifs.
+  // Les clips set_visible ont keepEnd=true : ils restent dans `active` après la fin
+  // de leur animation, ce qui permet de mémoriser le dernier état sans état mutable.
+  const nodeVisibility: Record<string, number> = {};
+  for (const node of spec.nodes) {
+    if (node.visible === false) nodeVisibility[node.id] = 0;
+  }
+  for (const a of active) {
+    if (a.clip.kind === 'set_visible') {
+      const clip = a.clip as SetVisibleClip;
+      nodeVisibility[clip.objectId] = clip.visible
+        ? a.progress
+        : 1 - a.progress;
     }
   }
 
@@ -192,6 +210,8 @@ export function Stage({
       {nodes.map((o) => {
         const placement = placements[o.id];
         if (!placement) return null;
+        const nodeOpacity = nodeVisibility[o.id] ?? 1;
+        if (nodeOpacity <= 0) return null;
         return (
           <StaticNode
             key={o.id}
@@ -202,6 +222,7 @@ export function Stage({
             loading={loadingNodes.has(o.id)}
             highlighted={highlightedIds.has(o.id)}
             highlight={highlight}
+            opacity={nodeOpacity < 1 ? nodeOpacity : undefined}
           />
         );
       })}

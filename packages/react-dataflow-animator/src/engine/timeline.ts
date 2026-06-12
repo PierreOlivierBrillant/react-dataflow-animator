@@ -15,7 +15,8 @@ export type ClipKind =
   | 'loading'
   | 'set_content'
   | 'comment'
-  | 'highlight';
+  | 'highlight'
+  | 'set_visible';
 
 interface ClipBase {
   /** Identifiant unique du clip (= id d'action si fourni, sinon généré). */
@@ -82,13 +83,22 @@ export interface HighlightClip extends ClipBase {
   targetId: string;
 }
 
+export interface SetVisibleClip extends ClipBase {
+  kind: 'set_visible';
+  /** ID du nœud statique dont la visibilité change. */
+  objectId: string;
+  /** true = le nœud apparaît, false = le nœud disparaît. */
+  visible: boolean;
+}
+
 export type Clip =
   | MoveClip
   | ArrowClip
   | LoadingClip
   | SetContentClip
   | CommentClip
-  | HighlightClip;
+  | HighlightClip
+  | SetVisibleClip;
 
 export interface Step {
   index: number;

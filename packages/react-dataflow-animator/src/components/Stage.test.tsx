@@ -127,4 +127,91 @@ describe('Stage — rendu à t fixe', () => {
     );
     expect(container.querySelector('.rdfa-spinner')).toBeTruthy();
   });
+
+  it('cache un nœud avec visible:false sur le nœud statique (avant toute action)', () => {
+    const spec: DataFlowSpec = {
+      nodes: [
+        { id: 'client', type: 'laptop', text: 'Client', lane: 1 },
+        {
+          id: 'server',
+          type: 'server',
+          text: 'Serveur',
+          lane: 2,
+          visible: false,
+        },
+      ],
+      packets: [],
+      timeline: [],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    // client est visible, server ne doit pas être dans le DOM
+    const nodes = container.querySelectorAll('[data-node-id]');
+    const ids = Array.from(nodes).map((n) => n.getAttribute('data-node-id'));
+    expect(ids).toContain('client');
+    expect(ids).not.toContain('server');
+  });
+
+  it('affiche un nœud caché après set_visible:true (transition terminée)', () => {
+    const spec: DataFlowSpec = {
+      nodes: [
+        { id: 'client', type: 'laptop', lane: 1 },
+        { id: 'server', type: 'server', lane: 2, visible: false },
+      ],
+      packets: [],
+      timeline: [
+        { type: 'set_visible', object: 'server', visible: true, duration: 300 },
+      ],
+    };
+    const { timeline } = compile(spec);
+    // set_visible startMs=0, endMs=300, durationMs=300.
+    // À t=300 (= durationMs), progress=1 → nodeOpacity=1 → nœud visible.
+    // evaluate() inclut les clips à t === visibleUntilMs (borne inclusive).
+    const { container } = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={300}
+        highlight={highlightCode}
+      />
+    );
+    const ids = Array.from(container.querySelectorAll('[data-node-id]')).map(
+      (n) => n.getAttribute('data-node-id')
+    );
+    expect(ids).toContain('server');
+  });
+
+  it('cache un nœud après set_visible:false (transition terminée)', () => {
+    const spec: DataFlowSpec = {
+      nodes: [
+        { id: 'client', type: 'laptop', lane: 1 },
+        { id: 'server', type: 'server', lane: 2 },
+      ],
+      packets: [],
+      timeline: [
+        {
+          type: 'set_visible',
+          object: 'server',
+          visible: false,
+          duration: 300,
+        },
+      ],
+    };
+    const { timeline } = compile(spec);
+    // À t=300 (= durationMs=endMs), progress=1 → opacity = 1-1 = 0 → nœud retiré.
+    const { container } = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={300}
+        highlight={highlightCode}
+      />
+    );
+    const ids = Array.from(container.querySelectorAll('[data-node-id]')).map(
+      (n) => n.getAttribute('data-node-id')
+    );
+    expect(ids).not.toContain('server');
+  });
 });

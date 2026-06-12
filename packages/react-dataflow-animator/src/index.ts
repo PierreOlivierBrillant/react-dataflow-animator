@@ -66,6 +66,7 @@ export type {
   SetContentClip,
   CommentClip,
   HighlightClip,
+  SetVisibleClip,
 } from './engine/timeline';
 export { computeLayout } from './engine/layout';
 export type { LayoutMap, NodePlacement } from './engine/layout';
