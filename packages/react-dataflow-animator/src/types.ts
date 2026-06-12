@@ -189,6 +189,15 @@ interface ActionBase {
   /** Si vrai, reste visible jusqu'à la fin de la chronologie. */
   keep_until_end?: boolean;
   /**
+   * Décalage de départ en ms, ajouté après la résolution de `wait_for` et le
+   * clamp de l'étape. Principalement utile dans un bloc `parallel` pour décaler
+   * des actions les unes par rapport aux autres (animations en séquence décalée).
+   * S'applique aussi à une action `parallel` entière pour retarder tout le groupe.
+   * @minimum 0
+   * @multipleOf 1
+   */
+  delay_ms?: number;
+  /**
    * Durée du fondu d'apparition en ms. Défaut: période de maintien de départ
    * pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.
    * @minimum 0

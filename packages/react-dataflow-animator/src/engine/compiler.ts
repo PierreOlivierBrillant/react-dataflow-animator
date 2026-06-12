@@ -117,6 +117,8 @@ function compileAction(
   // Borne inférieure : une action racine ne peut pas commencer avant son étape,
   // même si wait_for pointe vers une action très antérieure.
   if (startMs < minStartMs) startMs = minStartMs;
+  // Décalage explicite (delay_ms), appliqué après le clamp : toujours additif.
+  if (action.delay_ms) startMs += action.delay_ms;
 
   if (action.type === 'parallel') {
     const children = action.actions ?? [];

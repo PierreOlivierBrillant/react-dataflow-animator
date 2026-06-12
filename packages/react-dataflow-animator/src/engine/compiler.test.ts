@@ -338,6 +338,102 @@ describe("compile — wait_for sur action racine : borne au début de l'étape",
   });
 });
 
+describe('compile — delay_ms', () => {
+  it('décale le startMs dans un parallel (stagger)', () => {
+    // anim1 : 0 → 4000, anim2 : 2000 → 4000
+    const { timeline } = compile(
+      specOf([
+        {
+          type: 'parallel',
+          actions: [
+            { type: 'arrow', id: 'A1', from: 'a', to: 'b', duration: 4000 },
+            {
+              type: 'arrow',
+              id: 'A2',
+              from: 'a',
+              to: 'b',
+              duration: 2000,
+              delay_ms: 2000,
+            },
+          ],
+        },
+      ])
+    );
+    const a1 = timeline.clips.find((c) => c.id === 'A1')!;
+    const a2 = timeline.clips.find((c) => c.id === 'A2')!;
+    expect(a1.startMs).toBe(0);
+    expect(a1.endMs).toBe(4000);
+    expect(a2.startMs).toBe(2000);
+    expect(a2.endMs).toBe(4000);
+  });
+
+  it('décale une action racine dans son étape', () => {
+    const { timeline } = compile(
+      specOf([
+        {
+          type: 'arrow',
+          id: 'A',
+          from: 'a',
+          to: 'b',
+          duration: 500,
+          delay_ms: 300,
+        },
+      ])
+    );
+    const a = timeline.clips.find((c) => c.id === 'A')!;
+    expect(a.startMs).toBe(300);
+    expect(a.endMs).toBe(800);
+  });
+
+  it('compose avec wait_for : delay_ms est ajouté après la résolution', () => {
+    // À l'intérieur d'un parallel, les enfants n'ont pas de minStartMs,
+    // donc wait_for + delay_ms s'applique proprement sans clamp d'étape.
+    const { timeline } = compile(
+      specOf([
+        {
+          type: 'parallel',
+          actions: [
+            { type: 'arrow', id: 'X', from: 'a', to: 'b', duration: 500 },
+            {
+              type: 'arrow',
+              id: 'Y',
+              from: 'a',
+              to: 'b',
+              duration: 200,
+              wait_for: 'X',
+              delay_ms: 100,
+            },
+          ],
+        },
+      ])
+    );
+    const x = timeline.clips.find((c) => c.id === 'X')!;
+    const y = timeline.clips.find((c) => c.id === 'Y')!;
+    // Y démarre à X.endMs (500) + delay_ms (100) = 600.
+    expect(y.startMs).toBe(x.endMs + 100);
+    expect(y.endMs).toBe(x.endMs + 300);
+  });
+
+  it('delay_ms sur un parallel entier retarde tout le groupe', () => {
+    const { timeline } = compile(
+      specOf([
+        {
+          type: 'parallel',
+          delay_ms: 400,
+          actions: [
+            { type: 'arrow', id: 'P1', from: 'a', to: 'b', duration: 300 },
+            { type: 'arrow', id: 'P2', from: 'a', to: 'b', duration: 500 },
+          ],
+        },
+      ])
+    );
+    const p1 = timeline.clips.find((c) => c.id === 'P1')!;
+    const p2 = timeline.clips.find((c) => c.id === 'P2')!;
+    expect(p1.startMs).toBe(400);
+    expect(p2.startMs).toBe(400);
+  });
+});
+
 describe('compile — robustesse', () => {
   it('ignore une action incomplète et émet un warning', () => {
     const { timeline, warnings } = compile(
