@@ -58,7 +58,7 @@ describe('compile — ordonnancement', () => {
     expect(timeline.steps).toHaveLength(2);
   });
 
-  it('place les enfants d’un parallel au même timestamp', () => {
+  it("place les enfants d'un parallel au même timestamp", () => {
     const { timeline } = compile(
       specOf([
         {
@@ -94,7 +94,7 @@ describe('compile — ordonnancement', () => {
     expect(timeline.steps).toHaveLength(1);
   });
 
-  it('décale via wait_for vers la fin de l’action référencée', () => {
+  it(`décale via wait_for vers la fin de l'action référencée`, () => {
     const { timeline } = compile(
       specOf([
         { type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 1000 },
@@ -124,7 +124,7 @@ describe('compile — ordonnancement', () => {
 });
 
 describe('compile — cycle de vie', () => {
-  it('move disparaît à la fin, arrow persiste jusqu’à l’étape suivante', () => {
+  it(`move disparaît à la fin, arrow persiste jusqu'à l'étape suivante`, () => {
     const { timeline } = compile(
       specOf([
         { type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 300 },
@@ -142,11 +142,11 @@ describe('compile — cycle de vie', () => {
     const b = timeline.clips.find((c) => c.id === 'B')!;
     // move : défaut keep_until_next=false -> visible jusqu'à la fin du hold d'arrivée.
     expect(b.visibleUntilMs).toBe(b.endMs + ARRIVE_HOLD);
-    // arrow : persiste jusqu’au DÉBUT de l’étape suivante (à travers la pause).
+    // arrow : persiste jusqu'au DÉBUT de l'étape suivante (à travers la pause).
     expect(a.visibleUntilMs).toBe(timeline.steps[1].startMs);
   });
 
-  it('keep_until maintient jusqu’au début de l’action ciblée', () => {
+  it(`keep_until maintient jusqu'au début de l'action ciblée`, () => {
     const { timeline } = compile(
       specOf([
         {
@@ -179,7 +179,7 @@ describe('compile — cycle de vie', () => {
     expect(a.visibleUntilMs).toBe(c.startMs);
   });
 
-  it('keep_until_end maintient jusqu’à la fin de la chronologie', () => {
+  it(`keep_until_end maintient jusqu'à la fin de la chronologie`, () => {
     const { timeline } = compile(
       specOf([
         {
@@ -202,6 +202,33 @@ describe('compile — cycle de vie', () => {
     );
     const a = timeline.clips.find((c) => c.id === 'A')!;
     expect(a.visibleUntilMs).toBe(timeline.durationMs);
+  });
+
+  it('keep_until_end positionne keepEnd sur le clip', () => {
+    const { timeline } = compile(
+      specOf([
+        {
+          type: 'set_content',
+          id: 'SC',
+          object: 'a',
+          content: { type: 'text', value: 'v2' },
+          keep_until_end: true,
+        },
+        {
+          type: 'move',
+          id: 'M',
+          object: 'p',
+          from: 'a',
+          to: 'b',
+          duration: 300,
+        },
+      ])
+    );
+    const sc = timeline.clips.find((c) => c.id === 'SC')!;
+    expect(sc.keepEnd).toBe(true);
+    // Un clip sans keep_until_end ne doit pas avoir keepEnd à true.
+    const m = timeline.clips.find((c) => c.id === 'M')!;
+    expect(m.keepEnd).toBeFalsy();
   });
 });
 
@@ -229,7 +256,7 @@ describe('path shifting bidirectionnel', () => {
   });
 });
 
-describe('compile — points d’arrêt', () => {
+describe("compile — points d'arrêt", () => {
   it('un move produit deux arrêts (apparition + arrivée), une flèche un seul', () => {
     const { timeline } = compile(
       specOf([

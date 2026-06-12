@@ -52,11 +52,11 @@ function CodeBlock({ html }: { html: string }) {
 }
 
 export function ContentPanel({ content, highlight }: ContentPanelProps) {
-  const type = content.content_type ?? 'text';
+  const type = content.type ?? 'text';
 
   if (type === 'code') {
     const html = highlight(
-      content.content ?? '',
+      content.value ?? '',
       content.language ?? 'plaintext'
     );
     return (
@@ -77,7 +77,7 @@ export function ContentPanel({ content, highlight }: ContentPanelProps) {
           <span className="rdfa-window-url">{url}</span>
         </div>
         <div className="rdfa-content-body">
-          <img src={content.content} alt="" />
+          <img src={content.value} alt="" />
         </div>
       </div>
     );
@@ -89,7 +89,7 @@ export function ContentPanel({ content, highlight }: ContentPanelProps) {
       <div className="rdfa-window-bar">
         <span className="rdfa-window-url">{url}</span>
       </div>
-      <div className="rdfa-content-body">{content.content}</div>
+      <div className="rdfa-content-body">{content.value}</div>
     </div>
   );
 }

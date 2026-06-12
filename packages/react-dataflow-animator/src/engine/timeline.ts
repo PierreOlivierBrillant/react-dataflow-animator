@@ -31,6 +31,8 @@ interface ClipBase {
   visibleUntilMs: number;
   /** Index de l'étape racine à laquelle ce clip appartient. */
   stepIndex: number;
+  /** Vrai si l'action source avait keep_until_end : supprime le fondu de sortie. */
+  keepEnd?: boolean;
 }
 
 export interface MoveClip extends ClipBase {

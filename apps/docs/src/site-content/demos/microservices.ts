@@ -70,7 +70,7 @@ export const microservices: DataFlowSpec = {
       kind: 'http_packet',
       packet_content: {
         header: '200 OK',
-        body: { content_type: 'text', content: 'JWT' },
+        body: { type: 'text', value: 'JWT' },
       },
     },
     {
@@ -78,7 +78,7 @@ export const microservices: DataFlowSpec = {
       kind: 'http_packet',
       packet_content: {
         header: 'GET /orders',
-        body: { content_type: 'text', content: 'Bearer JWT' },
+        body: { type: 'text', value: 'Bearer JWT' },
       },
     },
     {
@@ -96,7 +96,7 @@ export const microservices: DataFlowSpec = {
       kind: 'http_packet',
       packet_content: {
         header: '200 OK',
-        body: { content_type: 'text', content: '[ orders ]' },
+        body: { type: 'text', value: '[ orders ]' },
       },
     },
   ],

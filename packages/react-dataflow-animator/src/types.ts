@@ -56,8 +56,8 @@ export type HighlightLanguage =
   | 'http';
 
 export interface ObjectContent {
-  content_type?: ContentType;
-  content?: string;
+  type?: ContentType;
+  value?: string;
   /** Langage pour la coloration syntaxique. Valeurs reconnues : voir {@link HighlightLanguage}. */
   language?: HighlightLanguage | (string & {});
   /** (mode `text`) URL affichée dans la barre d'adresse de la fenêtre. */
@@ -107,9 +107,9 @@ export interface Connection {
 }
 
 export interface PacketBody {
-  content_type?: 'text' | 'image';
+  type?: 'text' | 'image';
   /** Texte ou chemin d'image. */
-  content?: string;
+  value?: string;
   /** Langage pour la coloration syntaxique du texte (optionnel). Valeurs reconnues : voir {@link HighlightLanguage}. */
   language?: HighlightLanguage | (string & {});
 }
@@ -121,12 +121,12 @@ export interface PacketContent {
 }
 
 interface SqlResponseBody {
-  content_type?: 'text' | 'table';
-  /** Texte pur si content_type est 'text' */
-  content?: string;
-  /** Colonnes du tableau si content_type est 'table' */
+  type?: 'text' | 'table';
+  /** Texte pur si type est 'text' */
+  value?: string;
+  /** Colonnes du tableau si type est 'table' */
   columns?: string[];
-  /** Lignes de données si content_type est 'table' */
+  /** Lignes de données si type est 'table' */
   rows_data?: (string | number)[][];
 }
 

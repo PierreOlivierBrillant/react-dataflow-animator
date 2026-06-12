@@ -143,7 +143,7 @@ describe('validateSpec — duration, icon, language', () => {
           id: 'req',
           kind: 'http_packet',
           packet_content: {
-            body: { content_type: 'text', content: 'code', language: 'rust' },
+            body: { type: 'text', content: 'code', language: 'rust' },
           },
         },
       ],
@@ -165,7 +165,7 @@ describe('validateSpec — duration, icon, language', () => {
           kind: 'http_packet',
           packet_content: {
             body: {
-              content_type: 'text',
+              type: 'text',
               content: 'code',
               language: 'typescript',
             },

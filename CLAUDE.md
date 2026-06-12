@@ -45,7 +45,7 @@ npm run deadcode         # knip : code mort / exports inutilisés
 npm run test:coverage    # vitest + seuils de couverture
 npm run build            # build lib + site (typecheck inclus)
 npm run test:integration -w react-dataflow-animator
-Run npm run check:schema
+npm run check:schema
 ```
 
 ### Que faire en cas d'échec

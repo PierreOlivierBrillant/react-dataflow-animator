@@ -47,9 +47,9 @@ export const signalr: DataFlowSpec = {
       id: 'clientCode',
       object: 'client',
       content: {
-        content_type: 'code',
+        type: 'code',
         language: 'typescript',
-        content:
+        value:
           'const conn = new HubConnectionBuilder()\n  .withUrl("/chatHub").build();\nconn.on("ReceiveMessage", render);\nawait conn.start();',
       },
       keep_until: 'end',
@@ -91,9 +91,9 @@ export const signalr: DataFlowSpec = {
       id: 'hubCode',
       object: 'hub',
       content: {
-        content_type: 'code',
+        type: 'code',
         language: 'csharp',
-        content:
+        value:
           'public async Task SendMessage(string m) =>\n  await Clients.All\n    .SendAsync("ReceiveMessage", m);',
       },
       keep_until: 'end',

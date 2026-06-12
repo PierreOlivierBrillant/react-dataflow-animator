@@ -44,7 +44,7 @@ export const spa: DataFlowSpec = {
       kind: 'http_packet',
       packet_content: {
         header: '200 OK',
-        body: { content_type: 'text', content: 'index.html + app.js' },
+        body: { type: 'text', value: 'index.html + app.js' },
       },
     },
     {
@@ -63,7 +63,7 @@ export const spa: DataFlowSpec = {
       kind: 'http_packet',
       packet_content: {
         header: '200 OK',
-        body: { content_type: 'text', content: '[ 12 produits ]' },
+        body: { type: 'text', value: '[ 12 produits ]' },
       },
     },
   ],
@@ -97,9 +97,9 @@ export const spa: DataFlowSpec = {
       type: 'set_content',
       object: 'browser',
       content: {
-        content_type: 'text',
+        type: 'text',
         url: 'https://mon.app',
-        content: "✅ SPA chargée (React) — prête à appeler l'API",
+        value: "✅ SPA chargée (React) — prête à appeler l'API",
       },
       keep_until: 'render',
     },
@@ -145,9 +145,9 @@ export const spa: DataFlowSpec = {
       id: 'render',
       object: 'browser',
       content: {
-        content_type: 'text',
+        type: 'text',
         url: 'https://mon.app/produits',
-        content: '📦 12 produits affichés',
+        value: '📦 12 produits affichés',
       },
     },
     {

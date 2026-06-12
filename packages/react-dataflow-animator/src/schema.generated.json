@@ -116,10 +116,10 @@
     "ObjectContent": {
       "type": "object",
       "properties": {
-        "content_type": {
+        "type": {
           "$ref": "#/definitions/ContentType"
         },
-        "content": {
+        "value": {
           "type": "string"
         },
         "language": {
@@ -225,23 +225,23 @@
     "SqlResponseBody": {
       "type": "object",
       "properties": {
-        "content_type": {
+        "type": {
           "type": "string",
           "enum": [
             "text",
             "table"
           ]
         },
-        "content": {
+        "value": {
           "type": "string",
-          "description": "Texte pur si content_type est 'text'"
+          "description": "Texte pur si type est 'text'"
         },
         "columns": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Colonnes du tableau si content_type est 'table'"
+          "description": "Colonnes du tableau si type est 'table'"
         },
         "rows_data": {
           "type": "array",
@@ -254,7 +254,7 @@
               ]
             }
           },
-          "description": "Lignes de données si content_type est 'table'"
+          "description": "Lignes de données si type est 'table'"
         }
       },
       "additionalProperties": false
@@ -275,14 +275,14 @@
     "PacketBody": {
       "type": "object",
       "properties": {
-        "content_type": {
+        "type": {
           "type": "string",
           "enum": [
             "text",
             "image"
           ]
         },
-        "content": {
+        "value": {
           "type": "string",
           "description": "Texte ou chemin d'image."
         },

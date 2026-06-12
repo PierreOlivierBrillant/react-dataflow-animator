@@ -48,7 +48,7 @@ export const clientServer: DataFlowSpec = {
       response_content: {
         header: '2 Lignes',
         body: {
-          content_type: 'table',
+          type: 'table',
           columns: ['id', 'nom'],
           rows_data: [
             [1, 'Alice'],
@@ -63,8 +63,8 @@ export const clientServer: DataFlowSpec = {
       packet_content: {
         header: '200 OK',
         body: {
-          content_type: 'text',
-          content: '<div>\n  <h2>Alice</h2>\n  <h2>Bob</h2>\n</div>',
+          type: 'text',
+          value: '<div>\n  <h2>Alice</h2>\n  <h2>Bob</h2>\n</div>',
           language: 'html',
         },
       },
@@ -126,8 +126,8 @@ export const clientServer: DataFlowSpec = {
           keep_until_end: true,
           content: {
             url: 'exemple.com/users',
-            content_type: 'text',
-            content: 'Alice\nBob',
+            type: 'text',
+            value: 'Alice\nBob',
           },
         },
         {

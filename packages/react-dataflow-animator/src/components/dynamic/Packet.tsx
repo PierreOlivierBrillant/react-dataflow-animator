@@ -40,17 +40,17 @@ const HttpPacket = defineAnimatable<{
       {renderedHeader}
       {body ? (
         <div className="rdfa-packet-body">
-          {body.content_type === 'image' ? (
-            <img src={body.content} alt="" />
-          ) : body.language && highlight && body.content ? (
+          {body.type === 'image' ? (
+            <img src={body.value} alt="" />
+          ) : body.language && highlight && body.value ? (
             <div
               className="rdfa-packet-surface rdfa-code"
               dangerouslySetInnerHTML={{
-                __html: highlight(body.content, body.language),
+                __html: highlight(body.value, body.language),
               }}
             />
           ) : (
-            <div className="rdfa-packet-surface">{body.content}</div>
+            <div className="rdfa-packet-surface">{body.value}</div>
           )}
         </div>
       ) : null}
@@ -93,9 +93,9 @@ const SqlResponsePacket = defineAnimatable<{
       <div className="rdfa-packet-header">{displayedHeader}</div>
       {body && (
         <div className="rdfa-packet-body">
-          {body.content_type === 'text' ? (
-            <div className="rdfa-packet-surface">{body.content}</div>
-          ) : body.content_type === 'table' ? (
+          {body.type === 'text' ? (
+            <div className="rdfa-packet-surface">{body.value}</div>
+          ) : body.type === 'table' ? (
             <div className="rdfa-packet-surface rdfa-sql-table-wrapper">
               <table className="rdfa-sql-table">
                 {body.columns && (

@@ -36,9 +36,9 @@ const spec: DataFlowSpec = {
       type: 'set_content',
       object: 'editor',
       content: {
-        content_type: 'code',
+        type: 'code',
         language: 'javascript',
-        content: 'const add = (a, b) => a + b;',
+        value: 'const add = (a, b) => a + b;',
       },
     },
     {
