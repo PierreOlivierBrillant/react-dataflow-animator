@@ -2,7 +2,9 @@ import type { CSSProperties, ReactNode } from 'react';
 
 /**
  * Types TypeScript de la spécification DataFlow.
- * Ils reflètent le JSON schema exposé dans `schema.ts` (utilisé par la page Doc API).
+ * Le JSON Schema (`schema.ts`, exposé par la page Doc API) est GÉNÉRÉ depuis ces types
+ * via `ts-json-schema-generator` (script `generate:schema`). Ne pas éditer le schéma
+ * manuellement — modifier ici puis régénérer.
  */
 
 export type Direction =

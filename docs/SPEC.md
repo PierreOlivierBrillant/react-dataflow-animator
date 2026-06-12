@@ -133,6 +133,14 @@ référence API générée depuis le JSON Schema). Buildé via
 - `subicon` accepte du **texte libre** en plus des icônes (react-icons).
 - `response_content.data` retiré (jamais rendu) ; seul `rows` est affiché.
 - Actions modélisées en **union discriminée** (TS + `oneOf` schéma) → validation réelle.
+- **`language` : divergence TS ↔ schéma (intentionnelle).** Le type TypeScript est
+  `HighlightLanguage | (string & {})` — n'importe quelle chaîne est valide à la
+  compilation pour ne pas casser les consommateurs. Mais le script
+  `packages/react-dataflow-animator/scripts/schema-patches.mjs` retire la branche
+  `{type:string}` libre du schéma généré et ne conserve que le `$ref` vers
+  `HighlightLanguage`. Conséquence : un langage hors de l'énumération passe le
+  compilateur TypeScript mais est rejeté par Ajv. C'est voulu : le schéma est plus strict
+  que les types pour préserver l'auto-complétion et la validation.
 - Une référence manquante (champ requis absent, id `wait_for` inconnu…) produit un
   **avertissement non bloquant** (visible avec `debug`) plutôt qu'un crash.
 - Coloration syntaxique : **Prism** (dépendance), remplaçable via la prop `highlight`.

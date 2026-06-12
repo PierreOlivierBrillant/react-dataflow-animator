@@ -16,4 +16,42 @@ pour la configuration VS Code.
 
 :::
 
+:::warning Mémoïsez votre spec
+
+Si la prop `spec` est un objet littéral défini dans le corps d'un composant parent, elle
+reçoit une **nouvelle identité référentielle** à chaque rendu. Le compilateur recompile
+alors toute la timeline et la mesure DOM (`useStageGeometry`) est invalidée inutilement.
+
+```tsx
+// ✗ — recompile à chaque rendu du parent
+<DataFlowPlayer spec={{ nodes: [...], timeline: [...] }} />
+
+// ✓ — stable : définie en dehors du composant ou protégée par useMemo
+const spec = useMemo(() => ({ nodes: [...], timeline: [...] }), []);
+<DataFlowPlayer spec={spec} />
+```
+
+:::
+
+:::warning `registerNodeIcon` / `registerSubIcon` — registre global
+
+Ces deux fonctions mutent un **registre au niveau module** : partagé entre toutes les
+instances du player et entre les requêtes en environnement SSR. Appelez-les **une seule
+fois au démarrage de l'application** (fichier d'entrée, `_app.tsx`, `layout.tsx`…),
+jamais dans un corps de composant ou un `useEffect`.
+
+:::
+
+:::note Divergence TS ↔ schéma JSON pour `language`
+
+Le type TypeScript de `language` est `HighlightLanguage | (string & {})` : n'importe
+quelle chaîne est acceptée à la compilation pour ne pas casser les consommateurs qui
+utilisent un highlighter personnalisé. Cependant, le schéma JSON publié est **plus
+strict** : le script `schema-patches.mjs` retire la branche `string` libre et ne
+conserve que l'énumération `HighlightLanguage`. Un langage hors de cette énumération
+passe le compilateur TypeScript mais est **rejeté par Ajv** lors de la validation du
+schéma.
+
+:::
+
 <ApiReference />

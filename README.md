@@ -60,6 +60,12 @@ export default function Example() {
 }
 ```
 
+> **Mémoïsez votre spec.** Si la spec est définie dans le corps d'un composant parent
+> (objet littéral inline ou calculé sans `useMemo`), elle reçoit une nouvelle identité à
+> chaque rendu. Le compilateur recompile alors toute la timeline et la mesure DOM
+> (`useStageGeometry`) est invalidée inutilement. Définissez la spec à l'extérieur du
+> composant, ou protégez-la avec `useMemo` / une valeur stable.
+
 ## Concepts en une page
 
 Une **spec** décrit trois choses :
@@ -101,6 +107,12 @@ registerSubIcon('kafka', <svg viewBox="0 0 24 24">{/* … */}</svg>);
 
 Une sous-icône peut aussi être un **texte libre** (`'v2'`, `'API'`, `'JWT'`),
 automatiquement rendu en pastille.
+
+> **Registre global.** `registerNodeIcon` et `registerSubIcon` mutent un registre au
+> niveau module — partagé entre toutes les instances du player et entre les requêtes en
+> environnement SSR. Appelez-les **une seule fois au démarrage de l'application**
+> (fichier d'entrée, `_app.tsx`, `layout.tsx`…), jamais dans un corps de composant ou
+> un `useEffect`.
 
 ## Documentation
 
