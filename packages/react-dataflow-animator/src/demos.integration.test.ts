@@ -33,10 +33,10 @@ function collectRefs(actions: Action[]): string[] {
 const KNOWN_BROKEN = new Set<string>();
 
 const demos: Array<[string, DataFlowSpec]> = [
-  ['clientServer', clientServer as unknown as DataFlowSpec],
-  ['microservices', microservices as unknown as DataFlowSpec],
-  ['signalr', signalr as unknown as DataFlowSpec],
-  ['spa', spa as unknown as DataFlowSpec],
+  ['clientServer', clientServer],
+  ['microservices', microservices],
+  ['signalr', signalr],
+  ['spa', spa],
 ];
 
 describe.each(demos)('demo %s', (name, spec) => {

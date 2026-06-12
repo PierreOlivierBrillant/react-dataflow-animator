@@ -17,6 +17,7 @@ export type {
   ObjectContent,
   PacketContent,
   PacketBody,
+  SqlResponseBody,
   SqlResponse,
   Direction,
   NodeType,

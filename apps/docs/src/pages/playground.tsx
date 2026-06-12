@@ -303,7 +303,7 @@ export default function PlaygroundPage() {
                       {
                         uri: 'http://react-dataflow-animator/schema.json',
                         fileMatch: ['*'],
-                        schema: dataFlowSchema as any,
+                        schema: dataFlowSchema,
                       },
                     ],
                   });

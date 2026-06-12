@@ -120,7 +120,7 @@ export interface PacketContent {
   body?: PacketBody;
 }
 
-interface SqlResponseBody {
+export interface SqlResponseBody {
   type?: 'text' | 'table';
   /** Texte pur si type est 'text' */
   value?: string;
