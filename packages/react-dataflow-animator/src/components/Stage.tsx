@@ -65,7 +65,7 @@ export function Stage({
     return map;
   }, [spec]);
 
-  const active = useMemo(() => evaluate(timeline, t), [timeline, t]);
+  const active = evaluate(timeline, t);
 
   const lineConnections = useMemo(() => collectArrowConnections(spec), [spec]);
   const portOffsets = useMemo(
@@ -75,21 +75,18 @@ export function Stage({
 
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
   // actif (avec fondu d'apparition/disparition).
-  const contentByNode = useMemo(() => {
-    const map: Record<string, { content: ObjectContent; opacity: number }> = {};
-    for (const obj of spec.nodes) {
-      if (obj.content) map[obj.id] = { content: obj.content, opacity: 1 };
+  const contentByNode: Record<string, { content: ObjectContent; opacity: number }> = {};
+  for (const obj of spec.nodes) {
+    if (obj.content) contentByNode[obj.id] = { content: obj.content, opacity: 1 };
+  }
+  for (const a of active) {
+    if (a.clip.kind === 'set_content') {
+      contentByNode[a.clip.objectId] = {
+        content: a.clip.content,
+        opacity: clipOpacity(a.clip, t),
+      };
     }
-    for (const a of active) {
-      if (a.clip.kind === 'set_content') {
-        map[a.clip.objectId] = {
-          content: a.clip.content,
-          opacity: clipOpacity(a.clip, t),
-        };
-      }
-    }
-    return map;
-  }, [spec, active, t]);
+  }
 
   const loadingNodes = useMemo(() => {
     const set = new Set<string>();
