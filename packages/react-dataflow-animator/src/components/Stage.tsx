@@ -24,6 +24,7 @@ import {
 } from '../engine/portOffsets';
 import { connection, pathTip } from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
+import { buildStageSignature } from './stageSignature';
 import { StaticNode } from './nodes/StaticNode';
 import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
@@ -77,12 +78,7 @@ export function Stage({
   density = 'comfortable',
   debug,
 }: StageProps) {
-  const signature = useMemo(
-    () =>
-      `${spec.direction ?? 'left-to-right'}|` +
-      spec.nodes.map((o) => o.id).join(','),
-    [spec]
-  );
+  const signature = useMemo(() => buildStageSignature(spec), [spec]);
 
   const { stageRef, geometry, aspect, width, height } =
     useStageGeometry(signature);
