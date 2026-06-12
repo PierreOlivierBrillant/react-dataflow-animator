@@ -6,7 +6,6 @@ import type {
   ObjectContent,
 } from '../types';
 import {
-  clamp,
   evaluate,
   easeInOutCubic,
   type ArrowClip,
@@ -25,41 +24,12 @@ import {
 import { connection, pathTip } from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { buildStageSignature } from './stageSignature';
+import { clipOpacity } from './clipOpacity';
 import { StaticNode } from './nodes/StaticNode';
 import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
 import { CommentBubble } from './CommentBubble';
 import { DebugOverlay } from './DebugOverlay';
-
-/** Durée (ms) du fondu d'apparition/disparition (paquets, contenus). */
-const FADE_MS = 250;
-
-/**
- * Opacité d'un clip avec fondu : entrée pendant le hold d'apparition (ou sur
- * FADE_MS s'il n'y en a pas), sortie sur FADE_MS avant la disparition.
- * Pas de fondu de sortie si `keepEnd` est vrai (le clip doit rester visible
- * jusqu'à la toute fin de la chronologie).
- */
-function clipOpacity(
-  clip: {
-    startMs: number;
-    animStartMs: number;
-    visibleUntilMs: number;
-    keepEnd?: boolean;
-  },
-  t: number
-): number {
-  const inDur = clip.animStartMs - clip.startMs;
-  const fadeIn =
-    inDur > 0
-      ? clamp((t - clip.startMs) / inDur, 0, 1)
-      : clamp((t - clip.startMs) / FADE_MS, 0, 1);
-  if (clip.keepEnd) return fadeIn;
-  const outStart = clip.visibleUntilMs - FADE_MS;
-  const fadeOut =
-    t > outStart ? clamp((clip.visibleUntilMs - t) / FADE_MS, 0, 1) : 1;
-  return Math.min(fadeIn, fadeOut);
-}
 
 export interface StageProps {
   spec: DataFlowSpec;
