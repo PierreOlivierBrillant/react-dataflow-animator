@@ -30,9 +30,7 @@ function collectRefs(actions: Action[]): string[] {
   return refs;
 }
 
-// clientServer a un wait_for:'dbwork' sans action id:'dbwork' correspondante.
-// Bug à corriger dans un PR séparé. Les 2 assertions concernées sont marquées it.fails.
-const KNOWN_BROKEN = new Set(['clientServer']);
+const KNOWN_BROKEN = new Set<string>();
 
 const demos: Array<[string, DataFlowSpec]> = [
   ['clientServer', clientServer as unknown as DataFlowSpec],
