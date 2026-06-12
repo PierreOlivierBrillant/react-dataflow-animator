@@ -33,6 +33,10 @@ interface ClipBase {
   stepIndex: number;
   /** Vrai si l'action source avait keep_until_end : supprime le fondu de sortie. */
   keepEnd?: boolean;
+  /** Durée du fondu d'apparition (ms). Absent = comportement par défaut. */
+  fadeInMs?: number;
+  /** Durée du fondu de disparition (ms). Absent = comportement par défaut (250 ms). */
+  fadeOutMs?: number;
 }
 
 export interface MoveClip extends ClipBase {

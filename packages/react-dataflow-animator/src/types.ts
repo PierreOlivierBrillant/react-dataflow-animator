@@ -182,6 +182,20 @@ interface ActionBase {
   keep_until_next?: boolean;
   /** Si vrai, reste visible jusqu'à la fin de la chronologie. */
   keep_until_end?: boolean;
+  /**
+   * Durée du fondu d'apparition en ms. Défaut: période de maintien de départ
+   * pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.
+   * @minimum 0
+   * @multipleOf 1
+   */
+  fade_in_ms?: number;
+  /**
+   * Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée.
+   * Sans effet si `keep_until_end` est vrai.
+   * @minimum 0
+   * @multipleOf 1
+   */
+  fade_out_ms?: number;
 }
 
 /** Déplace un paquet de `from` vers `to`. */

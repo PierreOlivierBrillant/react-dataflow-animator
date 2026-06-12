@@ -161,6 +161,8 @@ function compileAction(
     visibleUntilMs: occupiedEndMs,
     stepIndex,
     keepEnd,
+    fadeInMs: action.fade_in_ms,
+    fadeOutMs: action.fade_out_ms,
   };
 
   switch (action.type) {

@@ -78,3 +78,67 @@ describe('clipOpacity — keepEnd supprime le fondu de sortie', () => {
     expect(clipOpacity(clip, 1500)).toBe(1);
   });
 });
+
+describe('clipOpacity — fadeInMs personnalisé', () => {
+  it("fade_in_ms: 100 remplace FADE_MS pour le fondu d'entrée", () => {
+    const clip = {
+      startMs: 0,
+      animStartMs: 0,
+      visibleUntilMs: 99_999,
+      fadeInMs: 100,
+    };
+    expect(clipOpacity(clip, 0)).toBe(0);
+    expect(clipOpacity(clip, 50)).toBeCloseTo(0.5);
+    expect(clipOpacity(clip, 100)).toBe(1);
+    expect(clipOpacity(clip, 200)).toBe(1);
+  });
+
+  it('fade_in_ms: 0 = apparition instantanée', () => {
+    const clip = {
+      startMs: 0,
+      animStartMs: 0,
+      visibleUntilMs: 99_999,
+      fadeInMs: 0,
+    };
+    expect(clipOpacity(clip, 0)).toBe(1);
+    expect(clipOpacity(clip, 500)).toBe(1);
+  });
+
+  it('fade_in_ms remplace aussi le hold de départ (move)', () => {
+    // Pour un move, inDur = APPEAR_HOLD = 300 ; fadeInMs = 100 prend le dessus.
+    const clip = {
+      startMs: 0,
+      animStartMs: APPEAR_HOLD,
+      visibleUntilMs: 99_999,
+      fadeInMs: 100,
+    };
+    expect(clipOpacity(clip, 0)).toBe(0);
+    expect(clipOpacity(clip, 50)).toBeCloseTo(0.5);
+    expect(clipOpacity(clip, 100)).toBe(1);
+  });
+});
+
+describe('clipOpacity — fadeOutMs personnalisé', () => {
+  it('fade_out_ms: 100 remplace FADE_MS pour le fondu de sortie', () => {
+    const clip = {
+      startMs: 0,
+      animStartMs: 0,
+      visibleUntilMs: 1000,
+      fadeOutMs: 100,
+    };
+    expect(clipOpacity(clip, 899)).toBe(1);
+    expect(clipOpacity(clip, 950)).toBeCloseTo(0.5);
+    expect(clipOpacity(clip, 1000)).toBe(0);
+  });
+
+  it("fade_out_ms: 0 = disparition instantanée (opacité 1 jusqu'à la fin)", () => {
+    const clip = {
+      startMs: 0,
+      animStartMs: 0,
+      visibleUntilMs: 1000,
+      fadeOutMs: 0,
+    };
+    expect(clipOpacity(clip, 999)).toBe(1);
+    expect(clipOpacity(clip, 1000)).toBe(1);
+  });
+});

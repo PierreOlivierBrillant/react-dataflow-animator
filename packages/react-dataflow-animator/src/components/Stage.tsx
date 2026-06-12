@@ -75,9 +75,13 @@ export function Stage({
 
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
   // actif (avec fondu d'apparition/disparition).
-  const contentByNode: Record<string, { content: ObjectContent; opacity: number }> = {};
+  const contentByNode: Record<
+    string,
+    { content: ObjectContent; opacity: number }
+  > = {};
   for (const obj of spec.nodes) {
-    if (obj.content) contentByNode[obj.id] = { content: obj.content, opacity: 1 };
+    if (obj.content)
+      contentByNode[obj.id] = { content: obj.content, opacity: 1 };
   }
   for (const a of active) {
     if (a.clip.kind === 'set_content') {

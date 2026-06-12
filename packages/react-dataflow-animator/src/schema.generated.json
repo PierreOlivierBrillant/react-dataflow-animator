@@ -399,6 +399,18 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
         "type": {
           "type": "string",
           "const": "move"
@@ -451,6 +463,18 @@
         "keep_until_end": {
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
         },
         "type": {
           "type": "string",
@@ -515,6 +539,18 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
         "type": {
           "type": "string",
           "const": "parallel"
@@ -562,6 +598,18 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
         "type": {
           "type": "string",
           "const": "loading"
@@ -605,6 +653,18 @@
         "keep_until_end": {
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
         },
         "type": {
           "type": "string",
@@ -654,6 +714,18 @@
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
         },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
         "type": {
           "type": "string",
           "const": "comment"
@@ -702,6 +774,18 @@
         "keep_until_end": {
           "type": "boolean",
           "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
         },
         "type": {
           "type": "string",
