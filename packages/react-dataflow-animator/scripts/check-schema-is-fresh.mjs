@@ -2,6 +2,7 @@ import { createGenerator } from 'ts-json-schema-generator';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
+import { applySchemaPatches } from './schema-patches.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageRoot = join(__dirname, '..');
@@ -18,8 +19,11 @@ const config = {
 };
 
 const generated =
-  JSON.stringify(createGenerator(config).createSchema(config.type), null, 2) +
-  '\n';
+  JSON.stringify(
+    applySchemaPatches(createGenerator(config).createSchema(config.type)),
+    null,
+    2,
+  ) + '\n';
 const committed = readFileSync(
   join(packageRoot, 'src/schema.generated.json'),
   'utf8',
