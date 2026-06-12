@@ -5,18 +5,12 @@ import {
   type DataFlowSpec,
   type DataFlowPlayerProps,
   dataFlowSchema,
-} from '../../../../packages/react-dataflow-animator/src';
+} from 'react-dataflow-animator';
 import { demos, demosById } from '../site-content/demos';
 import type { SpecError } from '../site-content/validateSpec';
 import { motion } from 'motion/react';
 import { Copy, Check, AlertCircle, ChevronDown, WrapText } from 'lucide-react';
 import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
-
-function initialDemoId(): string {
-  if (typeof window === 'undefined') return demos[0].id;
-  const id = new URLSearchParams(window.location.search).get('demo');
-  return id && demosById[id] ? id : demos[0].id;
-}
 
 // ─── Monaco cross-reference markers ──────────────────────────────────────────
 
@@ -81,13 +75,11 @@ function clearMonacoRefMarkers(
 /* ────────────── Component ────────────── */
 
 export default function PlaygroundPage() {
-  const [demoId, setDemoId] = useState(initialDemoId);
+  const [demoId, setDemoId] = useState<string>(demos[0].id);
   const [jsonText, setJsonText] = useState(() =>
-    JSON.stringify(demosById[initialDemoId()].spec, null, 2)
+    JSON.stringify(demos[0].spec, null, 2)
   );
-  const [spec, setSpec] = useState<DataFlowSpec | null>(
-    () => demosById[initialDemoId()].spec
-  );
+  const [spec, setSpec] = useState<DataFlowSpec | null>(() => demos[0].spec);
   const [parseError, setParseError] = useState<string | null>(null);
 
   const [schemaErrors, setSchemaErrors] = useState<SpecError[]>([]);
@@ -101,14 +93,31 @@ export default function PlaygroundPage() {
   // Resizing state
   const [leftWidth, setLeftWidth] = useState(44);
   const [isResizing, setIsResizing] = useState(false);
+  // false during SSR and initial client render — set to true after hydration
+  const [mounted, setMounted] = useState(false);
 
-  // Synchronise url & initial state on load
+  // On mount: mark hydration done and sync state to ?demo= URL parameter
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.set('demo', demoId);
-      window.history.replaceState({}, '', url);
+    setMounted(true);
+    const id = new URLSearchParams(window.location.search).get('demo');
+    if (id && demosById[id] && id !== demos[0].id) {
+      setDemoId(id);
+      setJsonText(JSON.stringify(demosById[id].spec, null, 2));
+      setSpec(demosById[id].spec);
     }
+  }, []);
+
+  // Sync URL when demoId changes — skip the initial mount to avoid
+  // overwriting a ?demo= param before the URL-reading effect above has run.
+  const didSyncUrlRef = useRef(false);
+  useEffect(() => {
+    if (!didSyncUrlRef.current) {
+      didSyncUrlRef.current = true;
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('demo', demoId);
+    window.history.replaceState({}, '', url);
   }, [demoId]);
 
   // Handle resizing
@@ -207,7 +216,7 @@ export default function PlaygroundPage() {
             className="flex flex-col w-full md:min-w-[340px] flex-1 md:flex-none border-b md:border-b-0 overflow-hidden bg-surface-alt"
             style={{
               width:
-                typeof window !== 'undefined' && window.innerWidth >= 768
+                mounted && window.innerWidth >= 768
                   ? `${leftWidth}%`
                   : undefined,
             }}

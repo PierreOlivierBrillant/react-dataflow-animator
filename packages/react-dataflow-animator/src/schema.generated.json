@@ -51,7 +51,7 @@
         "bottom-to-top",
         "circular"
       ],
-      "description": "Types TypeScript de la spécification DataFlow. Ils reflètent le JSON schema exposé dans `schema.ts` (utilisé par la page Doc API)."
+      "description": "Types TypeScript de la spécification DataFlow. Le JSON Schema (`schema.ts`, exposé par la page Doc API) est GÉNÉRÉ depuis ces types via `ts-json-schema-generator` (script `generate:schema`). Ne pas éditer le schéma manuellement — modifier ici puis régénérer."
     },
     "Node": {
       "type": "object",
