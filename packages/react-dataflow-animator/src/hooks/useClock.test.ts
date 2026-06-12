@@ -167,4 +167,30 @@ describe('useClock', () => {
     );
     expect(result.current.playing).toBe(true);
   });
+
+  it('tick géant (onglet inactif) : t avance au plus de MAX_DT × speed', () => {
+    // MAX_DT = 100 ms, défini dans useClock.ts. Si l'onglet est resté inactif
+    // plusieurs minutes, rAF reçoit un dt énorme — le plafond empêche le saut.
+    const MAX_DT = 100;
+    let rafCb: ((t: number) => void) | null = null;
+    vi.stubGlobal('requestAnimationFrame', (cb: (t: number) => void) => {
+      rafCb = cb;
+      return 0;
+    });
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+
+    const { result } = renderHook(() =>
+      useClock({ durationMs: DURATION, speed: 2 })
+    );
+    act(() => {
+      result.current.play();
+    });
+
+    // Simule un retour après 1 minute d'onglet en arrière-plan.
+    act(() => {
+      rafCb!(performance.now() + 60_000);
+    });
+
+    expect(result.current.t).toBe(MAX_DT * 2);
+  });
 });

@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clamp } from '../engine/timeline';
 
+// Onglet mis en arrière-plan → rAF gelé → dt peut valoir plusieurs minutes
+// au retour. Sans plafond, t sauterait à la fin (ou à une position arbitraire
+// en mode loop).
+const MAX_DT = 100; // ms
+
 /**
  * Horloge de lecture pilotée par requestAnimationFrame.
  *
@@ -97,7 +102,7 @@ export function useClock(options: UseClockOptions): Clock {
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
-      const dt = now - last;
+      const dt = Math.min(now - last, MAX_DT);
       last = now;
       let next = tRef.current + dt * speed;
       let stop = false;
