@@ -77,8 +77,24 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
       `${startTip.x - HEAD * Math.cos(angStart + Math.PI / 6)},${startTip.y - HEAD * Math.sin(angStart + Math.PI / 6)}`;
 
     // Chemin visible (polyline) de start jusqu'à la pointe.
+    // Les extrémités sont raccourcies jusqu'à la base du triangle de la flèche
+    // pour que l'épaisseur du trait ne dépasse pas sous la pointe.
     const pts = visiblePath(conn, progress);
-    const ptStr = pts.map((p) => `${p.x},${p.y}`).join(' ');
+    const ptsAdjusted = [...pts];
+    if (renderForward && progress > 0.02 && ptsAdjusted.length >= 2) {
+      const last = ptsAdjusted.length - 1;
+      ptsAdjusted[last] = {
+        x: tip.x - HEAD * Math.cos(ang),
+        y: tip.y - HEAD * Math.sin(ang),
+      };
+    }
+    if (renderBackward && progress > 0.02 && ptsAdjusted.length >= 2) {
+      ptsAdjusted[0] = {
+        x: startTip.x - HEAD * Math.cos(angStart),
+        y: startTip.y - HEAD * Math.sin(angStart),
+      };
+    }
+    const ptStr = ptsAdjusted.map((p) => `${p.x},${p.y}`).join(' ');
 
     // Position du label de texte au milieu du chemin complet.
     const mid = pathTip(conn, 0.5);
