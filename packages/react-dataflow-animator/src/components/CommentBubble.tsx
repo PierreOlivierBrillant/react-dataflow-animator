@@ -9,7 +9,7 @@ export const CommentBubble = memo(function CommentBubble({
   stageW,
   stageH,
 }: {
-  node: NodeGeom;
+  node?: NodeGeom;
   text: string;
   opacity: number;
   stageW: number;
@@ -29,6 +29,29 @@ export const CommentBubble = memo(function CommentBubble({
   }, []);
 
   const PAD = 8;
+
+  if (!node) {
+    // Omniscient : centré en haut du stage, sans queue de bulle.
+    let left = stageW / 2 - size.w / 2;
+    if (size.w > 0 && stageW > 0) {
+      left = clamp(left, PAD, Math.max(PAD, stageW - size.w - PAD));
+    }
+    return (
+      <div
+        ref={ref}
+        className="rdfa-comment rdfa-comment--omniscient"
+        style={{
+          left,
+          top: PAD,
+          opacity,
+          visibility: size.w === 0 || size.h === 0 ? 'hidden' : 'visible',
+        }}
+      >
+        {text}
+      </div>
+    );
+  }
+
   const nodeTop = node.y - node.height / 2;
   const nodeBottom = node.y + node.height / 2;
   const below = size.h > 0 && nodeTop - 8 - size.h < PAD;

@@ -558,3 +558,34 @@ describe('compile — wait', () => {
     expect(a.startMs).toBe(800 + STEP_GAP);
   });
 });
+
+describe('compile — commentaire omniscient', () => {
+  it('compile un comment sans object en clip sans nextToId', () => {
+    const { timeline, warnings } = compile(
+      specOf([{ type: 'comment', id: 'C', text: 'Bonjour' }])
+    );
+    const clip = timeline.clips.find((c) => c.id === 'C')!;
+    expect(clip).toBeDefined();
+    expect(clip.kind).toBe('comment');
+    // @ts-expect-error nextToId est optionnel — on vérifie qu'il est absent
+    expect(clip.nextToId).toBeUndefined();
+    expect(warnings).toHaveLength(0);
+  });
+
+  it('émet un avertissement quand text est absent', () => {
+    const action = { type: 'comment', id: 'C', object: 'a' } as Action;
+    const { timeline, warnings } = compile(specOf([action]));
+    expect(timeline.clips).toHaveLength(0);
+    expect(warnings[0]).toMatch(/text requis/);
+  });
+
+  it('compile un comment avec object en clip avec nextToId', () => {
+    const { timeline } = compile(
+      specOf([{ type: 'comment', id: 'C', object: 'a', text: 'ok' }])
+    );
+    const clip = timeline.clips.find((c) => c.id === 'C')! as {
+      nextToId?: string;
+    };
+    expect(clip.nextToId).toBe('a');
+  });
+});

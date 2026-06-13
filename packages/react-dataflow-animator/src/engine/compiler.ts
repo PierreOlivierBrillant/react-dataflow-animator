@@ -241,14 +241,14 @@ function compileAction(
       break;
     }
     case 'comment': {
-      if (!action.object || !action.text) {
-        ctx.warnings.push(`comment "${id}": object/text requis.`);
+      if (!action.text) {
+        ctx.warnings.push(`comment "${id}": text requis.`);
         break;
       }
       const clip: CommentClip = {
         ...base,
         kind: 'comment',
-        nextToId: action.object,
+        ...(action.object ? { nextToId: action.object } : {}),
         text: action.text,
       };
       push(clip);

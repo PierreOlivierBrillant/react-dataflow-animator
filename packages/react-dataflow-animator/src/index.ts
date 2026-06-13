@@ -11,6 +11,7 @@ export type {
   DataFlowPlayerProps,
   Node,
   Connection,
+  Zone,
   Packet,
   Action,
   ActionType,

@@ -109,6 +109,30 @@ describe('Stage — rendu à t fixe', () => {
     expect(bubble!.textContent).toContain('Réponse reçue');
   });
 
+  it('rend un commentaire omniscient (sans object) en haut du stage', () => {
+    const spec: DataFlowSpec = {
+      nodes: BASE_NODES,
+      packets: [],
+      timeline: [
+        { type: 'comment', text: 'Étape 1 : connexion', duration: 500 },
+      ],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={250}
+        highlight={highlightCode}
+      />
+    );
+    const bubble = container.querySelector('.rdfa-comment--omniscient');
+    expect(bubble).toBeTruthy();
+    expect(bubble!.textContent).toContain('Étape 1 : connexion');
+    // Pas de queue de bulle
+    expect(bubble!.querySelector('.rdfa-comment-tail')).toBeNull();
+  });
+
   it('rend le spinner pendant une action loading', () => {
     const spec: DataFlowSpec = {
       nodes: BASE_NODES,
@@ -181,6 +205,70 @@ describe('Stage — rendu à t fixe', () => {
       (n) => n.getAttribute('data-node-id')
     );
     expect(ids).toContain('server');
+  });
+
+  it('rend une zone englobant deux nœuds', () => {
+    const spec: DataFlowSpec = {
+      nodes: BASE_NODES,
+      packets: [],
+      zones: [{ id: 'z1', contains: ['client', 'server'], label: 'Réseau' }],
+      timeline: [],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    expect(container.querySelector('.rdfa-zone')).toBeTruthy();
+    expect(container.querySelector('.rdfa-zone-label')?.textContent).toBe(
+      'Réseau'
+    );
+  });
+
+  it('applique la couleur personnalisée via la variable CSS', () => {
+    const spec: DataFlowSpec = {
+      nodes: BASE_NODES,
+      packets: [],
+      zones: [{ contains: ['client'], color: '#ff0000' }],
+      timeline: [],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    const zone = container.querySelector('.rdfa-zone') as HTMLElement;
+    expect(zone).toBeTruthy();
+    expect(zone.style.getPropertyValue('--rdfa-zone-color')).toBe('#ff0000');
+  });
+
+  it("rend deux zones dont une est imbriquee dans l'autre", () => {
+    const spec: DataFlowSpec = {
+      nodes: BASE_NODES,
+      packets: [],
+      zones: [
+        { id: 'inner', contains: ['client'], label: 'Client' },
+        { id: 'outer', contains: ['inner', 'server'], label: 'Tout' },
+      ],
+      timeline: [],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    expect(container.querySelectorAll('.rdfa-zone').length).toBe(2);
+  });
+
+  it("n'affiche pas une zone dont les IDs sont tous inconnus", () => {
+    const spec: DataFlowSpec = {
+      nodes: BASE_NODES,
+      packets: [],
+      zones: [{ contains: ['inexistant'] }],
+      timeline: [],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    expect(container.querySelector('.rdfa-zone')).toBeNull();
   });
 
   it('cache un nœud après set_visible:false (transition terminée)', () => {

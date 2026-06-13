@@ -102,6 +102,18 @@ export interface Node {
   content?: ObjectContent;
 }
 
+/** Région rectangulaire englobant un groupe de nœuds et/ou d'autres zones. */
+export interface Zone {
+  /** Identifiant optionnel (requis pour être référencé dans le `contains` d'une autre zone). */
+  id?: string;
+  /** IDs des nœuds et/ou des zones englobés. */
+  contains: string[];
+  /** Couleur CSS de la bordure et du fond semi-transparent. */
+  color?: string;
+  /** Label affiché en haut à gauche de la zone. */
+  label?: string;
+}
+
 /** Lien/flèche permanent (décor), affiché dès l'initialisation. */
 export interface Connection {
   /** Identifiant optionnel. */
@@ -257,11 +269,11 @@ interface SetContentAction extends ActionBase {
   content: ObjectContent;
 }
 
-/** Affiche une bulle de commentaire près d'un nœud. */
+/** Affiche une bulle de commentaire près d'un nœud, ou en haut du stage si `object` est omis. */
 interface CommentAction extends ActionBase {
   type: 'comment';
-  /** ID du nœud près duquel afficher le commentaire. */
-  object: string;
+  /** ID du nœud près duquel afficher le commentaire. Omis = commentaire omniscient (haut du stage). */
+  object?: string;
   text: string;
 }
 
@@ -309,6 +321,8 @@ export interface DataFlowSpec {
   packets: Packet[];
   /** Flèches/liens permanents (décor) affichés dès l'initialisation. */
   connections?: Connection[];
+  /** Régions rectangulaires affichées en arrière-plan autour d'un groupe de nœuds. */
+  zones?: Zone[];
   timeline: Action[];
 }
 

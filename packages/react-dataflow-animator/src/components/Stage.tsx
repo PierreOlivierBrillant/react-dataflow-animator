@@ -10,6 +10,7 @@ import type {
   Packet as PacketSpec,
   Highlighter,
   ObjectContent,
+  Zone,
 } from '../types';
 import {
   evaluate,
@@ -50,6 +51,81 @@ const useIsoLayoutEffect =
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+/** Espacement minimum (px) entre un élément contenu et la bordure de sa zone. */
+const ZONE_PADDING = 20;
+/** Espace vertical (px) entre le bas du visuel d'un nœud et le haut de son label. */
+const NODE_LABEL_GAP = 6;
+
+interface ZoneBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Calcule les bornes (px, relatives au Stage) de chaque zone.
+ * Les zones internes sont résolues avant les zones qui les contiennent.
+ */
+function computeZoneBounds(
+  zones: Zone[] | undefined,
+  geometry: GeometryMap
+): Record<string, ZoneBounds> {
+  if (!zones?.length) return {};
+
+  const keys = zones.map((z, i) => z.id ?? `__zone_${i}`);
+  const computed: Record<string, ZoneBounds> = {};
+
+  const tryOne = (zone: Zone, key: string): boolean => {
+    if (computed[key]) return false;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (const id of zone.contains) {
+      const g = geometry[id];
+      if (g) {
+        const lh = g.labelH ?? 0;
+        minX = Math.min(minX, g.x - g.width / 2);
+        maxX = Math.max(maxX, g.x + g.width / 2);
+        minY = Math.min(minY, g.y - g.height / 2);
+        maxY = Math.max(
+          maxY,
+          g.y + g.height / 2 + (lh > 0 ? NODE_LABEL_GAP + lh : 0)
+        );
+      } else if (computed[id]) {
+        const b = computed[id];
+        minX = Math.min(minX, b.x);
+        maxX = Math.max(maxX, b.x + b.width);
+        minY = Math.min(minY, b.y);
+        maxY = Math.max(maxY, b.y + b.height);
+      } else if (keys.includes(id)) {
+        return false; // sous-zone pas encore calculée
+      }
+      // ID inconnu → ignoré silencieusement
+    }
+    if (minX === Infinity) return false;
+    computed[key] = {
+      x: minX - ZONE_PADDING,
+      y: minY - ZONE_PADDING,
+      width: maxX - minX + 2 * ZONE_PADDING,
+      height: maxY - minY + 2 * ZONE_PADDING,
+    };
+    return true;
+  };
+
+  // Point fixe : continue tant que des zones sont résolues (gère l'imbrication).
+  let progress = true;
+  while (progress) {
+    progress = false;
+    zones.forEach((zone, i) => {
+      if (tryOne(zone, keys[i])) progress = true;
+    });
+  }
+
+  return computed;
 }
 
 export interface StageProps {
@@ -242,6 +318,11 @@ export function Stage({
     [layout, geometry, width, height]
   );
 
+  const zoneBounds = useMemo(
+    () => computeZoneBounds(spec.zones, geometry),
+    [spec.zones, geometry]
+  );
+
   return (
     <div
       className="rdfa-stage"
@@ -255,6 +336,32 @@ export function Stage({
         } as CSSProperties
       }
     >
+      {/* Couche zones : derrière flèches et nœuds */}
+      {spec.zones?.map((zone, i) => {
+        const key = zone.id ?? `__zone_${i}`;
+        const b = zoneBounds[key];
+        if (!b) return null;
+        return (
+          <div
+            key={zone.id ?? i}
+            className="rdfa-zone"
+            style={
+              {
+                left: b.x,
+                top: b.y,
+                width: b.width,
+                height: b.height,
+                ...(zone.color ? { '--rdfa-zone-color': zone.color } : {}),
+              } as CSSProperties
+            }
+          >
+            {zone.label ? (
+              <span className="rdfa-zone-label">{zone.label}</span>
+            ) : null}
+          </div>
+        );
+      })}
+
       {/* Couche arrière : flèches */}
       <svg className="rdfa-arrow-svg">
         {/* Lignes de base */}
@@ -375,8 +482,11 @@ export function Stage({
         {active.map((a) => {
           if (a.clip.kind !== 'comment') return null;
           const clip = a.clip as CommentClip;
-          const n = effectiveGeometry[clip.nextToId];
-          if (!n) return null;
+          const n = clip.nextToId
+            ? effectiveGeometry[clip.nextToId]
+            : undefined;
+          // nextToId fourni mais nœud introuvable (mauvais ID) → on ignore
+          if (clip.nextToId && !n) return null;
           return (
             <CommentBubble
               key={clip.id}

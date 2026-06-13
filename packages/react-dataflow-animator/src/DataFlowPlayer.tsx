@@ -9,6 +9,7 @@ import {
 import './styles/dataflow.css';
 import type { DataFlowPlayerProps } from './types';
 import { compile } from './engine/compiler';
+import { nextStop, prevStop } from './engine/timeline';
 import { useClock } from './hooks/useClock';
 import { highlightCode } from './highlight/highlight';
 import { Stage } from './components/Stage';
@@ -79,12 +80,33 @@ export function DataFlowPlayer({
 
   const heightValue = typeof height === 'number' ? `${height}px` : height;
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!controls) return;
+      if (e.key === ' ') {
+        e.preventDefault();
+        clock.toggle();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        clock.pause();
+        clock.seek(nextStop(timeline, clock.t));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        clock.pause();
+        clock.seek(prevStop(timeline, clock.t));
+      }
+    },
+    [controls, clock, timeline]
+  );
+
   return (
     <div
       ref={rootRef}
       className={`rdfa-player${className ? ` ${className}` : ''}`}
       data-theme={theme}
       style={{ height: heightValue, ...style }}
+      tabIndex={controls ? 0 : undefined}
+      onKeyDown={controls ? handleKeyDown : undefined}
     >
       {fallback && !isClient ? (
         <div className="rdfa-stage rdfa-fallback">{fallback}</div>

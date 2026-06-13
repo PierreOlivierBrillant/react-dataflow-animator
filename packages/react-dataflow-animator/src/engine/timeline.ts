@@ -72,8 +72,8 @@ export interface SetContentClip extends ClipBase {
 
 export interface CommentClip extends ClipBase {
   kind: 'comment';
-  /** ID du nœud statique de référence. */
-  nextToId: string;
+  /** ID du nœud statique de référence. Absent = commentaire omniscient (haut du stage). */
+  nextToId?: string;
   text: string;
 }
 

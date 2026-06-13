@@ -28,6 +28,13 @@
           },
           "description": "Flèches/liens permanents (décor) affichés dès l'initialisation."
         },
+        "zones": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Zone"
+          },
+          "description": "Régions rectangulaires affichées en arrière-plan autour d'un groupe de nœuds."
+        },
         "timeline": {
           "type": "array",
           "items": {
@@ -369,6 +376,35 @@
         "animated"
       ],
       "description": "Style de ligne (terminologie SVG/CSS). `full` est accepté en alias de `solid`."
+    },
+    "Zone": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifiant optionnel (requis pour être référencé dans le `contains` d'une autre zone)."
+        },
+        "contains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "IDs des nœuds et/ou des zones englobés."
+        },
+        "color": {
+          "type": "string",
+          "description": "Couleur CSS de la bordure et du fond semi-transparent."
+        },
+        "label": {
+          "type": "string",
+          "description": "Label affiché en haut à gauche de la zone."
+        }
+      },
+      "required": [
+        "contains"
+      ],
+      "additionalProperties": false,
+      "description": "Région rectangulaire englobant un groupe de nœuds et/ou d'autres zones."
     },
     "Action": {
       "anyOf": [
@@ -800,7 +836,7 @@
         },
         "object": {
           "type": "string",
-          "description": "ID du nœud près duquel afficher le commentaire."
+          "description": "ID du nœud près duquel afficher le commentaire. Omis = commentaire omniscient (haut du stage)."
         },
         "text": {
           "type": "string"
@@ -808,11 +844,10 @@
       },
       "required": [
         "type",
-        "object",
         "text"
       ],
       "additionalProperties": false,
-      "description": "Affiche une bulle de commentaire près d'un nœud."
+      "description": "Affiche une bulle de commentaire près d'un nœud, ou en haut du stage si `object` est omis."
     },
     "HighlightAction": {
       "type": "object",
