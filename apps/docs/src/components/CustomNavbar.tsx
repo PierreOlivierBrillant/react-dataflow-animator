@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import Link from '@docusaurus/Link';
 import { useLocation } from '@docusaurus/router';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 import { Menu, X, Search, BookOpen, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -45,7 +46,7 @@ export function CustomNavbar() {
             : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-5 h-16 flex items-center gap-4 w-full">
+        <div className="w-full px-5 h-16 flex items-center gap-4">
           {/* Logo */}
           <Link
             to="/"
@@ -131,10 +132,10 @@ export function CustomNavbar() {
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-2.5 py-1.5 text-sm font-medium text-white/70 hover:text-white border border-white/[0.08] hover:border-white/20 rounded-lg transition-all no-underline hover:no-underline bg-white/[.03]"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/70 hover:text-white border border-white/[0.08] hover:border-white/20 rounded-lg transition-all no-underline hover:no-underline bg-white/[.03]"
               >
                 <FaGithub size={14} />
-                <span className="hidden sm:inline text-xs">GitHub</span>
+                <span className="hidden sm:inline">GitHub</span>
               </a>
             </div>
 
@@ -202,12 +203,14 @@ interface NavLinkProps {
 }
 
 function NavLink({ to, label, icon, exact = false }: NavLinkProps) {
-  const location = useLocation();
-  const currentPath = location.pathname;
+  const currentPath = useLocation().pathname;
+  // `to` est relatif à la racine du site ; useLocation renvoie le pathname réel,
+  // baseUrl compris (/react-dataflow-animator/…). On compare donc sur la même base.
+  const target = useBaseUrl(to);
 
   const isActive = exact
-    ? currentPath === to || currentPath === `${to}/`
-    : currentPath.startsWith(to);
+    ? currentPath === target || currentPath === `${target}/`
+    : currentPath.startsWith(target);
 
   return (
     <Link
