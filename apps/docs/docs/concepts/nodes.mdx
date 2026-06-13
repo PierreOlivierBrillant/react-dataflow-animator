@@ -7,6 +7,7 @@ import { DataFlowPlayer } from 'react-dataflow-animator';
 import {
   nodeTypesExample,
   iconsExample,
+  textNodesExample,
   revealExample,
 } from './_nodes/examples';
 
@@ -18,7 +19,7 @@ apparence. Chaque nœud porte un `id` **unique** réutilisé partout ailleurs
 
 ## Types de nœuds
 
-Le champ `type` choisit le pictogramme. Dix types sont disponibles :
+Le champ `type` choisit l'apparence. Dix types affichent un **pictogramme** :
 
 <DataFlowPlayer
   spec={nodeTypesExample}
@@ -38,6 +39,60 @@ Le champ `type` choisit le pictogramme. Dix types sont disponibles :
 | Réseau    | `client`, `server`, `cloud`   |
 | Données   | `database`                    |
 | Acteurs   | `user`, `admin`, `users`      |
+
+Deux types supplémentaires affichent **du texte** plutôt qu'un pictogramme :
+`simple_node` et `complex_node` (voir [ci-dessous](#nœuds-textuels--simple_node-et-complex_node)).
+
+## Nœuds textuels : `simple_node` et `complex_node`
+
+Quand un nœud doit montrer du **texte** (un extrait de code, un en-tête HTTP, une
+clé de config…) plutôt qu'un pictogramme, utilisez :
+
+- **`simple_node`** — une boîte de texte (champ `body`). Pas de gros pictogramme,
+  mais le `subicon` (`icon`) reste possible.
+- **`complex_node`** — comme `simple_node`, plus un **`header`** affiché au-dessus du
+  corps et séparé par un trait : le nœud prend l'allure d'un **paquet HTTP**.
+
+Le champ `language` applique la **coloration syntaxique** à _toutes_ les zones de
+texte du nœud (l'en-tête **et** le corps). Les valeurs reconnues sont les mêmes que
+pour [`content`](#content--contenu-initial) (`javascript`, `json`, `sql`, `http`…).
+
+<DataFlowPlayer
+  spec={textNodesExample}
+  theme="auto"
+  controls={false}
+  height={320}
+/>
+
+```ts
+nodes: [
+  // simple_node : corps de texte + subicon, sans pictogramme.
+  {
+    id: 'snippet',
+    type: 'simple_node',
+    icon: 'node',
+    body: 'const total = a + b;',
+    language: 'javascript',
+  },
+  // complex_node : en-tête + corps, à la manière d'un paquet HTTP.
+  {
+    id: 'request',
+    type: 'complex_node',
+    header: 'GET /api/users HTTP/1.1',
+    body: 'Host: api.example.com\nAccept: application/json',
+    language: 'http', // colore l'en-tête ET le corps
+  },
+],
+```
+
+:::note `body`/`header` vs `text`
+
+`text` reste le **label sous le nœud** (commun à tous les types). Pour les nœuds
+textuels, le contenu de la boîte se met dans `body` (et `header` pour `complex_node`).
+Un [`set_content`](../reference/actions.mdx#set_content) actif remplace le panneau
+textuel, exactement comme il masque un pictogramme.
+
+:::
 
 ## `text` — le label
 

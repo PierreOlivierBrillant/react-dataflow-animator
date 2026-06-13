@@ -273,6 +273,47 @@
   border-radius: 4px;
 }
 
+/* ---------- Nœuds textuels (simple_node / complex_node) ---------- */
+/* Boîte de texte qui remplace le pictogramme et reprend l'allure d'un paquet
+   HTTP (en-tête + corps). La coloration suit le thème (variables --rdfa-code-*),
+   contrairement au terminal de set_content toujours sombre. */
+.rdfa-node--panel {
+  /* Une boîte de texte respire plus qu'un pictogramme : on relâche la borne. */
+  max-width: 60%;
+}
+
+.rdfa-node-panel {
+  padding: calc(6px * var(--rdfa-scale, 1)) calc(10px * var(--rdfa-scale, 1));
+  border-radius: 8px;
+  font-size: calc(12px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  font-family: var(--rdfa-mono);
+  line-height: 1.4;
+  color: var(--rdfa-text);
+  background: var(--rdfa-surface);
+  border: 1px solid var(--rdfa-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: calc(var(--rdfa-maxw, 240px) * var(--rdfa-scale, 1));
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.rdfa-node-panel-header {
+  font-weight: 600;
+}
+
+.rdfa-node-panel-header.rdfa-code {
+  font-weight: 400; /* le code porte sa propre coloration, pas de gras global */
+}
+
+/* Séparateur en-tête/corps : seulement quand les deux coexistent (complex_node
+   pourvu d'un en-tête) — le corps nu d'un simple_node ne porte alors aucun trait. */
+.rdfa-node-panel--complex .rdfa-node-panel-header + .rdfa-node-panel-body {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--rdfa-border);
+}
+
 /* ---------- Surlignage (action highlight) ---------- */
 .rdfa-node--highlight .rdfa-node-icon {
   color: var(--rdfa-accent);

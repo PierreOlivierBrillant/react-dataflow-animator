@@ -6,6 +6,7 @@ import {
 import type { Highlighter, ObjectContent, Node } from '../../types';
 import type { NodePlacement } from '../../engine/layout';
 import { ContentPanel } from '../dynamic/ContentPanel';
+import { NodePanel } from './NodePanel';
 import { getNodeIcon } from './nodeIcons';
 import { getSubIcon } from './subIcons';
 
@@ -40,11 +41,17 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     opacity,
     visualHeight,
   }: StaticNodeProps) {
+    const isPanel =
+      object.type === 'simple_node' || object.type === 'complex_node';
     const visual: ReactNode = content ? (
       <ContentPanel content={content} highlight={highlight} />
     ) : (
       <>
-        <span className="rdfa-node-icon">{getNodeIcon(object.type)}</span>
+        {isPanel ? (
+          <NodePanel object={object} highlight={highlight} />
+        ) : (
+          <span className="rdfa-node-icon">{getNodeIcon(object.type)}</span>
+        )}
         {object.icon ? (
           <span className="rdfa-node-subicon">{getSubIcon(object.icon)}</span>
         ) : null}
@@ -88,6 +95,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     const cls =
       'rdfa-node' +
       (content ? ' rdfa-node--content' : '') +
+      (!content && isPanel ? ' rdfa-node--panel' : '') +
       (highlighted ? ' rdfa-node--highlight' : '');
 
     return (

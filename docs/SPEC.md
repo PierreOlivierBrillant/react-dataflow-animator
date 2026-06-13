@@ -51,10 +51,18 @@ conteneur (placement CSS pur). Voir [`packages/react-dataflow-animator/src/engin
   optionnels. Dimensionnées automatiquement (point fixe pour gérer l'imbrication),
   rendues sous les flèches et les nœuds.
 
-**Types de nœuds** : `desktop`, `laptop`, `client`, `server`, `database`, `mobile`,
-`user`, `admin`, `users`. Chaque nœud peut recevoir : un `text` (label), un `subicon`
-(techno connue, icône enregistrée **ou texte libre**), une `url` (rendant le nœud
-cliquable), et un `content` initial.
+**Types de nœuds** : dix **pictogrammes** (`desktop`, `laptop`, `client`, `server`,
+`database`, `mobile`, `user`, `admin`, `users`, `cloud`) et deux nœuds **textuels** :
+`simple_node` (boîte de texte sans pictogramme) et `complex_node` (en-tête + corps,
+à la manière d'un paquet HTTP). Chaque nœud peut recevoir : un `text` (label), un
+`subicon` (techno connue, icône enregistrée **ou texte libre**), une `url` (rendant le
+nœud cliquable), et un `content` initial.
+
+**Nœuds textuels** (`simple_node`, `complex_node`) : le contenu se met dans `body`
+(corps) et, pour `complex_node` uniquement, `header` (en-tête, séparé du corps par un
+trait). Le champ `language` applique la **coloration syntaxique** à _toutes_ les zones
+de texte du nœud (header + body). Le `subicon` reste disponible ; un `set_content`
+actif prend la priorité sur le panneau textuel (comme il masque le pictogramme).
 
 **Mise à l'échelle responsive** : une « cellule » (plus petite distance entre deux
 nœuds, en px) pilote un facteur d'échelle global (`--rdfa-scale` : icônes/polices plus
@@ -136,6 +144,10 @@ référence API générée depuis le JSON Schema). Buildé via
 
 ## 8. Notes d'implémentation et évolutions
 
+- Nœuds **textuels** `simple_node` / `complex_node` : boîte de texte (`body`, plus
+  `header` pour `complex_node`) au lieu d'un pictogramme, coloration optionnelle via
+  `language` (appliquée à toutes les zones). `complex_node` reprend l'allure d'un
+  paquet HTTP. Rendus par `NodePanel` (cf. `components/nodes/StaticNode.tsx`).
 - `is_navigable` a été **retiré de la spec** : la navigabilité est une prop `controls`.
 - Les flèches de décor ont migré de `static_objects` vers le tableau racine `connections`.
 - `comment` utilise `object` (et non plus `next_to`) pour cibler son nœud.

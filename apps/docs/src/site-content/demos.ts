@@ -22,7 +22,7 @@ export const demos: Demo[] = [
     id: 'signalr',
     title: 'Temps réel full-duplex (SignalR)',
     description:
-      'Connexion WebSocket persistante : on voit le code client et le code du hub, et qui fait quoi à chaque étape.',
+      'Connexion WebSocket persistante : on voit le code client et le code du hub, puis un SendAll qui diffuse le message à tous les clients connectés.',
     spec: signalr,
   },
   {

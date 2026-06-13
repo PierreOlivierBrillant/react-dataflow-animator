@@ -14,7 +14,13 @@ export type Direction =
   | 'bottom-to-top'
   | 'circular';
 
-/** Types de nœuds (apparence). Les flèches de décor vivent dans `connections`. */
+/**
+ * Types de nœuds (apparence). Les flèches de décor vivent dans `connections`.
+ *
+ * Les dix premiers sont des **pictogrammes**. Les deux derniers sont des nœuds
+ * **textuels** (boîte de texte, pas de gros pictogramme) : `simple_node` (corps
+ * seul) et `complex_node` (en-tête + corps, à la manière d'un paquet HTTP).
+ */
 export type NodeType =
   | 'desktop'
   | 'laptop'
@@ -25,7 +31,9 @@ export type NodeType =
   | 'user'
   | 'admin'
   | 'users'
-  | 'cloud';
+  | 'cloud'
+  | 'simple_node'
+  | 'complex_node';
 
 export type PacketKind = 'http_packet' | 'sql_request' | 'sql_response';
 
@@ -100,6 +108,24 @@ export interface Node {
   url?: string;
   /** Contenu initial affiché dans le nœud (terminal de code, fenêtre, etc.). */
   content?: ObjectContent;
+  /**
+   * (`simple_node` / `complex_node`) Texte affiché DANS le nœud (corps du
+   * panneau), par opposition à `text` qui reste le label sous le nœud. Les
+   * retours à la ligne sont respectés ; coloré selon `language` si fourni.
+   */
+  body?: string;
+  /**
+   * (`complex_node`) En-tête affiché au-dessus du `body`, séparé par un trait —
+   * le nœud prend alors l'allure d'un paquet HTTP. Ignoré par `simple_node`.
+   * Coloré selon `language` si fourni.
+   */
+  header?: string;
+  /**
+   * (`simple_node` / `complex_node`) Langage de coloration syntaxique appliqué
+   * à TOUTES les zones de texte du nœud (`header` et `body`). Valeurs reconnues :
+   * voir {@link HighlightLanguage}.
+   */
+  language?: HighlightLanguage | (string & {});
 }
 
 /** Région rectangulaire englobant un groupe de nœuds et/ou d'autres zones. */

@@ -101,6 +101,18 @@
         "content": {
           "$ref": "#/definitions/ObjectContent",
           "description": "Contenu initial affiché dans le nœud (terminal de code, fenêtre, etc.)."
+        },
+        "body": {
+          "type": "string",
+          "description": "(`simple_node` / `complex_node`) Texte affiché DANS le nœud (corps du panneau), par opposition à `text` qui reste le label sous le nœud. Les retours à la ligne sont respectés ; coloré selon `language` si fourni."
+        },
+        "header": {
+          "type": "string",
+          "description": "(`complex_node`) En-tête affiché au-dessus du `body`, séparé par un trait — le nœud prend alors l'allure d'un paquet HTTP. Ignoré par `simple_node`. Coloré selon `language` si fourni."
+        },
+        "language": {
+          "description": "(`simple_node` / `complex_node`) Langage de coloration syntaxique appliqué à TOUTES les zones de texte du nœud (`header` et `body`). Valeurs reconnues : voir  {@link  HighlightLanguage } .",
+          "$ref": "#/definitions/HighlightLanguage"
         }
       },
       "required": [
@@ -121,9 +133,11 @@
         "user",
         "admin",
         "users",
-        "cloud"
+        "cloud",
+        "simple_node",
+        "complex_node"
       ],
-      "description": "Types de nœuds (apparence). Les flèches de décor vivent dans `connections`."
+      "description": "Types de nœuds (apparence). Les flèches de décor vivent dans `connections`.\n\nLes dix premiers sont des **pictogrammes**. Les deux derniers sont des nœuds\n**textuels** (boîte de texte, pas de gros pictogramme) : `simple_node` (corps seul) et `complex_node` (en-tête + corps, à la manière d'un paquet HTTP)."
     },
     "ObjectContent": {
       "type": "object",

@@ -41,6 +41,34 @@ export const iconsExample: DataFlowSpec = {
   timeline: [],
 };
 
+/** Nœuds textuels : `simple_node` (corps seul) et `complex_node` (en-tête + corps,
+ *  allure paquet HTTP). `language` colore toutes les zones de texte du nœud. */
+export const textNodesExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: [
+    {
+      id: 'snippet',
+      type: 'simple_node',
+      text: 'Extrait',
+      icon: 'node', // un simple_node peut garder un subicon
+      body: 'const total = a + b;',
+      language: 'javascript',
+      lane: 1,
+    },
+    {
+      id: 'request',
+      type: 'complex_node',
+      text: 'Requête',
+      header: 'GET /api/users HTTP/1.1',
+      body: 'Host: api.example.com\nAccept: application/json',
+      language: 'http', // appliqué à l'en-tête ET au corps
+      lane: 2,
+    },
+  ],
+  packets: [],
+  timeline: [],
+};
+
 /** Visibilité initiale + révélation via l'action `set_visible`. */
 export const revealExample: DataFlowSpec = {
   direction: 'left-to-right',
