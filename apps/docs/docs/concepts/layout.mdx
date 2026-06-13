@@ -4,8 +4,11 @@ slug: /concepts/layout
 ---
 
 import { DataFlowPlayer } from 'react-dataflow-animator';
-import { demosById } from '@site/src/site-content';
-import { orientationExample, circularExample } from './_layout/orientations';
+import {
+  orientationExample,
+  circularExample,
+  circularHubExample,
+} from './_layout/orientations';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
@@ -73,6 +76,25 @@ Cinq valeurs possibles pour `direction` (au niveau racine de la spec) :
   </TabItem>
 </Tabs>
 
+Les **quatre directions linéaires** partagent exactement la même spec : seule la
+valeur de `direction` change. Voici le code des aperçus ci-dessus (le mode
+`circular`, structurellement différent, est [détaillé plus bas](#mode-circulaire)) :
+
+```ts
+{
+  direction: 'left-to-right', // ou 'right-to-left' | 'top-to-bottom' | 'bottom-to-top'
+  nodes: [
+    { id: 'a', type: 'server', text: 'A', lane: 1 },
+    { id: 'b', type: 'server', text: 'B', lane: 2 },
+    { id: 'c', type: 'server', text: 'C', lane: 3 },
+  ],
+  connections: [
+    { from: 'a', to: 'b', style: 'animated' },
+    { from: 'b', to: 'c', style: 'animated' },
+  ],
+}
+```
+
 ## Grilles et lanes
 
 En mode linéaire (les quatre premières directions), la propriété `lane`
@@ -113,22 +135,35 @@ Ignoré en mode `circular`.
 
 ## Mode circulaire
 
-En `circular`, le nœud marqué `main: true` est placé au centre ; les
-autres sont répartis à équidistance sur un cercle :
+En `circular`, le nœud marqué `main: true` est placé au centre ; les autres
+sont répartis à équidistance sur un cercle. Les `lane` et `align_with` sont
+ignorés — c'est le seul nœud `main` qui structure la disposition.
 
 ```ts
 {
   direction: 'circular',
   nodes: [
-    { id: 'gateway', type: 'server', main: true },
-    { id: 'svc-a',   type: 'server' },
-    { id: 'svc-b',   type: 'server' },
-    { id: 'svc-c',   type: 'server' },
+    { id: 'gateway', type: 'server', text: 'Gateway', icon: 'nginx', main: true },
+    { id: 'auth', type: 'server', text: 'Auth', icon: 'dotnet' },
+    { id: 'orders', type: 'server', text: 'Orders', icon: 'node' },
+    { id: 'billing', type: 'server', text: 'Billing', icon: 'java' },
+    { id: 'search', type: 'server', text: 'Search', icon: 'python' },
+  ],
+  connections: [
+    { from: 'auth', to: 'gateway', style: 'animated' },
+    { from: 'orders', to: 'gateway', style: 'animated' },
+    { from: 'billing', to: 'gateway', style: 'animated' },
+    { from: 'search', to: 'gateway', style: 'animated' },
   ],
 }
 ```
 
-<DataFlowPlayer theme="auto" spec={demosById.microservices.spec} />
+<DataFlowPlayer
+  theme="auto"
+  controls={false}
+  height={500}
+  spec={circularHubExample}
+/>
 
 ## Mise à l'échelle responsive
 

@@ -46,6 +46,10 @@ conteneur (placement CSS pur). Voir [`packages/react-dataflow-animator/src/engin
   équidistance sur un cercle (trigonométrie), ratio corrigé pour rester rond.
 - **`align_with`** : aligne un nœud sur l'axe transverse d'un autre (vertical si la
   direction est horizontale) → aligner deux nœuds de lanes différentes.
+- **Zones** (tableau racine `zones`) : rectangles d'arrière-plan englobant un
+  groupe de nœuds et/ou d'autres zones (`contains`), avec `color` et `label`
+  optionnels. Dimensionnées automatiquement (point fixe pour gérer l'imbrication),
+  rendues sous les flèches et les nœuds.
 
 **Types de nœuds** : `desktop`, `laptop`, `client`, `server`, `database`, `mobile`,
 `user`, `admin`, `users`. Chaque nœud peut recevoir : un `text` (label), un `subicon`
@@ -97,6 +101,9 @@ La timeline compile un tableau d'actions ordonnées. Voir
 7. **highlight** : surligne (halo pulsé) un nœud statique ou une connexion (par `object` = id).
 8. **wait** : temps mort — aucun clip émis, l'étape occupe simplement `duration` ms
    (défaut 1000) pour figer l'image avant l'étape suivante.
+9. **set_visible** : affiche ou cache un nœud statique (`object`) avec un fondu.
+   L'état de visibilité persiste jusqu'à la fin de la chronologie (ou un
+   `set_visible` contraire) ; complète le champ `visible` initial des nœuds.
 
 ## 6. Cycle de vie temporel
 

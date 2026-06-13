@@ -81,6 +81,19 @@ X`, écris en commentaire pourquoi.
   `types.ts`, régénère le schéma — ne l'édite jamais à la main. NB : le patch
   de `scripts/schema-patches.mjs` rend le schéma plus strict que les types TS
   pour `language` (voulu).
+- **Documente toute évolution de la spec.** Dès que tu ajoutes, modifies ou
+  retires un champ, un type d'action, une valeur d'énum ou une valeur par
+  défaut dans `types.ts`, tu DOIS répercuter le changement dans la doc, dans
+  le même commit :
+  - `docs/SPEC.md` (source de vérité fonctionnelle) ;
+  - la doc utilisateur MDX concernée sous `apps/docs/docs/` (concept ou
+    référence), avec **au moins un exemple concret** dans le style existant
+    (cf. les onglets d'orientation et les exemples co-localisés `_dossier/*.ts`) ;
+  - les liens d'`intro.mdx` et la `sidebars.ts` si tu crées une page.
+
+  Une PR qui change la spec sans toucher la doc est incomplète. La page
+  « Référence API » est générée depuis le schéma, mais ne dispense PAS d'une
+  explication en prose + exemple : le schéma seul ne documente pas l'intention.
 
 ## Points de vigilance (issus de revues de code)
 

@@ -69,12 +69,24 @@ Affiche un spinner de chargement sur un nœud cible (simule un traitement).
 
 ## `set_content`
 
-Mute le contenu d'un nœud. Trois modes :
+Mute le contenu d'un nœud. Le contenu suit la forme `ObjectContent`, partagée
+avec le champ [`content`](../concepts/nodes.mdx#content--contenu-initial) d'un
+nœud. Quatre modes via `type` :
 
 - **`code`** : terminal sombre avec coloration Prism, sans barre d'URL ; la
   police s'ajuste pour faire tenir la ligne la plus longue sans wrap.
-- **`text`** : fenêtre de navigateur avec barre d'URL paramétrable.
-- **`image`** : image affichée dans une fenêtre.
+- **`text`** : fenêtre de navigateur avec barre d'URL paramétrable (`url`).
+- **`image`** : image (`value` = chemin/URL) affichée dans une fenêtre.
+- **`table`** : tableau de données (`columns` + `rows_data`).
+
+:::caution Le texte est dans `value`
+
+Le champ porte-contenu s'appelle **`value`** (pas `content`). Le `content` est
+l'objet englobant.
+
+:::
+
+Mode `code` :
 
 ```ts
 {
@@ -83,14 +95,54 @@ Mute le contenu d'un nœud. Trois modes :
   content: {
     type: 'code',
     language: 'javascript',
-    content: 'const add = (a, b) => a + b;',
+    value: 'const add = (a, b) => a + b;',
   },
 }
 ```
 
+Mode `text` (fenêtre de navigateur avec barre d'adresse) :
+
+```ts
+{
+  type: 'set_content',
+  object: 'browser',
+  content: {
+    type: 'text',
+    url: 'exemple.com/users',
+    value: 'Alice\nBob',
+  },
+}
+```
+
+Mode `table` :
+
+```ts
+{
+  type: 'set_content',
+  object: 'admin',
+  content: {
+    type: 'table',
+    columns: ['id', 'nom'],
+    rows_data: [
+      [1, 'Alice'],
+      [2, 'Bob'],
+    ],
+  },
+}
+```
+
+| Champ       | Modes concernés | Rôle                                             |
+| ----------- | --------------- | ------------------------------------------------ |
+| `type`      | tous            | `code` \| `text` \| `image` \| `table`.          |
+| `value`     | code/text/image | Texte source, ou chemin d'image.                 |
+| `language`  | code            | Langage de coloration (cf. `HighlightLanguage`). |
+| `url`       | text            | Barre d'adresse de la fenêtre.                   |
+| `columns`   | table           | En-têtes de colonnes.                            |
+| `rows_data` | table           | Lignes de données.                               |
+
 ## `comment`
 
-Affiche une bulle de texte en fondu près d'un nœud.
+Affiche une bulle de texte en fondu près d'un nœud, identifié par `object`.
 
 ```ts
 {
@@ -100,6 +152,28 @@ Affiche une bulle de texte en fondu près d'un nœud.
   duration: 400,
 }
 ```
+
+**Commentaire omniscient** : omettez `object` pour afficher la bulle **en haut
+de la scène** plutôt qu'à côté d'un nœud — idéal pour une narration générale qui
+ne se rattache à aucun composant précis.
+
+```ts
+{ type: 'comment', text: 'Étape 2 — Authentification' }
+```
+
+## `set_visible`
+
+Affiche ou cache un nœud statique avec un fondu. Le nœud cible peut démarrer
+caché (`visible: false` dans sa déclaration) puis être révélé, ou inversement.
+L'état de visibilité **persiste** jusqu'à la fin de la chronologie (ou jusqu'à
+un `set_visible` contraire).
+
+```ts
+{ type: 'set_visible', object: 'cache', visible: true }
+```
+
+Voir [Nœuds → `visible`](../concepts/nodes.mdx#visible--visibilité-initiale)
+pour l'usage combiné avec la visibilité initiale.
 
 ## `highlight`
 

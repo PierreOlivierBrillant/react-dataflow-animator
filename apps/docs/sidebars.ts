@@ -7,7 +7,13 @@ const sidebars = {
       type: 'category',
       label: 'Concepts',
       className: 'menu-icon-concepts',
-      items: ['concepts/layout', 'concepts/timeline'],
+      items: [
+        'concepts/nodes',
+        'concepts/packets',
+        'concepts/decor',
+        'concepts/layout',
+        'concepts/timeline',
+      ],
     },
     {
       type: 'category',

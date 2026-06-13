@@ -1,0 +1,128 @@
+---
+title: Nœuds
+slug: /concepts/nodes
+---
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import {
+  nodeTypesExample,
+  iconsExample,
+  revealExample,
+} from './_nodes/examples';
+
+Les **nœuds** (`nodes`) sont les objets statiques de la scène : serveurs,
+clients, bases de données… Le moteur les place automatiquement (voir
+[Disposition](./layout.mdx)) ; vous ne décrivez que leur identité et leur
+apparence. Chaque nœud porte un `id` **unique** réutilisé partout ailleurs
+(`from`/`to` des actions, `connections`, `zones`, `object` des commentaires…).
+
+## Types de nœuds
+
+Le champ `type` choisit le pictogramme. Dix types sont disponibles :
+
+<DataFlowPlayer
+  spec={nodeTypesExample}
+  theme="auto"
+  controls={false}
+  height={460}
+  density="compact"
+/>
+
+```ts
+{ id: 'web', type: 'server', text: 'Serveur Web' }
+```
+
+| Catégorie | Types                         |
+| --------- | ----------------------------- |
+| Postes    | `desktop`, `laptop`, `mobile` |
+| Réseau    | `client`, `server`, `cloud`   |
+| Données   | `database`                    |
+| Acteurs   | `user`, `admin`, `users`      |
+
+## `text` — le label
+
+Le `text` s'affiche **sous** le nœud. Il est optionnel mais recommandé pour
+lever toute ambiguïté entre deux nœuds du même type.
+
+```ts
+{ id: 'authdb', type: 'database', text: 'Base Auth' }
+```
+
+## `icon` — le badge techno
+
+Le champ `icon` superpose un petit badge en coin du nœud. Trois sources sont
+acceptées, dans cet ordre de résolution :
+
+1. une **techno connue** (icône [react-icons](https://react-icons.github.io/react-icons/)
+   intégrée) — ex. `react`, `node`, `postgres`, `mongodb`, `redis`, `nginx`,
+   `docker`, `dotnet`, `python`, `typescript`, `aws`, `graphql`… ;
+2. une icône **enregistrée** par vous via `registerSubIcon` ;
+3. à défaut, un **texte libre** affiché en pastille (tronqué à 4 caractères).
+
+<DataFlowPlayer
+  spec={iconsExample}
+  theme="auto"
+  controls={false}
+  height={320}
+/>
+
+```ts
+{ id: 'spa',  type: 'laptop',   text: 'react',    icon: 'react' },   // techno connue
+{ id: 'edge', type: 'cloud',    text: 'v2',       icon: 'v2' },      // texte libre → pastille
+```
+
+:::tip Enregistrer ses propres badges
+
+`registerSubIcon(name, node)` ajoute une techno au registre global. Appelez-la
+**une seule fois au démarrage** de l'application (jamais dans un corps de
+composant) — voir l'avertissement dans la [Référence API](../reference/api.mdx).
+
+:::
+
+## `url` — rendre un nœud cliquable
+
+Fournir une `url` rend le nœud cliquable : il ouvre le lien dans un nouvel
+onglet. Pratique pour pointer vers la doc d'un service.
+
+```ts
+{ id: 'api', type: 'server', text: 'API', url: 'https://exemple.com/api' }
+```
+
+## `content` — contenu initial
+
+Un nœud peut afficher un **contenu dès l'initialisation** (avant toute action),
+via le champ `content`. Il utilise la même forme que l'action
+[`set_content`](../reference/actions.mdx#set_content) : un terminal de code,
+une fenêtre de navigateur, une image ou un tableau.
+
+```ts
+{
+  id: 'editor',
+  type: 'laptop',
+  text: 'Éditeur',
+  content: {
+    type: 'code',
+    language: 'javascript',
+    value: 'const add = (a, b) => a + b;',
+  },
+}
+```
+
+## `visible` — visibilité initiale
+
+Par défaut, tout nœud est visible (`visible: true`). Passez `visible: false`
+pour le **masquer au départ** et le révéler plus tard avec l'action
+[`set_visible`](../reference/actions.mdx#set_visible) — utile pour montrer
+l'ajout d'un composant (cache, réplica…) au fil de la narration.
+
+<DataFlowPlayer spec={revealExample} theme="auto" height={320} />
+
+```ts
+nodes: [
+  { id: 'app',   type: 'server',   text: 'App' },
+  { id: 'cache', type: 'database', text: 'Cache', visible: false }, // caché au départ
+],
+timeline: [
+  { type: 'set_visible', object: 'cache', visible: true }, // … puis révélé
+],
+```

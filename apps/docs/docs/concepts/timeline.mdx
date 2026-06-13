@@ -70,6 +70,7 @@ Chaque action accepte une `duration` (ms). Les défauts sont :
 | `move`, `arrow`, `set_content`, `comment` | 500         |
 | `loading`                                 | 1200        |
 | `highlight`                               | 600         |
+| `set_visible`                             | 300         |
 | `wait`                                    | 1000        |
 
 ## Persistance visuelle
@@ -97,7 +98,7 @@ la pause inter-étapes). Défauts par type d'action :
 | Type d'action                                  | `keep_until_next` par défaut |
 | ---------------------------------------------- | ---------------------------- |
 | `arrow`, `comment`, `set_content`, `highlight` | `true`                       |
-| `move`, `loading`                              | `false`                      |
+| `move`, `loading`, `set_visible`               | `false`                      |
 
 ### `keep_until_end`
 
@@ -106,3 +107,39 @@ Reste visible jusqu'à la **fin** de la chronologie :
 ```ts
 { type: 'highlight', object: 'db', keep_until_end: true },
 ```
+
+## Décalage et fondus
+
+Trois champs affinent le **timing fin** d'une action, au-delà de son
+ordonnancement logique.
+
+### `delay_ms`
+
+Décale le démarrage de `delay_ms` millisecondes, **après** la résolution de
+`wait_for` et le calage sur l'étape. Son usage principal est de **séquencer des
+actions à l'intérieur d'un `parallel`** (effet « cascade ») :
+
+```ts
+{
+  type: 'parallel',
+  actions: [
+    { type: 'move', object: 'p1', from: 'a', to: 'b' },
+    { type: 'move', object: 'p2', from: 'a', to: 'b', delay_ms: 150 },
+    { type: 'move', object: 'p3', from: 'a', to: 'b', delay_ms: 300 },
+  ],
+}
+```
+
+Appliqué à un `parallel` entier, il retarde tout le groupe.
+
+### `fade_in_ms` / `fade_out_ms`
+
+Contrôlent la durée des fondus d'apparition et de disparition (en ms). `0`
+donne une transition **instantanée**. `fade_out_ms` est sans effet si
+`keep_until_end` est vrai (l'élément ne disparaît jamais).
+
+```ts
+{ type: 'comment', object: 'db', text: 'Lecture', fade_in_ms: 0, fade_out_ms: 600 }
+```
+
+Défauts : `fade_out_ms` → 250 ; `fade_in_ms` → 250 (300 pour `move`).

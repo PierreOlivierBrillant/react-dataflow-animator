@@ -37,3 +37,29 @@ export const circularExample: DataFlowSpec = {
   ],
   timeline: [],
 };
+
+/** Exemple concret de la section « Mode circulaire » : un hub central. */
+export const circularHubExample: DataFlowSpec = {
+  direction: 'circular',
+  nodes: [
+    {
+      id: 'gateway',
+      type: 'server',
+      text: 'Gateway',
+      icon: 'nginx',
+      main: true,
+    },
+    { id: 'auth', type: 'server', text: 'Auth', icon: 'dotnet' },
+    { id: 'orders', type: 'server', text: 'Orders', icon: 'node' },
+    { id: 'billing', type: 'server', text: 'Billing', icon: 'java' },
+    { id: 'search', type: 'server', text: 'Search', icon: 'python' },
+  ],
+  packets: [],
+  connections: [
+    { from: 'auth', to: 'gateway', style: 'animated' },
+    { from: 'orders', to: 'gateway', style: 'animated' },
+    { from: 'billing', to: 'gateway', style: 'animated' },
+    { from: 'search', to: 'gateway', style: 'animated' },
+  ],
+  timeline: [],
+};
