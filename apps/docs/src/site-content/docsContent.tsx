@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- module de contenu (données + rendu), pas un module HMR */
 import type { ReactNode } from 'react';
+import Heading from '@theme/Heading';
 import { DataFlowPlayer, dataFlowSchema } from 'react-dataflow-animator';
 import { demosById } from './demos';
 
@@ -134,31 +135,48 @@ const ACTION_DEFS = [
   'HighlightAction',
 ] as const;
 
+/** Discriminant `type` affiché pour une action (fallback : nom de la définition). */
+function actionTypeLabel(key: (typeof ACTION_DEFS)[number]): string {
+  return defs[key].properties?.['type']?.const ?? key;
+}
+
 export function ApiReference() {
   return (
     <>
-      <h2 id="api-dataflowspec">DataFlowSpec (racine)</h2>
+      <Heading as="h2" id="api-dataflowspec">
+        DataFlowSpec (racine)
+      </Heading>
       <PropsTable node={root} />
 
-      <h2 id="api-node">Node</h2>
+      <Heading as="h2" id="api-node">
+        Node
+      </Heading>
       <p>
         Un nœud (serveur, base, client…). Placé automatiquement selon
         `direction`/`lane`.
       </p>
       <PropsTable node={defs.Node} />
 
-      <h2 id="api-connection">Connection</h2>
+      <Heading as="h2" id="api-connection">
+        Connection
+      </Heading>
       <p>Flèche permanente (décor) entre deux nœuds.</p>
       <PropsTable node={defs.Connection} />
 
-      <h2 id="api-packet">Packet</h2>
+      <Heading as="h2" id="api-packet">
+        Packet
+      </Heading>
       <p>Un paquet déplaçable, référencé par une action `move`.</p>
       <PropsTable node={defs.Packet} />
 
-      <h2 id="api-content">ObjectContent</h2>
+      <Heading as="h2" id="api-content">
+        ObjectContent
+      </Heading>
       <PropsTable node={defs.ObjectContent} />
 
-      <h2 id="api-actions">Actions</h2>
+      <Heading as="h2" id="api-actions">
+        Actions
+      </Heading>
       <p>
         Union discriminée sur <code className="inline">type</code>. Tous les
         types partagent les champs de timing (<code className="inline">id</code>
@@ -169,10 +187,11 @@ export function ApiReference() {
       </p>
       {ACTION_DEFS.map((key) => {
         const node = defs[key];
-        const actionTypeName = node.properties?.['type']?.const ?? key;
         return (
           <div key={key}>
-            <h3 id={`api-${key}`}>{actionTypeName}</h3>
+            <Heading as="h3" id={`api-${key}`}>
+              {actionTypeLabel(key)}
+            </Heading>
             {node.description ? <p>{node.description}</p> : null}
             <PropsTable node={node} />
           </div>
@@ -181,6 +200,34 @@ export function ApiReference() {
     </>
   );
 }
+
+interface TocItem {
+  readonly value: string;
+  readonly id: string;
+  readonly level: number;
+}
+
+/**
+ * Table des matières de la page « Référence API ». Ses titres sont rendus par
+ * <ApiReference/> en JSX, donc invisibles pour le générateur de TOC de
+ * Docusaurus (qui ne lit que les titres Markdown du source MDX). On la fournit
+ * explicitement : `api.mdx` la réexporte en `toc`, et Docusaurus respecte un
+ * export `toc` manuel sans l'écraser. La partie « actions » dérive des mêmes
+ * `ACTION_DEFS` que le rendu pour ne pas se désynchroniser.
+ */
+export const apiReferenceToc: TocItem[] = [
+  { value: 'DataFlowSpec (racine)', id: 'api-dataflowspec', level: 2 },
+  { value: 'Node', id: 'api-node', level: 2 },
+  { value: 'Connection', id: 'api-connection', level: 2 },
+  { value: 'Packet', id: 'api-packet', level: 2 },
+  { value: 'ObjectContent', id: 'api-content', level: 2 },
+  { value: 'Actions', id: 'api-actions', level: 2 },
+  ...ACTION_DEFS.map((key) => ({
+    value: actionTypeLabel(key),
+    id: `api-${key}`,
+    level: 3,
+  })),
+];
 
 // ---------------------------------------------------------------------------
 // Pages
