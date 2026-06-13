@@ -24,6 +24,9 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
   const all: ConnectionRef[] = [];
   const keysSeen = new Set<string>(); // déduplication par clé (existant)
   const directedSeen = new Set<string>(); // "from|to" : priorité connexions/arrows sur moves
+  // Directions ajoutées en passe 1 uniquement — utilisé en passe 2 pour éviter
+  // qu'un move en sens inverse ne duplique une paire déjà couverte par une ligne.
+  const passe1Directed = new Set<string>();
 
   // Passe 1 : connexions statiques et arrows (établissent les directions prioritaires).
   spec.connections?.forEach((c, i) => {
@@ -32,17 +35,25 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
       keysSeen.add(key);
       all.push({ key, from: c.from, to: c.to });
       directedSeen.add(`${c.from}|${c.to}`);
+      passe1Directed.add(`${c.from}|${c.to}`);
     }
   });
 
   const extractArrows = (actions: Action[]) => {
     actions.forEach((a, i) => {
       if (a.type === 'arrow' && a.from && a.to) {
-        const key = a.id ?? `${a.from}|${a.to}|action_${i}`;
-        if (!keysSeen.has(key)) {
-          keysSeen.add(key);
-          all.push({ key, from: a.from, to: a.to });
-          directedSeen.add(`${a.from}|${a.to}`);
+        const dk = `${a.from}|${a.to}`;
+        // Déduplication par direction : plusieurs arrows A→B (ou une arrow + une
+        // connexion statique sur le même trajet) représentent la même "voie" visuelle
+        // et ne doivent pas gonfler le compte de la paire.
+        if (!directedSeen.has(dk)) {
+          directedSeen.add(dk);
+          passe1Directed.add(dk);
+          const key = a.id ?? `${a.from}|${a.to}|action_${i}`;
+          if (!keysSeen.has(key)) {
+            keysSeen.add(key);
+            all.push({ key, from: a.from, to: a.to });
+          }
         }
       } else if (a.type === 'parallel' && a.actions) {
         extractArrows(a.actions);
@@ -51,12 +62,17 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
   };
   if (spec.timeline) extractArrows(spec.timeline);
 
-  // Passe 2 : moves (ajoutés seulement si la direction n'est pas déjà couverte).
+  // Passe 2 : moves — ajoutés seulement si :
+  //   1. la direction exacte n'est pas déjà couverte, ET
+  //   2. la direction inverse n'est pas couverte par une connexion/arrow de passe 1.
+  //      (un move B→A avec une ligne statique A→B doit partager le chemin central,
+  //      pas créer une 2e entrée dans la paire qui décalerait la ligne existante)
   const extractMoves = (actions: Action[]) => {
     actions.forEach((a, i) => {
       if (a.type === 'move' && a.from && a.to) {
         const dk = `${a.from}|${a.to}`;
-        if (!directedSeen.has(dk)) {
+        const dkReverse = `${a.to}|${a.from}`;
+        if (!directedSeen.has(dk) && !passe1Directed.has(dkReverse)) {
           directedSeen.add(dk);
           const key = a.id ?? `${a.from}|${a.to}|move_${i}`;
           if (!keysSeen.has(key)) {

@@ -51,6 +51,69 @@ describe('collectArrowConnections — moves', () => {
     expect(offsets[ab.key].start + offsets[ba.key].start).toBeCloseTo(0);
   });
 
+  it('une arrow action A→B avec une connexion statique A→B ne crée pas de 2e entrée', () => {
+    // Cas central du bug e4aa27b : static A→B + arrow A→B gonflaient la paire
+    // à 2 entrées → les deux recevaient un offset ±15 au lieu de 0.
+    const spec: DataFlowSpec = {
+      ...BASE_SPEC,
+      connections: [{ from: 'A', to: 'B' }],
+      timeline: [{ type: 'arrow', from: 'A', to: 'B' }],
+    };
+    const connections = collectArrowConnections(spec);
+    expect(connections).toHaveLength(1);
+    expect(connections[0].from).toBe('A');
+    expect(connections[0].to).toBe('B');
+
+    const layout = { A: { cx: 0.2, cy: 0.5 }, B: { cx: 0.8, cy: 0.5 } };
+    const offsets = computePortOffsets(connections, layout);
+    expect(offsets[connections[0].key]).toEqual({ start: 0, end: 0 });
+  });
+
+  it("deux arrows A→B sans connexion statique ne créent qu'une seule entrée", () => {
+    const spec: DataFlowSpec = {
+      ...BASE_SPEC,
+      timeline: [
+        { type: 'arrow', from: 'A', to: 'B' },
+        { type: 'arrow', from: 'A', to: 'B' },
+      ],
+    };
+    const connections = collectArrowConnections(spec);
+    const abEntries = connections.filter((c) => c.from === 'A' && c.to === 'B');
+    expect(abEntries).toHaveLength(1);
+
+    const layout = { A: { cx: 0.2, cy: 0.5 }, B: { cx: 0.8, cy: 0.5 } };
+    const offsets = computePortOffsets(connections, layout);
+    expect(offsets[abEntries[0].key]).toEqual({ start: 0, end: 0 });
+  });
+
+  it('un move en sens inverse ne décale pas la connexion statique existante', () => {
+    // Régression e4aa27b : move B→A créait une 2e entrée dans la paire A-B,
+    // ce qui décalait la connexion statique A→B de ±PORT_SPACING/2.
+    const spec: DataFlowSpec = {
+      ...BASE_SPEC,
+      connections: [{ from: 'A', to: 'B' }],
+      packets: [{ id: 'p', kind: 'http_packet' }],
+      timeline: [{ type: 'move', object: 'p', from: 'B', to: 'A' }],
+    };
+    const connections = collectArrowConnections(spec);
+    // La paire A-B ne doit contenir qu'une seule entrée (la connexion statique).
+    const abPair = connections.filter(
+      (c) =>
+        (c.from === 'A' && c.to === 'B') || (c.from === 'B' && c.to === 'A')
+    );
+    expect(abPair).toHaveLength(1);
+    expect(abPair[0].from).toBe('A');
+    expect(abPair[0].to).toBe('B');
+
+    const layout = {
+      A: { cx: 0.2, cy: 0.5 },
+      B: { cx: 0.8, cy: 0.5 },
+    };
+    const offsets = computePortOffsets(connections, layout);
+    // Une seule entrée → offset doit être 0 (connexion centrée).
+    expect(offsets[abPair[0].key]).toEqual({ start: 0, end: 0 });
+  });
+
   it("un move et une arrow sur le même trajet ne créent qu'une seule entrée", () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
