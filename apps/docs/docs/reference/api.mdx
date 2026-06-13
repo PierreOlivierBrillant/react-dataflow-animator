@@ -1,9 +1,15 @@
 ---
-title: Référence API
+title: Référence API (spec JSON)
 slug: /reference/api
 ---
 
 import { ApiReference } from '@site/src/site-content';
+
+Cette page documente **uniquement** la forme de la spécification JSON
+(`DataFlowSpec`) passée à la prop `spec`, générée à partir du JSON Schema. Pour
+les **composants et fonctions exportés** (props de `<DataFlowPlayer>`, icônes
+personnalisées, coloration syntaxique), voir
+[Composants et API JavaScript](./components.mdx).
 
 :::info JSON Schema disponible
 
@@ -13,32 +19,6 @@ pour la validation Ajv côté utilisateur, l'auto-complétion d'éditeur, ou
 la génération de formulaires. Voir la section
 [Auto-complétion JSON dans VS Code](../installation#autocomplete-json-vscode)
 pour la configuration VS Code.
-
-:::
-
-:::warning Mémoïsez votre spec
-
-Si la prop `spec` est un objet littéral défini dans le corps d'un composant parent, elle
-reçoit une **nouvelle identité référentielle** à chaque rendu. Le compilateur recompile
-alors toute la timeline et la mesure DOM (`useStageGeometry`) est invalidée inutilement.
-
-```tsx
-// ✗ — recompile à chaque rendu du parent
-<DataFlowPlayer spec={{ nodes: [...], timeline: [...] }} />
-
-// ✓ — stable : définie en dehors du composant ou protégée par useMemo
-const spec = useMemo(() => ({ nodes: [...], timeline: [...] }), []);
-<DataFlowPlayer spec={spec} />
-```
-
-:::
-
-:::warning `registerNodeIcon` / `registerSubIcon` — registre global
-
-Ces deux fonctions mutent un **registre au niveau module** : partagé entre toutes les
-instances du player et entre les requêtes en environnement SSR. Appelez-les **une seule
-fois au démarrage de l'application** (fichier d'entrée, `_app.tsx`, `layout.tsx`…),
-jamais dans un corps de composant ou un `useEffect`.
 
 :::
 

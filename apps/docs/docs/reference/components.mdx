@@ -1,0 +1,126 @@
+---
+title: Composants et API JavaScript
+slug: /reference/components
+---
+
+Cette page couvre la **surface JavaScript/TypeScript** du package : le composant
+`<DataFlowPlayer>` et ses props, l'enregistrement d'icônes, et la coloration
+syntaxique. Pour la forme de la spécification JSON (`spec`), voir la
+[Référence API (spec JSON)](./api.mdx).
+
+```tsx
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import 'react-dataflow-animator/styles.css';
+```
+
+## `<DataFlowPlayer>`
+
+Le composant qui compile une `spec` et l'affiche dans un lecteur multimédia.
+Seule la prop `spec` est requise.
+
+| Prop        | Type                                       | Défaut          | Rôle                                                     |
+| ----------- | ------------------------------------------ | --------------- | -------------------------------------------------------- |
+| `spec`      | `DataFlowSpec`                             | — (requis)      | La spécification à animer.                               |
+| `height`    | `number \| string`                         | `420`           | Hauteur de la scène (ex. `420`, `'60vh'`).               |
+| `controls`  | `boolean`                                  | `true`          | Affiche la barre de lecture et la navigation par étapes. |
+| `autoPlay`  | `boolean`                                  | `false`         | Démarre la lecture automatiquement.                      |
+| `loop`      | `boolean`                                  | `false`         | Rejoue en boucle à la fin.                               |
+| `speed`     | `number`                                   | `1`             | Vitesse de lecture (`1` = normal).                       |
+| `theme`     | `'light' \| 'dark' \| 'auto'`              | `'auto'`        | Thème visuel.                                            |
+| `density`   | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Densité visuelle (taille des éléments / espacement).     |
+| `debug`     | `boolean`                                  | `false`         | Overlay d'inspection de la timeline interne.             |
+| `highlight` | `Highlighter`                              | Prism           | Coloration syntaxique personnalisée (cf. plus bas).      |
+| `fallback`  | `ReactNode`                                | —               | Contenu rendu pendant le SSR / avant hydratation.        |
+| `className` | `string`                                   | —               | Classe CSS additionnelle sur le conteneur racine.        |
+| `style`     | `CSSProperties`                            | —               | Styles inline sur le conteneur racine.                   |
+
+:::warning Mémoïsez votre spec
+
+Si la prop `spec` est un objet littéral défini dans le corps d'un composant parent, elle
+reçoit une **nouvelle identité référentielle** à chaque rendu. Le compilateur recompile
+alors toute la timeline et la mesure DOM (`useStageGeometry`) est invalidée inutilement.
+
+```tsx
+// ✗ — recompile à chaque rendu du parent
+<DataFlowPlayer spec={{ nodes: [...], timeline: [...] }} />
+
+// ✓ — stable : définie en dehors du composant ou protégée par useMemo
+const spec = useMemo(() => ({ nodes: [...], timeline: [...] }), []);
+<DataFlowPlayer spec={spec} />
+```
+
+:::
+
+Pour le rendu SSR / le placeholder d'hydratation et l'intégration Next.js /
+Docusaurus, voir [Installation](../installation.mdx).
+
+## Icônes personnalisées
+
+Le champ [`icon`](../concepts/nodes.mdx#icon--le-badge-techno) d'un nœud résout
+d'abord une techno connue, puis un badge **enregistré**. Deux fonctions
+alimentent ces registres :
+
+```ts
+registerNodeIcon(type: string, node: ReactNode): void; // pictogramme principal du nœud
+registerSubIcon(name: string, node: ReactNode): void;  // badge `icon` (techno)
+```
+
+```tsx
+import { registerSubIcon } from 'react-dataflow-animator';
+import { SiKubernetes } from 'react-icons/si';
+
+registerSubIcon('k8s', <SiKubernetes color="#326CE5" />);
+// puis : { id: 'orchestrator', type: 'cloud', icon: 'k8s' }
+```
+
+:::warning Registre global — enregistrez une seule fois
+
+`registerNodeIcon` / `registerSubIcon` mutent un **registre au niveau module**,
+partagé entre toutes les instances du player et entre les requêtes en
+environnement SSR. Appelez-les **une seule fois au démarrage de l'application**
+(fichier d'entrée, `_app.tsx`, `layout.tsx`…), jamais dans un corps de composant
+ou un `useEffect`.
+
+:::
+
+Les lecteurs `getNodeIcon(type)` / `getSubIcon(name)` permettent d'inspecter le
+registre si besoin.
+
+## Coloration syntaxique
+
+Par défaut, le code (`set_content` en mode `code`, corps de paquets) est coloré
+par **Prism**, via la fonction exportée `highlightCode` :
+
+```ts
+highlightCode: (code: string, language: string) => string; // type Highlighter
+```
+
+Vous pouvez la remplacer entièrement par la prop `highlight` — utile pour
+brancher Shiki, Highlight.js, ou éviter d'embarquer Prism :
+
+```tsx
+const myHighlighter: Highlighter = (code, language) =>
+  myEngine.toHtml(code, language);
+
+<DataFlowPlayer spec={spec} highlight={myHighlighter} />;
+```
+
+La fonction reçoit le code brut et le `language` déclaré, et renvoie du **HTML**.
+`escapeHtml` est aussi exporté pour un repli sans coloration.
+
+## API avancée (moteur)
+
+Pour des intégrations sur mesure (rendu maison, tests, outillage), le moteur pur
+est exporté. Sa surface est **bas niveau** et peut évoluer plus librement que le
+composant :
+
+| Export                                  | Rôle                                                   |
+| --------------------------------------- | ------------------------------------------------------ |
+| `compile(spec)`                         | Compile une `spec` en `Timeline` (clips ordonnés).     |
+| `evaluate(timeline, t)`                 | État visuel pur à l'instant `t` (ms).                  |
+| `stepIndexAt` / `nextStop` / `prevStop` | Navigation par étapes et points d'arrêt.               |
+| `computeLayout(spec)`                   | Positions relatives des nœuds (ratios), sans DOM.      |
+| `useClock()`                            | Hook d'horloge `requestAnimationFrame` (lecture/seek). |
+
+Ces fonctions sont **SSR-safe** (aucun accès DOM) à l'exception de `useClock`,
+qui s'utilise comme tout hook React.

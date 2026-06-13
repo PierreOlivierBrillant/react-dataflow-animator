@@ -137,12 +137,6 @@ const ACTION_DEFS = [
 export function ApiReference() {
   return (
     <>
-      <p className="docs-lead">
-        Référence générée automatiquement depuis le JSON Schema exporté (
-        <code className="inline">dataFlowSchema</code>).{' '}
-        <span className="api-req">*</span> = requis.
-      </p>
-
       <h2 id="api-dataflowspec">DataFlowSpec (racine)</h2>
       <PropsTable node={root} />
 

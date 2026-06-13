@@ -3,6 +3,9 @@ title: Timeline et étapes
 slug: /concepts/timeline
 ---
 
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import { stepsExample, fanOutExample } from './_timeline/examples';
+
 Le moteur compile votre tableau `timeline` en une **chronologie pure** : à
 chaque instant `t` (ms), l'état visuel est déterminé par une fonction
 `evaluate(timeline, t)`. Le seek arrière, la navigation par étapes et le SSR
@@ -17,6 +20,21 @@ naviguent d'une étape à l'autre.
 Une courte pause (`STEP_GAP`) sépare deux étapes consécutives : l'arrêt
 « Suivant » montre ainsi l'étape « posée » seule, sans chevaucher
 l'apparition de la suivante.
+
+Dans l'exemple ci-dessous, les **cinq** actions racines forment cinq étapes :
+utilisez « Précédent » / « Suivant » pour avancer pas à pas.
+
+<DataFlowPlayer spec={stepsExample} theme="auto" height={340} />
+
+```ts
+timeline: [
+  { type: 'comment', object: 'browser', text: '1. …' }, // étape 1
+  { type: 'move', object: 'req', from: 'browser', to: 'api' }, // étape 2
+  { type: 'loading', id: 'work', object: 'api' }, // étape 3
+  { type: 'move', object: 'res', from: 'api', to: 'browser', wait_for: 'work' }, // étape 4
+  { type: 'comment', object: 'browser', text: '2. …', keep_until_end: true }, // étape 5
+],
+```
 
 ## Points d'arrêt
 
@@ -60,6 +78,11 @@ Encapsule plusieurs actions exécutées au **même instant** :
   ],
 }
 ```
+
+Ici, un gateway diffuse trois requêtes vers ses services : les trois paquets
+partent **simultanément**.
+
+<DataFlowPlayer spec={fanOutExample(false)} theme="auto" height={340} />
 
 ### Durées personnalisées
 
@@ -129,6 +152,11 @@ actions à l'intérieur d'un `parallel`** (effet « cascade ») :
   ],
 }
 ```
+
+Le même `fan-out` que ci-dessus, mais avec un `delay_ms` croissant : les paquets
+s'égrènent au lieu de partir d'un bloc.
+
+<DataFlowPlayer spec={fanOutExample(true)} theme="auto" height={340} />
 
 Appliqué à un `parallel` entier, il retarde tout le groupe.
 
