@@ -14,12 +14,15 @@ export const signalr: DataFlowSpec = {
       type: 'laptop',
       text: 'Client 2',
       icon: 'react',
+      // Révélés plus tard : ils ont déjà ouvert leur connexion hors-champ.
+      visible: false,
     },
     {
       id: 'client3',
       type: 'laptop',
       text: 'Client 3',
       icon: 'react',
+      visible: false,
     },
     {
       id: 'hub',
@@ -40,8 +43,21 @@ export const signalr: DataFlowSpec = {
       kind: 'http_packet',
       packet_content: { header: 'SendMessage("Salut")' },
     },
+    // Une copie de ReceiveMessage par destinataire : le SendAll les diffuse
+    // simultanément, donc trois paquets distincts (un paquet ne peut être
+    // qu'à un seul endroit à la fois).
     {
-      id: 'recv',
+      id: 'recv1',
+      kind: 'http_packet',
+      packet_content: { header: 'ReceiveMessage' },
+    },
+    {
+      id: 'recv2',
+      kind: 'http_packet',
+      packet_content: { header: 'ReceiveMessage' },
+    },
+    {
+      id: 'recv3',
       kind: 'http_packet',
       packet_content: { header: 'ReceiveMessage' },
     },
@@ -110,6 +126,48 @@ export const signalr: DataFlowSpec = {
       keep_until: 'end',
     },
     {
+      // On dévoile les deux autres clients : ils sont déjà connectés au hub
+      // (connexions tracées d'emblée), prêts à recevoir la diffusion.
+      type: 'parallel',
+      duration: 1800,
+      actions: [
+        {
+          type: 'comment',
+          text: 'Deux autres clients ont déjà initié leur connexion au hub',
+        },
+        { type: 'set_visible', object: 'client2', visible: true },
+        { type: 'set_visible', object: 'client3', visible: true },
+        {
+          type: 'arrow',
+          from: 'client2',
+          to: 'hub',
+          style: 'dashed',
+          keep_until_end: true,
+        },
+        {
+          type: 'arrow',
+          from: 'hub',
+          to: 'client2',
+          style: 'dashed',
+          keep_until_end: true,
+        },
+        {
+          type: 'arrow',
+          from: 'client3',
+          to: 'hub',
+          style: 'dashed',
+          keep_until_end: true,
+        },
+        {
+          type: 'arrow',
+          from: 'hub',
+          to: 'client3',
+          style: 'dashed',
+          keep_until_end: true,
+        },
+      ],
+    },
+    {
       type: 'comment',
       object: 'client1',
       text: '3. Le client envoie un message',
@@ -125,16 +183,19 @@ export const signalr: DataFlowSpec = {
     {
       type: 'comment',
       object: 'hub',
-      text: '4. Le hub diffuse à tous (full duplex)',
+      text: '4. Clients.All : le hub diffuse à tous les clients connectés',
       duration: 500,
     },
     {
-      type: 'move',
+      // SendAll : un même message part vers les trois clients simultanément.
+      type: 'parallel',
       id: 'end',
-      object: 'recv',
-      from: 'hub',
-      to: 'client1',
       duration: 800,
+      actions: [
+        { type: 'move', object: 'recv1', from: 'hub', to: 'client1' },
+        { type: 'move', object: 'recv2', from: 'hub', to: 'client2' },
+        { type: 'move', object: 'recv3', from: 'hub', to: 'client3' },
+      ],
     },
   ],
 };
