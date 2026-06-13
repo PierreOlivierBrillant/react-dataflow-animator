@@ -5,6 +5,9 @@ slug: /concepts/layout
 
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import { demosById } from '@site/src/site-content';
+import { orientationExample, circularExample } from './_layout/orientations';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 La disposition des nœuds repose sur quatre concepts : `direction`, `lane`,
 `align_with`, et le mode `circular`. Vous ne fournissez **aucune
@@ -15,13 +18,60 @@ ce qui rend l'animation responsive sans calcul manuel.
 
 Cinq valeurs possibles pour `direction` (au niveau racine de la spec) :
 
-| Direction                | Axe principal            | Axe transverse |
-| ------------------------ | ------------------------ | -------------- |
-| `left-to-right` (défaut) | horizontal               | vertical       |
-| `right-to-left`          | horizontal (inversé)     | vertical       |
-| `top-to-bottom`          | vertical                 | horizontal     |
-| `bottom-to-top`          | vertical (inversé)       | horizontal     |
-| `circular`               | autour d'un nœud central | —              |
+<Tabs
+  defaultValue="left-to-right"
+  values={[
+    { label: 'left-to-right', value: 'left-to-right' },
+    { label: 'right-to-left', value: 'right-to-left' },
+    { label: 'top-to-bottom', value: 'top-to-bottom' },
+    { label: 'bottom-to-top', value: 'bottom-to-top' },
+    { label: 'circular', value: 'circular' },
+  ]}
+>
+  <TabItem value="left-to-right">
+    <DataFlowPlayer
+      spec={orientationExample('left-to-right')}
+      theme="auto"
+      controls={false}
+      height={500}
+      density="spacious"
+    />
+  </TabItem>
+  <TabItem value="right-to-left">
+    <DataFlowPlayer
+      spec={orientationExample('right-to-left')}
+      theme="auto"
+      controls={false}
+      height={500}
+      density="spacious"
+    />
+  </TabItem>
+  <TabItem value="top-to-bottom">
+    <DataFlowPlayer
+      spec={orientationExample('top-to-bottom')}
+      theme="auto"
+      controls={false}
+      height={500}
+      density="spacious"
+    />
+  </TabItem>
+  <TabItem value="bottom-to-top">
+    <DataFlowPlayer
+      spec={orientationExample('bottom-to-top')}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+  <TabItem value="circular">
+    <DataFlowPlayer
+      spec={circularExample}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+</Tabs>
 
 ## Grilles et lanes
 

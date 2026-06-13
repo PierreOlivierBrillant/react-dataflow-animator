@@ -22,6 +22,12 @@ export interface StageGeometry {
   /** Dimensions mesurées du Stage (px). */
   width: number;
   height: number;
+  /**
+   * Force une nouvelle mesure DOM immédiate (synchrone dans un layout effect).
+   * Permet de batcher la capture de géométrie icône et la mesure ContentPanel
+   * en un seul cycle React pour éviter un flash intermédiaire.
+   */
+  forceRemeasure: () => void;
 }
 
 const useIsomorphicLayoutEffect =
@@ -88,5 +94,12 @@ export function useStageGeometry(signature: string): StageGeometry {
     return () => ro.disconnect();
   }, [measure, signature]);
 
-  return { stageRef, geometry, aspect, width: size.width, height: size.height };
+  return {
+    stageRef,
+    geometry,
+    aspect,
+    width: size.width,
+    height: size.height,
+    forceRemeasure: measure,
+  };
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import {
   defineAnimatable,
   type AnimatableComponent,
@@ -23,6 +23,9 @@ export interface StaticNodeProps {
   highlight: Highlighter;
   /** Opacité globale du nœud (fondu show/hide de set_visible). */
   opacity?: number;
+  /** Hauteur imposée au conteneur visuel pendant une transition set_content (px).
+   *  Permet d'animer le déplacement du label en synchronie avec le fondu. */
+  visualHeight?: number;
 }
 
 export const StaticNode: AnimatableComponent<StaticNodeProps> =
@@ -35,6 +38,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     highlighted,
     highlight,
     opacity,
+    visualHeight,
   }: StaticNodeProps) {
     const visual: ReactNode = content ? (
       <ContentPanel content={content} highlight={highlight} />
@@ -48,7 +52,22 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       </>
     );
 
-    const visualStyle = content ? { opacity: contentOpacity } : undefined;
+    // Pendant une transition set_content (visualHeight défini), on contraint la
+    // hauteur du conteneur visuel pour que le label glisse progressivement.
+    // overflow:hidden + alignItems:flex-start révèle le ContentPanel du haut vers
+    // le bas (barre de fenêtre d'abord) sans clipper la boîte englobante du nœud.
+    const visualStyle: CSSProperties | undefined = content
+      ? {
+          opacity: contentOpacity,
+          ...(visualHeight != null
+            ? {
+                height: visualHeight,
+                overflow: 'hidden',
+                alignItems: 'flex-start',
+              }
+            : {}),
+        }
+      : undefined;
     const inner = object.url ? (
       <a
         className="rdfa-node-link"

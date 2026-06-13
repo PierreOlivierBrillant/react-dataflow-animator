@@ -1,4 +1,10 @@
-import { useMemo, type CSSProperties } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from 'react';
 import type {
   DataFlowSpec,
   Packet as PacketSpec,
@@ -12,6 +18,7 @@ import {
   type CommentClip,
   type HighlightClip,
   type MoveClip,
+  type SetContentClip,
   type SetVisibleClip,
   type Timeline,
 } from '../engine/timeline';
@@ -22,7 +29,12 @@ import {
   collectArrowConnections,
   computePortOffsets,
 } from '../engine/portOffsets';
-import { connection, pathTip } from '../engine/geometry';
+import {
+  connection,
+  pathTip,
+  type GeometryMap,
+  type NodeGeom,
+} from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { buildStageSignature } from './stageSignature';
 import { clipOpacity } from './clipOpacity';
@@ -31,6 +43,14 @@ import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
 import { CommentBubble } from './CommentBubble';
 import { DebugOverlay } from './DebugOverlay';
+
+// SSR-safe : useLayoutEffect côté client, useEffect côté serveur.
+const useIsoLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
 
 export interface StageProps {
   spec: DataFlowSpec;
@@ -51,7 +71,7 @@ export function Stage({
 }: StageProps) {
   const signature = useMemo(() => buildStageSignature(spec), [spec]);
 
-  const { stageRef, geometry, aspect, width, height } =
+  const { stageRef, geometry, aspect, width, height, forceRemeasure } =
     useStageGeometry(signature);
   const layout = useMemo(() => computeLayout(spec, { aspect }), [spec, aspect]);
 
@@ -60,6 +80,11 @@ export function Stage({
     [layout, width, height, density]
   );
   const allNodes = useMemo(() => Object.values(geometry), [geometry]);
+  // Géométrie pré-ContentPanel (icône) par nodeId : capturée dans useLayoutEffect
+  // dès qu'un clip set_content devient actif, avant que le ResizeObserver tire.
+  const [iconGeomByNode, setIconGeomByNode] = useState<
+    Record<string, NodeGeom>
+  >({});
   const dynamicById = useMemo(() => {
     const map: Record<string, PacketSpec> = {};
     for (const obj of spec.packets) map[obj.id] = obj;
@@ -74,6 +99,42 @@ export function Stage({
     [lineConnections, layout, aspect]
   );
 
+  // Capture la géométrie "icône" des nœuds qui viennent d'entrer en mode
+  // set_content. S'exécute après le commit DOM, avant que le ResizeObserver
+  // n'ait eu le temps de mettre à jour geometry avec les dimensions du ContentPanel.
+  //
+  // Quand un nouveau nœud set_content apparaît (hasNew), on appelle forceRemeasure()
+  // dans le même layout effect. React 18 batche setIconGeomByNode + setGeometry en
+  // un seul re-render, éliminant le flash intermédiaire ("effet 2 frames").
+  useIsoLayoutEffect(() => {
+    const activeContentNodeIds = new Set<string>();
+    for (const a of active) {
+      if (a.clip.kind === 'set_content') {
+        activeContentNodeIds.add((a.clip as SetContentClip).objectId);
+      }
+    }
+    const hasNew = [...activeContentNodeIds].some(
+      (nodeId) => !iconGeomByNode[nodeId] && geometry[nodeId]
+    );
+    setIconGeomByNode((prev) => {
+      let next = prev;
+      for (const nodeId of activeContentNodeIds) {
+        if (!prev[nodeId] && geometry[nodeId]) {
+          if (next === prev) next = { ...prev };
+          next[nodeId] = geometry[nodeId];
+        }
+      }
+      for (const nodeId of Object.keys(prev)) {
+        if (!activeContentNodeIds.has(nodeId)) {
+          if (next === prev) next = { ...prev };
+          delete next[nodeId];
+        }
+      }
+      return next;
+    });
+    if (hasNew) forceRemeasure();
+  }, [active, geometry, iconGeomByNode, forceRemeasure]);
+
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
   // actif (avec fondu d'apparition/disparition).
   const contentByNode: Record<
@@ -85,11 +146,56 @@ export function Stage({
       contentByNode[obj.id] = { content: obj.content, opacity: 1 };
   }
   for (const a of active) {
-    if (a.clip.kind === 'set_content') {
-      contentByNode[a.clip.objectId] = {
-        content: a.clip.content,
-        opacity: clipOpacity(a.clip, t),
-      };
+    if (a.clip.kind !== 'set_content') continue;
+    const clip = a.clip as SetContentClip;
+    contentByNode[clip.objectId] = {
+      content: clip.content,
+      opacity: clipOpacity(clip, t),
+    };
+  }
+
+  // Géométrie interpolée : pendant une transition set_content, lerp entre la
+  // géométrie pré-content (icône, dans iconGeomByNode) et la géométrie actuelle
+  // (ContentPanel mesuré). Facteur = clipOpacity → en phase avec le fondu visuel.
+  let effectiveGeometry: GeometryMap = geometry;
+  let hasSetContentTransition = false;
+  for (const a of active) {
+    if (a.clip.kind !== 'set_content') continue;
+    const clip = a.clip as SetContentClip;
+    const nodeId = clip.objectId;
+    const iconGeom = iconGeomByNode[nodeId];
+    const currGeom = geometry[nodeId];
+    if (!iconGeom || !currGeom) continue;
+    const p = contentByNode[nodeId]?.opacity ?? 0;
+    if (p >= 1) continue;
+    if (!hasSetContentTransition) {
+      effectiveGeometry = { ...geometry };
+      hasSetContentTransition = true;
+    }
+    const lH = lerp(iconGeom.labelH ?? 0, currGeom.labelH ?? 0, p);
+    const lW = lerp(iconGeom.labelW ?? 0, currGeom.labelW ?? 0, p);
+    effectiveGeometry[nodeId] = {
+      id: currGeom.id,
+      x: lerp(iconGeom.x, currGeom.x, p),
+      y: lerp(iconGeom.y, currGeom.y, p),
+      width: lerp(iconGeom.width, currGeom.width, p),
+      height: lerp(iconGeom.height, currGeom.height, p),
+      ...(lH > 0 ? { labelH: lH } : {}),
+      ...(lW > 0 ? { labelW: lW } : {}),
+    };
+  }
+  const allEffectiveNodes = hasSetContentTransition
+    ? Object.values(effectiveGeometry)
+    : allNodes;
+
+  // Hauteur du visuel à imposer à StaticNode pendant la transition (px).
+  // Permet au label de glisser progressivement plutôt que de sauter.
+  const visualHeightByNode: Record<string, number> = {};
+  if (hasSetContentTransition) {
+    for (const nodeId of Object.keys(effectiveGeometry)) {
+      if (effectiveGeometry[nodeId] !== geometry[nodeId]) {
+        visualHeightByNode[nodeId] = effectiveGeometry[nodeId].height;
+      }
     }
   }
 
@@ -153,8 +259,8 @@ export function Stage({
       <svg className="rdfa-arrow-svg">
         {/* Lignes de base */}
         {spec.connections?.map((link, i) => {
-          const f = geometry[link.from];
-          const tg = geometry[link.to];
+          const f = effectiveGeometry[link.from];
+          const tg = effectiveGeometry[link.to];
           if (!f || !tg) return null;
           const key = link.id ?? `${link.from}|${link.to}|${i}`;
           const ports = portOffsets[key] ?? { start: 0, end: 0 };
@@ -170,15 +276,15 @@ export function Stage({
               text={link.text}
               progress={1}
               highlighted={!!link.id && highlightedIds.has(link.id)}
-              obstacles={allNodes}
+              obstacles={allEffectiveNodes}
             />
           );
         })}
         {active.map((a) => {
           if (a.clip.kind !== 'arrow') return null;
           const clip = a.clip as ArrowClip;
-          const f = geometry[clip.fromId];
-          const tg = geometry[clip.toId];
+          const f = effectiveGeometry[clip.fromId];
+          const tg = effectiveGeometry[clip.toId];
           if (!f || !tg) return null;
 
           let lineKey = clip.id;
@@ -200,7 +306,7 @@ export function Stage({
               arrow_head={clip.arrow_head}
               text={clip.text}
               progress={a.progress}
-              obstacles={allNodes}
+              obstacles={allEffectiveNodes}
             />
           );
         })}
@@ -223,6 +329,7 @@ export function Stage({
             highlighted={highlightedIds.has(o.id)}
             highlight={highlight}
             opacity={nodeOpacity < 1 ? nodeOpacity : undefined}
+            visualHeight={visualHeightByNode[o.id]}
           />
         );
       })}
@@ -232,8 +339,8 @@ export function Stage({
         {active.map((a) => {
           if (a.clip.kind !== 'move') return null;
           const clip = a.clip as MoveClip;
-          const f = geometry[clip.fromId];
-          const tg = geometry[clip.toId];
+          const f = effectiveGeometry[clip.fromId];
+          const tg = effectiveGeometry[clip.toId];
           const obj = dynamicById[clip.objectId];
           if (!f || !tg || !obj) return null;
           let moveKey = clip.id;
@@ -247,7 +354,7 @@ export function Stage({
           const conn = connection(
             f,
             tg,
-            allNodes,
+            allEffectiveNodes,
             movePorts.start,
             movePorts.end
           );
@@ -268,7 +375,7 @@ export function Stage({
         {active.map((a) => {
           if (a.clip.kind !== 'comment') return null;
           const clip = a.clip as CommentClip;
-          const n = geometry[clip.nextToId];
+          const n = effectiveGeometry[clip.nextToId];
           if (!n) return null;
           return (
             <CommentBubble
