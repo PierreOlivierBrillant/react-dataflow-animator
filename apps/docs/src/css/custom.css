@@ -333,3 +333,214 @@ select option {
   background: var(--ifm-background-surface-color) !important;
   color: #fff !important;
 }
+
+/* =========================================================================
+   Thème de la documentation (pages /docs/*)
+   Objectif : sidebar à icônes, TOC titrée, encadrés et cartes — inspiré
+   d'un layout type "docs moderne". Tout est piloté en CSS + classes posées
+   dans sidebars.ts ; aucune swizzle de composant Docusaurus n'est requise.
+   ========================================================================= */
+
+:root {
+  /* Infima dessine la barre active en pleine largeur ; on la neutralise pour
+     poser à la place une pastille arrondie en retrait (cf. .menu__link). */
+  --ifm-menu-color-background-active: transparent;
+  --ifm-menu-color-background-hover: transparent;
+}
+
+/* --- Sidebar : conteneur ------------------------------------------------- */
+.theme-doc-sidebar-container {
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.theme-doc-sidebar-container .menu {
+  padding: 1rem 0.75rem 2rem;
+}
+
+/* Intitulé de section au-dessus de la navigation (« NAVIGATION »). */
+.theme-doc-sidebar-menu::before {
+  content: 'Navigation';
+  display: block;
+  padding: 0 0.65rem 0.4rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ifm-color-secondary-dark);
+}
+
+/* --- Sidebar : liens ----------------------------------------------------- */
+.menu__link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.9rem;
+  color: var(--ifm-color-content-secondary);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.menu__link:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--ifm-font-color-base);
+}
+
+/* Pastille active : fond teinté primaire + texte clair (sans liseré). */
+.menu__link--active:not(.menu__link--sublist) {
+  background: rgba(168, 85, 247, 0.12);
+  color: #fff;
+}
+
+/* Catégories repliables : on garde le chevron Infima mais on adoucit la
+   couleur pour rester cohérent avec les liens. */
+.menu__caret::before,
+.menu__link--sublist-caret::after {
+  opacity: 0.6;
+}
+
+/* Sous-niveau (Concepts > Disposition…) : léger décalage, pas d'icône. */
+.menu__list .menu__list {
+  margin-top: 0.15rem;
+  padding-left: 0.65rem;
+}
+
+/* --- Sidebar : icônes par item (classes posées dans sidebars.ts) --------
+   L'icône suit la couleur du texte (currentColor via mask), donc l'état
+   actif/au survol éclaircit aussi le pictogramme sans SVG dédié. */
+.menu-icon-intro > .menu__link::before,
+.menu-icon-installation > .menu__link::before,
+.menu-icon-concepts > .menu__list-item-collapsible > .menu__link::before,
+.menu-icon-reference > .menu__list-item-collapsible > .menu__link::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 1.05rem;
+  height: 1.05rem;
+  background-color: currentColor;
+  -webkit-mask: var(--menu-icon) center / contain no-repeat;
+  mask: var(--menu-icon) center / contain no-repeat;
+  opacity: 0.9;
+}
+
+.menu-icon-intro {
+  --menu-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 7v14'/><path d='M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z'/></svg>");
+}
+.menu-icon-installation {
+  --menu-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z'/></svg>");
+}
+.menu-icon-concepts {
+  --menu-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z'/><path d='M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12'/><path d='M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17'/></svg>");
+}
+.menu-icon-reference {
+  --menu-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z'/><path d='M14 2v4a2 2 0 0 0 2 2h4'/><path d='M10 9H8'/><path d='M16 13H8'/><path d='M16 17H8'/></svg>");
+}
+
+/* --- Table des matières (colonne droite) -------------------------------- */
+.theme-doc-toc-desktop .table-of-contents::before {
+  content: 'Sur cette page';
+  display: block;
+  padding: 0 0.75rem 0.55rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ifm-color-secondary-dark);
+}
+
+.table-of-contents {
+  border-left-color: rgba(255, 255, 255, 0.08);
+}
+
+.table-of-contents__link {
+  color: var(--ifm-color-content-secondary);
+  transition: color 0.15s ease;
+}
+
+.table-of-contents__link:hover,
+.table-of-contents__link--active,
+.table-of-contents__link--active code {
+  color: var(--ifm-color-primary-light);
+}
+
+/* --- Fil d'Ariane -------------------------------------------------------- */
+.breadcrumbs__item--active .breadcrumbs__link {
+  background: transparent;
+  color: var(--ifm-color-primary-light);
+  font-weight: 600;
+}
+
+.breadcrumbs__link {
+  font-size: 0.85rem;
+}
+
+/* --- Encadré d'introduction (.docs-lead, déjà utilisé par ApiReference) -- */
+.docs-lead {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.9rem 1.15rem;
+  margin-bottom: 1.6rem;
+  background:
+    linear-gradient(135deg, rgba(168, 85, 247, 0.06), rgba(168, 85, 247, 0)),
+    var(--ifm-background-surface-color);
+  color: var(--ifm-color-content-secondary);
+}
+
+.docs-lead > :last-child {
+  margin-bottom: 0;
+}
+
+/* --- Liens de pagination (bas de page) : aspect « carte » ---------------- */
+.pagination-nav__link {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  background: var(--ifm-background-surface-color);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.pagination-nav__link:hover {
+  border-color: rgba(168, 85, 247, 0.45);
+  transform: translateY(-2px);
+}
+
+.pagination-nav__sublabel {
+  color: var(--ifm-color-secondary-dark);
+  font-size: 0.8rem;
+}
+
+.pagination-nav__label {
+  color: var(--ifm-color-primary-light);
+  font-weight: 600;
+}
+
+/* --- Listes à puces fléchées (1er niveau du contenu markdown) ------------
+   Scopé aux <ul> enfants directs de .markdown : les listes imbriquées et
+   celles dans les admonitions/Tabs gardent les puces par défaut. */
+.theme-doc-markdown > ul {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+
+.theme-doc-markdown > ul > li {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.theme-doc-markdown > ul > li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--ifm-color-primary);
+  font-weight: 700;
+}
+
+/* --- Admonitions : coins arrondis cohérents ------------------------------ */
+.theme-admonition {
+  border-radius: 12px;
+}

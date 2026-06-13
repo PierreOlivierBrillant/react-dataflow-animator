@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Action, DataFlowSpec } from '../types';
 import { APPEAR_HOLD, ARRIVE_HOLD, compile, STEP_GAP } from './compiler';
+import { evaluate } from './timeline';
 
 const nodes: DataFlowSpec['nodes'] = [
   { id: 'a', type: 'client' },
@@ -489,5 +490,71 @@ describe('compile — set_visible', () => {
     for (const c of timeline.clips.filter((c) => c.kind === 'set_visible')) {
       expect(c.visibleUntilMs).toBe(timeline.durationMs);
     }
+  });
+});
+
+describe('compile — wait', () => {
+  it("n'émet aucun clip mais crée une étape qui décale les suivantes", () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'arrow', id: 'A1', from: 'a', to: 'b', duration: 300 },
+        { type: 'wait', id: 'W', duration: 1000 },
+        { type: 'arrow', id: 'A2', from: 'a', to: 'b', duration: 300 },
+      ])
+    );
+    // Le wait ne produit aucun clip : seules les deux flèches sont présentes…
+    expect(timeline.clips).toHaveLength(2);
+    // …mais il occupe bien une étape à part entière.
+    expect(timeline.steps).toHaveLength(3);
+
+    const waitStart = 300 + STEP_GAP;
+    expect(timeline.steps[1].startMs).toBe(waitStart);
+    expect(timeline.steps[1].endMs).toBe(waitStart + 1000);
+
+    // L'étape suivante démarre après le wait (+ pause inter-étapes).
+    const a2 = timeline.clips.find((c) => c.id === 'A2')!;
+    expect(a2.startMs).toBe(waitStart + 1000 + STEP_GAP);
+  });
+
+  it('maintient le contenu posé (keep_until_next) PENDANT le temps mort', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'arrow', id: 'A1', from: 'a', to: 'b', duration: 300 },
+        { type: 'wait', duration: 1000 },
+        { type: 'arrow', id: 'A2', from: 'a', to: 'b', duration: 300 },
+      ])
+    );
+    const a1 = timeline.clips.find((c) => c.id === 'A1')!;
+    const a2 = timeline.clips.find((c) => c.id === 'A2')!;
+    // A1 reste visible jusqu'au DÉBUT de l'étape de contenu suivante (A2),
+    // donc à travers le wait, et non jusqu'au début du wait.
+    expect(a1.visibleUntilMs).toBe(a2.startMs);
+
+    // Au beau milieu de l'attente, A1 est toujours rendu (figé, progress 1).
+    const midWait = timeline.steps[1].startMs + 500;
+    const active = evaluate(timeline, midWait);
+    const shown = active.find((c) => c.clip.id === 'A1');
+    expect(shown).toBeDefined();
+    expect(shown!.animating).toBe(false);
+  });
+
+  it('utilise la durée par défaut (1000 ms) quand `duration` est absent', () => {
+    const { timeline } = compile(specOf([{ type: 'wait' }]));
+    expect(timeline.clips).toHaveLength(0);
+    expect(timeline.steps).toHaveLength(1);
+    expect(timeline.durationMs).toBe(1000);
+  });
+
+  it('résout wait_for vers la fin d’un wait identifié', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'wait', id: 'W', duration: 800 },
+        { type: 'arrow', id: 'A', from: 'a', to: 'b', wait_for: 'W' },
+      ])
+    );
+    const a = timeline.clips.find((c) => c.id === 'A')!;
+    // A est une étape racine : son plancher est le début de son étape, qui suit
+    // déjà le wait — wait_for ne fait donc que confirmer ce séquencement.
+    expect(a.startMs).toBe(800 + STEP_GAP);
   });
 });

@@ -544,6 +544,45 @@
   display: block;
 }
 
+/* ---------- set_content / content : tableau ---------- */
+.rdfa-content--table .rdfa-content-body {
+  padding: 0;
+  overflow: hidden;
+  max-height: none;
+}
+
+.rdfa-content-table-wrapper {
+  overflow: auto;
+  max-height: calc(320px * var(--rdfa-content-scale, 1));
+  max-width: 100%;
+}
+
+.rdfa-content-table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: calc(11px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
+  border-style: hidden;
+}
+
+.rdfa-content-table th,
+.rdfa-content-table td {
+  border: 1px solid var(--rdfa-border);
+  padding: 4px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.rdfa-content-table th {
+  background: var(--rdfa-window-bg);
+  font-weight: 600;
+}
+
+.rdfa-content-table tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--rdfa-surface) 95%, var(--rdfa-border));
+}
+
 .rdfa-terminal .rdfa-content-body,
 .rdfa-content-body.rdfa-code {
   /* Terminal is always dark, force dark Prism colors */

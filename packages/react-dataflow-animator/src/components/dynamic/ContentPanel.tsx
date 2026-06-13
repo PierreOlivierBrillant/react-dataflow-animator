@@ -83,6 +83,37 @@ export function ContentPanel({ content, highlight }: ContentPanelProps) {
     );
   }
 
+  if (type === 'table') {
+    return (
+      <div className="rdfa-content rdfa-content--table">
+        <div className="rdfa-content-body rdfa-content-table-wrapper">
+          <table className="rdfa-content-table">
+            {content.columns && (
+              <thead>
+                <tr>
+                  {content.columns.map((col, i) => (
+                    <th key={i}>{col}</th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            {content.rows_data && (
+              <tbody>
+                {content.rows_data.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((cell, j) => (
+                      <td key={j}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            )}
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   // text / UI : fenêtre de navigateur factice.
   return (
     <div className="rdfa-content">

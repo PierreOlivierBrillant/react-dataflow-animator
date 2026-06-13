@@ -113,7 +113,8 @@
         "mobile",
         "user",
         "admin",
-        "users"
+        "users",
+        "cloud"
       ],
       "description": "Types de nœuds (apparence). Les flèches de décor vivent dans `connections`."
     },
@@ -133,6 +134,26 @@
         "url": {
           "type": "string",
           "description": "(mode `text`) URL affichée dans la barre d'adresse de la fenêtre."
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "(mode `table`) En-têtes de colonnes."
+        },
+        "rows_data": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "number"
+              ]
+            }
+          },
+          "description": "(mode `table`) Lignes de données."
         }
       },
       "additionalProperties": false
@@ -142,7 +163,8 @@
       "enum": [
         "image",
         "text",
-        "code"
+        "code",
+        "table"
       ],
       "description": "Modes de contenu pour `set_content` (action) et `content` (objet statique)."
     },
@@ -373,6 +395,9 @@
         },
         {
           "$ref": "#/definitions/SetVisibleAction"
+        },
+        {
+          "$ref": "#/definitions/WaitAction"
         }
       ],
       "description": "Union discriminée des actions (par `type`)."
@@ -919,6 +944,64 @@
       ],
       "additionalProperties": false,
       "description": "Affiche ou cache un nœud statique avec un fondu."
+    },
+    "WaitAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID de l'action pour s'y référer (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Durée de l'animation en ms (défaut: 500, 1200 pour loading).",
+          "minimum": 1,
+          "multipleOf": 1
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Reste visible jusqu'au début de l'étape racine suivante. Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "Si vrai, reste visible jusqu'à la fin de la chronologie."
+        },
+        "delay_ms": {
+          "type": "number",
+          "description": "Décalage de départ en ms, ajouté après la résolution de `wait_for` et le clamp de l'étape. Principalement utile dans un bloc `parallel` pour décaler des actions les unes par rapport aux autres (animations en séquence décalée). S'applique aussi à une action `parallel` entière pour retarder tout le groupe.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Durée du fondu d'apparition en ms. Défaut: période de maintien de départ pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée. Sans effet si `keep_until_end` est vrai.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "type": {
+          "type": "string",
+          "const": "wait"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "description": "Temps mort : rien ne se passe pendant `duration` ms (défaut: 1000). Ne produit aucun clip ; insère simplement une pause entre deux étapes (les éléments maintenus via `keep_until_next` restent affichés pendant l'attente)."
     }
   },
   "title": "DataFlowSpec"

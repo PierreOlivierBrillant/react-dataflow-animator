@@ -24,7 +24,8 @@ export type NodeType =
   | 'mobile'
   | 'user'
   | 'admin'
-  | 'users';
+  | 'users'
+  | 'cloud';
 
 export type PacketKind = 'http_packet' | 'sql_request' | 'sql_response';
 
@@ -32,7 +33,7 @@ export type PacketKind = 'http_packet' | 'sql_request' | 'sql_response';
 export type LineStyle = 'solid' | 'dotted' | 'dashed' | 'animated';
 
 /** Modes de contenu pour `set_content` (action) et `content` (objet statique). */
-export type ContentType = 'image' | 'text' | 'code';
+export type ContentType = 'image' | 'text' | 'code' | 'table';
 
 /** Langages supportés par le moteur de coloration syntaxique (Prism). */
 export type HighlightLanguage =
@@ -64,6 +65,10 @@ export interface ObjectContent {
   language?: HighlightLanguage | (string & {});
   /** (mode `text`) URL affichée dans la barre d'adresse de la fenêtre. */
   url?: string;
+  /** (mode `table`) En-têtes de colonnes. */
+  columns?: string[];
+  /** (mode `table`) Lignes de données. */
+  rows_data?: (string | number)[][];
 }
 
 export interface Node {
@@ -165,7 +170,8 @@ export type ActionType =
   | 'set_content'
   | 'comment'
   | 'highlight'
-  | 'set_visible';
+  | 'set_visible'
+  | 'wait';
 
 /** Champs communs à toutes les actions (ordonnancement et cycle de vie). */
 interface ActionBase {
@@ -275,6 +281,15 @@ interface SetVisibleAction extends ActionBase {
   visible: boolean;
 }
 
+/**
+ * Temps mort : rien ne se passe pendant `duration` ms (défaut: 1000). Ne produit
+ * aucun clip ; insère simplement une pause entre deux étapes (les éléments
+ * maintenus via `keep_until_next` restent affichés pendant l'attente).
+ */
+interface WaitAction extends ActionBase {
+  type: 'wait';
+}
+
 /** Union discriminée des actions (par `type`). */
 export type Action =
   | MoveAction
@@ -284,7 +299,8 @@ export type Action =
   | SetContentAction
   | CommentAction
   | HighlightAction
-  | SetVisibleAction;
+  | SetVisibleAction
+  | WaitAction;
 
 export interface DataFlowSpec {
   /** Direction de placement automatique des nœuds. Défaut: 'left-to-right'. */

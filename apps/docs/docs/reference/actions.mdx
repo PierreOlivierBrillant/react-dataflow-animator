@@ -3,7 +3,7 @@ title: Types d'actions
 slug: /reference/actions
 ---
 
-Sept types d'actions sont disponibles. Toutes partagent un jeu de champs
+Les types d'actions suivants sont disponibles. Tous partagent un jeu de champs
 communs ([cycle de vie](../concepts/timeline.mdx) : `id`, `duration`,
 `wait_for`, `keep_until`, `keep_until_next`, `keep_until_end`).
 
@@ -109,6 +109,20 @@ identifiés par leur `id`.
 ```ts
 { type: 'highlight', object: 'db' }
 ```
+
+## `wait`
+
+Insère un temps mort : rien ne se passe pendant `duration` ms (défaut :
+1000). L'action ne produit aucun élément à l'écran ; elle se contente de
+décaler l'étape suivante. Le contenu déjà posé (via `keep_until_next`)
+reste affiché **pendant** l'attente, ce qui fige l'image le temps voulu.
+
+```ts
+{ type: 'wait', duration: 1500 }
+```
+
+Utile pour laisser le spectateur lire une étape avant de poursuivre, ou
+pour rythmer une lecture en `autoPlay`.
 
 ## Référence complète
 

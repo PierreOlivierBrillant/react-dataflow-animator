@@ -95,6 +95,8 @@ La timeline compile un tableau d'actions ordonnées. Voir
    paramétrable via `content.url`).
 6. **comment** : bulle de texte en fondu près d'un nœud (`object`).
 7. **highlight** : surligne (halo pulsé) un nœud statique ou une connexion (par `object` = id).
+8. **wait** : temps mort — aucun clip émis, l'étape occupe simplement `duration` ms
+   (défaut 1000) pour figer l'image avant l'étape suivante.
 
 ## 6. Cycle de vie temporel
 
@@ -112,7 +114,8 @@ La timeline compile un tableau d'actions ordonnées. Voir
   pour que l'arrêt « Suivant » montre l'étape « posée » seule (sans chevaucher
   l'apparition de la suivante).
 - **`keep_until_next`** : reste visible jusqu'au début de l'étape racine suivante
-  (donc à travers la pause).
+  (donc à travers la pause). Les étapes `wait` sont **sautées** dans cette
+  résolution : le contenu posé reste affiché pendant le temps mort.
 - **`keep_until_end`** (booléen) : reste visible jusqu'à la fin de la chronologie.
   Défauts : `move` → `false` ; `arrow`/`comment`/`set_content` → `true` ; `loading` → `false`.
 

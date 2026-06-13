@@ -82,6 +82,7 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
       <path d="M17 14.2c2.3.5 4 2.3 4 4.8" />
     </>
   ),
+  cloud: svg(<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />),
 };
 
 const fallback = svg(<rect x="4" y="4" width="16" height="16" rx="2" />);

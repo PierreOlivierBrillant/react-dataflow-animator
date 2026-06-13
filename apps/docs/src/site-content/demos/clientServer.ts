@@ -138,5 +138,9 @@ export const clientServer: DataFlowSpec = {
         },
       ],
     },
+    {
+      type: 'wait',
+      delay_ms: 1000,
+    },
   ],
 };

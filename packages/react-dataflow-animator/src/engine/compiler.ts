@@ -43,6 +43,7 @@ const DEFAULT_DURATION: Record<ActionType, number> = {
   highlight: 600,
   parallel: 0,
   set_visible: 300,
+  wait: 1000,
 };
 
 // Défaut de `keep_until_next` par type d'action (cf. schema).
@@ -132,6 +133,15 @@ function compileAction(
     }
     if (action.id) ctx.timingById.set(action.id, { startMs, endMs: animEndMs });
     return { startMs, animEndMs, occupiedEndMs };
+  }
+
+  if (action.type === 'wait') {
+    // Temps mort : aucun clip émis, on ne fait qu'occuper la fenêtre temporelle
+    // pour que l'étape suivante démarre plus tard. Les clips maintenus par les
+    // étapes précédentes (keep_until_next) restent affichés pendant l'attente.
+    const endMs = startMs + (action.duration ?? DEFAULT_DURATION.wait);
+    if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
+    return { startMs, animEndMs: endMs, occupiedEndMs: endMs };
   }
 
   const duration = action.duration ?? DEFAULT_DURATION[action.type];
@@ -334,6 +344,15 @@ export function compile(spec: DataFlowSpec): CompileResult {
   }
   if (steps.length > 0) steps[steps.length - 1].endMs = durationMs;
 
+  // Début de la prochaine étape « de contenu » après `stepIndex` : les étapes
+  // `wait` (temps morts sans clip) sont sautées pour que keep_until_next tienne
+  // le contenu posé PENDANT l'attente plutôt que de laisser un écran vide.
+  const nextContentStepStart = (stepIndex: number): number => {
+    let i = stepIndex + 1;
+    while (i < steps.length && spec.timeline[i]?.type === 'wait') i++;
+    return steps[i]?.startMs ?? durationMs;
+  };
+
   // Passe 2 : résolution du cycle de vie (visibleUntilMs).
   for (const { clip, keepUntil, keepNext, keepEnd, stepIndex } of ctx.pending) {
     if (keepUntil) {
@@ -344,8 +363,9 @@ export function compile(spec: DataFlowSpec): CompileResult {
       // Visible jusqu'à la fin de la chronologie.
       clip.visibleUntilMs = durationMs;
     } else if (keepNext) {
-      // Visible jusqu'au DÉBUT de l'étape suivante (donc à travers la pause).
-      clip.visibleUntilMs = steps[stepIndex + 1]?.startMs ?? durationMs;
+      // Visible jusqu'au DÉBUT de l'étape de contenu suivante (à travers la
+      // pause inter-étapes et les éventuels temps morts `wait`).
+      clip.visibleUntilMs = nextContentStepStart(stepIndex);
     }
     // sinon : visibleUntilMs reste = fin d'empreinte (disparaît après son hold).
   }
