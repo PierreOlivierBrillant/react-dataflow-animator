@@ -96,8 +96,9 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     }
     const ptStr = ptsAdjusted.map((p) => `${p.x},${p.y}`).join(' ');
 
-    // Position du label de texte au milieu du chemin complet.
-    const mid = pathTip(conn, 0.5);
+    // Position du label de texte : ancre décalée si le milieu du chemin tombe
+    // sur un nœud intercalé, sinon milieu du chemin.
+    const mid = conn.labelAnchor ?? pathTip(conn, 0.5);
 
     const lineCls = `rdfa-arrow-line${highlighted ? ' rdfa-arrow-line--highlight' : ''}`;
     const headCls = `rdfa-arrow-head${highlighted ? ' rdfa-arrow-head--highlight' : ''}`;

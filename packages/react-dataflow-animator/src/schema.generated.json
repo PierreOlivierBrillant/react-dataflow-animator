@@ -65,14 +65,20 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Identifiant unique du nœud (ex: 'serveur_web')."
+          "description": "Identifiant unique du nœud (ex: 'serveur_web').",
+          "examples": [
+            "serveur_web"
+          ]
         },
         "type": {
           "$ref": "#/definitions/NodeType"
         },
         "text": {
           "type": "string",
-          "description": "Label affiché en dessous du nœud."
+          "description": "Label affiché en dessous du nœud.",
+          "examples": [
+            "Serveur web"
+          ]
         },
         "visible": {
           "type": "boolean",
@@ -80,7 +86,10 @@
         },
         "icon": {
           "type": "string",
-          "description": "Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API')."
+          "description": "Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'), nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API').",
+          "examples": [
+            "react"
+          ]
         },
         "lane": {
           "type": "number",
@@ -96,15 +105,24 @@
         },
         "url": {
           "type": "string",
-          "description": "URL rendant le nœud cliquable (ouvre dans un nouvel onglet)."
+          "description": "URL rendant le nœud cliquable (ouvre dans un nouvel onglet).",
+          "examples": [
+            "https://status.example.com"
+          ]
         },
         "background_color": {
           "type": "string",
-          "description": "Couleur de fond du nœud : remplissage des formes, fond des panneaux (`simple_node`/`complex_node`), pastille derrière un pictogramme. Accepte une couleur CSS **prédéfinie** (nom : `tomato`, `steelblue`, `teal`…) ou une valeur\n**hexadécimale exacte** (`#3b82f6`). Sans effet sur un `set_content` actif."
+          "description": "Couleur de fond du nœud : remplissage des formes, fond des panneaux (`simple_node`/`complex_node`), pastille derrière un pictogramme. Accepte une couleur CSS **prédéfinie** (nom : `tomato`, `steelblue`, `teal`…) ou une valeur\n**hexadécimale exacte** (`#3b82f6`). Sans effet sur un `set_content` actif.",
+          "examples": [
+            "#3b82f6"
+          ]
         },
         "border_color": {
           "type": "string",
-          "description": "Couleur de la bordure / du trait du nœud (stroke des formes, bordure des panneaux, couleur des traits d'un pictogramme). Même format que `background_color`. Si `background_color` est défini mais pas `border_color`, une bordure coordonnée (variante plus sombre du fond) est générée automatiquement."
+          "description": "Couleur de la bordure / du trait du nœud (stroke des formes, bordure des panneaux, couleur des traits d'un pictogramme). Même format que `background_color`. Si `background_color` est défini mais pas `border_color`, une bordure coordonnée (variante plus sombre du fond) est générée automatiquement.",
+          "examples": [
+            "steelblue"
+          ]
         },
         "text_color": {
           "type": "string",
@@ -116,11 +134,17 @@
         },
         "body": {
           "type": "string",
-          "description": "Texte affiché DANS le nœud, par opposition à `text` qui reste le label sous le nœud. Pour `simple_node` / `complex_node` : corps du panneau (retours à la ligne respectés, coloré selon `language` si fourni). Pour les formes géométriques (`square` … `star`) : court texte centré dans la forme (gardez-le bref pour qu'il ne déborde pas)."
+          "description": "Texte affiché DANS le nœud, par opposition à `text` qui reste le label sous le nœud. Pour `simple_node` / `complex_node` : corps du panneau (retours à la ligne respectés, coloré selon `language` si fourni). Pour les formes géométriques (`square` … `star`) : court texte centré dans la forme (gardez-le bref pour qu'il ne déborde pas).",
+          "examples": [
+            "Worker"
+          ]
         },
         "header": {
           "type": "string",
-          "description": "(`complex_node`) En-tête affiché au-dessus du `body`, séparé par un trait — le nœud prend alors l'allure d'un paquet HTTP. Ignoré par `simple_node`. Coloré selon `language` si fourni."
+          "description": "(`complex_node`) En-tête affiché au-dessus du `body`, séparé par un trait — le nœud prend alors l'allure d'un paquet HTTP. Ignoré par `simple_node`. Coloré selon `language` si fourni.",
+          "examples": [
+            "POST /login"
+          ]
         },
         "language": {
           "description": "(`simple_node` / `complex_node`) Langage de coloration syntaxique appliqué à TOUTES les zones de texte du nœud (`header` et `body`). Valeurs reconnues : voir  {@link  HighlightLanguage } .",
@@ -166,7 +190,11 @@
           "$ref": "#/definitions/ContentType"
         },
         "value": {
-          "type": "string"
+          "type": "string",
+          "description": "Contenu textuel selon `type` : code source (`code`), texte (`text`) ou chemin/URL d'image (`image`).",
+          "examples": [
+            "SELECT * FROM users;"
+          ]
         },
         "language": {
           "description": "Langage pour la coloration syntaxique. Valeurs reconnues : voir  {@link  HighlightLanguage } .",
@@ -174,14 +202,23 @@
         },
         "url": {
           "type": "string",
-          "description": "(mode `text`) URL affichée dans la barre d'adresse de la fenêtre."
+          "description": "(mode `text`) URL affichée dans la barre d'adresse de la fenêtre.",
+          "examples": [
+            "https://app.example.com/login"
+          ]
         },
         "columns": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "(mode `table`) En-têtes de colonnes."
+          "description": "(mode `table`) En-têtes de colonnes.",
+          "examples": [
+            [
+              "id",
+              "email"
+            ]
+          ]
         },
         "rows_data": {
           "type": "array",
@@ -194,7 +231,19 @@
               ]
             }
           },
-          "description": "(mode `table`) Lignes de données."
+          "description": "(mode `table`) Lignes de données.",
+          "examples": [
+            [
+              [
+                1,
+                "alice@corp.io"
+              ],
+              [
+                2,
+                "bob@corp.io"
+              ]
+            ]
+          ]
         }
       },
       "additionalProperties": false
@@ -240,14 +289,20 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Identifiant unique du paquet."
+          "description": "Identifiant unique du paquet.",
+          "examples": [
+            "req_login"
+          ]
         },
         "kind": {
           "$ref": "#/definitions/PacketKind"
         },
         "request_content": {
           "type": "string",
-          "description": "Requête textuelle (ex: pour sql_request)."
+          "description": "Requête textuelle (ex: pour sql_request).",
+          "examples": [
+            "SELECT * FROM users WHERE id = 42"
+          ]
         },
         "response_content": {
           "$ref": "#/definitions/SqlResponse",
@@ -276,7 +331,10 @@
       "properties": {
         "rows": {
           "type": "number",
-          "description": "Nombre de lignes retournées."
+          "description": "Nombre de lignes retournées.",
+          "examples": [
+            42
+          ]
         },
         "header": {
           "type": "string",
@@ -308,7 +366,13 @@
           "items": {
             "type": "string"
           },
-          "description": "Colonnes du tableau si type est 'table'"
+          "description": "Colonnes du tableau si type est 'table'",
+          "examples": [
+            [
+              "id",
+              "name"
+            ]
+          ]
         },
         "rows_data": {
           "type": "array",
@@ -321,7 +385,19 @@
               ]
             }
           },
-          "description": "Lignes de données si type est 'table'"
+          "description": "Lignes de données si type est 'table'",
+          "examples": [
+            [
+              [
+                1,
+                "Alice"
+              ],
+              [
+                2,
+                "Bob"
+              ]
+            ]
+          ]
         }
       },
       "additionalProperties": false
@@ -331,7 +407,10 @@
       "properties": {
         "header": {
           "type": "string",
-          "description": "En-tête visible dans le paquet (ex: 'GET /api')."
+          "description": "En-tête visible dans le paquet (ex: 'GET /api').",
+          "examples": [
+            "GET /api/users"
+          ]
         },
         "body": {
           "$ref": "#/definitions/PacketBody"
@@ -351,7 +430,10 @@
         },
         "value": {
           "type": "string",
-          "description": "Texte ou chemin d'image."
+          "description": "Texte ou chemin d'image.",
+          "examples": [
+            "{ \"token\": \"abc123\" }"
+          ]
         },
         "language": {
           "description": "Langage pour la coloration syntaxique du texte (optionnel). Valeurs reconnues : voir  {@link  HighlightLanguage } .",
@@ -369,11 +451,17 @@
         },
         "from": {
           "type": "string",
-          "description": "ID du nœud source."
+          "description": "ID du nœud source.",
+          "examples": [
+            "client"
+          ]
         },
         "to": {
           "type": "string",
-          "description": "ID du nœud destination."
+          "description": "ID du nœud destination.",
+          "examples": [
+            "serveur_web"
+          ]
         },
         "style": {
           "$ref": "#/definitions/LineStyle",
@@ -391,7 +479,10 @@
         },
         "text": {
           "type": "string",
-          "description": "Texte médian optionnel."
+          "description": "Texte médian optionnel.",
+          "examples": [
+            "HTTPS"
+          ]
         }
       },
       "required": [
@@ -525,13 +616,22 @@
         },
         "object": {
           "type": "string",
-          "description": "ID du paquet à déplacer."
+          "description": "ID du paquet à déplacer.",
+          "examples": [
+            "req_login"
+          ]
         },
         "from": {
-          "type": "string"
+          "type": "string",
+          "examples": [
+            "client"
+          ]
         },
         "to": {
-          "type": "string"
+          "type": "string",
+          "examples": [
+            "serveur_web"
+          ]
         }
       },
       "required": [
@@ -595,13 +695,22 @@
           "const": "arrow"
         },
         "from": {
-          "type": "string"
+          "type": "string",
+          "examples": [
+            "client"
+          ]
         },
         "to": {
-          "type": "string"
+          "type": "string",
+          "examples": [
+            "serveur_web"
+          ]
         },
         "text": {
-          "type": "string"
+          "type": "string",
+          "examples": [
+            "200 OK"
+          ]
         },
         "style": {
           "$ref": "#/definitions/LineStyle"
@@ -873,7 +982,10 @@
           "description": "ID du nœud près duquel afficher le commentaire. Omis = commentaire omniscient (haut du stage)."
         },
         "text": {
-          "type": "string"
+          "type": "string",
+          "examples": [
+            "Le serveur valide le token"
+          ]
         }
       },
       "required": [

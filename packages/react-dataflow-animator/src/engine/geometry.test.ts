@@ -208,6 +208,54 @@ describe('labelBounds', () => {
   });
 });
 
+// ─── labelAnchor (décalage du label médian hors d'un nœud intercalé) ────────
+
+describe('labelAnchor', () => {
+  // ── Trait horizontal A→C enjambant B au centre → label remonté au-dessus ──
+  it('horizontal : milieu sur un nœud intercalé → ancre au-dessus du nœud', () => {
+    const a = mkNode('a', 0, 0);
+    const c = mkNode('c', 400, 0);
+    const b = mkNode('b', 200, 0); // pile au milieu du trajet
+    const conn = connection(a, c, [a, b, c]);
+    expect(conn.labelAnchor).toBeDefined();
+    // x reste centré sur le milieu, y remonte au-dessus du visuel de B.
+    expect(conn.labelAnchor!.x).toBeCloseTo(200, 0);
+    expect(conn.labelAnchor!.y).toBeCloseTo(0 - 20 - NODE_GAP, 5); // -34
+    expect(conn.labelAnchor!.y).toBeLessThan(b.y - b.height / 2); // dégagé du haut
+  });
+
+  // ── Trait vertical A→C enjambant B au centre → label décalé latéralement ──
+  it('vertical : milieu sur un nœud intercalé → ancre décalée sur le côté', () => {
+    const a = mkNode('a', 0, 0);
+    const c = mkNode('c', 0, 400);
+    const b = mkNode('b', 0, 200);
+    const conn = connection(a, c, [a, b, c]);
+    expect(conn.labelAnchor).toBeDefined();
+    expect(conn.labelAnchor!.y).toBeCloseTo(200, 0); // reste à hauteur du milieu
+    // centre du label hors du visuel de B (au moins demi-largeur + marge).
+    expect(Math.abs(conn.labelAnchor!.x - b.x)).toBeGreaterThanOrEqual(
+      b.width / 2 + NODE_GAP
+    );
+  });
+
+  // ── Milieu dégagé → pas d'ancre (le rendu retombe sur le milieu) ──────────
+  it('milieu dégagé : labelAnchor est undefined', () => {
+    const a = mkNode('a', 0, 0);
+    const c = mkNode('c', 400, 0);
+    const farBelow = mkNode('b', 200, 300); // loin sous le trajet
+    expect(connection(a, c, [a, farBelow, c]).labelAnchor).toBeUndefined();
+    expect(connection(a, c).labelAnchor).toBeUndefined(); // sans obstacles
+  });
+
+  // ── Obstacle dont id == from.id : ignoré (comme pour le routage du trait) ──
+  it('obstacle dont id == from.id : ignoré, pas de décalage', () => {
+    const a = mkNode('a', 0, 0);
+    const c = mkNode('c', 400, 0);
+    const ghost = mkNode('a', 200, 0); // même id que `from`, pile au milieu
+    expect(connection(a, c, [ghost]).labelAnchor).toBeUndefined();
+  });
+});
+
 // ─── pointOnSegment (test existant) ─────────────────────────────────────────
 
 describe('pointOnSegment', () => {

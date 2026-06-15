@@ -34,6 +34,7 @@ interface SchemaNode {
   title?: string;
   description?: string;
   enum?: readonly string[];
+  examples?: readonly unknown[];
   properties?: Record<string, SchemaNode>;
   items?: SchemaNode;
   required?: readonly string[];
@@ -75,6 +76,13 @@ function nodeSample(type: NodeType): Node {
 
 function refName(ref: string): string {
   return ref.replace('#/definitions/', '');
+}
+
+/** Rend une valeur d'exemple du schéma en littéral lisible. Les chaînes sont
+ *  affichées sans guillemets (la colonne Type indique déjà `string`) ; tableaux
+ *  et objets sont sérialisés en JSON. */
+function formatExample(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value);
 }
 
 function typeLabel(node: SchemaNode): string {
@@ -168,6 +176,16 @@ function PropsTable({ node }: { node: SchemaNode }) {
                       ))}
                     </div>
                   )
+                ) : null}
+                {row.node.examples && row.node.examples.length > 0 ? (
+                  <div className="api-examples">
+                    <span className="api-examples-label">ex.</span>
+                    {row.node.examples.map((ex, i) => (
+                      <code className="api-example" key={i}>
+                        {formatExample(ex)}
+                      </code>
+                    ))}
+                  </div>
                 ) : null}
               </td>
             </tr>

@@ -79,22 +79,42 @@ export type HighlightLanguage =
 
 export interface ObjectContent {
   type?: ContentType;
+  /**
+   * Contenu textuel selon `type` : code source (`code`), texte (`text`) ou
+   * chemin/URL d'image (`image`).
+   * @example "SELECT * FROM users;"
+   */
   value?: string;
   /** Langage pour la coloration syntaxique. Valeurs reconnues : voir {@link HighlightLanguage}. */
   language?: HighlightLanguage | (string & {});
-  /** (mode `text`) URL affichée dans la barre d'adresse de la fenêtre. */
+  /**
+   * (mode `text`) URL affichée dans la barre d'adresse de la fenêtre.
+   * @example "https://app.example.com/login"
+   */
   url?: string;
-  /** (mode `table`) En-têtes de colonnes. */
+  /**
+   * (mode `table`) En-têtes de colonnes.
+   * @example ["id", "email"]
+   */
   columns?: string[];
-  /** (mode `table`) Lignes de données. */
+  /**
+   * (mode `table`) Lignes de données.
+   * @example [[1, "alice@corp.io"], [2, "bob@corp.io"]]
+   */
   rows_data?: (string | number)[][];
 }
 
 export interface Node {
-  /** Identifiant unique du nœud (ex: 'serveur_web'). */
+  /**
+   * Identifiant unique du nœud (ex: 'serveur_web').
+   * @example "serveur_web"
+   */
   id: string;
   type: NodeType;
-  /** Label affiché en dessous du nœud. */
+  /**
+   * Label affiché en dessous du nœud.
+   * @example "Serveur web"
+   */
   text?: string;
   /**
    * Visibilité initiale du nœud. Défaut: true.
@@ -104,6 +124,7 @@ export interface Node {
   /**
    * Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'),
    * nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API').
+   * @example "react"
    */
   icon?: string;
   /** Rangée/colonne de placement (entier positif). Défaut: 1. */
@@ -115,13 +136,17 @@ export interface Node {
    * aligner deux nœuds de lanes différentes. Ignoré en disposition circular.
    */
   align_with?: string;
-  /** URL rendant le nœud cliquable (ouvre dans un nouvel onglet). */
+  /**
+   * URL rendant le nœud cliquable (ouvre dans un nouvel onglet).
+   * @example "https://status.example.com"
+   */
   url?: string;
   /**
    * Couleur de fond du nœud : remplissage des formes, fond des panneaux
    * (`simple_node`/`complex_node`), pastille derrière un pictogramme. Accepte une
    * couleur CSS **prédéfinie** (nom : `tomato`, `steelblue`, `teal`…) ou une valeur
    * **hexadécimale exacte** (`#3b82f6`). Sans effet sur un `set_content` actif.
+   * @example "#3b82f6"
    */
   background_color?: string;
   /**
@@ -129,6 +154,7 @@ export interface Node {
    * panneaux, couleur des traits d'un pictogramme). Même format que
    * `background_color`. Si `background_color` est défini mais pas `border_color`,
    * une bordure coordonnée (variante plus sombre du fond) est générée automatiquement.
+   * @example "steelblue"
    */
   border_color?: string;
   /**
@@ -148,12 +174,14 @@ export interface Node {
    * la ligne respectés, coloré selon `language` si fourni). Pour les formes
    * géométriques (`square` … `star`) : court texte centré dans la forme (gardez-le
    * bref pour qu'il ne déborde pas).
+   * @example "Worker"
    */
   body?: string;
   /**
    * (`complex_node`) En-tête affiché au-dessus du `body`, séparé par un trait —
    * le nœud prend alors l'allure d'un paquet HTTP. Ignoré par `simple_node`.
    * Coloré selon `language` si fourni.
+   * @example "POST /login"
    */
   header?: string;
   /**
@@ -180,28 +208,43 @@ export interface Zone {
 export interface Connection {
   /** Identifiant optionnel. */
   id?: string;
-  /** ID du nœud source. */
+  /**
+   * ID du nœud source.
+   * @example "client"
+   */
   from: string;
-  /** ID du nœud destination. */
+  /**
+   * ID du nœud destination.
+   * @example "serveur_web"
+   */
   to: string;
   /** Style de la ligne. Défaut: 'solid'. */
   style?: LineStyle;
   /** Pointe de la flèche. Défaut: 'forward'. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
-  /** Texte médian optionnel. */
+  /**
+   * Texte médian optionnel.
+   * @example "HTTPS"
+   */
   text?: string;
 }
 
 export interface PacketBody {
   type?: 'text' | 'image';
-  /** Texte ou chemin d'image. */
+  /**
+   * Texte ou chemin d'image.
+   * @example "{ \"token\": \"abc123\" }"
+   */
   value?: string;
   /** Langage pour la coloration syntaxique du texte (optionnel). Valeurs reconnues : voir {@link HighlightLanguage}. */
   language?: HighlightLanguage | (string & {});
 }
 
 export interface PacketContent {
-  /** En-tête visible dans le paquet (ex: 'GET /api'). */
+  /**
+   * En-tête visible dans le paquet (ex: 'GET /api').
+   * @example "GET /api/users"
+   */
   header?: string;
   body?: PacketBody;
 }
@@ -210,14 +253,23 @@ export interface SqlResponseBody {
   type?: 'text' | 'table';
   /** Texte pur si type est 'text' */
   value?: string;
-  /** Colonnes du tableau si type est 'table' */
+  /**
+   * Colonnes du tableau si type est 'table'
+   * @example ["id", "name"]
+   */
   columns?: string[];
-  /** Lignes de données si type est 'table' */
+  /**
+   * Lignes de données si type est 'table'
+   * @example [[1, "Alice"], [2, "Bob"]]
+   */
   rows_data?: (string | number)[][];
 }
 
 export interface SqlResponse {
-  /** Nombre de lignes retournées. */
+  /**
+   * Nombre de lignes retournées.
+   * @example 42
+   */
   rows?: number;
   /** En-tête optionnel visible dans le paquet. */
   header?: string;
@@ -226,10 +278,16 @@ export interface SqlResponse {
 }
 
 export interface Packet {
-  /** Identifiant unique du paquet. */
+  /**
+   * Identifiant unique du paquet.
+   * @example "req_login"
+   */
   id: string;
   kind: PacketKind;
-  /** Requête textuelle (ex: pour sql_request). */
+  /**
+   * Requête textuelle (ex: pour sql_request).
+   * @example "SELECT * FROM users WHERE id = 42"
+   */
   request_content?: string;
   /** Réponse (pour sql_response). */
   response_content?: SqlResponse;
@@ -296,17 +354,25 @@ interface ActionBase {
 /** Déplace un paquet de `from` vers `to`. */
 interface MoveAction extends ActionBase {
   type: 'move';
-  /** ID du paquet à déplacer. */
+  /**
+   * ID du paquet à déplacer.
+   * @example "req_login"
+   */
   object: string;
+  /** @example "client" */
   from: string;
+  /** @example "serveur_web" */
   to: string;
 }
 
 /** Trace une flèche animée entre deux nœuds. */
 interface ArrowAction extends ActionBase {
   type: 'arrow';
+  /** @example "client" */
   from: string;
+  /** @example "serveur_web" */
   to: string;
+  /** @example "200 OK" */
   text?: string;
   style?: LineStyle;
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
@@ -336,6 +402,7 @@ interface CommentAction extends ActionBase {
   type: 'comment';
   /** ID du nœud près duquel afficher le commentaire. Omis = commentaire omniscient (haut du stage). */
   object?: string;
+  /** @example "Le serveur valide le token" */
   text: string;
 }
 

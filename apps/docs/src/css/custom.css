@@ -278,6 +278,32 @@ footer__link-item > svg {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Exemples de valeur d'un champ, INLINE sous sa description (complément à la
+   spec, comme les aperçus de NodeType). L'étiquette « ex. » signale le rôle ;
+   chaque valeur est un littéral monospace. */
+.api-examples {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
+}
+.api-examples-label {
+  color: #94a3b8;
+  font-size: 11px;
+  font-style: italic;
+}
+.api-example {
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  color: #67e8f9;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: pre-wrap;
+}
+
 /* Aperçus des types de nœud, INLINE dans la cellule `type` du tableau Node.
    Le conteneur porte `.rdfa-player` (+ data-theme="auto") uniquement pour hériter
    des variables --rdfa-* du package — on neutralise donc sa « boîte » (bordure,

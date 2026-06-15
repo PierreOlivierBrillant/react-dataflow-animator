@@ -38,6 +38,12 @@ export interface Connection {
   waypoints?: Point[];
   /** Angle du dernier segment en degrés (utile pour orienter une pointe de flèche). */
   angleDeg: number;
+  /**
+   * Ancre du label médian. Indéfinie quand le milieu du chemin est dégagé (le
+   * rendu retombe alors sur ce milieu) ; définie et décalée perpendiculairement
+   * au trait quand le milieu tomberait sur le visuel d'un nœud intercalé.
+   */
+  labelAnchor?: Point;
 }
 
 /**
@@ -200,11 +206,44 @@ export function connection(
   const angleDeg =
     (Math.atan2(end.y - lastPt.y, end.x - lastPt.x) * 180) / Math.PI;
 
+  // Ancre du label médian. Le texte d'une connexion est posé au milieu du
+  // chemin ; si ce milieu tombe sur le VISUEL d'un nœud intercalé (ex. une
+  // connexion A→C qui enjambe un nœud B placé entre les deux), on décale l'ancre
+  // perpendiculairement au trait pour dégager le texte. Sans ça il se superpose
+  // au nœud — et, le label vivant sous la couche des nœuds, passe derrière lui.
+  let labelAnchor: Point | undefined;
+  if (obstacles && obstacles.length > 0) {
+    const mid = pathTip({ start, end, waypoints, angleDeg }, 0.5);
+    for (const obs of obstacles) {
+      if (obs.id === from.id || obs.id === to.id) continue;
+      const halfW = obs.width / 2;
+      const halfH = obs.height / 2;
+      if (
+        Math.abs(mid.x - obs.x) <= halfW + NODE_GAP &&
+        Math.abs(mid.y - obs.y) <= halfH + NODE_GAP
+      ) {
+        labelAnchor = isHorizontal
+          ? // Trait horizontal : on remonte le label au-dessus du nœud. La marge
+            // verticale ne dépend pas de la largeur (inconnue) du texte.
+            { x: mid.x, y: obs.y - halfH - NODE_GAP }
+          : // Trait vertical : on dégage latéralement. Le label restant ancré au
+            // centre (textAnchor=middle) et sa largeur étant inconnue ici, on
+            // garantit au moins que son centre quitte le nœud.
+            {
+              x: obs.x + (mid.x <= obs.x ? -1 : 1) * (halfW + NODE_GAP),
+              y: mid.y,
+            };
+        break;
+      }
+    }
+  }
+
   return {
     start,
     end,
     waypoints,
     angleDeg,
+    ...(labelAnchor ? { labelAnchor } : {}),
   };
 }
 

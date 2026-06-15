@@ -15,10 +15,17 @@ personnalisées, coloration syntaxique), voir
 
 :::info JSON Schema disponible
 
-Le JSON Schema brut de `DataFlowSpec` est exposé via
-`react-dataflow-animator/schema.json` (draft-07). Il peut être utilisé
-pour la validation Ajv côté utilisateur, l'auto-complétion d'éditeur, ou
-la génération de formulaires. Voir la section
+Le JSON Schema brut de `DataFlowSpec` (draft-07) est accessible de deux façons :
+
+- **Subpath du package npm** (après `npm install`) :
+  `import schema from 'react-dataflow-animator/schema.json'` (ou en lisant
+  `node_modules/react-dataflow-animator/schema.json`).
+- **URL publique**, servie par ce site :
+  [`schema.json`](pathname:///schema.json) — pratique pour pointer un
+  `$schema`, la configuration d'un éditeur ou un validateur en ligne.
+
+Il peut être utilisé pour la validation Ajv côté utilisateur, l'auto-complétion
+d'éditeur, ou la génération de formulaires. Voir la section
 [Auto-complétion JSON dans VS Code](../installation#autocomplete-json-vscode)
 pour la configuration VS Code.
 

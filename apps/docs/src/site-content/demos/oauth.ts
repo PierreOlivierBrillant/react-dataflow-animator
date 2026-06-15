@@ -23,7 +23,7 @@ export const oauth: DataFlowSpec = {
       type: 'server',
       text: 'API de ressources',
       icon: 'node',
-      lane: 4,
+      lane: 3,
     },
   ],
   connections: [
