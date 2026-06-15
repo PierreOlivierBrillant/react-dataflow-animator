@@ -137,10 +137,9 @@ export function CustomNavbar() {
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/70 hover:text-white border border-white/[0.08] hover:border-white/20 rounded-lg transition-all no-underline hover:no-underline bg-white/[.03]"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/70 hover:text-white rounded-lg transition-all no-underline hover:no-underline"
               >
-                <FaGithub size={14} />
-                <span className="hidden sm:inline">GitHub</span>
+                <FaGithub size={25} />
               </a>
             </div>
 
@@ -222,7 +221,7 @@ function NavLink({ to, label, icon, exact = false }: NavLinkProps) {
     <Link
       key={label}
       to={to}
-      className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg transition-colors no-underline hover:no-underline font-sans border ${
+      className={`flex items-center gap-1.5 px-3 py-2 text-lg rounded-lg transition-colors no-underline hover:no-underline font-sans border ${
         isActive
           ? 'text-violet-300 bg-violet-600/10 border-violet-500/25'
           : 'text-white/50 hover:text-white border-transparent'
