@@ -590,7 +590,7 @@
 }
 
 .rdfa-player .rdfa-sql-table-wrapper {
-  overflow-x: auto;
+  overflow: hidden;
   max-width: 100%;
 }
 
@@ -736,7 +736,9 @@
   font-size: calc(12.5px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
   line-height: 1.5;
   max-height: calc(320px * var(--rdfa-content-scale, 1));
-  overflow: auto;
+  /* Jamais de barre de défilement : le contenu est ajusté pour tenir (le code via
+     CodeBlock), ce qui dépasse encore est masqué plutôt que rendu défilable. */
+  overflow: hidden;
 }
 
 .rdfa-content-body img {
@@ -752,7 +754,7 @@
 }
 
 .rdfa-content-table-wrapper {
-  overflow: auto;
+  overflow: hidden;
   max-height: calc(320px * var(--rdfa-content-scale, 1));
   max-width: 100%;
 }
@@ -797,6 +799,14 @@
 
   background: var(--rdfa-terminal-bg);
   color: var(--rdfa-terminal-text);
+}
+
+/* Padding très serré pour le code : le CodeBlock réduit fortement la police pour
+   tenir (largeur ET hauteur), un padding généreux paraîtrait alors disproportionné
+   — surtout sur les miniatures, où la police descend à quelques pixels. */
+.rdfa-content-body.rdfa-code {
+  padding: calc(3px * var(--rdfa-content-scale, 1))
+    calc(7px * var(--rdfa-content-scale, 1));
 }
 
 .rdfa-content-body pre {

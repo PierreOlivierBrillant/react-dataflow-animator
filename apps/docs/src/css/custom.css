@@ -262,6 +262,15 @@ footer__link-item > svg {
   font-size: 12.5px;
   color: #22d3ee;
 }
+/* Lien d'un type référençant une définition documentée (saut vers sa section). */
+.api-type-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(34, 211, 238, 0.5);
+}
+.api-type-link:hover {
+  border-bottom-color: #22d3ee;
+}
 .api-req {
   color: #f43f5e;
   font-size: 11px;
@@ -278,20 +287,18 @@ footer__link-item > svg {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Exemples de valeur d'un champ, INLINE sous sa description (complément à la
-   spec, comme les aperçus de NodeType). L'étiquette « ex. » signale le rôle ;
-   chaque valeur est un littéral monospace. */
-.api-examples {
+/* Options acceptées d'un énum, listées dans la Description (pas dans Exemples). */
+.api-enum-list {
   margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+}
+/* Valeurs d'exemple d'un champ (colonne « Exemples ») : littéraux monospace. */
+.api-examples {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 5px;
-}
-.api-examples-label {
-  color: #94a3b8;
-  font-size: 11px;
-  font-style: italic;
 }
 .api-example {
   padding: 1px 7px;
@@ -343,6 +350,29 @@ footer__link-item > svg {
   min-height: 60px;
 }
 .api-node-enum-item .api-enum {
+  margin: 0;
+}
+
+/* Démo d'un attribut de Node : un vrai DataFlowPlayer (1 nœud) rendu compact,
+   largeur bornée pour ne pas étirer la cellule, + légende de la valeur. */
+.api-attr-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 184px;
+}
+.api-attr-demo .rdfa-player {
+  width: 100%;
+}
+/* L'auto-scaler du Stage est calibré pour un grand canevas : un nœud unique dans
+   un petit aperçu tombe au plancher (0.3 → ~17px) avec beaucoup de vide autour.
+   On force une échelle fixe lisible pour cadrer le nœud au plus près du contenu
+   qu'il démontre. `!important` bat la valeur posée inline par <Stage>. */
+.api-attr-demo .rdfa-stage {
+  --rdfa-scale: 0.85 !important;
+}
+.api-attr-demo .api-enum {
   margin: 0;
 }
 

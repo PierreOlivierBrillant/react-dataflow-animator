@@ -83,6 +83,33 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
     </>
   ),
   cloud: svg(<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />),
+  alice: svg(
+    <>
+      <circle cx="12" cy="8.5" r="3.5" />
+      {/* chignon */}
+      <circle cx="12" cy="4" r="1.5" />
+      <path d="M5 21c0-3.5 3-6 7-6s7 2.5 7 6" />
+    </>
+  ),
+  bob: svg(
+    <>
+      <circle cx="12" cy="9" r="3.5" />
+      {/* casquette */}
+      <path d="M9 7c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5h-6z" />
+      <path d="M7.5 7h9" />
+      <path d="M5 21c0-3.5 3-6 7-6s7 2.5 7 6" />
+    </>
+  ),
+  eve: svg(
+    <>
+      <circle cx="12" cy="8.5" r="3" />
+      {/* casque d'écoute — rappelle visuellement l'espionne */}
+      <path d="M9 8.5a3 3 0 0 1 6 0" />
+      <rect x="7.5" y="8" width="2" height="3" rx="1" />
+      <rect x="14.5" y="8" width="2" height="3" rx="1" />
+      <path d="M5 21c0-3.5 3-5.5 7-5.5s7 2 7 5.5" />
+    </>
+  ),
 };
 
 const fallback = svg(<rect x="4" y="4" width="16" height="16" rx="2" />);

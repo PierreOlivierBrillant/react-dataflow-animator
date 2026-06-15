@@ -10,11 +10,11 @@ import type { DataFlowSpec } from 'react-dataflow-animator';
 export const crypto: DataFlowSpec = {
   direction: 'left-to-right',
   nodes: [
-    { id: 'alice', type: 'user', text: 'Alice', lane: 1 },
+    { id: 'alice', type: 'alice', text: 'Alice', lane: 1 },
     // Ève est posée sur la lane médiane : le trafic Alice ↔ Bob lui passe
     // littéralement sous le nez.
-    { id: 'eve', type: 'admin', text: 'Ève (sur le câble)', lane: 2 },
-    { id: 'bob', type: 'user', text: 'Bob', lane: 3 },
+    { id: 'eve', type: 'eve', text: 'Ève (sur le câble)', lane: 2 },
+    { id: 'bob', type: 'bob', text: 'Bob', lane: 3 },
   ],
   connections: [
     {

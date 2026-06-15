@@ -65,10 +65,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Identifiant unique du nœud (ex: 'serveur_web').",
-          "examples": [
-            "serveur_web"
-          ]
+          "description": "Identifiant unique du nœud (ex: 'serveur_web')."
         },
         "type": {
           "$ref": "#/definitions/NodeType"
@@ -170,6 +167,9 @@
         "admin",
         "users",
         "cloud",
+        "alice",
+        "bob",
+        "eve",
         "simple_node",
         "complex_node",
         "square",
@@ -289,10 +289,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Identifiant unique du paquet.",
-          "examples": [
-            "req_login"
-          ]
+          "description": "Identifiant unique du paquet."
         },
         "kind": {
           "$ref": "#/definitions/PacketKind"
@@ -451,17 +448,11 @@
         },
         "from": {
           "type": "string",
-          "description": "ID du nœud source.",
-          "examples": [
-            "client"
-          ]
+          "description": "ID du nœud source."
         },
         "to": {
           "type": "string",
-          "description": "ID du nœud destination.",
-          "examples": [
-            "serveur_web"
-          ]
+          "description": "ID du nœud destination."
         },
         "style": {
           "$ref": "#/definitions/LineStyle",
@@ -616,22 +607,13 @@
         },
         "object": {
           "type": "string",
-          "description": "ID du paquet à déplacer.",
-          "examples": [
-            "req_login"
-          ]
+          "description": "ID du paquet à déplacer."
         },
         "from": {
-          "type": "string",
-          "examples": [
-            "client"
-          ]
+          "type": "string"
         },
         "to": {
-          "type": "string",
-          "examples": [
-            "serveur_web"
-          ]
+          "type": "string"
         }
       },
       "required": [
@@ -695,16 +677,10 @@
           "const": "arrow"
         },
         "from": {
-          "type": "string",
-          "examples": [
-            "client"
-          ]
+          "type": "string"
         },
         "to": {
-          "type": "string",
-          "examples": [
-            "serveur_web"
-          ]
+          "type": "string"
         },
         "text": {
           "type": "string",

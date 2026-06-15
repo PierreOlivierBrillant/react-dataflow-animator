@@ -35,6 +35,9 @@ export type NodeType =
   | 'admin'
   | 'users'
   | 'cloud'
+  | 'alice'
+  | 'bob'
+  | 'eve'
   | 'simple_node'
   | 'complex_node'
   | 'square'
@@ -105,10 +108,7 @@ export interface ObjectContent {
 }
 
 export interface Node {
-  /**
-   * Identifiant unique du nœud (ex: 'serveur_web').
-   * @example "serveur_web"
-   */
+  /** Identifiant unique du nœud (ex: 'serveur_web'). */
   id: string;
   type: NodeType;
   /**
@@ -208,15 +208,9 @@ export interface Zone {
 export interface Connection {
   /** Identifiant optionnel. */
   id?: string;
-  /**
-   * ID du nœud source.
-   * @example "client"
-   */
+  /** ID du nœud source. */
   from: string;
-  /**
-   * ID du nœud destination.
-   * @example "serveur_web"
-   */
+  /** ID du nœud destination. */
   to: string;
   /** Style de la ligne. Défaut: 'solid'. */
   style?: LineStyle;
@@ -278,10 +272,7 @@ export interface SqlResponse {
 }
 
 export interface Packet {
-  /**
-   * Identifiant unique du paquet.
-   * @example "req_login"
-   */
+  /** Identifiant unique du paquet. */
   id: string;
   kind: PacketKind;
   /**
@@ -354,23 +345,16 @@ interface ActionBase {
 /** Déplace un paquet de `from` vers `to`. */
 interface MoveAction extends ActionBase {
   type: 'move';
-  /**
-   * ID du paquet à déplacer.
-   * @example "req_login"
-   */
+  /** ID du paquet à déplacer. */
   object: string;
-  /** @example "client" */
   from: string;
-  /** @example "serveur_web" */
   to: string;
 }
 
 /** Trace une flèche animée entre deux nœuds. */
 interface ArrowAction extends ActionBase {
   type: 'arrow';
-  /** @example "client" */
   from: string;
-  /** @example "serveur_web" */
   to: string;
   /** @example "200 OK" */
   text?: string;

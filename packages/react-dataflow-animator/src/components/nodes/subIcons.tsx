@@ -163,32 +163,13 @@ function renderText(text: string): ReactNode {
   );
 }
 
-/** Avatar silhouette personne (tête + épaules) sur fond coloré — pour Alice, Bob, Ève. */
-function renderCharacter(bg: string): ReactNode {
-  return (
-    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-      <circle cx="12" cy="12" r="12" fill={bg} />
-      <circle cx="12" cy="8.5" r="3.5" fill="white" />
-      <path d="M3.5 21 Q3.5 14.5 12 14.5 Q20.5 14.5 20.5 21" fill="white" />
-    </svg>
-  );
-}
-
-const CHARACTERS: Record<string, ReactNode> = {
-  alice: renderCharacter('#6366F1'),
-  bob: renderCharacter('#10B981'),
-  eve: renderCharacter('#EF4444'),
-  ève: renderCharacter('#EF4444'),
-};
-
 /**
- * Résout un `subicon` : icône personnalisée enregistrée, sinon personnage connu
- * (Alice / Bob / Ève), sinon techno connue, sinon pastille de texte libre.
+ * Résout un `subicon` : icône personnalisée enregistrée, sinon techno connue,
+ * sinon pastille de texte libre (ex: 'v2', 'API', 'JWT').
  */
 export function getSubIcon(name: string): ReactNode {
   const key = name.toLowerCase();
   if (custom[key]) return custom[key];
-  if (key in CHARACTERS) return CHARACTERS[key];
   const def = KNOWN[key];
   if (def) return <def.Icon color={def.color} title={name} />;
   return renderText(name);

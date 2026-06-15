@@ -12,6 +12,9 @@ const NODE_TYPES: NodeType[] = [
   'user',
   'admin',
   'users',
+  'alice',
+  'bob',
+  'eve',
 ];
 
 export const nodeTypesExample: DataFlowSpec = {
