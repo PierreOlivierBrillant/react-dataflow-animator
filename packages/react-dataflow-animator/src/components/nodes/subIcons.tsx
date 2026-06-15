@@ -33,10 +33,24 @@ import {
   SiDigitalocean,
   SiGit,
   SiRust,
+  SiKubernetes,
+  SiOpenid,
+  SiGooglepay,
+  SiApplepay,
+  SiVisa,
+  SiMastercard,
+  SiBluetooth,
 } from 'react-icons/si';
-import { FaJava, FaAws, FaDatabase, FaWindows } from 'react-icons/fa';
+import {
+  FaJava,
+  FaAws,
+  FaDatabase,
+  FaWindows,
+  FaPiggyBank,
+} from 'react-icons/fa';
 import { DiMsqlServer } from 'react-icons/di';
 import { VscAzure } from 'react-icons/vsc';
+import { MdHttp, MdDns, Md5G, MdWifi } from 'react-icons/md';
 
 /**
  * Sous-icônes technologiques (badge `subicon`), basées sur react-icons.
@@ -50,26 +64,40 @@ interface IconDef {
 }
 
 const KNOWN: Record<string, IconDef> = {
+  '5g': { Icon: Md5G, color: '#64748b' },
   angular: { Icon: SiAngular, color: '#DD0031' },
   apple: { Icon: SiApple, color: '#A2AAAD' },
+  'apple pay': { Icon: SiApplepay, color: '#A2AAAD' },
+  applepay: { Icon: SiApplepay, color: '#A2AAAD' },
   aws: { Icon: FaAws, color: '#FF9900' },
   azure: { Icon: VscAzure, color: '#0078D4' },
+  bank: { Icon: FaPiggyBank, color: '#EC4899' },
+  banque: { Icon: FaPiggyBank, color: '#EC4899' },
+  bluetooth: { Icon: SiBluetooth, color: '#0082FC' },
   chrome: { Icon: SiGooglechrome, color: '#4285F4' },
   csharp: { Icon: SiSharp, color: '#8B5CF6' },
   css: { Icon: SiCss, color: '#1572B6' },
   db: { Icon: FaDatabase, color: '#FFD700' },
   digitalocean: { Icon: SiDigitalocean, color: '#0080FF' },
+  dns: { Icon: MdDns, color: '#64748b' },
   docker: { Icon: SiDocker, color: '#2496ED' },
   dotnet: { Icon: SiDotnet, color: '#8B5CF6' },
   express: { Icon: SiExpress, color: '#64748b' },
   firefox: { Icon: SiFirefoxbrowser, color: '#FF7139' },
   git: { Icon: SiGit, color: '#F05032' },
   go: { Icon: SiGo, color: '#00ADD8' },
+  'google pay': { Icon: SiGooglepay, color: '#4285F4' },
+  googlepay: { Icon: SiGooglepay, color: '#4285F4' },
+  gpay: { Icon: SiGooglepay, color: '#4285F4' },
   graphql: { Icon: SiGraphql, color: '#E10098' },
   html: { Icon: SiHtml5, color: '#E34F26' },
+  http: { Icon: MdHttp, color: '#64748b' },
   java: { Icon: FaJava, color: '#E76F00' },
   javascript: { Icon: SiJavascript, color: '#E8C400' },
+  k8s: { Icon: SiKubernetes, color: '#326CE5' },
+  kubernetes: { Icon: SiKubernetes, color: '#326CE5' },
   linux: { Icon: SiLinux, color: '#FCC624' },
+  mastercard: { Icon: SiMastercard, color: '#EB001B' },
   mongodb: { Icon: SiMongodb, color: '#47A248' },
   mssql: { Icon: DiMsqlServer, color: '#CC2927' },
   mysql: { Icon: SiMysql, color: '#4479A1' },
@@ -77,7 +105,10 @@ const KNOWN: Record<string, IconDef> = {
   nextjs: { Icon: SiNextdotjs, color: '#64748b' },
   nginx: { Icon: SiNginx, color: '#009639' },
   node: { Icon: SiNodedotjs, color: '#5FA04E' },
+  oidc: { Icon: SiOpenid, color: '#F78C40' },
+  openid: { Icon: SiOpenid, color: '#F78C40' },
   php: { Icon: SiPhp, color: '#8993BE' },
+  piggybank: { Icon: FaPiggyBank, color: '#EC4899' },
   postgres: { Icon: SiPostgresql, color: '#4169E1' },
   postgresql: { Icon: SiPostgresql, color: '#4169E1' },
   python: { Icon: SiPython, color: '#3776AB' },
@@ -89,7 +120,9 @@ const KNOWN: Record<string, IconDef> = {
   rust: { Icon: SiRust, color: '#DEA584' },
   typescript: { Icon: SiTypescript, color: '#3178C6' },
   vercel: { Icon: SiVercel, color: '#64748b' },
+  visa: { Icon: SiVisa, color: '#1434CB' },
   vue: { Icon: SiVuedotjs, color: '#4FC08D' },
+  wifi: { Icon: MdWifi, color: '#64748b' },
   windows: { Icon: FaWindows, color: '#00A4EF' },
 };
 
@@ -130,13 +163,32 @@ function renderText(text: string): ReactNode {
   );
 }
 
+/** Avatar silhouette personne (tête + épaules) sur fond coloré — pour Alice, Bob, Ève. */
+function renderCharacter(bg: string): ReactNode {
+  return (
+    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+      <circle cx="12" cy="12" r="12" fill={bg} />
+      <circle cx="12" cy="8.5" r="3.5" fill="white" />
+      <path d="M3.5 21 Q3.5 14.5 12 14.5 Q20.5 14.5 20.5 21" fill="white" />
+    </svg>
+  );
+}
+
+const CHARACTERS: Record<string, ReactNode> = {
+  alice: renderCharacter('#6366F1'),
+  bob: renderCharacter('#10B981'),
+  eve: renderCharacter('#EF4444'),
+  ève: renderCharacter('#EF4444'),
+};
+
 /**
- * Résout un `subicon` : icône personnalisée enregistrée, sinon techno connue,
- * sinon pastille de texte libre (ex: 'v2', 'API', 'JWT').
+ * Résout un `subicon` : icône personnalisée enregistrée, sinon personnage connu
+ * (Alice / Bob / Ève), sinon techno connue, sinon pastille de texte libre.
  */
 export function getSubIcon(name: string): ReactNode {
   const key = name.toLowerCase();
   if (custom[key]) return custom[key];
+  if (key in CHARACTERS) return CHARACTERS[key];
   const def = KNOWN[key];
   if (def) return <def.Icon color={def.color} title={name} />;
   return renderText(name);
