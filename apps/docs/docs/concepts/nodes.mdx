@@ -8,6 +8,8 @@ import {
   nodeTypesExample,
   iconsExample,
   textNodesExample,
+  shapesExample,
+  colorsExample,
   revealExample,
 } from './_nodes/examples';
 
@@ -42,6 +44,9 @@ Le champ `type` choisit l'apparence. Dix types affichent un **pictogramme** :
 
 Deux types supplémentaires affichent **du texte** plutôt qu'un pictogramme :
 `simple_node` et `complex_node` (voir [ci-dessous](#nœuds-textuels--simple_node-et-complex_node)).
+Huit types dessinent une **forme géométrique** pouvant contenir un court texte :
+`square`, `diamond`, `circle`, `triangle`, `parallelogram`, `width_rectangle`,
+`height_rectangle` et `star` (voir [Formes géométriques](#formes-géométriques)).
 
 ## Nœuds textuels : `simple_node` et `complex_node`
 
@@ -94,6 +99,96 @@ textuel, exactement comme il masque un pictogramme.
 
 :::
 
+## Formes géométriques
+
+Huit types dessinent une **forme** plutôt qu'un pictogramme : `square`, `diamond`,
+`circle`, `triangle`, `parallelogram`, `width_rectangle`, `height_rectangle` et
+`star`. Chaque forme peut contenir un **court texte centré** via `body`.
+
+<DataFlowPlayer
+  spec={shapesExample}
+  theme="auto"
+  controls={false}
+  height={460}
+  density="compact"
+/>
+
+```ts
+nodes: [
+  { id: 'cache', type: 'circle', text: 'Cache', body: 'Redis' },
+  { id: 'choix', type: 'diamond', text: 'Routage', body: 'GET ?' },
+  { id: 'file', type: 'height_rectangle', body: 'Queue' },
+],
+```
+
+:::caution Gardez le texte court
+
+Le `body` d'une forme est pensé pour une **étiquette brève** (un mot, un nombre,
+un sigle). La forme s'agrandit pour accueillir le texte, mais celui-ci est borné
+(`max-width`) et **recadré au besoin** pour ne jamais déborder du tracé : un
+paragraphe entier serait tronqué. Pour du texte long, préférez un
+[`simple_node`](#nœuds-textuels--simple_node-et-complex_node).
+
+:::
+
+## Couleurs : `background_color` et `border_color`
+
+Deux champs ajustent les couleurs d'un nœud :
+
+- **`background_color`** — le fond : remplissage d'une forme, fond d'un panneau
+  (`simple_node`/`complex_node`), ou pastille derrière un pictogramme.
+- **`border_color`** — la bordure : trait d'une forme, bordure d'un panneau, ou
+  couleur des traits d'un pictogramme.
+- **`text_color`** — la couleur du texte **dans** le nœud (corps d'une forme,
+  en-tête/corps d'un panneau), **uniquement si la coloration syntaxique est
+  désactivée** (sans `language`). Avec `language`, les couleurs de la syntaxe priment.
+
+Chaque champ accepte une **couleur prédéfinie** (n'importe quel nom CSS : `tomato`,
+`steelblue`, `gold`…) **ou** une **valeur hexadécimale** exacte (`#3b82f6`).
+
+<DataFlowPlayer
+  spec={colorsExample}
+  theme="auto"
+  controls={false}
+  height={320}
+/>
+
+```ts
+nodes: [
+  // background_color seul → bordure ET texte dérivés automatiquement.
+  { id: 'api', type: 'server', background_color: '#bfdbfe' },
+  // nom prédéfini + bordure explicite, sur une forme.
+  {
+    id: 'cache',
+    type: 'circle',
+    body: 'Cache',
+    background_color: 'gold',
+    border_color: 'darkgoldenrod',
+  },
+  // fond sombre, texte auto-contrasté (blanc) ; ou text_color explicite.
+  { id: 'note', type: 'simple_node', body: 'TODO', background_color: '#1e3a8a' },
+  {
+    id: 'tag',
+    type: 'square',
+    body: 'SALE',
+    background_color: '#fee2e2',
+    text_color: '#b91c1c',
+  },
+],
+```
+
+:::tip Bordure et texte automatiques
+
+Si vous donnez un `background_color` **sans** `border_color`, la bordure est
+**dérivée du fond** (une variante plus sombre qui s'agence bien). De même, sans
+`text_color`, la couleur du texte interne est choisie pour offrir un **très fort
+contraste** avec le fond (noir ou blanc selon sa luminance) — un fond sombre reste
+donc lisible sans rien régler. Précisez `border_color` / `text_color` pour forcer
+une teinte. Avec `language` (coloration syntaxique), les couleurs des tokens priment
+sur `text_color`.
+
+:::
+
 ## `text` — le label
 
 Le `text` s'affiche **sous** le nœud. Il est optionnel mais recommandé pour
@@ -110,7 +205,8 @@ acceptées, dans cet ordre de résolution :
 
 1. une **techno connue** (icône [react-icons](https://react-icons.github.io/react-icons/)
    intégrée) — ex. `react`, `node`, `postgres`, `mongodb`, `redis`, `nginx`,
-   `docker`, `dotnet`, `python`, `typescript`, `aws`, `graphql`… ;
+   `docker`, `dotnet`, `python`, `typescript`, `go`, `rust`, `git`, `azure`,
+   `aws`, `graphql`… ;
 2. une icône **enregistrée** par vous via `registerSubIcon` ;
 3. à défaut, un **texte libre** affiché en pastille (tronqué à 4 caractères).
 

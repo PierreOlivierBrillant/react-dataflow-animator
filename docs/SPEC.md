@@ -52,17 +52,41 @@ conteneur (placement CSS pur). Voir [`packages/react-dataflow-animator/src/engin
   rendues sous les flèches et les nœuds.
 
 **Types de nœuds** : dix **pictogrammes** (`desktop`, `laptop`, `client`, `server`,
-`database`, `mobile`, `user`, `admin`, `users`, `cloud`) et deux nœuds **textuels** :
-`simple_node` (boîte de texte sans pictogramme) et `complex_node` (en-tête + corps,
-à la manière d'un paquet HTTP). Chaque nœud peut recevoir : un `text` (label), un
-`subicon` (techno connue, icône enregistrée **ou texte libre**), une `url` (rendant le
-nœud cliquable), et un `content` initial.
+`database`, `mobile`, `user`, `admin`, `users`, `cloud`), deux nœuds **textuels**
+(`simple_node` = boîte de texte sans pictogramme, `complex_node` = en-tête + corps à
+la manière d'un paquet HTTP) et huit **formes géométriques** (`square`, `diamond`,
+`circle`, `triangle`, `parallelogram`, `width_rectangle`, `height_rectangle`, `star`).
+Chaque nœud peut recevoir : un `text` (label), un `subicon` (techno connue, icône
+enregistrée **ou texte libre**), une `url` (rendant le nœud cliquable), un
+`content` initial, et des **couleurs** `background_color` / `border_color`.
+
+**Couleurs** (`background_color`, `border_color`, `text_color`) : changent le fond,
+la bordure et le texte du nœud — remplissage/trait d'une forme, fond/bordure d'un
+panneau, pastille + traits d'un pictogramme, et couleur du texte interne. Chaque champ
+accepte une couleur CSS **prédéfinie** (nom : `tomato`, `steelblue`…) ou une valeur
+**hexadécimale** exacte (`#3b82f6`). Dérivations automatiques (CSS pur, sans JS,
+valables pour noms comme pour hex) quand un `background_color` est fourni sans la
+couleur correspondante : `border_color` → fond assombri (`color-mix`) ; `text_color`
+→ noir ou blanc selon la luminance du fond (`oklch(from …)`), pour un très fort
+contraste. `text_color` ne s'applique **que si la coloration syntaxique est désactivée**
+(sans `language`) ; sinon les couleurs des tokens priment. Sans effet quand un
+`set_content` occupe le nœud.
 
 **Nœuds textuels** (`simple_node`, `complex_node`) : le contenu se met dans `body`
 (corps) et, pour `complex_node` uniquement, `header` (en-tête, séparé du corps par un
 trait). Le champ `language` applique la **coloration syntaxique** à _toutes_ les zones
 de texte du nœud (header + body). Le `subicon` reste disponible ; un `set_content`
 actif prend la priorité sur le panneau textuel (comme il masque le pictogramme).
+
+**Formes géométriques** (`square`, `diamond`, `circle`, `triangle`, `parallelogram`,
+`width_rectangle`, `height_rectangle`, `star`) : une forme dessinée en SVG qui peut
+contenir un **court texte centré** via `body` (`text` reste le label sous la forme).
+La forme s'agrandit pour accueillir le texte, mais celui-ci est borné (`max-width`)
+et **recadré** (`overflow:hidden`) pour ne jamais déborder du tracé visible — le `body`
+est donc pensé pour une étiquette brève, pas un paragraphe. Le `subicon` reste
+disponible et un `set_content` actif remplace la forme. Toutes ces familles partagent
+le même chemin de rendu (`NodeView`) : `isPanelNode`/`isShapeType` (module `nodeKinds`)
+arbitrent panneau/forme/pictogramme.
 
 **Mise à l'échelle responsive** : une « cellule » (plus petite distance entre deux
 nœuds, en px) pilote un facteur d'échelle global (`--rdfa-scale` : icônes/polices plus
@@ -148,6 +172,19 @@ référence API générée depuis le JSON Schema). Buildé via
   `header` pour `complex_node`) au lieu d'un pictogramme, coloration optionnelle via
   `language` (appliquée à toutes les zones). `complex_node` reprend l'allure d'un
   paquet HTTP. Rendus par `NodePanel` (cf. `components/nodes/StaticNode.tsx`).
+- **Formes géométriques** (`square` … `star`) : forme SVG (`preserveAspectRatio="none"`,
+  `non-scaling-stroke`) avec un court `body` centré. Marge de sécurité par forme +
+  `max-width` + `overflow:hidden` garantissent que le texte ne déborde pas du tracé.
+  Rendues par `ShapeNode` via `NodeView` ; le prédicat `isShapeType` vit dans
+  `components/nodes/nodeKinds.ts` (source de vérité unique, comme `isPanelNode`).
+- **Couleurs des nœuds** (`background_color` / `border_color` / `text_color`) : posées
+  en variables CSS `--rdfa-fill` / `--rdfa-stroke` / `--rdfa-ink` sur la racine
+  `.rdfa-node` (`nodeColors.ts`), lues par le CSS des formes/panneaux/pictogrammes avec
+  fallback sur le thème. Dérivations auto (CSS pur, SSR-safe, indépendant du format) :
+  bordure = `color-mix(in srgb, <fond>, #000 32%)` ; texte = `oklch(from var(--rdfa-fill)
+clamp(0, (0.62 − l) × 1000, 1) 0 0)` (noir/blanc selon la luminance). `--rdfa-ink`
+  n'est lu que **hors zones de code** (`:not(.rdfa-code)`) : la coloration syntaxique
+  prime. Un `background_color` sur un pictogramme ajoute une pastille (`rdfa-node--tinted`).
 - `is_navigable` a été **retiré de la spec** : la navigabilité est une prop `controls`.
 - Les flèches de décor ont migré de `static_objects` vers le tableau racine `connections`.
 - `comment` utilise `object` (et non plus `next_to`) pour cibler son nœud.

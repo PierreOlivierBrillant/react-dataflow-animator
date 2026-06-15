@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { validateSpec } from './validateSpec';
 import { clientServer } from './demos/clientServer';
+import { demos } from './demos';
 
 describe('validateSpec — validation de schéma', () => {
   it('retourne un tableau vide pour une spec valide', () => {
@@ -58,6 +59,15 @@ describe('validateSpec — validation de schéma', () => {
     expect(err!.message).toMatch(/type incorrect/);
     expect(err!.message).toContain('number');
   });
+});
+
+describe('validateSpec — toutes les démos de la galerie sont valides', () => {
+  it.each(demos.map((d) => [d.id, d.spec] as const))(
+    'la démo « %s » passe le schéma et la validation des références',
+    (_id, spec) => {
+      expect(validateSpec(spec)).toEqual([]);
+    }
+  );
 });
 
 describe('validateSpec — duration, icon, language', () => {

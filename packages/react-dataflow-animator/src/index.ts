@@ -42,6 +42,11 @@ export type { DataFlowSchema } from './schema';
 export { registerNodeIcon, getNodeIcon } from './components/nodes/nodeIcons';
 export { registerSubIcon, getSubIcon } from './components/nodes/subIcons';
 
+// Rendu isolé du cœur visuel d'un nœud (pictogramme ou panneau), hors Stage —
+// utilisé par la doc pour la galerie des types, réutilisable côté consommateur.
+export { NodeView } from './components/nodes/NodeView';
+export type { NodeViewProps } from './components/nodes/NodeView';
+
 // Coloration syntaxique par défaut (réutilisable / remplaçable).
 export { highlightCode, escapeHtml } from './highlight/highlight';
 

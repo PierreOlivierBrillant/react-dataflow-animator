@@ -17,9 +17,12 @@ export type Direction =
 /**
  * Types de nœuds (apparence). Les flèches de décor vivent dans `connections`.
  *
- * Les dix premiers sont des **pictogrammes**. Les deux derniers sont des nœuds
- * **textuels** (boîte de texte, pas de gros pictogramme) : `simple_node` (corps
- * seul) et `complex_node` (en-tête + corps, à la manière d'un paquet HTTP).
+ * Trois familles :
+ * - **Pictogrammes** (`desktop` … `cloud`) : une icône SVG fixe.
+ * - **Nœuds textuels** (`simple_node`, `complex_node`) : une boîte de texte
+ *   (corps seul, ou en-tête + corps à la manière d'un paquet HTTP).
+ * - **Formes géométriques** (`square` … `star`) : une forme dessinée qui peut
+ *   contenir un court texte centré (champ `body`).
  */
 export type NodeType =
   | 'desktop'
@@ -33,7 +36,15 @@ export type NodeType =
   | 'users'
   | 'cloud'
   | 'simple_node'
-  | 'complex_node';
+  | 'complex_node'
+  | 'square'
+  | 'diamond'
+  | 'circle'
+  | 'triangle'
+  | 'parallelogram'
+  | 'height_rectangle'
+  | 'width_rectangle'
+  | 'star';
 
 export type PacketKind = 'http_packet' | 'sql_request' | 'sql_response';
 
@@ -106,12 +117,37 @@ export interface Node {
   align_with?: string;
   /** URL rendant le nœud cliquable (ouvre dans un nouvel onglet). */
   url?: string;
+  /**
+   * Couleur de fond du nœud : remplissage des formes, fond des panneaux
+   * (`simple_node`/`complex_node`), pastille derrière un pictogramme. Accepte une
+   * couleur CSS **prédéfinie** (nom : `tomato`, `steelblue`, `teal`…) ou une valeur
+   * **hexadécimale exacte** (`#3b82f6`). Sans effet sur un `set_content` actif.
+   */
+  background_color?: string;
+  /**
+   * Couleur de la bordure / du trait du nœud (stroke des formes, bordure des
+   * panneaux, couleur des traits d'un pictogramme). Même format que
+   * `background_color`. Si `background_color` est défini mais pas `border_color`,
+   * une bordure coordonnée (variante plus sombre du fond) est générée automatiquement.
+   */
+  border_color?: string;
+  /**
+   * Couleur du texte affiché DANS le nœud (corps d'une forme, en-tête/corps d'un
+   * panneau), **uniquement quand la coloration syntaxique est désactivée** (pas de
+   * `language` : sinon les couleurs de la syntaxe priment). Même format que
+   * `background_color` (nom prédéfini ou hex). Si elle n'est pas définie mais qu'un
+   * `background_color` l'est, une couleur à très fort contraste avec le fond
+   * (noir ou blanc) est choisie automatiquement.
+   */
+  text_color?: string;
   /** Contenu initial affiché dans le nœud (terminal de code, fenêtre, etc.). */
   content?: ObjectContent;
   /**
-   * (`simple_node` / `complex_node`) Texte affiché DANS le nœud (corps du
-   * panneau), par opposition à `text` qui reste le label sous le nœud. Les
-   * retours à la ligne sont respectés ; coloré selon `language` si fourni.
+   * Texte affiché DANS le nœud, par opposition à `text` qui reste le label sous
+   * le nœud. Pour `simple_node` / `complex_node` : corps du panneau (retours à
+   * la ligne respectés, coloré selon `language` si fourni). Pour les formes
+   * géométriques (`square` … `star`) : court texte centré dans la forme (gardez-le
+   * bref pour qu'il ne déborde pas).
    */
   body?: string;
   /**

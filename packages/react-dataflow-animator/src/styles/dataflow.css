@@ -222,7 +222,18 @@
 .rdfa-node-icon {
   width: calc(56px * var(--rdfa-scale, 1));
   height: calc(56px * var(--rdfa-scale, 1));
-  color: var(--rdfa-node-stroke);
+  color: var(--rdfa-stroke, var(--rdfa-node-stroke));
+}
+
+/* Pastille de fond derrière un pictogramme quand `background_color` est posé
+   (seuls les pictogrammes rendent `.rdfa-node-icon`). content-box : on garde la
+   taille du glyphe et la pastille déborde via le padding. */
+.rdfa-node--tinted .rdfa-node-icon {
+  box-sizing: content-box;
+  padding: calc(9px * var(--rdfa-scale, 1));
+  background: var(--rdfa-fill);
+  border: 1px solid var(--rdfa-stroke, var(--rdfa-border));
+  border-radius: calc(14px * var(--rdfa-scale, 1));
 }
 
 .rdfa-node-icon svg {
@@ -238,7 +249,8 @@
   pointer-events: auto;
 }
 
-.rdfa-node-link:hover .rdfa-node-icon {
+.rdfa-node-link:hover .rdfa-node-icon,
+.rdfa-node-link:hover .rdfa-shape {
   color: var(--rdfa-accent);
 }
 
@@ -289,8 +301,8 @@
   font-family: var(--rdfa-mono);
   line-height: 1.4;
   color: var(--rdfa-text);
-  background: var(--rdfa-surface);
-  border: 1px solid var(--rdfa-border);
+  background: var(--rdfa-fill, var(--rdfa-surface));
+  border: 1px solid var(--rdfa-stroke, var(--rdfa-border));
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   max-width: calc(var(--rdfa-maxw, 240px) * var(--rdfa-scale, 1));
   text-align: left;
@@ -306,17 +318,134 @@
   font-weight: 400; /* le code porte sa propre coloration, pas de gras global */
 }
 
+/* Couleur de texte personnalisée (`text_color`) ou auto-contrastée — appliquée
+   seulement HORS zones de code : quand la coloration syntaxique est active
+   (`.rdfa-code`), ses couleurs de tokens priment (exigence : pas de surcharge). */
+.rdfa-node-panel-header:not(.rdfa-code),
+.rdfa-node-panel-body:not(.rdfa-code) {
+  color: var(--rdfa-ink, var(--rdfa-text));
+}
+
 /* Séparateur en-tête/corps : seulement quand les deux coexistent (complex_node
    pourvu d'un en-tête) — le corps nu d'un simple_node ne porte alors aucun trait. */
 .rdfa-node-panel--complex .rdfa-node-panel-header + .rdfa-node-panel-body {
   margin-top: 5px;
   padding-top: 5px;
-  border-top: 1px solid var(--rdfa-border);
+  border-top: 1px solid var(--rdfa-stroke, var(--rdfa-border));
+}
+
+/* ---------- Nœuds géométriques (square … star) ---------- */
+/* Une forme dessinée en SVG qui peut contenir un court texte centré (`body`).
+   Le SVG (preserveAspectRatio="none") remplit la boîte ; la boîte s'adapte au
+   texte. La marge par forme + overflow:hidden + max-width garantissent que le
+   texte ne déborde pas du tracé visible. non-scaling-stroke garde un trait
+   d'épaisseur constante même quand un texte long étire la boîte. */
+.rdfa-node--shape {
+  /* Une forme remplie respire plus qu'un pictogramme : on relâche la borne. */
+  max-width: 55%;
+}
+
+.rdfa-shape {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: var(--rdfa-node-stroke);
+  min-width: calc(56px * var(--rdfa-scale, 1));
+  min-height: calc(56px * var(--rdfa-scale, 1));
+  max-width: calc(var(--rdfa-maxw, 240px) * var(--rdfa-scale, 1));
+  /* Marge de sécurité par défaut (carré/rectangles), surchargée par forme. */
+  padding: calc(10px * var(--rdfa-scale, 1));
+}
+
+.rdfa-shape-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.rdfa-shape-bg > * {
+  fill: var(--rdfa-fill, var(--rdfa-node-bg));
+  stroke: var(--rdfa-stroke, currentColor);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.rdfa-shape-text {
+  position: relative; /* au-dessus du SVG de fond */
+  z-index: 1;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden; /* garantie ultime : pas de débordement hors de la boîte */
+  font-size: calc(12px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  font-family: var(--rdfa-mono);
+  line-height: 1.25;
+  color: var(--rdfa-ink, var(--rdfa-text));
+  text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Formes à ratio verrouillé : la boîte reste carrée (le SVG étiré sur un carré
+   rend la forme sans déformation ; un texte long s'enroule au lieu d'aplatir). */
+.rdfa-shape--square,
+.rdfa-shape--circle,
+.rdfa-shape--diamond,
+.rdfa-shape--triangle,
+.rdfa-shape--star {
+  aspect-ratio: 1;
+}
+
+/* Marges de sécurité par forme : éloigner le texte des bords courbes ou pointus
+   pour qu'il reste dans le tracé visible (cercle inscrit, demi-bas du triangle…). */
+.rdfa-shape--circle {
+  padding: calc(13px * var(--rdfa-scale, 1));
+}
+.rdfa-shape--diamond {
+  min-width: calc(66px * var(--rdfa-scale, 1));
+  min-height: calc(66px * var(--rdfa-scale, 1));
+  padding: calc(17px * var(--rdfa-scale, 1));
+}
+.rdfa-shape--triangle {
+  min-width: calc(66px * var(--rdfa-scale, 1));
+  min-height: calc(66px * var(--rdfa-scale, 1));
+  /* La pointe est en haut : on pousse le texte vers la moitié basse, plus large. */
+  padding: calc(30px * var(--rdfa-scale, 1)) calc(15px * var(--rdfa-scale, 1))
+    calc(10px * var(--rdfa-scale, 1));
+}
+.rdfa-shape--star {
+  min-width: calc(78px * var(--rdfa-scale, 1));
+  min-height: calc(78px * var(--rdfa-scale, 1));
+  padding: calc(22px * var(--rdfa-scale, 1));
+}
+.rdfa-shape--parallelogram {
+  min-width: calc(80px * var(--rdfa-scale, 1));
+  min-height: calc(48px * var(--rdfa-scale, 1));
+  /* Extra horizontal pour dégager les côtés obliques. */
+  padding: calc(8px * var(--rdfa-scale, 1)) calc(24px * var(--rdfa-scale, 1));
+}
+.rdfa-shape--width_rectangle {
+  min-width: calc(96px * var(--rdfa-scale, 1));
+  min-height: calc(46px * var(--rdfa-scale, 1));
+}
+.rdfa-shape--height_rectangle {
+  min-width: calc(52px * var(--rdfa-scale, 1));
+  min-height: calc(92px * var(--rdfa-scale, 1));
 }
 
 /* ---------- Surlignage (action highlight) ---------- */
-.rdfa-node--highlight .rdfa-node-icon {
+.rdfa-node--highlight .rdfa-node-icon,
+.rdfa-node--highlight .rdfa-shape {
   color: var(--rdfa-accent);
+}
+/* L'accent prime sur un trait personnalisé (--rdfa-stroke gagnerait sinon). */
+.rdfa-node--highlight .rdfa-shape-bg > * {
+  stroke: var(--rdfa-accent);
 }
 .rdfa-node--highlight .rdfa-node-visual::after {
   content: '';

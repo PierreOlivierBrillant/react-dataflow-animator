@@ -24,16 +24,4 @@ pour la configuration VS Code.
 
 :::
 
-:::note Divergence TS ↔ schéma JSON pour `language`
-
-Le type TypeScript de `language` est `HighlightLanguage | (string & {})` : n'importe
-quelle chaîne est acceptée à la compilation pour ne pas casser les consommateurs qui
-utilisent un highlighter personnalisé. Cependant, le schéma JSON publié est **plus
-strict** : le script `schema-patches.mjs` retire la branche `string` libre et ne
-conserve que l'énumération `HighlightLanguage`. Un langage hors de cette énumération
-passe le compilateur TypeScript mais est **rejeté par Ajv** lors de la validation du
-schéma.
-
-:::
-
 <ApiReference />

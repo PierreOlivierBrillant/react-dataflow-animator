@@ -98,13 +98,25 @@
           "type": "string",
           "description": "URL rendant le nœud cliquable (ouvre dans un nouvel onglet)."
         },
+        "background_color": {
+          "type": "string",
+          "description": "Couleur de fond du nœud : remplissage des formes, fond des panneaux (`simple_node`/`complex_node`), pastille derrière un pictogramme. Accepte une couleur CSS **prédéfinie** (nom : `tomato`, `steelblue`, `teal`…) ou une valeur\n**hexadécimale exacte** (`#3b82f6`). Sans effet sur un `set_content` actif."
+        },
+        "border_color": {
+          "type": "string",
+          "description": "Couleur de la bordure / du trait du nœud (stroke des formes, bordure des panneaux, couleur des traits d'un pictogramme). Même format que `background_color`. Si `background_color` est défini mais pas `border_color`, une bordure coordonnée (variante plus sombre du fond) est générée automatiquement."
+        },
+        "text_color": {
+          "type": "string",
+          "description": "Couleur du texte affiché DANS le nœud (corps d'une forme, en-tête/corps d'un panneau), **uniquement quand la coloration syntaxique est désactivée** (pas de `language` : sinon les couleurs de la syntaxe priment). Même format que `background_color` (nom prédéfini ou hex). Si elle n'est pas définie mais qu'un `background_color` l'est, une couleur à très fort contraste avec le fond (noir ou blanc) est choisie automatiquement."
+        },
         "content": {
           "$ref": "#/definitions/ObjectContent",
           "description": "Contenu initial affiché dans le nœud (terminal de code, fenêtre, etc.)."
         },
         "body": {
           "type": "string",
-          "description": "(`simple_node` / `complex_node`) Texte affiché DANS le nœud (corps du panneau), par opposition à `text` qui reste le label sous le nœud. Les retours à la ligne sont respectés ; coloré selon `language` si fourni."
+          "description": "Texte affiché DANS le nœud, par opposition à `text` qui reste le label sous le nœud. Pour `simple_node` / `complex_node` : corps du panneau (retours à la ligne respectés, coloré selon `language` si fourni). Pour les formes géométriques (`square` … `star`) : court texte centré dans la forme (gardez-le bref pour qu'il ne déborde pas)."
         },
         "header": {
           "type": "string",
@@ -135,9 +147,17 @@
         "users",
         "cloud",
         "simple_node",
-        "complex_node"
+        "complex_node",
+        "square",
+        "diamond",
+        "circle",
+        "triangle",
+        "parallelogram",
+        "height_rectangle",
+        "width_rectangle",
+        "star"
       ],
-      "description": "Types de nœuds (apparence). Les flèches de décor vivent dans `connections`.\n\nLes dix premiers sont des **pictogrammes**. Les deux derniers sont des nœuds\n**textuels** (boîte de texte, pas de gros pictogramme) : `simple_node` (corps seul) et `complex_node` (en-tête + corps, à la manière d'un paquet HTTP)."
+      "description": "Types de nœuds (apparence). Les flèches de décor vivent dans `connections`.\n\nTrois familles :\n- **Pictogrammes** (`desktop` … `cloud`) : une icône SVG fixe.\n- **Nœuds textuels** (`simple_node`, `complex_node`) : une boîte de texte   (corps seul, ou en-tête + corps à la manière d'un paquet HTTP).\n- **Formes géométriques** (`square` … `star`) : une forme dessinée qui peut   contenir un court texte centré (champ `body`)."
     },
     "ObjectContent": {
       "type": "object",

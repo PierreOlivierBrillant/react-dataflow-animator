@@ -1,7 +1,12 @@
 /* eslint-disable react-refresh/only-export-components -- module de contenu (données + rendu), pas un module HMR */
 import type { ReactNode } from 'react';
 import Heading from '@theme/Heading';
-import { DataFlowPlayer, dataFlowSchema } from 'react-dataflow-animator';
+import {
+  DataFlowPlayer,
+  NodeView,
+  dataFlowSchema,
+} from 'react-dataflow-animator';
+import type { Node, NodeType } from 'react-dataflow-animator';
 import { demosById } from './demos';
 
 interface DocPage {
@@ -40,6 +45,33 @@ const defs = (
   dataFlowSchema as unknown as { definitions: Record<string, SchemaNode> }
 ).definitions;
 const root = defs.DataFlowSpec;
+
+// ---------------------------------------------------------------------------
+// Aperçus des types de nœud, rendus par le composant réel (NodeView) et injectés
+// DANS la ligne `type` du tableau Node (jamais une section à part) : complément
+// visuel à la spec. Pilotés par l'énum du schéma → un nouveau type apparaît seul.
+// ---------------------------------------------------------------------------
+
+/** Échantillons soignés pour les panneaux et les formes (sinon `body` = le nom
+ *  du type). Court par construction : le `body` d'une forme ne doit pas déborder. */
+const NODE_SAMPLES: Partial<Record<NodeType, Pick<Node, 'header' | 'body'>>> = {
+  simple_node: { body: 'Worker' },
+  complex_node: { header: 'POST /login', body: '200 OK' },
+  square: { body: 'API' },
+  diamond: { body: '?' },
+  circle: { body: 'Start' },
+  triangle: { body: 'Run' },
+  parallelogram: { body: 'I/O' },
+  height_rectangle: { body: 'Queue' },
+  width_rectangle: { body: 'Bus' },
+  star: { body: 'New' },
+};
+
+function nodeSample(type: NodeType): Node {
+  // `body` par défaut = nom du type : un futur nœud-panneau ou forme sans
+  // échantillon dédié s'affiche quand même (les pictogrammes ignorent `body`).
+  return { id: type, type, body: type, ...NODE_SAMPLES[type] };
+}
 
 function refName(ref: string): string {
   return ref.replace('#/definitions/', '');
@@ -96,6 +128,11 @@ function PropsTable({ node }: { node: SchemaNode }) {
           const enumValues = row.node.$ref
             ? defs[refName(row.node.$ref)]?.enum
             : row.node.enum;
+          // La ligne `type` (réf. NodeType) illustre chaque valeur par son rendu
+          // réel, INLINE dans la cellule — complément visuel, jamais une section
+          // à part. Le wrapper `.rdfa-player` fournit les variables de thème.
+          const isNodeType =
+            row.node.$ref != null && refName(row.node.$ref) === 'NodeType';
           return (
             <tr key={row.name}>
               <td className="name">
@@ -108,13 +145,29 @@ function PropsTable({ node }: { node: SchemaNode }) {
               <td>
                 {row.node.description ?? ''}
                 {enumValues ? (
-                  <div>
-                    {enumValues.map((v) => (
-                      <span className="api-enum" key={v}>
-                        {v}
-                      </span>
-                    ))}
-                  </div>
+                  isNodeType ? (
+                    <div
+                      className="rdfa-player api-node-enum"
+                      data-theme="auto"
+                    >
+                      {enumValues.map((v) => (
+                        <div className="api-node-enum-item" key={v}>
+                          <div className="api-node-enum-visual">
+                            <NodeView node={nodeSample(v as NodeType)} />
+                          </div>
+                          <code className="api-enum">{v}</code>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div>
+                      {enumValues.map((v) => (
+                        <span className="api-enum" key={v}>
+                          {v}
+                        </span>
+                      ))}
+                    </div>
+                  )
                 ) : null}
               </td>
             </tr>

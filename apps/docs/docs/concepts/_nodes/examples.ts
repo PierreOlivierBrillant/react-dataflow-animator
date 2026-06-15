@@ -69,6 +69,81 @@ export const textNodesExample: DataFlowSpec = {
   timeline: [],
 };
 
+/** Formes géométriques : une forme dessinée pouvant contenir un court texte
+ *  centré (`body`). `text` reste le label sous la forme. */
+const SHAPE_TYPES: NodeType[] = [
+  'square',
+  'diamond',
+  'circle',
+  'triangle',
+  'parallelogram',
+  'width_rectangle',
+  'height_rectangle',
+  'star',
+];
+
+export const shapesExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: SHAPE_TYPES.map((type, i) => ({
+    id: type,
+    type,
+    text: type,
+    body: 'Texte',
+    // 4 colonnes : les nœuds d'une même lane s'empilent sur l'axe transverse.
+    lane: (i % 4) + 1,
+  })),
+  packets: [],
+  timeline: [],
+};
+
+/** Couleurs personnalisées : `background_color` (nom prédéfini ou hex) et
+ *  `border_color`. Sans bordure explicite, une bordure coordonnée est dérivée. */
+export const colorsExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: [
+    // Hex + bordure dérivée automatiquement (aucune border_color).
+    {
+      id: 'api',
+      type: 'server',
+      text: 'bordure auto',
+      background_color: '#bfdbfe',
+      lane: 1,
+    },
+    // Couleur prédéfinie (nom) sur une forme, avec bordure explicite.
+    {
+      id: 'cache',
+      type: 'circle',
+      text: 'noms CSS',
+      body: 'Cache',
+      background_color: 'gold',
+      border_color: 'darkgoldenrod',
+      lane: 2,
+    },
+    // Panneau de texte teinté. Fond sombre sans text_color → texte auto-contrasté
+    // (blanc) pour rester lisible.
+    {
+      id: 'note',
+      type: 'simple_node',
+      text: 'texte auto',
+      body: 'TODO',
+      background_color: '#1e3a8a',
+      lane: 3,
+    },
+    // Couleur de texte explicite sur une forme.
+    {
+      id: 'tag',
+      type: 'square',
+      text: 'text_color',
+      body: 'SALE',
+      background_color: '#fee2e2',
+      text_color: '#b91c1c',
+      lane: 4,
+    },
+  ],
+  packets: [],
+  timeline: [],
+};
+
 /** Visibilité initiale + révélation via l'action `set_visible`. */
 export const revealExample: DataFlowSpec = {
   direction: 'left-to-right',

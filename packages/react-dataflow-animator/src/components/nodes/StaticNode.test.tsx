@@ -94,3 +94,107 @@ describe('StaticNode — nœuds textuels', () => {
     expect(container.querySelector('.rdfa-content')).toBeTruthy();
   });
 });
+
+describe('StaticNode — formes géométriques', () => {
+  it('rend une forme avec son texte (body) et la classe rdfa-node--shape', () => {
+    const { container } = renderNode({
+      id: 'cache',
+      type: 'circle',
+      body: 'Cache',
+    });
+    expect(container.querySelector('.rdfa-node--shape')).toBeTruthy();
+    expect(container.querySelector('.rdfa-shape--circle')).toBeTruthy();
+    expect(container.querySelector('.rdfa-node-icon')).toBeNull();
+    expect(container.querySelector('.rdfa-shape-text')?.textContent).toBe(
+      'Cache'
+    );
+  });
+
+  it('conserve le subicon et le label sous la forme', () => {
+    const { container } = renderNode({
+      id: 'q',
+      type: 'square',
+      body: 'Q',
+      icon: 'redis',
+      text: 'File',
+    });
+    expect(container.querySelector('.rdfa-node-subicon')).toBeTruthy();
+    expect(container.querySelector('.rdfa-node-label')?.textContent).toBe(
+      'File'
+    );
+  });
+
+  it('un set_content actif remplace la forme', () => {
+    const { container } = render(
+      <StaticNode
+        object={{ id: 'cache', type: 'circle', body: 'Cache' }}
+        placement={placement}
+        content={{ type: 'text', value: 'remplacé' }}
+        highlight={highlightCode}
+      />
+    );
+    expect(container.querySelector('.rdfa-shape')).toBeNull();
+    expect(container.querySelector('.rdfa-node--shape')).toBeNull();
+    expect(container.querySelector('.rdfa-content')).toBeTruthy();
+  });
+});
+
+describe('StaticNode — couleurs (background_color / border_color)', () => {
+  it('pose --rdfa-fill et --rdfa-stroke sur la racine du nœud', () => {
+    const { container } = renderNode({
+      id: 'box',
+      type: 'square',
+      background_color: '#fde68a',
+      border_color: '#92400e',
+    });
+    const node = container.querySelector('.rdfa-node') as HTMLElement;
+    expect(node.style.getPropertyValue('--rdfa-fill')).toBe('#fde68a');
+    expect(node.style.getPropertyValue('--rdfa-stroke')).toBe('#92400e');
+  });
+
+  it('background_color seul : bordure complémentaire dérivée', () => {
+    const { container } = renderNode({
+      id: 'box',
+      type: 'square',
+      background_color: '#3b82f6',
+    });
+    const node = container.querySelector('.rdfa-node') as HTMLElement;
+    expect(node.style.getPropertyValue('--rdfa-stroke')).toContain('color-mix');
+  });
+
+  it('pictogramme + background_color : classe rdfa-node--tinted (pastille)', () => {
+    const { container } = renderNode({
+      id: 'srv',
+      type: 'server',
+      background_color: 'teal',
+    });
+    expect(container.querySelector('.rdfa-node--tinted')).toBeTruthy();
+  });
+
+  it('sans background_color : pas de classe tinted', () => {
+    const { container } = renderNode({ id: 'srv', type: 'server' });
+    expect(container.querySelector('.rdfa-node--tinted')).toBeNull();
+  });
+
+  it('text_color : pose --rdfa-ink sur la racine du nœud', () => {
+    const { container } = renderNode({
+      id: 'box',
+      type: 'square',
+      body: 'OK',
+      text_color: '#0f172a',
+    });
+    const node = container.querySelector('.rdfa-node') as HTMLElement;
+    expect(node.style.getPropertyValue('--rdfa-ink')).toBe('#0f172a');
+  });
+
+  it('background_color sans text_color : --rdfa-ink auto-contrasté', () => {
+    const { container } = renderNode({
+      id: 'box',
+      type: 'square',
+      body: 'OK',
+      background_color: '#1e3a8a',
+    });
+    const node = container.querySelector('.rdfa-node') as HTMLElement;
+    expect(node.style.getPropertyValue('--rdfa-ink')).toContain('oklch');
+  });
+});

@@ -6,8 +6,9 @@ import {
 import type { Highlighter, ObjectContent, Node } from '../../types';
 import type { NodePlacement } from '../../engine/layout';
 import { ContentPanel } from '../dynamic/ContentPanel';
-import { NodePanel } from './NodePanel';
-import { getNodeIcon } from './nodeIcons';
+import { NodeView } from './NodeView';
+import { isPanelNode, isShapeType } from './nodeKinds';
+import { nodeTint } from './nodeColors';
 import { getSubIcon } from './subIcons';
 
 export interface StaticNodeProps {
@@ -41,17 +42,13 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     opacity,
     visualHeight,
   }: StaticNodeProps) {
-    const isPanel =
-      object.type === 'simple_node' || object.type === 'complex_node';
+    const isPanel = isPanelNode(object.type);
+    const isShape = isShapeType(object.type);
     const visual: ReactNode = content ? (
       <ContentPanel content={content} highlight={highlight} />
     ) : (
       <>
-        {isPanel ? (
-          <NodePanel object={object} highlight={highlight} />
-        ) : (
-          <span className="rdfa-node-icon">{getNodeIcon(object.type)}</span>
-        )}
+        <NodeView node={object} highlight={highlight} />
         {object.icon ? (
           <span className="rdfa-node-subicon">{getSubIcon(object.icon)}</span>
         ) : null}
@@ -92,10 +89,14 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       </span>
     );
 
+    // `tinted` ne sert qu'à la pastille des pictogrammes ; formes/panneaux lisent
+    // directement --rdfa-fill. Inutile quand un set_content occupe le nœud.
     const cls =
       'rdfa-node' +
       (content ? ' rdfa-node--content' : '') +
       (!content && isPanel ? ' rdfa-node--panel' : '') +
+      (!content && isShape ? ' rdfa-node--shape' : '') +
+      (!content && object.background_color ? ' rdfa-node--tinted' : '') +
       (highlighted ? ' rdfa-node--highlight' : '');
 
     return (
@@ -106,6 +107,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
           left: `${placement.cx * 100}%`,
           top: `${placement.cy * 100}%`,
           opacity,
+          ...nodeTint(object),
         }}
       >
         {inner}

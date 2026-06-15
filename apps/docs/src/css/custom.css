@@ -278,6 +278,48 @@ footer__link-item > svg {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Aperçus des types de nœud, INLINE dans la cellule `type` du tableau Node.
+   Le conteneur porte `.rdfa-player` (+ data-theme="auto") uniquement pour hériter
+   des variables --rdfa-* du package — on neutralise donc sa « boîte » (bordure,
+   fond, largeur, flex colonne) pour ne garder que le rôle de fournisseur de
+   thème, qui suit le clair/sombre de Docusaurus. */
+.api-node-enum.rdfa-player {
+  display: flex;
+  /* `.rdfa-player` impose flex-direction:column — on rétablit explicitement la
+     rangée, sinon les items s'empilent et ne wrappent jamais (cellule sans
+     hauteur contrainte → tableau très long). */
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px;
+  width: auto;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+  font-family: inherit;
+  color: inherit;
+}
+.api-node-enum-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  /* Pas de largeur fixe : pictogrammes/formes ~56px, panneaux plus larges —
+     chaque item épouse son visuel pour ne pas clipper les panneaux. */
+}
+.api-node-enum-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+.api-node-enum-item .api-enum {
+  margin: 0;
+}
+
 /* Erreurs de validation de schéma dans le playground */
 .rdfa-playground-errors {
   background: rgba(239, 68, 68, 0.08);

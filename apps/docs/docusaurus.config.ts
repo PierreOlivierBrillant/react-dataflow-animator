@@ -55,6 +55,7 @@ const config = {
     navbar: {
       items: [
         { to: '/docs/intro', label: 'Documentation', position: 'left' },
+        { to: '/examples', label: 'Exemples', position: 'left' },
         { to: '/playground', label: 'Playground', position: 'left' },
         {
           href: 'https://github.com/PierreOlivierBrillant/react-dataflow-animator',
@@ -70,6 +71,7 @@ const config = {
           title: 'SITE',
           items: [
             { label: 'Documentation', to: '/docs/intro' },
+            { label: 'Exemples', to: '/examples' },
             { label: 'Playground', to: '/playground' },
           ],
         },

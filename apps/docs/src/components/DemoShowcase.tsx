@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import Link from '@docusaurus/Link';
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import { demos } from '../site-content';
 
+// Quelques exemples mis en avant sur l'accueil ; la galerie complète
+// (recherche + filtres) vit sur la page /examples.
+const featured = demos.slice(0, 6);
+
 export function DemoShowcase() {
-  const [activeId, setActiveId] = useState(demos[0].id);
+  const [activeId, setActiveId] = useState(featured[0].id);
   const active = demos.find((d) => d.id === activeId)!;
   const [codeVisible, setCodeVisible] = useState(false);
 
@@ -50,7 +55,7 @@ export function DemoShowcase() {
 
         {/* Tabs */}
         <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
-          {demos.map((demo) => (
+          {featured.map((demo) => (
             <button
               key={demo.id}
               onClick={() => setActiveId(demo.id)}
@@ -117,6 +122,17 @@ export function DemoShowcase() {
             </AnimatePresence>
           </motion.div>
         </AnimatePresence>
+
+        {/* Vers la galerie complète */}
+        <div className="text-center mt-12">
+          <Link
+            to="/examples"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-sans text-violet-200 bg-violet-600/15 border border-violet-600/40 hover:bg-violet-600/25 transition-colors no-underline"
+          >
+            Explorer les {demos.length} exemples
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
       </div>
     </section>
   );

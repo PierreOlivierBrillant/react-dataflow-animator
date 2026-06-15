@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import Link from '@docusaurus/Link';
 import { useLocation } from '@docusaurus/router';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import { Menu, X, Search, BookOpen, Zap } from 'lucide-react';
+import { Menu, X, Search, BookOpen, LayoutGrid, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { FaGithub } from 'react-icons/fa';
@@ -109,6 +109,11 @@ export function CustomNavbar() {
                 icon={<BookOpen size={13} />}
               />
               <NavLink
+                to="/examples"
+                label="Exemples"
+                icon={<LayoutGrid size={13} />}
+              />
+              <NavLink
                 to="/playground"
                 label="Playground"
                 exact={true}
@@ -165,6 +170,7 @@ export function CustomNavbar() {
                 <div className="flex flex-col gap-1 pt-3">
                   {[
                     { label: 'Documentation', to: '/docs/intro' },
+                    { label: 'Exemples', to: '/examples' },
                     { label: 'Playground', to: '/playground' },
                   ].map(({ label, to }) => (
                     <Link

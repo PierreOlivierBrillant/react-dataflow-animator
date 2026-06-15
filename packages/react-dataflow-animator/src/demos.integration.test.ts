@@ -5,6 +5,23 @@ import { clientServer } from '../../../apps/docs/src/site-content/demos/clientSe
 import { microservices } from '../../../apps/docs/src/site-content/demos/microservices';
 import { signalr } from '../../../apps/docs/src/site-content/demos/signalr';
 import { spa } from '../../../apps/docs/src/site-content/demos/spa';
+import { crypto } from '../../../apps/docs/src/site-content/demos/crypto';
+import { tls } from '../../../apps/docs/src/site-content/demos/tls';
+import { oauth } from '../../../apps/docs/src/site-content/demos/oauth';
+import { dns } from '../../../apps/docs/src/site-content/demos/dns';
+import { cicd } from '../../../apps/docs/src/site-content/demos/cicd';
+import { raft } from '../../../apps/docs/src/site-content/demos/raft';
+import { messageQueue } from '../../../apps/docs/src/site-content/demos/messageQueue';
+import { cdn } from '../../../apps/docs/src/site-content/demos/cdn';
+import { loadBalancer } from '../../../apps/docs/src/site-content/demos/loadBalancer';
+import { kubernetes } from '../../../apps/docs/src/site-content/demos/kubernetes';
+import { payment } from '../../../apps/docs/src/site-content/demos/payment';
+import { blockchain } from '../../../apps/docs/src/site-content/demos/blockchain';
+import { smtp } from '../../../apps/docs/src/site-content/demos/smtp';
+import { graphql } from '../../../apps/docs/src/site-content/demos/graphql';
+import { webhook } from '../../../apps/docs/src/site-content/demos/webhook';
+import { circular } from '../../../apps/docs/src/site-content/demos/circular';
+import { collision } from '../../../apps/docs/src/site-content/demos/collision';
 
 function collectIds(actions: Action[]): Set<string> {
   const ids = new Set<string>();
@@ -37,6 +54,23 @@ const demos: Array<[string, DataFlowSpec]> = [
   ['microservices', microservices],
   ['signalr', signalr],
   ['spa', spa],
+  ['crypto', crypto],
+  ['tls', tls],
+  ['oauth', oauth],
+  ['dns', dns],
+  ['cicd', cicd],
+  ['raft', raft],
+  ['messageQueue', messageQueue],
+  ['cdn', cdn],
+  ['loadBalancer', loadBalancer],
+  ['kubernetes', kubernetes],
+  ['payment', payment],
+  ['blockchain', blockchain],
+  ['smtp', smtp],
+  ['graphql', graphql],
+  ['webhook', webhook],
+  ['circular', circular],
+  ['collision', collision],
 ];
 
 describe.each(demos)('demo %s', (name, spec) => {

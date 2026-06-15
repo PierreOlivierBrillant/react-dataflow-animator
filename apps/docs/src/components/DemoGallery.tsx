@@ -1,0 +1,355 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { DataFlowPlayer, type DataFlowSpec } from 'react-dataflow-animator';
+import Link from '@docusaurus/Link';
+import { Search, X, ExternalLink, Sparkles } from 'lucide-react';
+import {
+  demos,
+  demosById,
+  demoCategories,
+  type Demo,
+  type DemoCategory,
+} from '../site-content/demos';
+
+/** Insensibilise une chaîne aux accents et à la casse pour la recherche. */
+const fold = (s: string): string =>
+  s
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+// ─── Miniature ────────────────────────────────────────────────────────────────
+
+/**
+ * Aperçu animé d'une démo. Monté paresseusement à la première entrée dans le
+ * viewport (IntersectionObserver), puis la lecture est pilotée par la
+ * VISIBILITÉ : une carte à l'écran joue son animation (`autoPlay` + `loop`) dès
+ * l'arrivée sur la page ; dès qu'elle sort du champ on la remonte en image
+ * figée (clé `idle`, aucune boucle rAF). On borne ainsi le nombre d'animations
+ * actives à ce qui est réellement visible — sans ce garde-fou, 21 boucles rAF
+ * tourneraient en permanence (enjeu de performance). La lecture reprend au
+ * défilement.
+ */
+function DemoThumbnail({ spec }: { spec: DataFlowSpec }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      setMounted(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        const isVisible = entries.some((e) => e.isIntersecting);
+        setVisible(isVisible);
+        if (isVisible) setMounted(true);
+      },
+      { rootMargin: '80px', threshold: 0.2 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="absolute inset-0 pointer-events-none">
+      {mounted && (
+        <DataFlowPlayer
+          key={visible ? 'play' : 'idle'}
+          spec={spec}
+          theme="dark"
+          controls={false}
+          autoPlay={visible}
+          loop
+          height="100%"
+          density="spacious"
+          className="h-full w-full border-none bg-transparent"
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Carte ──────────────────────────────────────────────────────────────────
+
+function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
+  return (
+    <motion.button
+      type="button"
+      onClick={onOpen}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="group flex flex-col text-left appearance-none p-0 rounded-2xl overflow-hidden border border-white/[0.07] bg-white/[0.02] hover:border-violet-500/40 hover:bg-white/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60"
+    >
+      {/* Aperçu */}
+      <div className="relative aspect-[16/9] overflow-hidden bg-[#0c0a1e] border-b border-white/[0.06]">
+        <DemoThumbnail spec={demo.spec} />
+        <span className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider bg-black/55 backdrop-blur-sm text-violet-300 border border-violet-500/30">
+          {demo.category}
+        </span>
+        <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center gap-1.5 py-2 text-[11px] font-sans text-white/90 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+          <Sparkles size={12} className="text-violet-300" />
+          Cliquez pour ouvrir en grand
+        </div>
+      </div>
+
+      {/* Corps */}
+      <div className="flex flex-col flex-1 p-4">
+        <h3 className="text-white text-[15px] font-semibold mb-1.5 font-heading leading-snug">
+          {demo.title}
+        </h3>
+        <p className="text-[13px] leading-relaxed text-white/45 font-sans line-clamp-2 mb-3">
+          {demo.description}
+        </p>
+        {demo.tags && demo.tags.length > 0 && (
+          <div className="mt-auto flex flex-wrap gap-1.5">
+            {demo.tags.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                className="px-1.5 py-0.5 rounded text-[10px] font-mono text-white/40 bg-white/[0.04] border border-white/[0.06]"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.button>
+  );
+}
+
+// ─── Modale d'aperçu ──────────────────────────────────────────────────────────
+
+function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={demo.title}
+    >
+      <motion.div
+        className="relative w-full max-w-4xl rounded-2xl overflow-hidden border border-white/10 bg-[#0c0a1e] shadow-2xl"
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        transition={{ duration: 0.2 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* En-tête */}
+        <div className="flex items-start gap-4 px-5 py-4 border-b border-white/[0.07]">
+          <div className="flex-1 min-w-0">
+            <span className="inline-block mb-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-violet-300 bg-violet-500/10 border border-violet-500/25">
+              {demo.category}
+            </span>
+            <h2 className="text-white text-lg font-bold font-heading leading-tight mb-0">
+              {demo.title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer"
+            className="shrink-0 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer bg-transparent border-none"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Lecteur */}
+        <div className="bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,0.08)_0%,transparent_70%)]">
+          <DataFlowPlayer
+            key={demo.id}
+            spec={demo.spec}
+            theme="dark"
+            controls
+            autoPlay
+            loop
+            height={420}
+            className="border-none bg-transparent rounded-none"
+          />
+        </div>
+
+        {/* Pied */}
+        <div className="px-5 py-4 border-t border-white/[0.07]">
+          <p className="text-[13px] leading-relaxed text-white/55 font-sans mb-3">
+            {demo.description}
+          </p>
+          <Link
+            to={`/playground?demo=${demo.id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans text-white bg-violet-600/90 hover:bg-violet-600 transition-colors no-underline"
+          >
+            Ouvrir dans le Playground
+            <ExternalLink size={14} />
+          </Link>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── Galerie ──────────────────────────────────────────────────────────────────
+
+export function DemoGallery() {
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<DemoCategory | 'all'>('all');
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { all: demos.length };
+    for (const c of demoCategories)
+      map[c] = demos.filter((d) => d.category === c).length;
+    return map;
+  }, []);
+
+  const filtered = useMemo(() => {
+    const terms = fold(query.trim()).split(/\s+/).filter(Boolean);
+    return demos.filter((d) => {
+      if (category !== 'all' && d.category !== category) return false;
+      if (terms.length === 0) return true;
+      const haystack = fold(
+        [d.title, d.description, d.category, d.id, ...(d.tags ?? [])].join(' ')
+      );
+      return terms.every((t) => haystack.includes(t));
+    });
+  }, [query, category]);
+
+  const openDemo = openId ? demosById[openId] : null;
+
+  return (
+    <div className="max-w-6xl mx-auto px-5 py-12">
+      {/* Recherche */}
+      <div className="relative mb-5">
+        <Search
+          size={16}
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Rechercher un exemple (ex. « chiffrement », « cache », « alice »)…"
+          aria-label="Rechercher un exemple"
+          className="w-full pl-10 pr-10 py-3 rounded-xl text-sm font-sans text-white bg-white/[0.03] border border-white/[0.09] outline-none placeholder:text-white/30 focus:border-violet-500/50 transition-colors"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            aria-label="Effacer la recherche"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded text-white/30 hover:text-white/70 transition-colors cursor-pointer bg-transparent border-none"
+          >
+            <X size={15} />
+          </button>
+        )}
+      </div>
+
+      {/* Filtres par catégorie */}
+      <div className="flex flex-wrap items-center gap-2 mb-8">
+        <CategoryChip
+          label="Toutes"
+          count={counts.all}
+          active={category === 'all'}
+          onClick={() => setCategory('all')}
+        />
+        {demoCategories.map((c) => (
+          <CategoryChip
+            key={c}
+            label={c}
+            count={counts[c]}
+            active={category === c}
+            onClick={() => setCategory(c)}
+          />
+        ))}
+      </div>
+
+      {/* Grille */}
+      {filtered.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((demo) => (
+            <DemoCard
+              key={demo.id}
+              demo={demo}
+              onOpen={() => setOpenId(demo.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-20">
+          <p className="text-white/50 font-sans mb-1">
+            Aucun exemple ne correspond à « {query} ».
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setQuery('');
+              setCategory('all');
+            }}
+            className="text-sm text-violet-400 hover:text-violet-300 cursor-pointer bg-transparent border-none font-sans"
+          >
+            Réinitialiser les filtres
+          </button>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {openDemo && (
+          <DemoModal demo={openDemo} onClose={() => setOpenId(null)} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function CategoryChip({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-lg text-xs font-sans transition-colors cursor-pointer ${
+        active
+          ? 'bg-violet-600/20 border border-violet-600/50 text-violet-200'
+          : 'bg-white/[0.03] border border-white/[0.07] text-white/50 hover:text-white/80'
+      }`}
+    >
+      {label}
+      <span
+        className={`ml-1.5 ${active ? 'text-violet-300/70' : 'text-white/30'}`}
+      >
+        {count}
+      </span>
+    </button>
+  );
+}
