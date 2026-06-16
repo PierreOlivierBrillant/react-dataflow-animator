@@ -293,23 +293,6 @@ footer__link-item > svg {
   display: flex;
   flex-wrap: wrap;
 }
-/* Valeurs d'exemple d'un champ (colonne « Exemples ») : littéraux monospace. */
-.api-examples {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 5px;
-}
-.api-example {
-  padding: 1px 7px;
-  border-radius: 5px;
-  background: rgba(34, 211, 238, 0.08);
-  border: 1px solid rgba(34, 211, 238, 0.2);
-  color: #67e8f9;
-  font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
-  white-space: pre-wrap;
-}
 
 /* Aperçus des types de nœud, INLINE dans la cellule `type` du tableau Node.
    Le conteneur porte `.rdfa-player` (+ data-theme="auto") uniquement pour hériter
@@ -353,27 +336,50 @@ footer__link-item > svg {
   margin: 0;
 }
 
-/* Démo d'un attribut de Node : un vrai DataFlowPlayer (1 nœud) rendu compact,
-   largeur bornée pour ne pas étirer la cellule, + légende de la valeur. */
-.api-attr-demo {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  max-width: 184px;
+/* Démo d'une propriété : un vrai DataFlowPlayer rendant une spec qui isole
+   l'effet. L'auto-scaler du Stage vise un grand canevas et rapetisse trop un
+   aperçu (un nœud unique tombe au plancher 0.3 → ~17px) ; on force donc une
+   échelle fixe selon le nombre de nœuds. `!important` bat la valeur posée inline
+   par <Stage>. Les polices du contenu (paquet, table, terminal) suivent
+   `--rdfa-scale` SANS plafond : un mono-nœud a donc une grande échelle pour
+   rester lisible, alors que les démos à 2+ nœuds doivent rester plus petites
+   pour ne pas se chevaucher. */
+.api-prop-demo {
+  margin-top: 4px;
 }
-.api-attr-demo .rdfa-player {
+.api-prop-demo .rdfa-player {
   width: 100%;
 }
-/* L'auto-scaler du Stage est calibré pour un grand canevas : un nœud unique dans
-   un petit aperçu tombe au plancher (0.3 → ~17px) avec beaucoup de vide autour.
-   On force une échelle fixe lisible pour cadrer le nœud au plus près du contenu
-   qu'il démontre. `!important` bat la valeur posée inline par <Stage>. */
-.api-attr-demo .rdfa-stage {
-  --rdfa-scale: 0.85 !important;
+.api-prop-demo-stage {
+  width: 100%;
 }
-.api-attr-demo .api-enum {
-  margin: 0;
+/* Largeur FIXE (pas seulement max-width) : portée par CE conteneur (toujours
+   monté), sinon la colonne se réagencerait au montage/démontage du player en
+   scrollant (le `InView` interne, lui, ne réserve que la hauteur). */
+.api-prop-demo--single {
+  width: 320px;
+}
+.api-prop-demo--single .rdfa-stage {
+  --rdfa-scale: 1.5 !important;
+}
+.api-prop-demo--pair {
+  width: 330px;
+}
+.api-prop-demo--pair .rdfa-stage {
+  --rdfa-scale: 0.92 !important;
+}
+.api-prop-demo--multi {
+  width: 330px;
+}
+.api-prop-demo--multi .rdfa-stage {
+  --rdfa-scale: 0.62 !important;
+}
+/* Légende sous la démo : explique la valeur/le comportement démontré. */
+.api-prop-demo-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #94a3b8;
 }
 
 /* Erreurs de validation de schéma dans le playground */

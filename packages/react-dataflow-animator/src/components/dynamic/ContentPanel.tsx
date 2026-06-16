@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Highlighter, ObjectContent } from '../../types';
 
 /**
@@ -11,39 +11,80 @@ import type { Highlighter, ObjectContent } from '../../types';
 export interface ContentPanelProps {
   content: ObjectContent;
   highlight: Highlighter;
+  /** Facteur de police COMMUN à tous les panneaux de code (synchronisation). */
+  codeFontScale?: number;
+  /** Remonte au Stage le ratio de réduction que CE code nécessiterait seul. */
+  onCodeFit?: (ratio: number) => void;
 }
 
 /**
- * Bloc de code en `white-space: pre` (pas de retour à la ligne) qui réduit sa
- * police pour que la ligne la plus longue tienne dans la largeur disponible.
+ * Bloc de code en `white-space: pre` (pas de retour à la ligne). Il MESURE le
+ * ratio de réduction qui le ferait tenir (largeur ET hauteur) et le remonte au
+ * Stage via `onFit`, mais APPLIQUE le facteur GLOBAL `fontScale` (= le minimum
+ * sur tous les panneaux de code) : ainsi tous les codes ont EXACTEMENT la même
+ * taille de police, et aucun ne déborde ni n'est clippé.
  */
-function CodeBlock({ html }: { html: string }) {
+function CodeBlock({
+  html,
+  fontScale = 1,
+  onFit,
+}: {
+  html: string;
+  fontScale?: number;
+  onFit?: (ratio: number) => void;
+}) {
   const ref = useRef<HTMLPreElement>(null);
-  const [fontPx, setFontPx] = useState<number>();
+  // onFit n'est pas stable (capture le nodeId) ; on le lit via une ref pour ne
+  // pas relancer l'effet de mesure à chaque rendu.
+  const onFitRef = useRef(onFit);
+  useEffect(() => {
+    onFitRef.current = onFit;
+  });
+  const [baseFont, setBaseFont] = useState<number>();
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
-    const fit = () => {
-      // Mesure la largeur naturelle à la police de base (CSS), puis calcule la
-      // police qui fait tenir la ligne la plus longue dans la largeur dispo.
+    const measure = () => {
+      const SAFETY = 2;
+      // Le <pre> porte son propre padding (qui ne dépend PAS de la police) : on le
+      // retranche pour ne raisonner que sur la zone de TEXTE.
+      const preCs = getComputedStyle(el);
+      const padX =
+        (parseFloat(preCs.paddingLeft) || 0) +
+        (parseFloat(preCs.paddingRight) || 0);
+      const padY =
+        (parseFloat(preCs.paddingTop) || 0) +
+        (parseFloat(preCs.paddingBottom) || 0);
       const applied = el.style.fontSize;
       el.style.fontSize = '';
       const base = parseFloat(getComputedStyle(el).fontSize) || 12.5;
-      const natural = el.scrollWidth;
-      const avail = el.clientWidth;
+      const naturalW = el.scrollWidth - padX;
+      const naturalH = el.scrollHeight - padY;
+      const availW = el.clientWidth - padX;
+      // Hauteur dispo = celle du corps (borné par max-height), padding du <pre> déduit.
+      const body = el.parentElement;
+      const availH = (body ? body.clientHeight : el.clientHeight) - padY;
       el.style.fontSize = applied;
-      setFontPx(
-        avail > 0 && natural > avail + 1
-          ? Math.max(7, base * (avail / natural))
-          : undefined
-      );
+      const ratioW =
+        availW > 0 && naturalW > availW ? (availW - SAFETY) / naturalW : 1;
+      const ratioH =
+        availH > 0 && naturalH > availH ? (availH - SAFETY) / naturalH : 1;
+      setBaseFont(base);
+      onFitRef.current?.(Math.min(ratioW, ratioH, 1));
     };
-    const ro = new ResizeObserver(fit);
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, [html]);
 
+  // Police finale = base (CSS, proportionnelle au lecteur) × facteur GLOBAL.
+  // Pas de plancher significatif : la taille reste exactement proportionnelle au
+  // lecteur (sur une miniature, le code est petit, comme tout le reste).
+  const fontPx =
+    baseFont != null && fontScale < 1
+      ? Math.max(1, baseFont * fontScale)
+      : undefined;
   return (
     <pre ref={ref} style={fontPx ? { fontSize: `${fontPx}px` } : undefined}>
       <code dangerouslySetInnerHTML={{ __html: html }} />
@@ -51,7 +92,12 @@ function CodeBlock({ html }: { html: string }) {
   );
 }
 
-export function ContentPanel({ content, highlight }: ContentPanelProps) {
+export function ContentPanel({
+  content,
+  highlight,
+  codeFontScale,
+  onCodeFit,
+}: ContentPanelProps) {
   const type = content.type ?? 'text';
 
   if (type === 'code') {
@@ -62,7 +108,7 @@ export function ContentPanel({ content, highlight }: ContentPanelProps) {
     return (
       <div className="rdfa-content rdfa-terminal">
         <div className="rdfa-content-body rdfa-code">
-          <CodeBlock html={html} />
+          <CodeBlock html={html} fontScale={codeFontScale} onFit={onCodeFit} />
         </div>
       </div>
     );

@@ -19,6 +19,7 @@ vi.mock('../hooks/useStageGeometry', () => ({
     aspect: 800 / 600,
     width: 800,
     height: 600,
+    forceRemeasure: () => {},
   }),
 }));
 

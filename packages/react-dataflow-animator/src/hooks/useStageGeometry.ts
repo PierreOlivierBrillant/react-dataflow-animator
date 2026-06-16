@@ -34,6 +34,31 @@ const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /**
+ * Égalité de deux cartes de géométrie. Permet à `measure()` de NE PAS publier un
+ * nouvel état quand rien n'a bougé : indispensable pour qu'une re-mesure
+ * déclenchée par un changement de placements converge au lieu de boucler.
+ */
+function sameGeometry(a: GeometryMap, b: GeometryMap): boolean {
+  const ka = Object.keys(a);
+  if (ka.length !== Object.keys(b).length) return false;
+  for (const id of ka) {
+    const x = a[id];
+    const y = b[id];
+    if (!y) return false;
+    if (
+      x.x !== y.x ||
+      x.y !== y.y ||
+      x.width !== y.width ||
+      x.height !== y.height ||
+      x.labelH !== y.labelH ||
+      x.labelW !== y.labelW
+    )
+      return false;
+  }
+  return true;
+}
+
+/**
  * @param signature chaîne qui change quand l'ensemble des nœuds change, pour
  *   forcer une nouvelle mesure (ajout/suppression de nœuds, nouvelle spec).
  */
@@ -49,7 +74,11 @@ export function useStageGeometry(signature: string): StageGeometry {
     const sr = stage.getBoundingClientRect();
     if (sr.width > 0 && sr.height > 0) {
       setAspect(sr.width / sr.height);
-      setSize({ width: sr.width, height: sr.height });
+      setSize((prev) =>
+        prev.width === sr.width && prev.height === sr.height
+          ? prev
+          : { width: sr.width, height: sr.height }
+      );
     }
 
     const map: GeometryMap = {};
@@ -76,11 +105,26 @@ export function useStageGeometry(signature: string): StageGeometry {
       }
       map[id] = node;
     });
-    setGeometry(map);
+    setGeometry((prev) => (sameGeometry(prev, map) ? prev : map));
   }, []);
 
   useIsomorphicLayoutEffect(() => {
     measure();
+    // Après ce commit, les positions peuvent encore bouger : l'échelle se
+    // stabilise sur les premiers rendus (computeScale dépend de la taille mesurée),
+    // ce qui peut faire cesser le clamp anti-débordement d'un nœud de bord — un
+    // DÉPLACEMENT que le ResizeObserver ne voit pas (il ne capte que les tailles).
+    // On re-mesure sur quelques frames pour fixer la position définitive. Borné
+    // (pas piloté par les rendus) → aucune boucle ; idempotent → pas de churn.
+    if (typeof requestAnimationFrame === 'undefined') return;
+    let raf = 0;
+    let n = 0;
+    const tick = () => {
+      measure();
+      if (++n < 3) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [measure, signature]);
 
   useEffect(() => {

@@ -27,9 +27,10 @@ export interface LayoutOptions {
 /** Répartit n positions à intervalles réguliers avec marges aux extrémités. */
 /**
  * Répartit `count` positions sur l'axe, étalées entre une marge `[m, 1-m]`.
- * La marge `m` est plafonnée à 0,2 : pour peu d'éléments (2-3) on exploite
- * l'espace disponible aux extrémités pour les éloigner davantage ; pour beaucoup
- * d'éléments, on retombe sur la répartition `(i+1)/(count+1)` (marges plus fines).
+ * On garde une marge d'« aération » autour des nœuds par défaut (m plafonné à
+ * 0,2) ; ce n'est QUE lorsqu'ils deviennent nombreux — donc serrés — que `m`
+ * descend via `1/(count+1)` pour les écarter davantage et préserver une distance
+ * minimale entre eux. Peu de nœuds restent ainsi aérés, pas collés aux bords.
  */
 function spread(index: number, count: number): number {
   if (count <= 1) return 0.5;

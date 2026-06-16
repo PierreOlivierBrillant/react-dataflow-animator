@@ -192,7 +192,7 @@
   position: absolute;
   top: 8px;
   left: 12px;
-  font-size: calc(11px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  font-size: calc(11px * var(--rdfa-scale, 1));
   font-weight: 600;
   color: var(--rdfa-zone-color, var(--rdfa-accent));
   opacity: 0.85;
@@ -206,7 +206,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
   z-index: 3;
   max-width: 40%;
   text-align: center;
@@ -275,11 +274,26 @@
   display: block;
 }
 
+/* Label SOUS le visuel, en position absolue : la boîte du nœud se limite ainsi au
+   visuel, dont le centre reste à cy% quelle que soit la hauteur du label (1 ou 2
+   lignes). Sans ça, un label plus haut décale le centre du visuel vers le haut, et
+   la flèche — qui s'y accroche — part de travers entre deux nœuds pourtant alignés.
+   top:100% + 6px reproduit l'ancien gap (LABEL_GAP, cf. geometry.ts/placements.ts). */
 .rdfa-node-label {
-  font-size: calc(13px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, 6px);
+  /* width:max-content sinon le shrink-to-fit caterait le label à la largeur du
+     visuel (le bloc conteneur), le faisant s'enrouler à tort ; max-width le borne
+     puis autorise le retour à la ligne pour les libellés vraiment longs. */
+  width: max-content;
+  max-width: calc(var(--rdfa-maxw, 240px) * var(--rdfa-scale, 1));
+  font-size: calc(13px * var(--rdfa-scale, 1));
   color: var(--rdfa-text);
   line-height: 1.2;
   white-space: pre-wrap;
+  text-align: center;
   background: var(--rdfa-bg);
   padding: 2px 6px;
   border-radius: 4px;
@@ -297,7 +311,7 @@
 .rdfa-node-panel {
   padding: calc(6px * var(--rdfa-scale, 1)) calc(10px * var(--rdfa-scale, 1));
   border-radius: 8px;
-  font-size: calc(12px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  font-size: calc(12px * var(--rdfa-scale, 1));
   font-family: var(--rdfa-mono);
   line-height: 1.4;
   color: var(--rdfa-text);
@@ -382,7 +396,7 @@
   max-width: 100%;
   max-height: 100%;
   overflow: hidden; /* garantie ultime : pas de débordement hors de la boîte */
-  font-size: calc(12px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  font-size: calc(12px * var(--rdfa-scale, 1));
   font-family: var(--rdfa-mono);
   line-height: 1.25;
   color: var(--rdfa-ink, var(--rdfa-text));
@@ -515,7 +529,7 @@
 
 .rdfa-arrow-label {
   fill: var(--rdfa-text);
-  font-size: calc(12px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  font-size: calc(12px * var(--rdfa-scale, 1));
   font-family: var(--rdfa-font);
   paint-order: stroke;
   stroke: var(--rdfa-bg);
@@ -528,17 +542,20 @@
   position: absolute;
   transform: translate(-50%, -50%);
   z-index: 4;
-  padding: calc(5px * var(--rdfa-scale, 1)) calc(9px * var(--rdfa-scale, 1));
+  /* Les paquets suivent l'échelle de CONTENU (agressive sur miniatures) pour
+     rapetisser franchement avec le reste du contenu. */
+  padding: calc(5px * var(--rdfa-content-scale, 1))
+    calc(9px * var(--rdfa-content-scale, 1));
   border-radius: 8px;
-  font-size: calc(12px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  font-size: calc(12px * var(--rdfa-content-scale, 1));
   font-family: var(--rdfa-mono);
   color: var(--rdfa-text);
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  /* Largeur proportionnelle à l'échelle. L'algorithme de layout garantit qu'il
-     y a assez d'espace, donc le paquet rétrécit ou s'agrandit parfaitement. */
-  max-width: calc(var(--rdfa-maxw, 240px) * var(--rdfa-scale, 1) * 0.92);
+  max-width: calc(
+    var(--rdfa-maxw, 240px) * var(--rdfa-content-scale, 1) * 0.92
+  );
   overflow-wrap: anywhere;
   text-align: left;
   white-space: pre-wrap;
@@ -565,8 +582,8 @@
 
 .rdfa-packet-body img {
   display: block;
-  max-width: 120px;
-  max-height: 80px;
+  max-width: calc(120px * var(--rdfa-content-scale, 1));
+  max-height: calc(80px * var(--rdfa-content-scale, 1));
   border-radius: 4px;
 }
 
@@ -599,14 +616,14 @@
   width: 100%;
   margin-bottom: 0;
   border-collapse: collapse;
-  font-size: calc(11px * clamp(0.75, var(--rdfa-scale, 1), 1.1));
+  font-size: calc(11px * var(--rdfa-scale, 1));
   border-style: hidden;
 }
 
 .rdfa-player .rdfa-sql-table th,
 .rdfa-player .rdfa-sql-table td {
   border: 1px solid var(--rdfa-border);
-  padding: 2px 6px;
+  padding: calc(2px * var(--rdfa-scale, 1)) calc(6px * var(--rdfa-scale, 1));
   text-align: left;
 }
 
@@ -640,12 +657,13 @@
   position: absolute;
   z-index: 6;
   max-width: calc(var(--rdfa-maxw, 240px) * var(--rdfa-content-scale, 1));
-  padding: 8px 12px;
+  padding: calc(8px * var(--rdfa-content-scale, 1))
+    calc(12px * var(--rdfa-content-scale, 1));
   border-radius: 10px;
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);
   color: var(--rdfa-text);
-  font-size: calc(13px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
+  font-size: calc(13px * var(--rdfa-content-scale, 1));
   line-height: 1.35;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
   white-space: pre-wrap;
@@ -675,8 +693,9 @@
 /* ---------- set_content : terminal de code ---------- */
 .rdfa-content {
   min-width: 0;
-  /* Plafonnée pour ne pas déborder sur les voisins, mais plus large que les
-     paquets (un seul panneau par nœud → on exploite l'espace disponible). */
+  /* La boîte s'ajuste à son contenu, plafonnée aux rebords du lecteur (px,
+     calculés par computeScale). Au-delà, le CodeBlock réduit la police : rien
+     n'est tronqué. */
   max-width: var(--rdfa-content-maxw, var(--rdfa-maxw, 320px));
   border-radius: 10px;
   overflow: hidden;
@@ -685,23 +704,25 @@
   text-align: left;
 }
 
-/* Un nœud qui affiche du contenu n'est plus contraint en largeur. */
+/* Un nœud qui affiche du contenu n'est plus contraint en largeur : c'est
+   --rdfa-content-maxw (les rebords) qui borne, pas ce pourcentage. */
 .rdfa-node--content {
-  max-width: 70%;
+  max-width: 96%;
   z-index: 8;
 }
 
 .rdfa-window-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: calc(8px * var(--rdfa-content-scale, 1));
+  padding: calc(8px * var(--rdfa-content-scale, 1))
+    calc(12px * var(--rdfa-content-scale, 1));
   background: var(--rdfa-window-bg);
 }
 
 .rdfa-window-dot {
-  width: 11px;
-  height: 11px;
+  width: calc(11px * var(--rdfa-content-scale, 1));
+  height: calc(11px * var(--rdfa-content-scale, 1));
   border-radius: 50%;
 }
 
@@ -717,11 +738,12 @@
 
 .rdfa-window-url {
   flex: 1;
-  padding: 3px 10px;
+  padding: calc(3px * var(--rdfa-content-scale, 1))
+    calc(10px * var(--rdfa-content-scale, 1));
   border-radius: 6px;
   background: var(--rdfa-surface);
   color: var(--rdfa-muted);
-  font-size: calc(12px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
+  font-size: calc(12px * var(--rdfa-content-scale, 1));
   font-family: var(--rdfa-mono);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -733,9 +755,14 @@
   color: var(--rdfa-text);
   padding: calc(10px * var(--rdfa-content-scale, 1))
     calc(12px * var(--rdfa-content-scale, 1));
-  font-size: calc(12.5px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
+  font-size: calc(12.5px * var(--rdfa-content-scale, 1));
   line-height: 1.5;
-  max-height: calc(320px * var(--rdfa-content-scale, 1));
+  /* La boîte grandit avec son contenu jusqu'aux rebords du lecteur ; au-delà, le
+     CodeBlock réduit la police pour que rien ne soit tronqué. */
+  max-height: var(
+    --rdfa-content-maxh,
+    calc(320px * var(--rdfa-content-scale, 1))
+  );
   /* Jamais de barre de défilement : le contenu est ajusté pour tenir (le code via
      CodeBlock), ce qui dépasse encore est masqué plutôt que rendu défilable. */
   overflow: hidden;
@@ -755,7 +782,10 @@
 
 .rdfa-content-table-wrapper {
   overflow: hidden;
-  max-height: calc(320px * var(--rdfa-content-scale, 1));
+  max-height: var(
+    --rdfa-content-maxh,
+    calc(320px * var(--rdfa-content-scale, 1))
+  );
   max-width: 100%;
 }
 
@@ -764,14 +794,15 @@
   width: 100%;
   margin: 0;
   border-collapse: collapse;
-  font-size: calc(11px * clamp(0.75, var(--rdfa-content-scale, 1), 1.1));
+  font-size: calc(11px * var(--rdfa-content-scale, 1));
   border-style: hidden;
 }
 
 .rdfa-content-table th,
 .rdfa-content-table td {
   border: 1px solid var(--rdfa-border);
-  padding: 4px 8px;
+  padding: calc(4px * var(--rdfa-content-scale, 1))
+    calc(8px * var(--rdfa-content-scale, 1));
   text-align: left;
   white-space: nowrap;
 }
@@ -801,12 +832,15 @@
   color: var(--rdfa-terminal-text);
 }
 
-/* Padding très serré pour le code : le CodeBlock réduit fortement la police pour
-   tenir (largeur ET hauteur), un padding généreux paraîtrait alors disproportionné
-   — surtout sur les miniatures, où la police descend à quelques pixels. */
+/* Le padding du code vit sur le <pre> (pas sur le corps) : il s'adapte à la
+   taille du lecteur via --rdfa-content-scale, mais ne descend jamais sous 0,3rem
+   (plancher atteint sur les miniatures). Le corps lui-même n'a aucun padding. */
 .rdfa-content-body.rdfa-code {
-  padding: calc(3px * var(--rdfa-content-scale, 1))
-    calc(7px * var(--rdfa-content-scale, 1));
+  padding: 0;
+}
+
+.rdfa-content-body.rdfa-code pre {
+  padding: max(0.3rem, calc(0.55rem * var(--rdfa-content-scale, 1)));
 }
 
 .rdfa-content-body pre {
@@ -815,6 +849,9 @@
   /* Jamais de retour à la ligne : la police s'ajuste (CodeBlock) pour tenir. */
   white-space: pre;
   tab-size: 2;
+  /* Réinitialise l'overflow:auto que des hôtes (Docusaurus & co.) posent sur <pre> :
+     sinon une barre de défilement horizontale réapparaît dans le terminal. */
+  overflow: hidden;
 }
 
 /* ---------- Coloration Prism (scopée) ---------- */

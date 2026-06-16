@@ -7,19 +7,21 @@
       "properties": {
         "direction": {
           "$ref": "#/definitions/Direction",
-          "description": "Direction de placement automatique des nœuds. Défaut: 'left-to-right'."
+          "description": "Sens de placement automatique des nœuds (aucune coordonnée à fournir). Défaut: 'left-to-right'."
         },
         "nodes": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Node"
-          }
+          },
+          "description": "Éléments fixes de la scène (serveurs, clients, bases…). Ils forment le décor permanent et sont placés automatiquement selon `direction` et leur `lane`."
         },
         "packets": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Packet"
-          }
+          },
+          "description": "Éléments mobiles (requêtes, réponses, messages). Déclarés ici, puis déplacés d'un nœud à l'autre par une action `move` de la `timeline`."
         },
         "connections": {
           "type": "array",
@@ -39,7 +41,8 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/Action"
-          }
+          },
+          "description": "Scénario animé : liste ordonnée d'actions (déplacements, flèches, commentaires…) jouées séquentiellement. Chaque action racine devient une étape navigable."
         }
       },
       "required": [
@@ -68,7 +71,8 @@
           "description": "Identifiant unique du nœud (ex: 'serveur_web')."
         },
         "type": {
-          "$ref": "#/definitions/NodeType"
+          "$ref": "#/definitions/NodeType",
+          "description": "Apparence du nœud : pictogramme (serveur, client…), nœud textuel (panneau) ou forme géométrique. Voir les aperçus de chaque valeur ci-contre."
         },
         "text": {
           "type": "string",
@@ -187,7 +191,8 @@
       "type": "object",
       "properties": {
         "type": {
-          "$ref": "#/definitions/ContentType"
+          "$ref": "#/definitions/ContentType",
+          "description": "Mode d'affichage du contenu : `code` (terminal coloré), `text` (fenêtre type navigateur), `image` (illustration) ou `table` (tableau de données)."
         },
         "value": {
           "type": "string",
@@ -292,7 +297,8 @@
           "description": "Identifiant unique du paquet."
         },
         "kind": {
-          "$ref": "#/definitions/PacketKind"
+          "$ref": "#/definitions/PacketKind",
+          "description": "Catégorie du paquet, qui fixe son apparence et le contenu attendu : `http_packet` (en-tête + corps via `packet_content`), `sql_request` (requête textuelle via `request_content`), `sql_response` (réponse via `response_content`)."
         },
         "request_content": {
           "type": "string",
@@ -303,10 +309,11 @@
         },
         "response_content": {
           "$ref": "#/definitions/SqlResponse",
-          "description": "Réponse (pour sql_response)."
+          "description": "Contenu d'un `sql_response` : nombre de lignes, en-tête et corps (texte ou tableau)."
         },
         "packet_content": {
-          "$ref": "#/definitions/PacketContent"
+          "$ref": "#/definitions/PacketContent",
+          "description": "Contenu d'un `http_packet` : en-tête (ex. 'GET /api') et corps optionnel."
         }
       },
       "required": [
@@ -607,13 +614,15 @@
         },
         "object": {
           "type": "string",
-          "description": "ID du paquet à déplacer."
+          "description": "ID du paquet (déclaré dans `packets`) à déplacer."
         },
         "from": {
-          "type": "string"
+          "type": "string",
+          "description": "ID du nœud de départ."
         },
         "to": {
-          "type": "string"
+          "type": "string",
+          "description": "ID du nœud d'arrivée."
         }
       },
       "required": [
@@ -677,19 +686,20 @@
           "const": "arrow"
         },
         "from": {
-          "type": "string"
+          "type": "string",
+          "description": "ID du nœud de départ de la flèche."
         },
         "to": {
-          "type": "string"
+          "type": "string",
+          "description": "ID du nœud d'arrivée de la flèche."
         },
         "text": {
           "type": "string",
-          "examples": [
-            "200 OK"
-          ]
+          "description": "Libellé affiché au milieu de la flèche."
         },
         "style": {
-          "$ref": "#/definitions/LineStyle"
+          "$ref": "#/definitions/LineStyle",
+          "description": "Style de ligne : plein, pointillé, tirets ou animé. Défaut: 'solid'."
         },
         "arrow_head": {
           "type": "string",
@@ -698,7 +708,8 @@
             "backward",
             "both",
             "none"
-          ]
+          ],
+          "description": "Côté(s) où dessiner la pointe de la flèche. Défaut: 'forward'."
         }
       },
       "required": [

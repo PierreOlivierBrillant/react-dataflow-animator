@@ -11,8 +11,8 @@ export const smtp: DataFlowSpec = {
     { id: 'alice', type: 'laptop', text: 'Alice (client mail)', lane: 1 },
     { id: 'out', type: 'server', text: 'MTA expéditeur', lane: 2 },
     { id: 'dns', type: 'server', text: 'DNS (MX)', icon: 'DNS', lane: 3 },
-    { id: 'in', type: 'server', text: 'MTA destinataire', lane: 4 },
-    { id: 'bob', type: 'mobile', text: 'Bob (client mail)', lane: 5 },
+    { id: 'in', type: 'server', text: 'MTA destinataire', lane: 3 },
+    { id: 'bob', type: 'mobile', text: 'Bob (client mail)', lane: 4 },
   ],
   connections: [
     { from: 'alice', to: 'out', style: 'dotted' },

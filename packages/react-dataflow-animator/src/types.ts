@@ -81,6 +81,10 @@ export type HighlightLanguage =
   | 'http';
 
 export interface ObjectContent {
+  /**
+   * Mode d'affichage du contenu : `code` (terminal coloré), `text` (fenêtre type
+   * navigateur), `image` (illustration) ou `table` (tableau de données).
+   */
   type?: ContentType;
   /**
    * Contenu textuel selon `type` : code source (`code`), texte (`text`) ou
@@ -110,6 +114,10 @@ export interface ObjectContent {
 export interface Node {
   /** Identifiant unique du nœud (ex: 'serveur_web'). */
   id: string;
+  /**
+   * Apparence du nœud : pictogramme (serveur, client…), nœud textuel (panneau)
+   * ou forme géométrique. Voir les aperçus de chaque valeur ci-contre.
+   */
   type: NodeType;
   /**
    * Label affiché en dessous du nœud.
@@ -274,14 +282,20 @@ export interface SqlResponse {
 export interface Packet {
   /** Identifiant unique du paquet. */
   id: string;
+  /**
+   * Catégorie du paquet, qui fixe son apparence et le contenu attendu :
+   * `http_packet` (en-tête + corps via `packet_content`), `sql_request` (requête
+   * textuelle via `request_content`), `sql_response` (réponse via `response_content`).
+   */
   kind: PacketKind;
   /**
    * Requête textuelle (ex: pour sql_request).
    * @example "SELECT * FROM users WHERE id = 42"
    */
   request_content?: string;
-  /** Réponse (pour sql_response). */
+  /** Contenu d'un `sql_response` : nombre de lignes, en-tête et corps (texte ou tableau). */
   response_content?: SqlResponse;
+  /** Contenu d'un `http_packet` : en-tête (ex. 'GET /api') et corps optionnel. */
   packet_content?: PacketContent;
 }
 
@@ -345,20 +359,26 @@ interface ActionBase {
 /** Déplace un paquet de `from` vers `to`. */
 interface MoveAction extends ActionBase {
   type: 'move';
-  /** ID du paquet à déplacer. */
+  /** ID du paquet (déclaré dans `packets`) à déplacer. */
   object: string;
+  /** ID du nœud de départ. */
   from: string;
+  /** ID du nœud d'arrivée. */
   to: string;
 }
 
 /** Trace une flèche animée entre deux nœuds. */
 interface ArrowAction extends ActionBase {
   type: 'arrow';
+  /** ID du nœud de départ de la flèche. */
   from: string;
+  /** ID du nœud d'arrivée de la flèche. */
   to: string;
-  /** @example "200 OK" */
+  /** Libellé affiché au milieu de la flèche. */
   text?: string;
+  /** Style de ligne : plein, pointillé, tirets ou animé. Défaut: 'solid'. */
   style?: LineStyle;
+  /** Côté(s) où dessiner la pointe de la flèche. Défaut: 'forward'. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
 }
 
@@ -428,14 +448,29 @@ export type Action =
   | WaitAction;
 
 export interface DataFlowSpec {
-  /** Direction de placement automatique des nœuds. Défaut: 'left-to-right'. */
+  /**
+   * Sens de placement automatique des nœuds (aucune coordonnée à fournir).
+   * Défaut: 'left-to-right'.
+   */
   direction?: Direction;
+  /**
+   * Éléments fixes de la scène (serveurs, clients, bases…). Ils forment le décor
+   * permanent et sont placés automatiquement selon `direction` et leur `lane`.
+   */
   nodes: Node[];
+  /**
+   * Éléments mobiles (requêtes, réponses, messages). Déclarés ici, puis déplacés
+   * d'un nœud à l'autre par une action `move` de la `timeline`.
+   */
   packets: Packet[];
   /** Flèches/liens permanents (décor) affichés dès l'initialisation. */
   connections?: Connection[];
   /** Régions rectangulaires affichées en arrière-plan autour d'un groupe de nœuds. */
   zones?: Zone[];
+  /**
+   * Scénario animé : liste ordonnée d'actions (déplacements, flèches, commentaires…)
+   * jouées séquentiellement. Chaque action racine devient une étape navigable.
+   */
   timeline: Action[];
 }
 

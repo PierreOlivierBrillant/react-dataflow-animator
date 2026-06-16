@@ -1,13 +1,14 @@
 /* eslint-disable react-refresh/only-export-components -- module de contenu (données + rendu), pas un module HMR */
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Heading from '@theme/Heading';
 import {
   DataFlowPlayer,
   NodeView,
   dataFlowSchema,
 } from 'react-dataflow-animator';
-import type { Node, NodeType } from 'react-dataflow-animator';
+import type { DataFlowSpec, Node, NodeType } from 'react-dataflow-animator';
 import { demosById } from './demos';
+import { apiExampleSpecs, apiExampleNotes } from './apiExamples';
 
 interface DocPage {
   id: string;
@@ -74,15 +75,115 @@ function nodeSample(type: NodeType): Node {
   return { id: type, type, body: type, ...NODE_SAMPLES[type] };
 }
 
+/**
+ * Ne monte ses enfants que lorsqu'ils approchent du viewport, et les démonte en
+ * sortant. La page de référence porte ~40 players ; sans ce gardiennage, tous
+ * les players animés (autoplay/loop) feraient tourner leur boucle rAF en
+ * permanence.
+ *
+ * IMPORTANT : la classe de taille (largeur + hauteur fixes) est portée par CE
+ * conteneur, pas par un wrapper interne — il occupe donc la MÊME boîte que le
+ * player soit monté ou non. Sinon, en scrollant, chaque montage/démontage
+ * changerait la largeur de la cellule et le tableau se réagencerait (bug visuel).
+ */
+function InView({
+  className,
+  height,
+  children,
+}: {
+  className: string;
+  height: number;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const obs = new IntersectionObserver(
+      (entries) => setShown(entries.some((e) => e.isIntersecting)),
+      { rootMargin: '250px' }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={className} style={{ height }}>
+      {shown ? children : null}
+    </div>
+  );
+}
+
+/**
+ * Démo d'une propriété : un VRAI `<DataFlowPlayer>` rendant une spec qui isole
+ * l'effet de la propriété. Une spec avec timeline est jouée en boucle (le
+ * comportement doit être visible) ; sinon c'est un aperçu statique. La taille du
+ * cadre et l'échelle dépendent du nombre de nœuds — l'auto-scaler du Stage vise
+ * un grand canevas et rapetisse trop un aperçu, donc on force `--rdfa-scale` via
+ * une classe (cf. CSS `.api-prop-demo--*`).
+ */
+function PropDemo({ spec, note }: { spec: DataFlowSpec; note?: string }) {
+  const animated = spec.timeline.length > 0;
+  const n = spec.nodes.length;
+  const sizeClass =
+    n <= 1
+      ? 'api-prop-demo--single'
+      : n <= 2
+        ? 'api-prop-demo--pair'
+        : 'api-prop-demo--multi';
+  const height = n <= 1 ? 188 : n <= 2 ? 166 : 196;
+  return (
+    <div className={`api-prop-demo ${sizeClass}`}>
+      <InView className="api-prop-demo-stage" height={height}>
+        <DataFlowPlayer
+          spec={spec}
+          controls={false}
+          autoPlay={animated}
+          loop={animated}
+          height={height}
+          theme="auto"
+        />
+      </InView>
+      {note ? (
+        <p className="api-prop-demo-note">{renderInlineMarkdown(note)}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function refName(ref: string): string {
   return ref.replace('#/definitions/', '');
 }
 
-/** Rend une valeur d'exemple du schéma en littéral lisible. Les chaînes sont
- *  affichées sans guillemets (la colonne Type indique déjà `string`) ; tableaux
- *  et objets sont sérialisés en JSON. */
-function formatExample(value: unknown): string {
-  return typeof value === 'string' ? value : JSON.stringify(value);
+/** Rend le markdown inline des descriptions du schéma : `code`, **gras** et les
+ *  `{@link X}` JSDoc (laissés tels quels par le générateur) → `code`. Les
+ *  descriptions viennent du JSON Schema sous forme de texte brut, donc ce
+ *  formatage n'est pas fait par MDX : on le rend nous-mêmes. */
+function renderInlineMarkdown(text: string): ReactNode {
+  const normalized = text.replace(
+    /\{@link\s+([^}]+?)\s*\}/g,
+    (_, name: string) => `\`${name.trim()}\``
+  );
+  const out: ReactNode[] = [];
+  const re = /`([^`]+)`|\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(normalized)) !== null) {
+    if (m.index > last) out.push(normalized.slice(last, m.index));
+    if (m[1] != null) {
+      out.push(
+        <code className="inline" key={key++}>
+          {m[1]}
+        </code>
+      );
+    } else {
+      out.push(<strong key={key++}>{m[2]}</strong>);
+    }
+    last = re.lastIndex;
+  }
+  if (last < normalized.length) out.push(normalized.slice(last));
+  return out;
 }
 
 function typeLabel(node: SchemaNode): string {
@@ -95,6 +196,44 @@ function typeLabel(node: SchemaNode): string {
   if (node.type === 'array')
     return `${node.items ? typeLabel(node.items) : 'any'}[]`;
   return node.type ?? 'object';
+}
+
+// Définitions qui ont leur propre section dans <ApiReference/> : un type qui les
+// référence devient un lien d'ancrage. Les autres réfs (PacketContent, Zone, les
+// énums…) n'ont pas de section et restent en texte simple.
+const SECTION_ANCHORS: Record<string, string> = {
+  Node: 'api-node',
+  Connection: 'api-connection',
+  Packet: 'api-packet',
+  ObjectContent: 'api-content',
+  Action: 'api-actions',
+};
+
+/** Rend le type d'un champ ; si c'est une réf. vers une définition documentée,
+ *  le rend cliquable vers sa section. Les tableaux relaient sur le type d'item
+ *  (`Node[]` → lien sur `Node`). */
+function TypeCell({ node }: { node: SchemaNode }): ReactNode {
+  if (node.type === 'array' && node.items) {
+    return (
+      <>
+        <TypeCell node={node.items} />
+        []
+      </>
+    );
+  }
+  if (node.$ref) {
+    const name = refName(node.$ref);
+    const label = defs[name]?.title ?? name;
+    const anchor = SECTION_ANCHORS[name];
+    return anchor ? (
+      <a className="api-type-link" href={`#${anchor}`}>
+        {label}
+      </a>
+    ) : (
+      <>{label}</>
+    );
+  }
+  return <>{typeLabel(node)}</>;
 }
 
 interface Row {
@@ -120,8 +259,16 @@ function rowsOf(node: SchemaNode): Row[] {
   }));
 }
 
-function PropsTable({ node }: { node: SchemaNode }) {
+function PropsTable({ node, defName }: { node: SchemaNode; defName: string }) {
   const rows = rowsOf(node);
+  // Chaque exemple est un player démontrant la propriété (registre `apiExamples`,
+  // clé `${defName}.${prop}`). Les énums (options acceptées) restent dans la
+  // Description. Si aucun champ de la table n'a de démo, pas de colonne Exemples.
+  const demoOf = (row: Row): DataFlowSpec | undefined =>
+    apiExampleSpecs[`${defName}.${row.name}`];
+  const noteOf = (row: Row): string | undefined =>
+    apiExampleNotes[`${defName}.${row.name}`];
+  const hasExamples = rows.some((row) => demoOf(row) != null);
   return (
     <table className="api-table">
       <thead>
@@ -129,6 +276,7 @@ function PropsTable({ node }: { node: SchemaNode }) {
           <th>Propriété</th>
           <th>Type</th>
           <th>Description</th>
+          {hasExamples ? <th>Exemples</th> : null}
         </tr>
       </thead>
       <tbody>
@@ -136,9 +284,9 @@ function PropsTable({ node }: { node: SchemaNode }) {
           const enumValues = row.node.$ref
             ? defs[refName(row.node.$ref)]?.enum
             : row.node.enum;
-          // La ligne `type` (réf. NodeType) illustre chaque valeur par son rendu
-          // réel, INLINE dans la cellule — complément visuel, jamais une section
-          // à part. Le wrapper `.rdfa-player` fournit les variables de thème.
+          // La galerie des `NodeType` reste INLINE dans la Description (exception
+          // demandée). Les autres énums (options acceptées) s'affichent aussi dans
+          // la Description ; seule la colonne « Exemples » porte démos + `@example`.
           const isNodeType =
             row.node.$ref != null && refName(row.node.$ref) === 'NodeType';
           return (
@@ -148,10 +296,12 @@ function PropsTable({ node }: { node: SchemaNode }) {
                 {row.required ? <span className="api-req"> *</span> : null}
               </td>
               <td>
-                <span className="api-type">{typeLabel(row.node)}</span>
+                <span className="api-type">
+                  <TypeCell node={row.node} />
+                </span>
               </td>
               <td>
-                {row.node.description ?? ''}
+                {renderInlineMarkdown(row.node.description ?? '')}
                 {enumValues ? (
                   isNodeType ? (
                     <div
@@ -168,7 +318,7 @@ function PropsTable({ node }: { node: SchemaNode }) {
                       ))}
                     </div>
                   ) : (
-                    <div>
+                    <div className="api-enum-list">
                       {enumValues.map((v) => (
                         <span className="api-enum" key={v}>
                           {v}
@@ -177,17 +327,14 @@ function PropsTable({ node }: { node: SchemaNode }) {
                     </div>
                   )
                 ) : null}
-                {row.node.examples && row.node.examples.length > 0 ? (
-                  <div className="api-examples">
-                    <span className="api-examples-label">ex.</span>
-                    {row.node.examples.map((ex, i) => (
-                      <code className="api-example" key={i}>
-                        {formatExample(ex)}
-                      </code>
-                    ))}
-                  </div>
-                ) : null}
               </td>
+              {hasExamples ? (
+                <td>
+                  {demoOf(row) ? (
+                    <PropDemo spec={demoOf(row)!} note={noteOf(row)} />
+                  ) : null}
+                </td>
+              ) : null}
             </tr>
           );
         })}
@@ -217,33 +364,37 @@ export function ApiReference() {
       <Heading as="h2" id="api-dataflowspec">
         DataFlowSpec (racine)
       </Heading>
-      <PropsTable node={root} />
+      <PropsTable node={root} defName="DataFlowSpec" />
 
       <Heading as="h2" id="api-node">
         Node
       </Heading>
       <p>
-        Un nœud (serveur, base, client…). Placé automatiquement selon
-        `direction`/`lane`.
+        Un nœud (serveur, base, client…). Placé automatiquement selon{' '}
+        <code className="inline">direction</code>/
+        <code className="inline">lane</code>.
       </p>
-      <PropsTable node={defs.Node} />
+      <PropsTable node={defs.Node} defName="Node" />
 
       <Heading as="h2" id="api-connection">
         Connection
       </Heading>
       <p>Flèche permanente (décor) entre deux nœuds.</p>
-      <PropsTable node={defs.Connection} />
+      <PropsTable node={defs.Connection} defName="Connection" />
 
       <Heading as="h2" id="api-packet">
         Packet
       </Heading>
-      <p>Un paquet déplaçable, référencé par une action `move`.</p>
-      <PropsTable node={defs.Packet} />
+      <p>
+        Un paquet déplaçable, référencé par une action{' '}
+        <code className="inline">move</code>.
+      </p>
+      <PropsTable node={defs.Packet} defName="Packet" />
 
       <Heading as="h2" id="api-content">
         ObjectContent
       </Heading>
-      <PropsTable node={defs.ObjectContent} />
+      <PropsTable node={defs.ObjectContent} defName="ObjectContent" />
 
       <Heading as="h2" id="api-actions">
         Actions
@@ -263,8 +414,10 @@ export function ApiReference() {
             <Heading as="h3" id={`api-${key}`}>
               {actionTypeLabel(key)}
             </Heading>
-            {node.description ? <p>{node.description}</p> : null}
-            <PropsTable node={node} />
+            {node.description ? (
+              <p>{renderInlineMarkdown(node.description)}</p>
+            ) : null}
+            <PropsTable node={node} defName={key} />
           </div>
         );
       })}

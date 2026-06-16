@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -25,7 +26,7 @@ import {
 } from '../engine/timeline';
 import { computeLayout } from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
-import { computePlacements } from '../engine/placements';
+import { computePlacements, computeContentLimits } from '../engine/placements';
 import {
   collectArrowConnections,
   computePortOffsets,
@@ -52,6 +53,13 @@ const useIsoLayoutEffect =
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
+
+/**
+ * Hauteur (px) de l'« espace de conception » de référence. L'échelle visuelle est
+ * `designScale × (hauteur_réelle / DESIGN_H)` : tout est donc strictement
+ * proportionnel à la taille du lecteur (cf. calcul de `scale` dans Stage).
+ */
+const DESIGN_H = 495;
 
 /** Espacement minimum (px) entre un élément contenu et la bordure de sa zone. */
 const ZONE_PADDING = 20;
@@ -151,10 +159,25 @@ export function Stage({
     useStageGeometry(signature);
   const layout = useMemo(() => computeLayout(spec, { aspect }), [spec, aspect]);
 
-  const { scale, maxW, contentMaxW } = useMemo(
-    () => computeScale(layout, width, height, density),
-    [layout, width, height, density]
+  // Proportionnalité EXACTE : on raisonne dans un « espace de conception » de
+  // hauteur fixe (DESIGN_H), de même aspect que le lecteur. Tout (échelle, tailles
+  // de panneau, ratios de police) y est calculé une fois — donc constant à aspect
+  // donné — puis multiplié par k = hauteur_réelle / DESIGN_H. Les tailles valent
+  // ainsi base × designScale × k (∝ k, donc à la taille du lecteur), les positions
+  // restent en %, et les ratios de réduction sont identiques à toute taille : un
+  // petit lecteur est une réduction strictement homogène d'un grand.
+  const k = height > 0 ? height / DESIGN_H : 1;
+  const designW = width > 0 && k > 0 ? width / k : 700;
+  const design = useMemo(
+    () => computeScale(layout, designW, DESIGN_H, density),
+    [layout, designW, density]
   );
+  const scale = design.scale * k;
+  const maxW = design.maxW * k;
+  const contentMaxW = design.contentMaxW * k;
+  const contentMaxH = design.contentMaxH * k;
+  // Le contenu suit exactement l'échelle des icônes.
+  const contentScale = scale;
   const allNodes = useMemo(() => Object.values(geometry), [geometry]);
   // Géométrie pré-ContentPanel (icône) par nodeId : capturée dans useLayoutEffect
   // dès qu'un clip set_content devient actif, avant que le ResizeObserver tire.
@@ -192,6 +215,13 @@ export function Stage({
     const hasNew = [...activeContentNodeIds].some(
       (nodeId) => !iconGeomByNode[nodeId] && geometry[nodeId]
     );
+    // Un nœud qui SORT du mode set_content rétrécit du panneau vers son icône :
+    // un déplacement (clamp anti-débordement qui se relâche) que le ResizeObserver
+    // peut manquer. Sans re-mesure, la géométrie reste sur la position du panneau
+    // et la flèche ne revient pas exactement à sa place initiale.
+    const hasGone = Object.keys(iconGeomByNode).some(
+      (nodeId) => !activeContentNodeIds.has(nodeId)
+    );
     setIconGeomByNode((prev) => {
       let next = prev;
       for (const nodeId of activeContentNodeIds) {
@@ -208,7 +238,7 @@ export function Stage({
       }
       return next;
     });
-    if (hasNew) forceRemeasure();
+    if (hasNew || hasGone) forceRemeasure();
   }, [active, geometry, iconGeomByNode, forceRemeasure]);
 
   // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
@@ -229,6 +259,23 @@ export function Stage({
       opacity: clipOpacity(clip, t),
     };
   }
+
+  // Police de code SYNCHRONISÉE : chaque CodeBlock remonte (handleCodeFit) le ratio
+  // de réduction qu'il nécessiterait seul pour tenir dans sa boîte ; on applique à
+  // TOUS le minimum sur l'ENSEMBLE des panneaux de code déjà vus (pas seulement les
+  // actifs : ils n'apparaissent pas tous en même temps), si bien que tous les codes
+  // ont exactement la même taille de police à tout instant — et aucun ne déborde.
+  // Le facteur grandit quand le lecteur grandit (plus de place → moins de réduction).
+  const [codeRatios, setCodeRatios] = useState<Record<string, number>>({});
+  useIsoLayoutEffect(() => setCodeRatios({}), [signature]);
+  const handleCodeFit = useCallback((id: string, ratio: number) => {
+    setCodeRatios((prev) =>
+      Math.abs((prev[id] ?? 1) - ratio) < 0.005
+        ? prev
+        : { ...prev, [id]: ratio }
+    );
+  }, []);
+  const codeFontScale = Math.min(1, ...Object.values(codeRatios));
 
   // Géométrie interpolée : pendant une transition set_content, lerp entre la
   // géométrie pré-content (icône, dans iconGeomByNode) et la géométrie actuelle
@@ -311,11 +358,28 @@ export function Stage({
 
   const nodes = spec.nodes;
 
-  // Garantit qu'aucun nœud ne sort du canevas : on borne son centre selon sa
-  // taille mesurée (basé sur le ratio de layout, donc stable — pas de boucle).
+  // Les nœuds ne se DÉPLACENT jamais : on les borne juste pour ne pas sortir du
+  // canevas. C'est le rétrécissement des panneaux (contentLimits) qui évite les
+  // chevauchements, pas un écartement.
   const placements = useMemo(
     () => computePlacements(layout, geometry, width, height),
     [layout, geometry, width, height]
+  );
+
+  // Taille de panneau maximale par nœud pour qu'un set_content ne recouvre jamais
+  // un voisin (positions FIXES connues d'avance) : au-delà, le contenu rétrécit.
+  // Calculée dans l'espace de CONCEPTION (constant) — le rendu applique ensuite ×k.
+  const contentLimits = useMemo(
+    () =>
+      computeContentLimits(
+        layout,
+        designW,
+        DESIGN_H,
+        design.scale,
+        design.contentMaxW,
+        design.contentMaxH
+      ),
+    [layout, designW, design]
   );
 
   const zoneBounds = useMemo(
@@ -330,8 +394,10 @@ export function Stage({
       style={
         {
           '--rdfa-scale': scale,
+          '--rdfa-content-scale': contentScale,
           '--rdfa-maxw': `${maxW}px`,
           '--rdfa-content-maxw': `${contentMaxW}px`,
+          '--rdfa-content-maxh': `${contentMaxH}px`,
           visibility: width === 0 || height === 0 ? 'hidden' : 'visible',
         } as CSSProperties
       }
@@ -437,6 +503,16 @@ export function Stage({
             highlight={highlight}
             opacity={nodeOpacity < 1 ? nodeOpacity : undefined}
             visualHeight={visualHeightByNode[o.id]}
+            contentLimit={
+              contentLimits[o.id]
+                ? {
+                    maxW: contentLimits[o.id].maxW * k,
+                    maxH: contentLimits[o.id].maxH * k,
+                  }
+                : undefined
+            }
+            codeFontScale={codeFontScale}
+            onCodeFit={handleCodeFit}
           />
         );
       })}

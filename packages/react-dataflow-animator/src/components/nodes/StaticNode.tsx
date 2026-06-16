@@ -28,6 +28,13 @@ export interface StaticNodeProps {
   /** Hauteur imposée au conteneur visuel pendant une transition set_content (px).
    *  Permet d'animer le déplacement du label en synchronie avec le fondu. */
   visualHeight?: number;
+  /** Taille max (px) du panneau set_content pour qu'il ne recouvre pas ses voisins
+   *  (les nœuds ne bougeant pas, c'est le panneau qui rétrécit pour tenir). */
+  contentLimit?: { maxW: number; maxH: number };
+  /** Facteur de police COMMUN à tous les panneaux de code (synchronisation). */
+  codeFontScale?: number;
+  /** Remonte au Stage le ratio de réduction que ce code nécessiterait seul. */
+  onCodeFit?: (id: string, ratio: number) => void;
 }
 
 export const StaticNode: AnimatableComponent<StaticNodeProps> =
@@ -41,11 +48,21 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     highlight,
     opacity,
     visualHeight,
+    contentLimit,
+    codeFontScale,
+    onCodeFit,
   }: StaticNodeProps) {
     const isPanel = isPanelNode(object.type);
     const isShape = isShapeType(object.type);
     const visual: ReactNode = content ? (
-      <ContentPanel content={content} highlight={highlight} />
+      <ContentPanel
+        content={content}
+        highlight={highlight}
+        codeFontScale={codeFontScale}
+        onCodeFit={
+          onCodeFit ? (ratio) => onCodeFit(object.id, ratio) : undefined
+        }
+      />
     ) : (
       <>
         <NodeView node={object} highlight={highlight} />
@@ -103,12 +120,22 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       <div
         className={cls}
         data-node-id={object.id}
-        style={{
-          left: `${placement.cx * 100}%`,
-          top: `${placement.cy * 100}%`,
-          opacity,
-          ...nodeTint(object),
-        }}
+        style={
+          {
+            left: `${placement.cx * 100}%`,
+            top: `${placement.cy * 100}%`,
+            opacity,
+            // Plafonds par nœud : le panneau set_content rétrécit pour ne pas
+            // recouvrir ses voisins (les nœuds ne se déplaçant pas).
+            ...(content && contentLimit
+              ? {
+                  '--rdfa-content-maxw': `${contentLimit.maxW}px`,
+                  '--rdfa-content-maxh': `${contentLimit.maxH}px`,
+                }
+              : {}),
+            ...nodeTint(object),
+          } as CSSProperties
+        }
       >
         {inner}
         {object.text ? (

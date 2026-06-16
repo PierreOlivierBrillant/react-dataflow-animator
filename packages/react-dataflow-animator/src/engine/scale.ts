@@ -16,8 +16,14 @@ const DENSITY: Record<Density, { scale: number; maxw: number }> = {
 export interface ScaleResult {
   scale: number;
   maxW: number;
+  /** Largeur max d'un panneau set_content (px) — bornée par les rebords du lecteur. */
   contentMaxW: number;
+  /** Hauteur max d'un panneau set_content (px) — bornée par les rebords du lecteur. */
+  contentMaxH: number;
 }
+
+/** Marge (px) laissée entre un panneau set_content et le bord du lecteur. */
+const CONTENT_EDGE = 16;
 
 export function computeScale(
   layout: Record<string, { cx: number; cy: number }>,
@@ -27,7 +33,7 @@ export function computeScale(
 ): ScaleResult {
   const ids = Object.keys(layout);
   if (ids.length === 0 || width === 0 || height === 0) {
-    return { scale: 1, maxW: 240, contentMaxW: 320 };
+    return { scale: 1, maxW: 240, contentMaxW: 320, contentMaxH: 240 };
   }
 
   let maxAllowedScale = Infinity;
@@ -55,9 +61,19 @@ export function computeScale(
 
   const finalScale = clamp(targetScale, 0.3, 1.6);
 
+  // Taille max d'un panneau set_content. Le panneau s'ajuste à son CONTENU.
+  // - Largeur : plafond MODÉRÉ proportionnel au lecteur (~moitié) pour qu'il ne
+  //   soit pas démesuré ; l'écartement des voisins (computePlacements) lui ménage
+  //   la place. Sur les petits lecteurs (miniatures), il rétrécit donc aussi.
+  // - Hauteur : bornée aux rebords ; la boîte peut grandir verticalement, et au
+  //   pire le CodeBlock réduit la police pour que rien ne soit tronqué.
+  const contentMaxW = Math.round(clamp(width * 0.42, 140, 460));
+  const contentMaxH = Math.round(clamp(height - 2 * CONTENT_EDGE, 100, 600));
+
   return {
     scale: finalScale,
     maxW: Math.max(PAIR_W, 320),
-    contentMaxW: Math.round((width || 320) * 0.95),
+    contentMaxW,
+    contentMaxH,
   };
 }

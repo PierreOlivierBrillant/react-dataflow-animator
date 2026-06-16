@@ -36,6 +36,39 @@ describe('computeLayout — linéaire', () => {
     expect(layout.a.cy).not.toBeCloseTo(layout.b.cy);
   });
 
+  it('peu de nœuds : aérés (marge 0,2), pas collés aux bords', () => {
+    const spec: DataFlowSpec = {
+      direction: 'left-to-right',
+      nodes: [
+        { id: 'a', type: 'client', lane: 1 },
+        { id: 'b', type: 'server', lane: 2 },
+      ],
+      packets: [],
+      timeline: [],
+    };
+    const layout = computeLayout(spec);
+    // marge d'aération plafonnée à 0,2 → extrémités à 0,2 et 0,8.
+    expect(layout.a.cx).toBeCloseTo(0.2, 5);
+    expect(layout.b.cx).toBeCloseTo(0.8, 5);
+  });
+
+  it('beaucoup de nœuds : marge resserrée pour préserver la distance minimale', () => {
+    const spec: DataFlowSpec = {
+      direction: 'left-to-right',
+      nodes: Array.from({ length: 6 }, (_, i) => ({
+        id: `n${i}`,
+        type: 'server' as const,
+        lane: i + 1,
+      })),
+      packets: [],
+      timeline: [],
+    };
+    const layout = computeLayout(spec);
+    // 6 lanes → m = 1/7 ≈ 0,143 < 0,2 : les extrémités sont plus proches des bords.
+    expect(layout.n0.cx).toBeCloseTo(1 / 7, 5);
+    expect(layout.n5.cx).toBeCloseTo(6 / 7, 5);
+  });
+
   it('top-to-bottom : lane croissante = y croissant', () => {
     const spec: DataFlowSpec = {
       direction: 'top-to-bottom',

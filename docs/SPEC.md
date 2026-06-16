@@ -51,8 +51,11 @@ conteneur (placement CSS pur). Voir [`packages/react-dataflow-animator/src/engin
   optionnels. Dimensionnées automatiquement (point fixe pour gérer l'imbrication),
   rendues sous les flèches et les nœuds.
 
-**Types de nœuds** : dix **pictogrammes** (`desktop`, `laptop`, `client`, `server`,
-`database`, `mobile`, `user`, `admin`, `users`, `cloud`), deux nœuds **textuels**
+**Types de nœuds** : treize **pictogrammes** (`desktop`, `laptop`, `client`, `server`,
+`database`, `mobile`, `user`, `admin`, `users`, `cloud`, `alice`, `bob`, `eve` — les
+trois derniers représentent des **personnages nommés** : Alice (chignon), Bob (casquette),
+Ève (casque d'écoute, espionne), utiles pour les schémas de cryptographie et de
+protocoles réseau), deux nœuds **textuels**
 (`simple_node` = boîte de texte sans pictogramme, `complex_node` = en-tête + corps à
 la manière d'un paquet HTTP) et huit **formes géométriques** (`square`, `diamond`,
 `circle`, `triangle`, `parallelogram`, `width_rectangle`, `height_rectangle`, `star`).
