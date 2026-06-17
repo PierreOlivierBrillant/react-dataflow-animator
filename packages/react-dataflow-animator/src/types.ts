@@ -320,9 +320,9 @@ interface ActionBase {
    * @multipleOf 1
    */
   duration?: number;
-  /** ID d'une autre action : démarre à la fin de celle-ci. */
+  /** ID d'une autre action : cette action démarre à la fin de celle-ci. */
   wait_for?: string;
-  /** ID d'une action future : reste visible jusqu'à son démarrage. */
+  /** ID d'une action future : cette action reste visible jusqu'à son démarrage. */
   keep_until?: string;
   /**
    * Reste visible jusqu'au début de l'étape racine suivante.
