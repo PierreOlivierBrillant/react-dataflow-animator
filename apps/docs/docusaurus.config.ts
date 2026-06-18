@@ -45,6 +45,7 @@ const config = {
       };
     },
   ],
+  themes: ['@docusaurus/theme-search-algolia'],
   themeConfig: {
     colorMode: {
       defaultMode: 'dark',
@@ -94,6 +95,12 @@ const config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+    },
+    algolia: {
+      appId: 'O5PT29Z2XG',
+      apiKey: '6ab54371d9c7838ec9038b1e45831c11',
+      indexName: 'YOUR_INDEX_NAME',
+      searchPagePath: 'search',
     },
   },
 };
