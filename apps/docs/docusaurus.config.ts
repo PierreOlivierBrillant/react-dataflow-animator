@@ -7,7 +7,7 @@ const config = {
   favicon: 'img/logo.svg',
   url: 'https://pierreolivierbrillant.github.io',
   baseUrl: '/react-dataflow-animator/',
-  trailingSlash: false,
+  trailingSlash: true,
   organizationName: 'PierreOlivierBrillant',
   projectName: 'react-dataflow-animator',
   onBrokenLinks: 'throw',
