@@ -45,7 +45,6 @@ const config = {
       };
     },
   ],
-  themes: ['@docusaurus/theme-search-algolia'],
   themeConfig: {
     colorMode: {
       defaultMode: 'dark',
@@ -99,7 +98,7 @@ const config = {
     algolia: {
       appId: 'O5PT29Z2XG',
       apiKey: '6ab54371d9c7838ec9038b1e45831c11',
-      indexName: 'YOUR_INDEX_NAME',
+      indexName: 'React Dataflow Animator documentation website',
       searchPagePath: 'search',
     },
   },
