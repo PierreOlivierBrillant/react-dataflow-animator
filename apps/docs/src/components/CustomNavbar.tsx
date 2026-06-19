@@ -2,7 +2,8 @@ import { useState, useEffect, type ReactNode } from 'react';
 import Link from '@docusaurus/Link';
 import { useLocation } from '@docusaurus/router';
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import { Menu, X, Search, BookOpen, LayoutGrid, Zap } from 'lucide-react';
+import SearchBar from '@theme/SearchBar';
+import { Menu, X, BookOpen, LayoutGrid, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { FaGithub } from 'react-icons/fa';
@@ -14,8 +15,6 @@ const GITHUB_URL =
 export function CustomNavbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation().pathname;
   const isHome =
     location === '/' ||
@@ -53,50 +52,11 @@ export function CustomNavbar() {
             className="flex items-center gap-2.5 shrink-0 no-underline hover:no-underline"
           >
             <LogoText logoSize={32} />
-            {/* Version figée sur le major.minor de la lib (cf. package.json) */}
-            <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-xs text-violet-300 bg-violet-500/15 border border-violet-500/30">
-              v1.0
-            </span>
           </Link>
 
-          {/* Recherche — décorative tant qu'aucun provider (Algolia / local) n'est branché */}
-          <div className="flex-1 max-w-md mx-auto hidden md:block">
-            {searchOpen ? (
-              <div className="relative flex items-center">
-                <Search
-                  size={14}
-                  className="absolute left-3 text-slate-400 pointer-events-none"
-                />
-                <input
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher dans la documentation…"
-                  className="w-full pl-8 pr-8 py-1.5 rounded-md text-sm outline-none font-sans bg-white/[.06] border border-violet-500/50 text-slate-200 placeholder:text-slate-500"
-                />
-                <button
-                  onClick={() => {
-                    setSearchOpen(false);
-                    setSearchQuery('');
-                  }}
-                  className="absolute right-2.5 text-slate-400 hover:text-slate-200 bg-transparent border-none cursor-pointer"
-                  aria-label="Fermer la recherche"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm font-sans cursor-pointer text-slate-500 bg-white/[.04] border border-white/10 hover:border-slate-600 transition-colors"
-              >
-                <Search size={13} />
-                <span>Rechercher…</span>
-                <kbd className="ml-auto text-xs px-1.5 py-0.5 rounded font-mono text-slate-600 bg-white/[.06] border border-white/10">
-                  ⌘K
-                </kbd>
-              </button>
-            )}
+          {/* Recherche Algolia */}
+          <div className="hidden md:flex items-center">
+            <SearchBar />
           </div>
 
           {/* Liens + actions */}
@@ -121,14 +81,10 @@ export function CustomNavbar() {
               />
             </nav>
 
-            {/* Recherche mobile */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="md:hidden p-1.5 rounded text-white/50 hover:text-white hover:bg-white/5 transition-colors bg-transparent border-none cursor-pointer"
-              aria-label="Rechercher"
-            >
-              <Search size={15} />
-            </button>
+            {/* Recherche mobile (Algolia) */}
+            <div className="md:hidden flex items-center">
+              <SearchBar />
+            </div>
 
             {/* Séparateur + GitHub (desktop) */}
             <div className="hidden md:flex items-center gap-1">

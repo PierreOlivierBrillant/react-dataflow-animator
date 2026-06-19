@@ -46,6 +46,9 @@ const config = {
     },
   ],
   themeConfig: {
+    metadata: [
+      { name: 'algolia-site-verification', content: 'B7EDACFD9951C67F' },
+    ],
     colorMode: {
       defaultMode: 'dark',
       disableSwitch: true,
