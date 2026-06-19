@@ -576,11 +576,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
@@ -649,11 +649,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
@@ -735,11 +735,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
@@ -800,11 +800,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
@@ -862,11 +862,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
@@ -928,11 +928,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
@@ -997,11 +997,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
@@ -1060,11 +1060,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
@@ -1128,11 +1128,11 @@
         },
         "wait_for": {
           "type": "string",
-          "description": "ID d'une autre action : démarre à la fin de celle-ci."
+          "description": "ID d'une autre action : cette action démarre à la fin de celle-ci."
         },
         "keep_until": {
           "type": "string",
-          "description": "ID d'une action future : reste visible jusqu'à son démarrage."
+          "description": "ID d'une action future : cette action reste visible jusqu'à son démarrage."
         },
         "keep_until_next": {
           "type": "boolean",
