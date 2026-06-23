@@ -322,7 +322,7 @@ const staticSpecs: Record<string, DataFlowSpec> = {
         content: {
           type: 'code',
           language: 'javascript',
-          value: 'const add = (a, b) => a + b;',
+          value: 'const x = 1;',
         },
       },
     ],

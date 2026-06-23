@@ -361,18 +361,35 @@ footer__link-item > svg {
 }
 .api-prop-demo--single .rdfa-stage {
   --rdfa-scale: 1.5 !important;
+  --rdfa-content-scale: 1.15 !important;
+  --rdfa-content-maxh: 210px !important;
 }
 .api-prop-demo--pair {
   width: 330px;
 }
 .api-prop-demo--pair .rdfa-stage {
   --rdfa-scale: 0.92 !important;
+  --rdfa-content-scale: 1 !important;
+  --rdfa-content-maxh: 200px !important;
 }
 .api-prop-demo--multi {
   width: 330px;
 }
 .api-prop-demo--multi .rdfa-stage {
   --rdfa-scale: 0.62 !important;
+  --rdfa-content-scale: 0.85 !important;
+  --rdfa-content-maxh: 200px !important;
+}
+/* Le contenu (paquet, terminal, table, commentaire) suit `--rdfa-content-scale`,
+   posé INLINE par <Stage> (auto-fit : très petit en miniature). On le force ci-
+   dessus pour rester lisible. De plus, le style global `th` de Docusaurus fuit
+   dans les tables de contenu (en-tête 12.5px alors que les rangées suivent
+   l'échelle) : on réaligne en-tête et rangées sur la police de la table. */
+.api-prop-demo .rdfa-content-table th,
+.api-prop-demo .rdfa-content-table td,
+.api-prop-demo .rdfa-sql-table th,
+.api-prop-demo .rdfa-sql-table td {
+  font-size: inherit !important;
 }
 /* Légende sous la démo : explique la valeur/le comportement démontré. */
 .api-prop-demo-note {
