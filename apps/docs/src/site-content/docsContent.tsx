@@ -426,7 +426,7 @@ export function ApiReference() {
       {ACTION_DEFS.map((key) => {
         const node = defs[key];
         return (
-          <div key={key}>
+          <div key={key} className="api-subsection">
             <Heading as="h3" id={`api-${key}`}>
               {actionTypeLabel(key)}
             </Heading>
