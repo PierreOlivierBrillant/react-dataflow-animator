@@ -257,6 +257,24 @@ footer__link-item > svg {
   font-weight: 600;
   white-space: nowrap;
 }
+.api-prop-anchor {
+  opacity: 0;
+  margin-right: 5px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #64748b;
+  text-decoration: none;
+  transition:
+    opacity 0.12s,
+    color 0.12s;
+  user-select: none;
+}
+.api-table tr:hover .api-prop-anchor {
+  opacity: 1;
+}
+.api-prop-anchor:hover {
+  color: #22d3ee;
+}
 .api-type {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12.5px;

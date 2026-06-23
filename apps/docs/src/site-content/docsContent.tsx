@@ -290,8 +290,15 @@ function PropsTable({ node, defName }: { node: SchemaNode; defName: string }) {
           const isNodeType =
             row.node.$ref != null && refName(row.node.$ref) === 'NodeType';
           return (
-            <tr key={row.name}>
+            <tr key={row.name} id={`api-${defName}-${row.name}`}>
               <td className="name">
+                <a
+                  className="api-prop-anchor"
+                  href={`#api-${defName}-${row.name}`}
+                  aria-label={`Lien vers ${row.name}`}
+                >
+                  #
+                </a>
                 {row.name}
                 {row.required ? <span className="api-req"> *</span> : null}
               </td>
@@ -359,6 +366,15 @@ function actionTypeLabel(key: (typeof ACTION_DEFS)[number]): string {
 }
 
 export function ApiReference() {
+  // Le browser tente le scroll vers le hash avant que React ait rendu le
+  // contenu dynamique. On relit le hash après hydration et on force le scroll.
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    const el = document.getElementById(hash);
+    if (el) el.scrollIntoView({ block: 'start' });
+  }, []);
+
   return (
     <>
       <Heading as="h2" id="api-dataflowspec">
