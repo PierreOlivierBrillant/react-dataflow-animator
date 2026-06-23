@@ -26,8 +26,5 @@
     "concurrently": "^10.0.3",
     "knip": "^6.16.1",
     "prettier": "^3.8.4"
-  },
-  "dependencies": {
-    "@docusaurus/theme-search-algolia": "^3.10.1"
   }
 }
