@@ -22,9 +22,6 @@ export interface ScaleResult {
   contentMaxH: number;
 }
 
-/** Marge (px) laissée entre un panneau set_content et le bord du lecteur. */
-const CONTENT_EDGE = 16;
-
 export function computeScale(
   layout: Record<string, { cx: number; cy: number }>,
   width: number,
@@ -62,13 +59,12 @@ export function computeScale(
   const finalScale = clamp(targetScale, 0.3, 1.6);
 
   // Taille max d'un panneau set_content. Le panneau s'ajuste à son CONTENU.
-  // - Largeur : plafond MODÉRÉ proportionnel au lecteur (~moitié) pour qu'il ne
-  //   soit pas démesuré ; l'écartement des voisins (computePlacements) lui ménage
-  //   la place. Sur les petits lecteurs (miniatures), il rétrécit donc aussi.
-  // - Hauteur : bornée aux rebords ; la boîte peut grandir verticalement, et au
-  //   pire le CodeBlock réduit la police pour que rien ne soit tronqué.
-  const contentMaxW = Math.round(clamp(width * 0.42, 140, 460));
-  const contentMaxH = Math.round(clamp(height - 2 * CONTENT_EDGE, 100, 600));
+  // - Largeur : plafond conservateur (~38 % du lecteur) pour laisser davantage
+  //   de marge aux voisins, notamment sur les miniatures.
+  // - Hauteur : 88 % de la hauteur pour conserver une marge visible autour du
+  //   panneau ; bornée aux rebords. Le CodeBlock réduit la police si besoin.
+  const contentMaxW = Math.round(clamp(width * 0.38, 120, 420));
+  const contentMaxH = Math.round(clamp(height * 0.88, 100, 560));
 
   return {
     scale: finalScale,

@@ -833,14 +833,15 @@
 }
 
 /* Le padding du code vit sur le <pre> (pas sur le corps) : il s'adapte à la
-   taille du lecteur via --rdfa-content-scale, mais ne descend jamais sous 0,3rem
-   (plancher atteint sur les miniatures). Le corps lui-même n'a aucun padding. */
+   taille du lecteur via --rdfa-content-scale. Le plancher à 2px (vs 0,3rem)
+   garantit un espace minimal sans déborder sur les miniatures où le panneau
+   est serré. Le corps lui-même n'a aucun padding. */
 .rdfa-content-body.rdfa-code {
   padding: 0;
 }
 
 .rdfa-content-body.rdfa-code pre {
-  padding: max(0.3rem, calc(0.55rem * var(--rdfa-content-scale, 1)));
+  padding: max(2px, calc(0.45rem * var(--rdfa-content-scale, 1)));
 }
 
 .rdfa-content-body pre {

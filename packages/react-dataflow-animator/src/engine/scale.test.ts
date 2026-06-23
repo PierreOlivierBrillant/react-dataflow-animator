@@ -50,11 +50,11 @@ describe('computeScale', () => {
     expect(result.scale).toBeCloseTo(sizeScale, 3);
   });
 
-  it('f. contentMaxW modéré (~0,42 largeur), contentMaxH borné par les rebords', () => {
+  it('f. contentMaxW conservateur (~0,38 largeur), contentMaxH à 88 % de la hauteur', () => {
     const layout = { a: { cx: 0.25, cy: 0.5 }, b: { cx: 0.75, cy: 0.5 } };
     const result = computeScale(layout, 800, 500, 'comfortable');
-    expect(result.contentMaxW).toBe(336); // 800×0.42, dans [140, 460]
-    expect(result.contentMaxH).toBe(468); // 500−32, dans [100, 600]
+    expect(result.contentMaxW).toBe(304); // 800×0.38, dans [120, 420]
+    expect(result.contentMaxH).toBe(440); // 500×0.88, dans [100, 560]
     // Indépendant du nombre/écart des nœuds : c'est l'écartement (computePlacements)
     // qui ménage la place, pas un rétrécissement de la boîte ici.
     const dense = computeScale(
@@ -63,17 +63,17 @@ describe('computeScale', () => {
       500,
       'comfortable'
     );
-    expect(dense.contentMaxW).toBe(336);
+    expect(dense.contentMaxW).toBe(304);
   });
 
-  it('g. petit lecteur (miniature) → panneau plus petit (0,42 largeur)', () => {
+  it('g. petit lecteur (miniature) → panneau plus petit (0,38 largeur, 88 % hauteur)', () => {
     const result = computeScale(
       { a: { cx: 0.25, cy: 0.5 }, b: { cx: 0.75, cy: 0.5 } },
       360,
       200,
       'spacious'
     );
-    expect(result.contentMaxW).toBe(151); // 360×0.42
-    expect(result.contentMaxH).toBe(168); // 200−32
+    expect(result.contentMaxW).toBe(137); // 360×0.38
+    expect(result.contentMaxH).toBe(176); // 200×0.88
   });
 });

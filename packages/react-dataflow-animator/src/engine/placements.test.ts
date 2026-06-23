@@ -75,14 +75,14 @@ describe('computePlacements', () => {
 });
 
 describe('computeContentLimits', () => {
-  // half = 28*scale, gap = 22 ; un voisin horizontal à distance dx borne
-  // halfW à dx - 28*scale - 22, d'où maxW = 2*halfW.
+  // half = 28*scale, gapMargin = max(22*scale, 40) ; gap = half + gapMargin.
+  // Voisin horizontal à distance dx borne halfW à dx - gap, d'où maxW = 2*halfW.
   it('voisin horizontal proche → largeur du panneau bornée', () => {
     const layout = { a: { cx: 0.4, cy: 0.5 }, b: { cx: 0.6, cy: 0.5 } };
     const r = computeContentLimits(layout, 1000, 600, 1, 900, 500);
-    // a→b : dx=200 → halfW = 200-28-22 = 150 → maxW = 300.
-    expect(r.a.maxW).toBe(300);
-    // pas de voisin vertical → hauteur bornée par les rebords (min(300,300)-6=294).
+    // a→b : dx=200, half=28, gapMargin=max(22,40)=40, gap=68 → halfW=132 → maxW=264.
+    expect(r.a.maxW).toBe(264);
+    // pas de voisin vertical → hauteur bornée par les rebords.
     expect(r.a.maxH).toBe(500); // min(500, 588)
   });
 
@@ -95,16 +95,16 @@ describe('computeContentLimits', () => {
       s: { cx: 0.5, cy: 0.7 },
     };
     const r = computeContentLimits(layout, 1000, 600, 1, 900, 500);
-    // e/w : dx=200 → halfW=150 → maxW=300 ; n/s : dy=120 → halfH=120-50=70 → maxH=140.
-    expect(r.c.maxW).toBe(300);
-    expect(r.c.maxH).toBe(140);
+    // e/w : dx=200 → halfW=132 → maxW=264 ; n/s : dy=120, gap=68 → halfH=52 → maxH=104.
+    expect(r.c.maxW).toBe(264);
+    expect(r.c.maxH).toBe(104);
   });
 
-  it('échelle réduite (miniature) → gap proportionnel, donc plus de place', () => {
+  it('échelle réduite (miniature) → plancher absolu du gap actif', () => {
     const layout = { a: { cx: 0.4, cy: 0.5 }, b: { cx: 0.6, cy: 0.5 } };
     const r = computeContentLimits(layout, 1000, 600, 0.5, 900, 500);
-    // half=28*0.5=14, gap=22*0.5=11 → halfW = 200-14-11 = 175 → maxW = 350.
-    expect(r.a.maxW).toBe(350);
+    // half=14, gapMargin=max(11, 40)=40, gap=54 → halfW=200-54=146 → maxW=292.
+    expect(r.a.maxW).toBe(292);
   });
 
   it('nœud isolé → bornes = plafonds globaux', () => {

@@ -12,6 +12,11 @@ const NEIGHBOR_HALF = 28;
 /** Marge (px) entre un panneau et la boîte d'un voisin, dans le calcul de place. */
 const CONTENT_NEIGHBOR_GAP = 22;
 
+/** Marge absolue minimale (px, espace de conception) entre le bord d'un panneau
+ *  set_content et le bord de l'icône voisine — garantit qu'un paquet reste visible
+ *  même sur les miniatures où CONTENT_NEIGHBOR_GAP × scale devient trop faible. */
+const MIN_PACKET_VISIBLE_GAP = 40;
+
 /** Taille mini (px) d'un panneau : en deçà on ne rétrécit plus (cas extrême). */
 const MIN_CONTENT_BOX = 48;
 
@@ -95,9 +100,12 @@ export function computeContentLimits(
       if (oid === id) continue;
       const dx = Math.abs(nx - layout[oid].cx * width);
       const dy = Math.abs(ny - layout[oid].cy * height);
-      // Le voisin contraint l'axe sur lequel il est le plus aligné. Le gap suit
-      // l'échelle pour que la réduction reste proportionnelle entre tailles de lecteur.
-      const gap = half + CONTENT_NEIGHBOR_GAP * scale;
+      // Le voisin contraint l'axe sur lequel il est le plus aligné.
+      // Le gap proportionnel à l'échelle garantit la proportionnalité sur les grands
+      // lecteurs ; le plancher absolu assure qu'un paquet reste toujours visible
+      // sur les miniatures où scale est faible et rendrait le gap quasi nul.
+      const gap =
+        half + Math.max(CONTENT_NEIGHBOR_GAP * scale, MIN_PACKET_VISIBLE_GAP);
       if (dx >= dy) halfW = Math.min(halfW, dx - gap);
       else halfH = Math.min(halfH, dy - gap);
     }
