@@ -57,8 +57,12 @@ function linearLayout(nodes: Node[], direction: Direction): LayoutMap {
   lanes.forEach((lane, laneOrder) => {
     const main = spread(laneOrder, lanes.length);
     const members = byLane.get(lane)!;
-    members.forEach((node, k) => {
-      const cross = spread(k, members.length);
+    // Les nœuds avec align_with auront leur position transverse écrasée par
+    // applyAlignment : on les exclut de la distribution pour éviter les collisions.
+    const free = members.filter((n) => !n.align_with);
+    let freeIdx = 0;
+    members.forEach((node) => {
+      const cross = node.align_with ? 0.5 : spread(freeIdx++, free.length);
       let cx: number;
       let cy: number;
       switch (direction) {
@@ -132,6 +136,55 @@ function applyAlignment(
   }
 }
 
+/**
+ * Après align_with, plusieurs nœuds d'une même lane peuvent partager la même
+ * position transverse (ex. deux cibles différentes qui ont toutes deux cy=0.5).
+ * On redistribue les nœuds en collision et on synchronise leurs cibles.
+ */
+function resolveCollisions(
+  map: LayoutMap,
+  nodes: Node[],
+  direction: Direction
+): void {
+  const horizontal =
+    direction === 'left-to-right' || direction === 'right-to-left';
+  const getCross = (id: string): number =>
+    horizontal ? map[id].cy : map[id].cx;
+  const setCross = (id: string, v: number): void => {
+    if (horizontal) map[id].cy = v;
+    else map[id].cx = v;
+  };
+
+  const byLane = new Map<number, Node[]>();
+  for (const node of nodes) {
+    const lane = node.lane ?? 1;
+    const list = byLane.get(lane);
+    if (list) list.push(node);
+    else byLane.set(lane, [node]);
+  }
+
+  for (const [, members] of byLane) {
+    const byCross = new Map<number, Node[]>();
+    for (const node of members) {
+      const key = Math.round(getCross(node.id) * 1e9);
+      const list = byCross.get(key);
+      if (list) list.push(node);
+      else byCross.set(key, [node]);
+    }
+    for (const [, colliders] of byCross) {
+      if (colliders.length <= 1) continue;
+      colliders.forEach((node, k) => {
+        const newCross = spread(k, colliders.length);
+        setCross(node.id, newCross);
+        // Synchronise la cible pour que align_with reste cohérent visuellement.
+        if (node.align_with && map[node.align_with]) {
+          setCross(node.align_with, newCross);
+        }
+      });
+    }
+  }
+}
+
 export function computeLayout(
   spec: DataFlowSpec,
   options: LayoutOptions = {}
@@ -143,5 +196,6 @@ export function computeLayout(
   }
   const map = linearLayout(nodes, direction);
   applyAlignment(map, nodes, direction);
+  resolveCollisions(map, nodes, direction);
   return map;
 }

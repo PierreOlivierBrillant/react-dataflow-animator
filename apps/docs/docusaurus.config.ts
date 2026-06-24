@@ -45,6 +45,20 @@ const config = {
         },
       };
     },
+    // Permet à webpack de détecter les changements dans le dist de la lib quand
+    // on tourne en dev (docusaurus ne surveille pas les node_modules par défaut).
+    function watchLibPlugin() {
+      return {
+        name: 'watch-lib-dist',
+        configureWebpack() {
+          return {
+            watchOptions: {
+              ignored: /node_modules\/(?!react-dataflow-animator)/,
+            },
+          };
+        },
+      };
+    },
   ],
   themeConfig: {
     metadata: [

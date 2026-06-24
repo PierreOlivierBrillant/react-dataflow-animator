@@ -69,6 +69,55 @@ describe('computeLayout — linéaire', () => {
     expect(layout.n5.cx).toBeCloseTo(6 / 7, 5);
   });
 
+  it('align_with : le nœud aligné ne collision pas avec les nœuds libres de sa lane', () => {
+    // Reproduit le bug : lane 1 = [server, db, fcm(align_with)], lane 2 = [alice].
+    // Sans le fix, fcm hérite de cy=alice.cy=0.5, identique à db.cy — collision.
+    const spec: DataFlowSpec = {
+      direction: 'left-to-right',
+      nodes: [
+        { id: 'alice', type: 'client', lane: 2 },
+        { id: 'server', type: 'server', lane: 1 },
+        { id: 'db', type: 'database', lane: 1 },
+        { id: 'fcm', type: 'cloud', lane: 1, align_with: 'alice' },
+      ],
+      packets: [],
+      timeline: [],
+    };
+    const layout = computeLayout(spec);
+    // fcm doit être aligné sur alice (même cy)
+    expect(layout.fcm.cy).toBeCloseTo(layout.alice.cy);
+    // les nœuds libres de la même lane ne doivent pas se superposer à fcm/alice
+    expect(layout.server.cy).not.toBeCloseTo(layout.alice.cy);
+    expect(layout.db.cy).not.toBeCloseTo(layout.alice.cy);
+    // les nœuds libres ne se superposent pas entre eux
+    expect(layout.server.cy).not.toBeCloseTo(layout.db.cy);
+  });
+
+  it('plusieurs align_with dans une même lane : pas de collision même si les cibles ont la même cy initiale', () => {
+    // Config problématique : bob et alice sont seuls dans leur lane → cy=0.5 tous les deux.
+    // Sans resolveCollisions, server, token_db et fcm se superposent tous à cy=0.5.
+    const spec: DataFlowSpec = {
+      direction: 'left-to-right',
+      nodes: [
+        { id: 'bob', type: 'bob', lane: 1 },
+        { id: 'alice', type: 'alice', lane: 3 },
+        { id: 'server', type: 'server', lane: 2 },
+        { id: 'token_db', type: 'database', lane: 2, align_with: 'bob' },
+        { id: 'fcm', type: 'cloud', lane: 2, align_with: 'alice' },
+      ],
+      packets: [],
+      timeline: [],
+    };
+    const layout = computeLayout(spec);
+    // Aucune collision dans la lane 2
+    expect(layout.server.cy).not.toBeCloseTo(layout.token_db.cy);
+    expect(layout.server.cy).not.toBeCloseTo(layout.fcm.cy);
+    expect(layout.token_db.cy).not.toBeCloseTo(layout.fcm.cy);
+    // Les contraintes align_with sont toujours honorées
+    expect(layout.token_db.cy).toBeCloseTo(layout.bob.cy);
+    expect(layout.fcm.cy).toBeCloseTo(layout.alice.cy);
+  });
+
   it('top-to-bottom : lane croissante = y croissant', () => {
     const spec: DataFlowSpec = {
       direction: 'top-to-bottom',
