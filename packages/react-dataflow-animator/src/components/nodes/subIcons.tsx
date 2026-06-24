@@ -40,6 +40,7 @@ import {
   SiVisa,
   SiMastercard,
   SiBluetooth,
+  SiFirebase,
 } from 'react-icons/si';
 import {
   FaJava,
@@ -51,6 +52,7 @@ import {
 import { DiMsqlServer } from 'react-icons/di';
 import { VscAzure } from 'react-icons/vsc';
 import { MdHttp, MdDns, Md5G, MdWifi } from 'react-icons/md';
+import { TbApi } from 'react-icons/tb';
 
 /**
  * Sous-icônes technologiques (badge `subicon`), basées sur react-icons.
@@ -66,6 +68,7 @@ interface IconDef {
 const KNOWN: Record<string, IconDef> = {
   '5g': { Icon: Md5G, color: '#64748b' },
   angular: { Icon: SiAngular, color: '#DD0031' },
+  api: { Icon: TbApi, color: '#64748b' },
   apple: { Icon: SiApple, color: '#A2AAAD' },
   'apple pay': { Icon: SiApplepay, color: '#A2AAAD' },
   applepay: { Icon: SiApplepay, color: '#A2AAAD' },
@@ -83,6 +86,7 @@ const KNOWN: Record<string, IconDef> = {
   docker: { Icon: SiDocker, color: '#2496ED' },
   dotnet: { Icon: SiDotnet, color: '#8B5CF6' },
   express: { Icon: SiExpress, color: '#64748b' },
+  firebase: { Icon: SiFirebase, color: '#FFCA28' },
   firefox: { Icon: SiFirefoxbrowser, color: '#FF7139' },
   git: { Icon: SiGit, color: '#F05032' },
   go: { Icon: SiGo, color: '#00ADD8' },

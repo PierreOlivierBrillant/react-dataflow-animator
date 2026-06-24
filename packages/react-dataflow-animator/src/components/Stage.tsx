@@ -63,6 +63,10 @@ const DESIGN_H = 495;
 
 /** Espacement minimum (px) entre un élément contenu et la bordure de sa zone. */
 const ZONE_PADDING = 20;
+/** Pixels supplémentaires réservés en haut d'une zone qui a un label, pour
+ *  garantir que le texte du label (positionné à top: 8px) ne chevauche jamais
+ *  l'arrière-plan du nœud le plus haut — indépendamment du z-index. */
+const ZONE_LABEL_EXTRA_TOP = 20;
 /** Espace vertical (px) entre le bas du visuel d'un nœud et le haut de son label. */
 const NODE_LABEL_GAP = 6;
 
@@ -117,11 +121,12 @@ function computeZoneBounds(
       // ID inconnu → ignoré silencieusement
     }
     if (minX === Infinity) return false;
+    const topExtra = zone.label ? ZONE_LABEL_EXTRA_TOP : 0;
     computed[key] = {
       x: minX - ZONE_PADDING,
-      y: minY - ZONE_PADDING,
+      y: minY - ZONE_PADDING - topExtra,
       width: maxX - minX + 2 * ZONE_PADDING,
-      height: maxY - minY + 2 * ZONE_PADDING,
+      height: maxY - minY + 2 * ZONE_PADDING + topExtra,
     };
     return true;
   };
@@ -422,11 +427,7 @@ export function Stage({
                 ...(zone.color ? { '--rdfa-zone-color': zone.color } : {}),
               } as CSSProperties
             }
-          >
-            {zone.label ? (
-              <span className="rdfa-zone-label">{zone.label}</span>
-            ) : null}
-          </div>
+          />
         );
       })}
 
@@ -516,6 +517,29 @@ export function Stage({
             codeFontScale={codeFontScale}
             onCodeFit={handleCodeFit}
           />
+        );
+      })}
+
+      {/* Labels des zones : au-dessus des nœuds, en dessous des paquets animés */}
+      {spec.zones?.map((zone, i) => {
+        if (!zone.label) return null;
+        const key = zone.id ?? `__zone_${i}`;
+        const b = zoneBounds[key];
+        if (!b) return null;
+        return (
+          <span
+            key={`zonelabel-${zone.id ?? i}`}
+            className="rdfa-zone-label"
+            style={
+              {
+                left: b.x + 12,
+                top: b.y + 8,
+                ...(zone.color ? { '--rdfa-zone-color': zone.color } : {}),
+              } as CSSProperties
+            }
+          >
+            {zone.label}
+          </span>
         );
       })}
 

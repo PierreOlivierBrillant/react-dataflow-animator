@@ -10,7 +10,18 @@ afterEach(cleanup);
 
 // Géométrie mutable : les tests qui ont besoin d'un contexte différent
 // peuvent réassigner `mockGeometry` avant de rendre.
-let mockGeometry: Record<string, { id: string; x: number; y: number; width: number; height: number; labelH?: number; labelW?: number }> = {
+let mockGeometry: Record<
+  string,
+  {
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    labelH?: number;
+    labelW?: number;
+  }
+> = {
   client: { id: 'client', x: 100, y: 300, width: 60, height: 60 },
   server: { id: 'server', x: 700, y: 300, width: 60, height: 60 },
 };
@@ -266,7 +277,15 @@ describe('Stage — rendu à t fixe', () => {
     // (100-100 à 100+100) avant padding (ZONE_PADDING=20).
     // Avec padding : left = 0-20 = -20, width = 200+40 = 240.
     mockGeometry = {
-      client: { id: 'client', x: 100, y: 300, width: 60, height: 60, labelH: 16, labelW: 200 },
+      client: {
+        id: 'client',
+        x: 100,
+        y: 300,
+        width: 60,
+        height: 60,
+        labelH: 16,
+        labelW: 200,
+      },
     };
     const spec: DataFlowSpec = {
       nodes: [{ id: 'client', type: 'laptop', text: 'Client', lane: 1 }],

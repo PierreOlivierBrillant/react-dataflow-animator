@@ -190,13 +190,15 @@
 
 .rdfa-zone-label {
   position: absolute;
-  top: 8px;
-  left: 12px;
   font-size: calc(11px * var(--rdfa-scale, 1));
   font-weight: 600;
   color: var(--rdfa-zone-color, var(--rdfa-accent));
   opacity: 0.85;
   white-space: nowrap;
+  /* Au-dessus des nœuds (z-index 3) et des nœuds set_content (z-index 8),
+     en dessous de l'overlay des paquets (z-index 12). */
+  z-index: 9;
+  pointer-events: none;
 }
 
 /* ---------- Nœuds statiques ---------- */
@@ -257,8 +259,8 @@
   position: absolute;
   right: calc(-3px * var(--rdfa-scale, 1));
   bottom: calc(2px * var(--rdfa-scale, 1));
-  width: calc(25px * var(--rdfa-scale, 1));
-  height: calc(25px * var(--rdfa-scale, 1));
+  width: calc(28px * var(--rdfa-scale, 1));
+  height: calc(28px * var(--rdfa-scale, 1));
   padding: 2px;
   border-radius: 50%;
   background: var(--rdfa-surface);

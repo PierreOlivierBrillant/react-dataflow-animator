@@ -20,6 +20,7 @@ import { graphql } from './demos/graphql';
 import { webhook } from './demos/webhook';
 import { circular } from './demos/circular';
 import { collision } from './demos/collision';
+import { pushNotifications } from './demos/pushNotifications';
 
 /** Catégorie de classement d'un exemple (filtre de la galerie). */
 export type DemoCategory =
@@ -247,6 +248,15 @@ export const demos: Demo[] = [
     category: 'Concepts moteur',
     tags: ['anti-collision', 'voies parallèles', 'décalage', 'connexions'],
     spec: collision,
+  },
+  {
+    id: 'pushNotifications',
+    title: 'Notifications push (FCM)',
+    description:
+      "Cycle de vie complet d'une notification push : comment l'appareil d'Alice fait connaître son adresse de livraison (le token FCM), puis comment un message envoyé par Bob est acheminé jusqu'à elle, même si son application est fermée.",
+    category: 'Temps réel',
+    tags: ['push', 'notification', 'fcm', 'firebase', 'mobile'],
+    spec: pushNotifications,
   },
 ];
 
