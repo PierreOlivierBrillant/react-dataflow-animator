@@ -110,7 +110,10 @@ export function Controls({
       <button
         type="button"
         className="rdfa-btn"
-        onClick={() => clock.seek(prevStop(timeline, t))}
+        onClick={() => {
+          clock.pause();
+          clock.seek(prevStop(timeline, t));
+        }}
         aria-label="Étape précédente"
         title="Étape précédente"
       >
