@@ -261,7 +261,7 @@
   bottom: calc(2px * var(--rdfa-scale, 1));
   width: calc(28px * var(--rdfa-scale, 1));
   height: calc(28px * var(--rdfa-scale, 1));
-  padding: 2px;
+  padding: calc(5px * var(--rdfa-scale, 1));
   border-radius: 50%;
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);

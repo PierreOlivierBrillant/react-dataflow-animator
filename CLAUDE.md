@@ -150,6 +150,8 @@ Package (`packages/react-dataflow-animator/`) :
 
 - Ne fais **jamais** `git add .` ni `git add -A` — ajoute les fichiers
   nommément.
+- Ne fais **jamais** `git commit` de ta propre initiative — propose le
+  message et attends une confirmation explicite de l'utilisateur.
 - Ne fais **jamais** `git commit --amend` sans en discuter (Claude par
   défaut crée un nouveau commit).
 - Ne mets **jamais** `--no-verify` pour passer un hook.
