@@ -96,8 +96,10 @@ function computeZoneBounds(
       const g = geometry[id];
       if (g) {
         const lh = g.labelH ?? 0;
-        minX = Math.min(minX, g.x - g.width / 2);
-        maxX = Math.max(maxX, g.x + g.width / 2);
+        const lw = lh > 0 ? (g.labelW ?? Math.max(g.width * 1.5, 60)) : 0;
+        const halfW = Math.max(g.width / 2, lw / 2);
+        minX = Math.min(minX, g.x - halfW);
+        maxX = Math.max(maxX, g.x + halfW);
         minY = Math.min(minY, g.y - g.height / 2);
         maxY = Math.max(
           maxY,

@@ -86,21 +86,21 @@ describe('connection', () => {
     expect(c.start.y).toBeCloseTo(60, 5);
   });
 
-  // ── Cas 5 : segment quasi-vertical, obstacle traversé → waypoint latéral ──
-  it('[cas 5] segment vertical + obstacle traversé : waypoint latéral (gauche du label)', () => {
+  // ── Cas 5 : segment quasi-vertical, même lane (start.x == obs.x) ────────────
+  it('[cas 5] segment vertical + obstacle traversé, même lane : bypass à droite', () => {
     // from et to partagent x=0 → segment quasi-vertical.
-    // obs a un label centré sur x=0 (lw=80 → lb.x=-40).
-    // Le contournement doit être à gauche (start.x=0 <= obs.x=0) : wp.x < lb.x.
+    // obs a un label centré sur x=0 (lw=80 → lb.x=-40, lb.x+lw=40).
+    // start.x(0) == obs.x(0) → condition start.x < obs.x est fausse → bypass à DROITE
+    // pour éviter de croiser les flèches allant vers la gauche depuis le même nœud.
     const from = mkNode('f5', 0, 0);
     const to = mkNode('t5', 0, 300);
     const obs = mkNode('obs5', 0, 150, 40, 40, 20, 80);
     const c = connection(from, to, [obs]);
     expect(c.waypoints).toBeDefined();
     expect(c.waypoints).toHaveLength(1);
-    const labelLeft = obs.x - 80 / 2; // -40
-    expect(c.waypoints![0].x).toBeLessThan(labelLeft);
-    // y doit être à la hauteur d'entrée dans le label (pas au-dessus)
     const labelTop = obs.y + obs.height / 2 + LABEL_GAP; // 176
+    const labelRight = obs.x + 80 / 2; // 40
+    expect(c.waypoints![0].x).toBeGreaterThan(labelRight);
     expect(c.waypoints![0].y).toBeCloseTo(labelTop, 5);
   });
 
@@ -123,15 +123,16 @@ describe('connection', () => {
     expect(c.waypoints).toBeUndefined();
   });
 
-  // ── Cas 5b : segment quasi-vertical, approche par la droite → waypoint droit
-  it('[cas 5b] segment vertical, start à droite du label → waypoint à droite', () => {
+  // ── Cas 5b : segment quasi-vertical, start à droite de l'obstacle ───────────
+  it('[cas 5b] segment vertical, start à droite de obs : bypass à droite', () => {
     // from=(100,0), to=(100,300) ; obs centré à x=80 (lw=80 → lb.x=40, lb.x+lw=120).
-    // x=100 ∈ [40,120] → intersection. start.x=100 > obs.x=80 → bypass droite.
+    // x=100 ∈ [40,120] → intersection. start.x=100 >= obs.x=80 → bypass droite.
     const from = mkNode('f5b', 100, 0);
     const to = mkNode('t5b', 100, 300);
     const obs = mkNode('obs5b', 80, 150, 40, 40, 20, 80);
     const c = connection(from, to, [obs]);
     expect(c.waypoints).toBeDefined();
+    expect(c.waypoints).toHaveLength(1);
     const labelRight = obs.x + 80 / 2; // 120
     expect(c.waypoints![0].x).toBeGreaterThan(labelRight);
   });

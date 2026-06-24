@@ -176,7 +176,7 @@ export function connection(
   let waypoints: Point[] | undefined;
   if (obstacles && obstacles.length > 0) {
     let firstT = Infinity;
-    let bestWp: Point | null = null;
+    let bestWps: Point[] | null = null;
     for (const obs of obstacles) {
       if (obs.id === from.id || obs.id === to.id) continue;
       const lb = labelBounds(obs);
@@ -186,19 +186,24 @@ export function connection(
         firstT = isect.tEntry;
         if (isHorizontal) {
           const xAt = start.x + (end.x - start.x) * isect.tEntry;
-          bestWp = { x: xAt, y: lb.y - NODE_GAP };
+          bestWps = [{ x: xAt, y: lb.y - NODE_GAP }];
         } else {
           // Segment quasi-vertical : contourner latéralement plutôt que de
           // rebrousser vers le haut, ce qui produit un détour non naturel.
           const yAt = start.y + (end.y - start.y) * isect.tEntry;
-          bestWp = {
-            x: start.x <= obs.x ? lb.x - NODE_GAP : lb.x + lb.w + NODE_GAP,
-            y: yAt,
-          };
+          // start.x strictement à gauche de l'obstacle → contourner à gauche.
+          // start.x au même x ou à droite (ex. même lane) → contourner à droite
+          // pour éviter les croisements avec les flèches partant vers la gauche.
+          bestWps = [
+            {
+              x: start.x < obs.x ? lb.x - NODE_GAP : lb.x + lb.w + NODE_GAP,
+              y: yAt,
+            },
+          ];
         }
       }
     }
-    if (bestWp) waypoints = [bestWp];
+    if (bestWps) waypoints = bestWps;
   }
 
   // Angle du dernier segment (pour la pointe de flèche).

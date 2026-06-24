@@ -8,14 +8,17 @@ import type { DataFlowSpec } from '../types';
 
 afterEach(cleanup);
 
-// Fournit une géométrie fixe pour découpler Stage de la mesure DOM réelle.
+// Géométrie mutable : les tests qui ont besoin d'un contexte différent
+// peuvent réassigner `mockGeometry` avant de rendre.
+let mockGeometry: Record<string, { id: string; x: number; y: number; width: number; height: number; labelH?: number; labelW?: number }> = {
+  client: { id: 'client', x: 100, y: 300, width: 60, height: 60 },
+  server: { id: 'server', x: 700, y: 300, width: 60, height: 60 },
+};
+
 vi.mock('../hooks/useStageGeometry', () => ({
   useStageGeometry: () => ({
     stageRef: { current: null },
-    geometry: {
-      client: { id: 'client', x: 100, y: 300, width: 60, height: 60 },
-      server: { id: 'server', x: 700, y: 300, width: 60, height: 60 },
-    },
+    geometry: mockGeometry,
     aspect: 800 / 600,
     width: 800,
     height: 600,
@@ -256,6 +259,36 @@ describe('Stage — rendu à t fixe', () => {
       <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
     );
     expect(container.querySelectorAll('.rdfa-zone').length).toBe(2);
+  });
+
+  it('zone : englobe le label large (labelW > width) dans la dimension horizontale', () => {
+    // client : x=100, width=60 mais labelW=200 → la zone doit s'étendre de 0 à 200
+    // (100-100 à 100+100) avant padding (ZONE_PADDING=20).
+    // Avec padding : left = 0-20 = -20, width = 200+40 = 240.
+    mockGeometry = {
+      client: { id: 'client', x: 100, y: 300, width: 60, height: 60, labelH: 16, labelW: 200 },
+    };
+    const spec: DataFlowSpec = {
+      nodes: [{ id: 'client', type: 'laptop', text: 'Client', lane: 1 }],
+      packets: [],
+      zones: [{ contains: ['client'] }],
+      timeline: [],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    const zone = container.querySelector('.rdfa-zone') as HTMLElement;
+    expect(zone).toBeTruthy();
+    // left doit tenir compte du label : 100 - 200/2 - 20 = -20
+    expect(parseFloat(zone.style.left)).toBeCloseTo(-20, 0);
+    // width doit couvrir toute la largeur du label : 200 + 2*20 = 240
+    expect(parseFloat(zone.style.width)).toBeCloseTo(240, 0);
+    // Remet la géométrie par défaut pour les tests suivants.
+    mockGeometry = {
+      client: { id: 'client', x: 100, y: 300, width: 60, height: 60 },
+      server: { id: 'server', x: 700, y: 300, width: 60, height: 60 },
+    };
   });
 
   it("n'affiche pas une zone dont les IDs sont tous inconnus", () => {
