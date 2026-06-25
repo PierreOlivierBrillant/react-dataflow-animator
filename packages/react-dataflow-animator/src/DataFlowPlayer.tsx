@@ -14,10 +14,18 @@ import { useClock } from './hooks/useClock';
 import { highlightCode } from './highlight/highlight';
 import { Stage } from './components/Stage';
 import { Controls } from './components/Controls';
+import { JsonDialog } from './components/JsonDialog';
+import { copyText, downloadJson, serializeSpec } from './export/json';
 
 const emptySubscribe = () => () => {};
 const returnTrue = () => true;
 const returnFalse = () => false;
+
+const JsonIcon = (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M7 4a3 3 0 0 0-3 3v2a2 2 0 0 1-2 2v2a2 2 0 0 1 2 2v2a3 3 0 0 0 3 3h1v-2H7a1 1 0 0 1-1-1v-2a3 3 0 0 0-1.2-2.4A3 3 0 0 0 6 9V7a1 1 0 0 1 1-1h1V4H7zm10 0a3 3 0 0 1 3 3v2a2 2 0 0 0 2 2v2a2 2 0 0 0-2 2v2a3 3 0 0 1-3 3h-1v-2h1a1 1 0 0 0 1-1v-2a3 3 0 0 1 1.2-2.4A3 3 0 0 1 18 9V7a1 1 0 0 0-1-1h-1V4h1z" />
+  </svg>
+);
 
 /**
  * Lecteur principal : compile une `spec` en chronologie déterministe puis la joue.
@@ -34,6 +42,7 @@ export function DataFlowPlayer({
   autoPlay = false,
   loop = false,
   controls = true,
+  exportable = false,
   theme = 'auto',
   density = 'comfortable',
   debug = false,
@@ -49,8 +58,10 @@ export function DataFlowPlayer({
     autoPlay,
   });
   const highlighter = highlight ?? highlightCode;
+  const specJson = useMemo(() => serializeSpec(spec), [spec]);
 
   const rootRef = useRef<HTMLDivElement>(null);
+  const [jsonOpen, setJsonOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   // Vrai uniquement côté client (après hydratation), sans setState-in-effect.
   const isClient = useSyncExternalStore(
@@ -126,6 +137,28 @@ export function DataFlowPlayer({
               timeline={timeline}
               isFullscreen={isFullscreen}
               onToggleFullscreen={toggleFullscreen}
+              exportSlot={
+                exportable ? (
+                  <button
+                    type="button"
+                    className="rdfa-btn"
+                    aria-label="Spécification JSON"
+                    title="Spécification JSON"
+                    onClick={() => setJsonOpen(true)}
+                  >
+                    {JsonIcon}
+                  </button>
+                ) : null
+              }
+            />
+          ) : null}
+          {exportable && jsonOpen ? (
+            <JsonDialog
+              json={specJson}
+              highlight={highlighter}
+              onCopy={() => copyText(specJson)}
+              onDownload={() => downloadJson(specJson)}
+              onClose={() => setJsonOpen(false)}
             />
           ) : null}
         </>

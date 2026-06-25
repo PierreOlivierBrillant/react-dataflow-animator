@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import type { Clock } from '../hooks/useClock';
 import { clamp, nextStop, prevStop, type Timeline } from '../engine/timeline';
 
@@ -7,6 +7,8 @@ export interface ControlsProps {
   timeline: Timeline;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  /** Emplacement optionnel pour le bouton de la spec JSON (rendu avant le plein écran). */
+  exportSlot?: ReactNode;
 }
 
 const Icon = {
@@ -77,6 +79,7 @@ export function Controls({
   timeline,
   isFullscreen,
   onToggleFullscreen,
+  exportSlot,
 }: ControlsProps) {
   const { t, playing, durationMs } = clock;
   const ratio = durationMs > 0 ? clamp(t / durationMs, 0, 1) : 0;
@@ -159,6 +162,8 @@ export function Controls({
       <span className="rdfa-time">
         {fmt(t)} / {fmt(durationMs)}
       </span>
+
+      {exportSlot}
 
       <button
         type="button"

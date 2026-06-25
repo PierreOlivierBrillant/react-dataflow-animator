@@ -374,6 +374,7 @@ export default function PlaygroundPage() {
                   spec={spec}
                   theme="dark"
                   controls={true}
+                  exportable={true}
                   density={density}
                   height="100%"
                   className="w-full h-full rounded-none border-x-0 border-t-0 bg-transparent border-none"

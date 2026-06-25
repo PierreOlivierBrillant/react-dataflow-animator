@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { DataFlowPlayer } from './DataFlowPlayer';
 import type { DataFlowSpec } from './types';
 
@@ -73,5 +73,20 @@ describe('DataFlowPlayer (montage réel)', () => {
       <DataFlowPlayer spec={spec} controls={false} />
     );
     expect(container.querySelector('.rdfa-controls')).toBeNull();
+  });
+
+  it('n’affiche pas le bouton JSON par défaut', () => {
+    render(<DataFlowPlayer spec={spec} />);
+    expect(screen.queryByLabelText('Spécification JSON')).toBeNull();
+  });
+
+  it('ouvre la fenêtre JSON colorée quand exportable', () => {
+    render(<DataFlowPlayer spec={spec} exportable />);
+    fireEvent.click(screen.getByLabelText('Spécification JSON'));
+    const dialog = screen.getByRole('dialog');
+    // JSON présent et colorisé (tokens Prism) dans la fenêtre.
+    const code = dialog.querySelector('.rdfa-dialog-code');
+    expect(code?.textContent).toContain('"nodes"');
+    expect(code?.querySelector('.token')).toBeTruthy();
   });
 });

@@ -492,6 +492,13 @@ export interface DataFlowPlayerProps {
   loop?: boolean;
   /** Affiche les contrôles de navigation. Défaut: true. */
   controls?: boolean;
+  /**
+   * Ajoute un bouton dans la barre de contrôles qui ouvre la spécification JSON
+   * (colorée) dans une fenêtre, avec copie dans le presse-papier et
+   * téléchargement en fichier `.json`. Sans effet si `controls` est false.
+   * Défaut: false.
+   */
+  exportable?: boolean;
   /** Thème visuel. Défaut: 'auto'. */
   theme?: 'light' | 'dark' | 'auto';
   /**
