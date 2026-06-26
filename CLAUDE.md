@@ -95,6 +95,39 @@ X`, écris en commentaire pourquoi.
   « Référence API » est générée depuis le schéma, mais ne dispense PAS d'une
   explication en prose + exemple : le schéma seul ne documente pas l'intention.
 
+## Corriger la cause, pas seulement le symptôme (patch vs. redesign)
+
+Avant de coder le correctif le plus court, demande-toi si le problème
+local est en réalité le symptôme d'une structure qui ne tient plus. Sur un
+produit construit par incréments, empiler des patchs ponctuels fait
+s'accumuler des cas particuliers qui finissent par coûter plus cher que la
+dette qu'ils prétendaient éviter. **Évalue systématiquement si une solution
+plus globale — un petit redesign de la zone concernée — réglerait la cause
+plutôt que de masquer le symptôme**, et fais-en la base de ta proposition.
+
+Signaux qu'un redesign cadré vaut mieux qu'un énième patch :
+
+- tu ajoutes un **3ᵉ cas particulier** (`if`/override/exception) à un endroit
+  qui en a déjà ;
+- deux éléments doivent rester **synchronisés à la main** (mêmes coordonnées,
+  mêmes valeurs dupliquées) au lieu de dériver d'une source unique — cf. la
+  refonte du badge `subicon` + spinner en un conteneur commun ;
+- un correctif n'a d'effet qu'en **compensant** un autre module au lieu de le
+  corriger là où la décision se prend ;
+- tu te bats contre la structure existante (sélecteurs de plus en plus
+  spécifiques, marges de compensation, `!important`…).
+
+Garde-fous — la règle n'est PAS « redessine souvent » :
+
+- **Reste dans le périmètre.** Le redesign couvre la zone que la tâche touche,
+  pas un refactor opportuniste du voisinage.
+- **Pas de breaking change furtif.** Respecte la règle sur l'API publique ; un
+  redesign qui la modifie suit la procédure (version majeure + doc).
+- **Propose avant d'exécuter les gros.** Un changement contenu (comme le badge),
+  tu peux le mener puis le présenter. Dès qu'il déborde sur plusieurs modules,
+  l'API publique ou la spec, **expose l'option et son coût à l'utilisateur**
+  avant de t'engager — ne refonds pas en douce une large surface.
+
 ## Points de vigilance (issus de revues de code)
 
 Pièges déjà rencontrés dans ce dépôt — vérifie-les quand tu touches la zone
