@@ -227,11 +227,21 @@
 }
 
 /* Pastille de fond derrière un pictogramme quand `background_color` est posé
-   (seuls les pictogrammes rendent `.rdfa-node-icon`). content-box : on garde la
-   taille du glyphe et la pastille déborde via le padding. */
+   (seuls les pictogrammes rendent `.rdfa-node-icon`). Rendue via un pseudo-élément
+   ABSOLU : elle déborde un peu du glyphe (respiration autour du pictogramme) SANS
+   agrandir la boîte de mise en page du nœud — la géométrie (ancrage des flèches,
+   espacement des voisins) et la taille du glyphe (56px) restent donc identiques
+   avec ou sans `background_color`. L'ancienne version (content-box + padding)
+   faisait grossir la boîte mesurée elle-même. */
 .rdfa-node--tinted .rdfa-node-icon {
-  box-sizing: content-box;
-  padding: calc(9px * var(--rdfa-scale, 1));
+  position: relative;
+  isolation: isolate; /* contient le z-index négatif de la pastille */
+}
+.rdfa-node--tinted .rdfa-node-icon::before {
+  content: '';
+  position: absolute;
+  inset: calc(-5px * var(--rdfa-scale, 1));
+  z-index: -1; /* derrière le glyphe */
   background: var(--rdfa-fill);
   border: 1px solid var(--rdfa-stroke, var(--rdfa-border));
   border-radius: calc(14px * var(--rdfa-scale, 1));
