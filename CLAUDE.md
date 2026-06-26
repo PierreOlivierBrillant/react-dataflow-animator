@@ -26,6 +26,9 @@ Lis ces fichiers avant toute modification non triviale :
   vérité sur les comportements attendus).
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — découpage des modules,
   pipeline de rendu, points d'extension.
+- [`docs/AI-VALIDATION.md`](./docs/AI-VALIDATION.md) — comment faire valider le
+  rendu (clarté/fluidité) par une IA via le harnais déterministe et la
+  régression visuelle Playwright.
 - [`apps/docs/docs/`](./apps/docs/docs/) — documentation utilisateur MDX
   (concepts, références).
 - [`packages/react-dataflow-animator/src/types.ts`](./packages/react-dataflow-animator/src/types.ts)
@@ -170,14 +173,17 @@ Racine du monorepo :
 
 Package (`packages/react-dataflow-animator/`) :
 
-| Script                     | Effet                                       |
-| -------------------------- | ------------------------------------------- |
-| `npm run build`            | Typecheck + vite build + déclarations .d.ts |
-| `npm run dev`              | vite build en mode watch                    |
-| `npm run lint`             | ESLint sur src/                             |
-| `npm test`                 | Tests vitest unitaires                      |
-| `npm run test:coverage`    | Tests + couverture                          |
-| `npm run test:integration` | Tests d'intégration sur les démos           |
+| Script                     | Effet                                        |
+| -------------------------- | -------------------------------------------- |
+| `npm run build`            | Typecheck + vite build + déclarations .d.ts  |
+| `npm run dev`              | vite build en mode watch                     |
+| `npm run lint`             | ESLint sur src/                              |
+| `npm test`                 | Tests vitest unitaires                       |
+| `npm run test:coverage`    | Tests + couverture                           |
+| `npm run test:integration` | Tests d'intégration sur les démos            |
+| `npm run harness`          | Harnais de validation visuelle (Vite, :5199) |
+| `npm run curves`           | Passe structurelle headless (`--demo <id>`)  |
+| `npm run test:visual`      | Régression visuelle Playwright (goldens)     |
 
 ## Workflows à éviter
 

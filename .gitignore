@@ -30,3 +30,9 @@ dist-demo
 .mcp.json
 
 coverage/
+
+# Playwright (régression visuelle du harnais) — on COMMITE les goldens
+# (*-snapshots/), pas les rapports ni les diffs de run.
+test-results/
+playwright-report/
+blob-report/

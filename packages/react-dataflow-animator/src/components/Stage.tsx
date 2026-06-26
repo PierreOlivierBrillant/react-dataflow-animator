@@ -39,7 +39,7 @@ import {
 } from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { buildStageSignature } from './stageSignature';
-import { clipOpacity } from './clipOpacity';
+import { clipOpacity, contentCrossfade } from './clipOpacity';
 import { StaticNode } from './nodes/StaticNode';
 import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
@@ -263,7 +263,8 @@ export function Stage({
     const clip = a.clip as SetContentClip;
     contentByNode[clip.objectId] = {
       content: clip.content,
-      opacity: clipOpacity(clip, t),
+      // Eased : pilote l'opacité du contenu ET le lerp de géométrie (l. 299).
+      opacity: contentCrossfade(clip, t),
     };
   }
 
@@ -286,7 +287,8 @@ export function Stage({
 
   // Géométrie interpolée : pendant une transition set_content, lerp entre la
   // géométrie pré-content (icône, dans iconGeomByNode) et la géométrie actuelle
-  // (ContentPanel mesuré). Facteur = clipOpacity → en phase avec le fondu visuel.
+  // (ContentPanel mesuré). Facteur = contentCrossfade (eased) → le morph suit
+  // exactement le fondu visuel, départ et arrivée ralentis.
   let effectiveGeometry: GeometryMap = geometry;
   let hasSetContentTransition = false;
   for (const a of active) {

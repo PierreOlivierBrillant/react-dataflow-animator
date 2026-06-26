@@ -50,7 +50,10 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "smoke:export": "node scripts/smoke-export.mjs"
+    "smoke:export": "node scripts/smoke-export.mjs",
+    "harness": "vite --config scripts/validation-harness/vite.config.ts",
+    "curves": "node scripts/extract-curves.mjs",
+    "test:visual": "playwright test"
   },
   "peerDependencies": {
     "react": ">=18",
@@ -62,6 +65,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^24.12.3",
     "@types/prismjs": "^1.26.5",

@@ -28,6 +28,7 @@
   "ignoreDependencies": [
     "@docusaurus/theme-common",
     "@eslint/js",
+    "@playwright/test",
     "autoprefixer",
     "eslint-plugin-react-hooks",
     "eslint-plugin-react-refresh",

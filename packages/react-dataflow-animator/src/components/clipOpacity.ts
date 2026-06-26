@@ -1,4 +1,4 @@
-import { clamp } from '../engine/timeline';
+import { clamp, easeInOutCubic } from '../engine/timeline';
 
 /** Durée (ms) du fondu d'apparition/disparition par défaut (paquets, contenus). */
 export const FADE_MS = 250;
@@ -39,4 +39,21 @@ export function clipOpacity(
       ? 1
       : clamp((clip.visibleUntilMs - t) / effectiveFadeOut, 0, 1);
   return Math.min(fadeIn, fadeOut);
+}
+
+/**
+ * Crossfade d'un `set_content` : le fondu linéaire de `clipOpacity` adouci par
+ * `easeInOutCubic`. Cette valeur pilote À LA FOIS l'opacité du contenu ET le
+ * lerp de géométrie (le nœud passe de l'icône au panneau) ; les easer ensemble
+ * supprime l'effet mécanique du morph linéaire — départ et arrivée ralentis.
+ * Les fondus de paquets/flèches gardent `clipOpacity` brut.
+ *
+ * Source unique partagée avec le harnais de validation (cf.
+ * scripts/validation-harness) : la courbe qu'il trace EST celle rendue ici.
+ */
+export function contentCrossfade(
+  clip: Parameters<typeof clipOpacity>[0],
+  t: number
+): number {
+  return easeInOutCubic(clipOpacity(clip, t));
 }
