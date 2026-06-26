@@ -25,9 +25,11 @@ export interface StaticNodeProps {
   highlight: Highlighter;
   /** Opacité globale du nœud (fondu show/hide de set_visible). */
   opacity?: number;
-  /** Hauteur imposée au conteneur visuel pendant une transition set_content (px).
-   *  Permet d'animer le déplacement du label en synchronie avec le fondu. */
-  visualHeight?: number;
+  /** Fraction révélée [0..1] du panneau pendant une transition set_content. La
+   *  révélation se fait de HAUT en bas via `clip-path` — qui ne change pas la
+   *  taille de layout, donc le ResizeObserver mesure toujours le panneau plein
+   *  (pas de boucle de rétroaction avec la géométrie). */
+  reveal?: number;
   /** Taille max (px) du panneau set_content pour qu'il ne recouvre pas ses voisins
    *  (les nœuds ne bougeant pas, c'est le panneau qui rétrécit pour tenir). */
   contentLimit?: { maxW: number; maxH: number };
@@ -47,7 +49,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     highlighted,
     highlight,
     opacity,
-    visualHeight,
+    reveal,
     contentLimit,
     codeFontScale,
     onCodeFit,
@@ -85,19 +87,17 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       </>
     );
 
-    // Pendant une transition set_content (visualHeight défini), on contraint la
-    // hauteur du conteneur visuel pour que le label glisse progressivement.
-    // overflow:hidden + alignItems:flex-start révèle le ContentPanel du haut vers
-    // le bas (barre de fenêtre d'abord) sans clipper la boîte englobante du nœud.
+    // Pendant une transition set_content, on révèle le panneau du HAUT vers le bas
+    // par clip-path (barre de fenêtre d'abord). Contrairement à `height`,
+    // clip-path ne touche PAS la boîte de layout : le ResizeObserver mesure
+    // toujours le panneau plein → la géométrie reste stable (pas de boucle qui
+    // figeait le morph à la taille de l'icône), et le panneau ne s'ouvre plus
+    // « du centre vers le haut et le bas ».
     const visualStyle: CSSProperties | undefined = content
       ? {
           opacity: contentOpacity,
-          ...(visualHeight != null
-            ? {
-                height: visualHeight,
-                overflow: 'hidden',
-                alignItems: 'flex-start',
-              }
+          ...(reveal != null && reveal < 1
+            ? { clipPath: `inset(0 0 ${((1 - reveal) * 100).toFixed(2)}% 0)` }
             : {}),
         }
       : undefined;

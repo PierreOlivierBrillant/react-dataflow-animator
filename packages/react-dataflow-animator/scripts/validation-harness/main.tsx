@@ -21,7 +21,7 @@
  * `compile`, `Stage`) importées depuis `src` : une seule source de vérité, aucune
  * duplication à resynchroniser à la main.
  */
-import { StrictMode } from 'react';
+import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { compile } from '../../src/engine/compiler';
 import type { Clip, Timeline } from '../../src/engine/timeline';
@@ -200,6 +200,80 @@ function Filmstrip({
   );
 }
 
+// Sonde LIVE : un seul Stage qui JOUE en continu (rAF) une boucle courte autour
+// du set_content. Le morph de géométrie icône→panneau est émergent de la
+// choréographie image-par-image (capture d'`iconGeomByNode` quand le clip
+// devient actif, puis forceRemeasure/ResizeObserver) — un Stage figé ou des
+// sauts de `t` ne le reproduisent pas. La boucle repasse par l'état icône à
+// chaque cycle, ce qui re-capture proprement la géométrie. On lit le bord haut
+// au fil de la lecture (poll DOM) pour vérifier l'ancrage.
+const PROBE_PRE_MS = 700;
+const PROBE_POST_MS = 700;
+const PROBE_SPEED = 0.18;
+
+function LiveProbe({
+  spec,
+  timeline,
+  clip,
+}: {
+  spec: DataFlowSpec;
+  timeline: Timeline;
+  clip: Clip;
+}) {
+  const lo = Math.max(0, clip.startMs - PROBE_PRE_MS);
+  const hi = clip.startMs + PROBE_POST_MS;
+  // ?probeT=<ms> fige la sonde à un instant précis (capture déterministe d'un
+  // mi-parcours) ; sinon elle joue en boucle.
+  const frozenParam = params.get('probeT');
+  const frozen = frozenParam != null ? Number(frozenParam) : null;
+  const [t, setT] = useState(frozen ?? lo);
+  useEffect(() => {
+    const w = window as unknown as {
+      __probe?: { start: number; objectId: string };
+    };
+    w.__probe = {
+      start: clip.startMs,
+      objectId: 'objectId' in clip ? clip.objectId : '?',
+    };
+    if (frozen != null) return;
+    let raf = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = Math.min(50, now - last);
+      last = now;
+      setT((prev) => {
+        const next = prev + dt * PROBE_SPEED;
+        return next > hi ? lo : next;
+      });
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [clip, lo, hi, frozen]);
+  return (
+    <div className="probe">
+      <div className="probe-head">
+        sonde live · <code>{'objectId' in clip ? clip.objectId : '?'}</code> ·
+        t=
+        {Math.round(t)}ms
+      </div>
+      <div
+        className="rdfa-player"
+        data-theme={theme}
+        style={{ height: 380, width: 560 }}
+      >
+        <Stage
+          spec={spec}
+          timeline={timeline}
+          t={t}
+          highlight={highlightCode}
+          density="comfortable"
+        />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   if (!spec) {
     return (
@@ -257,6 +331,17 @@ function App() {
         <Filmstrip spec={spec} timeline={timeline} />
       </section>
 
+      {setContentClips.length > 0 && (
+        <section className="probe-section">
+          <h2>Sonde live — apparition réelle (géométrie animée)</h2>
+          <LiveProbe
+            spec={spec}
+            timeline={timeline}
+            clip={setContentClips[0]}
+          />
+        </section>
+      )}
+
       <section>
         <h2>Fluidité — crossfade des {setContentClips.length} set_content</h2>
         {setContentClips.length === 0 ? (
@@ -273,8 +358,7 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
+// Pas de StrictMode : il double-invoque les effets, ce qui perturbe la séquence
+// précise capture iconGeom → forceRemeasure du set_content. On reste fidèle au
+// rendu réel (Docusaurus n'enveloppe pas le player dans StrictMode).
+createRoot(document.getElementById('root')!).render(<App />);

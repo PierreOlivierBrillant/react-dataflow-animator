@@ -320,15 +320,13 @@ export function Stage({
     ? Object.values(effectiveGeometry)
     : allNodes;
 
-  // Hauteur du visuel à imposer à StaticNode pendant la transition (px).
-  // Permet au label de glisser progressivement plutôt que de sauter.
-  const visualHeightByNode: Record<string, number> = {};
-  if (hasSetContentTransition) {
-    for (const nodeId of Object.keys(effectiveGeometry)) {
-      if (effectiveGeometry[nodeId] !== geometry[nodeId]) {
-        visualHeightByNode[nodeId] = effectiveGeometry[nodeId].height;
-      }
-    }
+  // Fraction révélée (0..1) par nœud : pilote le clip-path top-down de StaticNode.
+  // = l'opacité eased du crossfade (contentCrossfade). Découplé de la géométrie
+  // (pas de dépendance à la mesure / iconGeom) → robuste, marche aussi figé.
+  const revealByNode: Record<string, number> = {};
+  for (const nodeId of Object.keys(contentByNode)) {
+    const op = contentByNode[nodeId].opacity;
+    if (op < 1) revealByNode[nodeId] = op;
   }
 
   // Opacité de visibilité par nœud : 0 = caché, 1 = visible, intermédiaire = fondu.
@@ -507,7 +505,7 @@ export function Stage({
             highlighted={highlightedIds.has(o.id)}
             highlight={highlight}
             opacity={nodeOpacity < 1 ? nodeOpacity : undefined}
-            visualHeight={visualHeightByNode[o.id]}
+            reveal={revealByNode[o.id]}
             contentLimit={
               contentLimits[o.id]
                 ? {

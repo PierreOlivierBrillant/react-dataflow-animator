@@ -33,6 +33,12 @@ for (const demo of DEMOS) {
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(400);
 
+    // La sonde live joue en boucle (rAF) → image non déterministe : on l'exclut
+    // du golden (c'est un diagnostic, pas une cible de régression).
+    await page.evaluate(() =>
+      document.querySelector('.probe-section')?.remove()
+    );
+
     await expect(page).toHaveScreenshot(`${demo}.png`, { fullPage: true });
   });
 }
