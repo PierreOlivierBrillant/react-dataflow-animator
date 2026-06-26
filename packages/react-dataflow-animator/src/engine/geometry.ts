@@ -4,6 +4,9 @@
  * au conteneur « Stage ».
  */
 
+import type { PathShape } from '../types';
+import { shapeWaypoints } from './pathShapes';
+
 export interface Point {
   x: number;
   y: number;
@@ -34,7 +37,12 @@ const LABEL_GAP = 6;
 export interface Connection {
   start: Point;
   end: Point;
-  /** Points intermédiaires pour contourner des labels obstacles. */
+  /**
+   * Points intermédiaires du tracé, parcourus par longueur d'arc. Selon la
+   * {@link PathShape} : détours anti-collision (straight), coins (step) ou
+   * échantillons de courbe (bezier/simplebezier/smoothstep). Indéfini = trait
+   * droit direct.
+   */
   waypoints?: Point[];
   /** Angle du dernier segment en degrés (utile pour orienter une pointe de flèche). */
   angleDeg: number;
@@ -110,7 +118,8 @@ export function connection(
   to: NodeGeom,
   obstacles?: NodeGeom[],
   startPortOffset = 0,
-  endPortOffset = 0
+  endPortOffset = 0,
+  shape: PathShape = 'bezier'
 ): Connection {
   const c1 = { x: from.x, y: from.y };
   const c2 = { x: to.x, y: to.y };
@@ -171,9 +180,10 @@ export function connection(
   const start: Point = startBase;
   const end: Point = endBase;
 
-  // Détecte le premier label tiers que le segment traverse et insère un waypoint
-  // juste au-dessus pour le contourner.
-  let waypoints: Point[] | undefined;
+  // Détecte le premier label tiers que le segment traverse et insère un détour
+  // juste au-dessus/à côté pour le contourner. Ce détour est indépendant de la
+  // forme : toutes les formes le traversent (cf. control ci-dessous).
+  let detour: Point[] | undefined;
   if (obstacles && obstacles.length > 0) {
     let firstT = Infinity;
     let bestWps: Point[] | null = null;
@@ -203,11 +213,18 @@ export function connection(
         }
       }
     }
-    if (bestWps) waypoints = bestWps;
+    if (bestWps) detour = bestWps;
   }
 
+  // Polyligne de contrôle = extrémités + détours, puis application de la forme.
+  // `shapeWaypoints` renvoie les points intermédiaires effectifs (échantillons de
+  // courbe, coins…), parcourus par longueur d'arc comme un simple polyligne.
+  const control: Point[] = detour ? [start, ...detour, end] : [start, end];
+  const waypoints = shapeWaypoints(control, shape);
+
   // Angle du dernier segment (pour la pointe de flèche).
-  const lastPt = waypoints ? waypoints[waypoints.length - 1] : start;
+  const lastPt =
+    waypoints && waypoints.length > 0 ? waypoints[waypoints.length - 1] : start;
   const angleDeg =
     (Math.atan2(end.y - lastPt.y, end.x - lastPt.x) * 180) / Math.PI;
 

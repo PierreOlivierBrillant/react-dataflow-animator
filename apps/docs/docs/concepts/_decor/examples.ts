@@ -1,4 +1,4 @@
-import { DataFlowSpec, LineStyle } from 'react-dataflow-animator';
+import { DataFlowSpec, LineStyle, PathShape } from 'react-dataflow-animator';
 
 /** Un même lien décliné dans chaque style de ligne. */
 export const lineStyleExample: (style: LineStyle) => DataFlowSpec = (
@@ -11,6 +11,26 @@ export const lineStyleExample: (style: LineStyle) => DataFlowSpec = (
   ],
   packets: [],
   connections: [{ from: 'a', to: 'b', style, text: style }],
+  timeline: [],
+});
+
+/**
+ * Un fan-out (load balancer → deux services) décliné dans chaque forme de tracé.
+ * Le décalage transverse entre `lb` et les deux cibles rend la courbure visible —
+ * sur deux nœuds parfaitement alignés, toutes les formes se confondent.
+ */
+export const pathShapeExample: (path: PathShape) => DataFlowSpec = (path) => ({
+  direction: 'left-to-right',
+  nodes: [
+    { id: 'lb', type: 'server', text: 'Load balancer', icon: 'nginx', lane: 1 },
+    { id: 'api1', type: 'server', text: 'API 1', icon: 'node', lane: 2 },
+    { id: 'api2', type: 'server', text: 'API 2', icon: 'node', lane: 2 },
+  ],
+  packets: [],
+  connections: [
+    { from: 'lb', to: 'api1', path, text: path },
+    { from: 'lb', to: 'api2', path },
+  ],
   timeline: [],
 });
 

@@ -24,6 +24,7 @@ export type {
   NodeType,
   PacketKind,
   LineStyle,
+  PathShape,
   ContentType,
   Highlighter,
   HighlightLanguage,

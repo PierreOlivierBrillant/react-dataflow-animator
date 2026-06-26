@@ -1,4 +1,4 @@
-import type { LineStyle, ObjectContent } from '../types';
+import type { LineStyle, ObjectContent, PathShape } from '../types';
 
 /**
  * Représentation intermédiaire (IR) déterministe de la chronologie.
@@ -53,6 +53,7 @@ export interface ArrowClip extends ClipBase {
   fromId: string;
   toId: string;
   style: LineStyle;
+  path: PathShape;
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   text?: string;
 }

@@ -124,8 +124,10 @@ La timeline compile un tableau d'actions ordonnées. Voir
 1. **move** : déplace un objet dynamique (paquet/requête) de `from` vers `to` ;
    interpolation sur `duration` ms ; épouse la voie décalée si bidirectionnel.
 2. **arrow** : trace une ligne SVG entre deux nœuds (dessin progressif `x2/y2`).
-   Styles `solid` / `dotted` / `dashed`, texte médian optionnel. Les flèches **permanentes**
-   (décor) se déclarent dans le tableau racine `connections` (affichées dès l'init).
+   Styles de trait `solid` / `dotted` / `dashed` / `animated` et forme de tracé
+   `path` (`bezier` par défaut, `simplebezier` / `straight` / `step` / `smoothstep`),
+   texte médian optionnel. Les flèches **permanentes** (décor) se déclarent dans le
+   tableau racine `connections` (affichées dès l'init).
 3. **parallel** : encapsule des actions enfants exécutées au même timestamp.
 4. **loading** : spinner attaché à un nœud cible (simule un traitement).
 5. **set_content** : mute le contenu d'un nœud. Mode `code` (terminal + coloration
@@ -192,6 +194,10 @@ clamp(0, (0.62 − l) × 1000, 1) 0 0)` (noir/blanc selon la luminance). `--rdfa
 - Les flèches de décor ont migré de `static_objects` vers le tableau racine `connections`.
 - `comment` utilise `object` (et non plus `next_to`) pour cibler son nœud.
 - `style` : terminologie SVG/CSS `solid`/`dotted`/`dashed` (`full` toléré en alias).
+- `path` : forme du tracé d'une flèche/connexion (`bezier` par défaut,
+  `simplebezier`/`straight`/`step`/`smoothstep`) — orthogonal à `style`. La
+  courbure n'apparaît qu'avec un décalage transverse ; les paquets `move`
+  épousent le tracé `bezier` par défaut.
 - `subicon` accepte du **texte libre** en plus des icônes (react-icons).
 - `response_content.data` retiré (jamais rendu) ; seul `rows` est affiché.
 - Actions modélisées en **union discriminée** (TS + `oneOf` schéma) → validation réelle.

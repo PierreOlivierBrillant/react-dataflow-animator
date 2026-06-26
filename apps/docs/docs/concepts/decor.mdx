@@ -6,6 +6,7 @@ slug: /concepts/decor
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import {
   lineStyleExample,
+  pathShapeExample,
   arrowHeadExample,
   zonesExample,
   nestedZonesExample,
@@ -82,6 +83,77 @@ toléré pour `solid`) :
 
 Le style `animated` fait défiler les tirets pour suggérer un flux continu
 (connexion temps réel, WebSocket…).
+
+### `path` — forme du tracé
+
+Indépendamment du style de trait, `path` règle la **forme** du chemin. Cinq
+valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
+
+<Tabs
+  defaultValue="bezier"
+  values={[
+    { label: 'bezier', value: 'bezier' },
+    { label: 'simplebezier', value: 'simplebezier' },
+    { label: 'straight', value: 'straight' },
+    { label: 'step', value: 'step' },
+    { label: 'smoothstep', value: 'smoothstep' },
+  ]}
+>
+  <TabItem value="bezier">
+    <DataFlowPlayer
+      spec={pathShapeExample('bezier')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="simplebezier">
+    <DataFlowPlayer
+      spec={pathShapeExample('simplebezier')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="straight">
+    <DataFlowPlayer
+      spec={pathShapeExample('straight')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="step">
+    <DataFlowPlayer
+      spec={pathShapeExample('step')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="smoothstep">
+    <DataFlowPlayer
+      spec={pathShapeExample('smoothstep')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+</Tabs>
+
+```ts
+{ from: 'lb', to: 'api1', path: 'bezier' }     // courbe douce (défaut)
+{ from: 'lb', to: 'api1', path: 'simplebezier' } // courbe plus discrète
+{ from: 'lb', to: 'api1', path: 'straight' }   // segment direct
+{ from: 'lb', to: 'api1', path: 'step' }       // angles droits
+{ from: 'lb', to: 'api1', path: 'smoothstep' } // angles droits arrondis
+```
+
+La courbure n'apparaît qu'en présence d'un **décalage transverse** (lanes
+différentes, fan-out, voies bidirectionnelles) : entre deux nœuds parfaitement
+alignés, toutes les formes se confondent avec un trait droit. Les paquets d'une
+action [`move`](../reference/actions.mdx#move) épousent le tracé `bezier` par
+défaut.
 
 ### `arrow_head` — pointes de flèche
 

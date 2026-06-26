@@ -465,6 +465,10 @@
           "$ref": "#/definitions/LineStyle",
           "description": "Style de la ligne. Défaut: 'solid'."
         },
+        "path": {
+          "$ref": "#/definitions/PathShape",
+          "description": "Forme du tracé du lien. Défaut: 'bezier'. Voir  {@link  PathShape } ."
+        },
         "arrow_head": {
           "type": "string",
           "enum": [
@@ -499,6 +503,17 @@
         "animated"
       ],
       "description": "Style de ligne (terminologie SVG/CSS). `full` est accepté en alias de `solid`."
+    },
+    "PathShape": {
+      "type": "string",
+      "enum": [
+        "bezier",
+        "simplebezier",
+        "straight",
+        "step",
+        "smoothstep"
+      ],
+      "description": "Forme du tracé d'une flèche / connexion — orthogonale à  {@link  LineStyle } , qui ne règle que le motif du trait (plein, pointillé…). Défaut: 'bezier'.\n\n- `bezier` : courbe douce en S, poignées le long de l'axe dominant (défaut) ;\n- `simplebezier` : même esprit, courbure plus discrète ;\n- `straight` : segment direct (contourne les labels intercalés) ;\n- `step` : trajet orthogonal à angles droits ;\n- `smoothstep` : trajet orthogonal aux angles arrondis.\n\nSur deux nœuds parfaitement alignés (même rangée/colonne), toutes les formes se confondent avec un trait droit : la courbure n'apparaît qu'en présence d'un décalage transverse (lanes différentes, fan-out, voies bidirectionnelles)."
     },
     "Zone": {
       "type": "object",
@@ -700,6 +715,10 @@
         "style": {
           "$ref": "#/definitions/LineStyle",
           "description": "Style de ligne : plein, pointillé, tirets ou animé. Défaut: 'solid'."
+        },
+        "path": {
+          "$ref": "#/definitions/PathShape",
+          "description": "Forme du tracé : bezier, simplebezier, straight, step, smoothstep. Défaut: 'bezier'."
         },
         "arrow_head": {
           "type": "string",

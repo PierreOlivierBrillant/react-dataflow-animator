@@ -95,7 +95,9 @@ describe('connection', () => {
     const from = mkNode('f5', 0, 0);
     const to = mkNode('t5', 0, 300);
     const obs = mkNode('obs5', 0, 150, 40, 40, 20, 80);
-    const c = connection(from, to, [obs]);
+    // Le détour anti-collision est indépendant de la forme : on l'observe sur
+    // un tracé droit où il constitue l'unique point intermédiaire.
+    const c = connection(from, to, [obs], 0, 0, 'straight');
     expect(c.waypoints).toBeDefined();
     expect(c.waypoints).toHaveLength(1);
     const labelTop = obs.y + obs.height / 2 + LABEL_GAP; // 176
@@ -130,7 +132,7 @@ describe('connection', () => {
     const from = mkNode('f5b', 100, 0);
     const to = mkNode('t5b', 100, 300);
     const obs = mkNode('obs5b', 80, 150, 40, 40, 20, 80);
-    const c = connection(from, to, [obs]);
+    const c = connection(from, to, [obs], 0, 0, 'straight');
     expect(c.waypoints).toBeDefined();
     expect(c.waypoints).toHaveLength(1);
     const labelRight = obs.x + 80 / 2; // 120
@@ -145,7 +147,7 @@ describe('connection', () => {
     const from = mkNode('f5c', 0, 100);
     const to = mkNode('t5c', 300, 100);
     const obs = mkNode('obs5c', 150, 50, 40, 40, 80, 80);
-    const c = connection(from, to, [obs]);
+    const c = connection(from, to, [obs], 0, 0, 'straight');
     expect(c.waypoints).toBeDefined();
     expect(c.waypoints).toHaveLength(1);
     const labelTop = obs.y + obs.height / 2 + LABEL_GAP; // 76
@@ -201,8 +203,8 @@ describe('labelBounds', () => {
     const obsDefault = mkNode('obs3d', 50, 150, 60, 40, 20); // pas de labelW → lw=90
     const obsNarrow = mkNode('obs3n', 50, 150, 60, 40, 20, 60); // labelW=60 → lw=60
 
-    const cDefault = connection(from, to, [obsDefault]);
-    const cNarrow = connection(from, to, [obsNarrow]);
+    const cDefault = connection(from, to, [obsDefault], 0, 0, 'straight');
+    const cNarrow = connection(from, to, [obsNarrow], 0, 0, 'straight');
 
     expect(cDefault.waypoints).toBeDefined(); // lw=90 provoque l'intersection
     expect(cNarrow.waypoints).toBeUndefined(); // lw=60 ne la provoque pas

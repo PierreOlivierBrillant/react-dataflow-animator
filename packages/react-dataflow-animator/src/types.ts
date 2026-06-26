@@ -54,6 +54,27 @@ export type PacketKind = 'http_packet' | 'sql_request' | 'sql_response';
 /** Style de ligne (terminologie SVG/CSS). `full` est accepté en alias de `solid`. */
 export type LineStyle = 'solid' | 'dotted' | 'dashed' | 'animated';
 
+/**
+ * Forme du tracé d'une flèche / connexion — orthogonale à {@link LineStyle},
+ * qui ne règle que le motif du trait (plein, pointillé…). Défaut: 'bezier'.
+ *
+ * - `bezier` : courbe douce en S, poignées le long de l'axe dominant (défaut) ;
+ * - `simplebezier` : même esprit, courbure plus discrète ;
+ * - `straight` : segment direct (contourne les labels intercalés) ;
+ * - `step` : trajet orthogonal à angles droits ;
+ * - `smoothstep` : trajet orthogonal aux angles arrondis.
+ *
+ * Sur deux nœuds parfaitement alignés (même rangée/colonne), toutes les formes
+ * se confondent avec un trait droit : la courbure n'apparaît qu'en présence d'un
+ * décalage transverse (lanes différentes, fan-out, voies bidirectionnelles).
+ */
+export type PathShape =
+  | 'bezier'
+  | 'simplebezier'
+  | 'straight'
+  | 'step'
+  | 'smoothstep';
+
 /** Modes de contenu pour `set_content` (action) et `content` (objet statique). */
 export type ContentType = 'image' | 'text' | 'code' | 'table';
 
@@ -222,6 +243,8 @@ export interface Connection {
   to: string;
   /** Style de la ligne. Défaut: 'solid'. */
   style?: LineStyle;
+  /** Forme du tracé du lien. Défaut: 'bezier'. Voir {@link PathShape}. */
+  path?: PathShape;
   /** Pointe de la flèche. Défaut: 'forward'. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   /**
@@ -378,6 +401,8 @@ interface ArrowAction extends ActionBase {
   text?: string;
   /** Style de ligne : plein, pointillé, tirets ou animé. Défaut: 'solid'. */
   style?: LineStyle;
+  /** Forme du tracé : bezier, simplebezier, straight, step, smoothstep. Défaut: 'bezier'. */
+  path?: PathShape;
   /** Côté(s) où dessiner la pointe de la flèche. Défaut: 'forward'. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
 }

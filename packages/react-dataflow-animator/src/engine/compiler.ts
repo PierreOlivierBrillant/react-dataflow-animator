@@ -1,4 +1,10 @@
-import type { Action, ActionType, DataFlowSpec, LineStyle } from '../types';
+import type {
+  Action,
+  ActionType,
+  DataFlowSpec,
+  LineStyle,
+  PathShape,
+} from '../types';
 import type {
   ArrowClip,
   Clip,
@@ -62,6 +68,18 @@ function normalizeStyle(style: string | undefined): LineStyle {
   if (style === 'dotted' || style === 'dashed' || style === 'animated')
     return style;
   return 'solid'; // 'solid', 'full' (alias) ou absent
+}
+
+/** Normalise la forme du tracé (bezier par défaut, y compris valeur inconnue). */
+function normalizePath(path: string | undefined): PathShape {
+  if (
+    path === 'straight' ||
+    path === 'step' ||
+    path === 'smoothstep' ||
+    path === 'simplebezier'
+  )
+    return path;
+  return 'bezier';
 }
 
 interface PendingClip {
@@ -207,6 +225,7 @@ function compileAction(
         fromId: action.from,
         toId: action.to,
         style: normalizeStyle(action.style),
+        path: normalizePath(action.path),
         arrow_head: action.arrow_head,
         text: action.text,
       };

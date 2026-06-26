@@ -8,7 +8,7 @@ import {
   visiblePath,
   type NodeGeom,
 } from '../../engine/geometry';
-import type { LineStyle } from '../../types';
+import type { LineStyle, PathShape } from '../../types';
 
 /**
  * Flèche SVG entre deux nœuds. `progress` ∈ [0,1] anime le dessin progressif.
@@ -21,6 +21,8 @@ export interface ArrowLineProps {
   startPortOffset?: number;
   endPortOffset?: number;
   style?: LineStyle;
+  /** Forme du tracé. Défaut: 'bezier'. */
+  path?: PathShape;
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   text?: string;
   /** 1 pour une flèche statique (décor), interpolé pour une flèche dynamique. */
@@ -40,6 +42,7 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     startPortOffset = 0,
     endPortOffset = 0,
     style = 'solid',
+    path,
     text,
     progress,
     highlighted,
@@ -57,7 +60,8 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
       to,
       obstacles,
       startPortOffset,
-      endPortOffset
+      endPortOffset,
+      path
     );
 
     // Position et angle de la pointe au paramètre `progress`.

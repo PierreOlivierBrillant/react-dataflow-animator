@@ -448,6 +448,7 @@ export function Stage({
               startPortOffset={ports.start}
               endPortOffset={ports.end}
               style={link.style}
+              path={link.path}
               arrow_head={link.arrow_head}
               text={link.text}
               progress={1}
@@ -479,6 +480,7 @@ export function Stage({
               startPortOffset={ports.start}
               endPortOffset={ports.end}
               style={clip.style}
+              path={clip.path}
               arrow_head={clip.arrow_head}
               text={clip.text}
               progress={a.progress}
