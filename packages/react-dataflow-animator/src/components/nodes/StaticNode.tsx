@@ -66,10 +66,22 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     ) : (
       <>
         <NodeView node={object} highlight={highlight} />
-        {object.icon ? (
-          <span className="rdfa-node-subicon">{getSubIcon(object.icon)}</span>
+        {/* Badge unique en coin : le subicon (techno) et l'anneau de chargement
+            partagent le même conteneur positionné, donc restent toujours
+            concentriques. Le conteneur porte le fond plein qui sert
+            d'arrière-plan au spinner (« vers l'intérieur »). */}
+        {object.icon || loading ? (
+          <span className="rdfa-node-badge">
+            {object.icon ? (
+              <span className="rdfa-node-subicon">
+                {getSubIcon(object.icon)}
+              </span>
+            ) : null}
+            {loading ? (
+              <span className="rdfa-spinner" aria-hidden="true" />
+            ) : null}
+          </span>
         ) : null}
-        {loading ? <span className="rdfa-spinner" /> : null}
       </>
     );
 

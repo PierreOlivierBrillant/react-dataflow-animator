@@ -255,17 +255,27 @@
   color: var(--rdfa-accent);
 }
 
-.rdfa-node-subicon {
+/* Badge en coin du nœud : conteneur UNIQUE qui groupe le subicon (techno) et
+   l'anneau de chargement. Positionné une seule fois, il garantit que les deux
+   sont toujours parfaitement concentriques. Son fond plein fait office
+   d'arrière-plan « vers l'intérieur » pour le spinner. */
+.rdfa-node-badge {
   position: absolute;
-  right: calc(-3px * var(--rdfa-scale, 1));
-  bottom: calc(2px * var(--rdfa-scale, 1));
+  right: calc(-8px * var(--rdfa-scale, 1));
+  bottom: calc(-8px * var(--rdfa-scale, 1));
   width: calc(28px * var(--rdfa-scale, 1));
   height: calc(28px * var(--rdfa-scale, 1));
   border-radius: 50%;
   background: var(--rdfa-surface);
   border: 1px solid var(--rdfa-border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-  z-index: 6; /* Au-dessus du loading */
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rdfa-node-subicon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -277,6 +287,24 @@
   width: calc(16px * var(--rdfa-scale, 1));
   height: calc(16px * var(--rdfa-scale, 1));
   flex-shrink: 0;
+}
+
+/* Anneau de chargement : concentrique au badge (inset négatif → il tourne juste
+   autour du fond plein). Aligné par construction avec le subicon central. */
+.rdfa-spinner {
+  position: absolute;
+  inset: calc(-3px * var(--rdfa-scale, 1));
+  border: calc(3px * var(--rdfa-scale, 1)) solid transparent;
+  border-top-color: var(--rdfa-accent);
+  border-radius: 50%;
+  animation: rdfa-spin-corner 0.8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rdfa-spin-corner {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Label SOUS le visuel, en position absolue : la boîte du nœud se limite ainsi au
@@ -327,6 +355,13 @@
   text-align: left;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Réserve de l'espace pour le badge quand un subicon est présent sur un panel :
+   sans ça, le badge (20px de part intérieure) chevauche le texte du panneau. */
+.rdfa-node--panel:has(.rdfa-node-badge) .rdfa-node-panel {
+  margin-right: calc(8px * var(--rdfa-scale, 1));
+  margin-bottom: calc(8px * var(--rdfa-scale, 1));
 }
 
 .rdfa-node-panel-header {
@@ -635,26 +670,6 @@
 .rdfa-player .rdfa-sql-table th {
   background: var(--rdfa-bg);
   font-weight: 600;
-}
-
-/* ---------- Loading (spinner) ---------- */
-.rdfa-spinner {
-  position: absolute;
-  right: calc(-4px * var(--rdfa-scale, 1));
-  bottom: calc(1px * var(--rdfa-scale, 1));
-  width: calc(30px * var(--rdfa-scale, 1));
-  height: calc(30px * var(--rdfa-scale, 1));
-  z-index: 5;
-  border: calc(4px * var(--rdfa-scale, 1)) solid var(--rdfa-border);
-  border-top-color: var(--rdfa-accent);
-  border-radius: 50%;
-  animation: rdfa-spin-corner 0.8s linear infinite;
-}
-
-@keyframes rdfa-spin-corner {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ---------- Commentaire ---------- */
