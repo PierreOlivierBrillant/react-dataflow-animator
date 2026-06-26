@@ -735,8 +735,8 @@
   display: flex;
   align-items: center;
   gap: calc(8px * var(--rdfa-content-scale, 1));
-  padding: calc(8px * var(--rdfa-content-scale, 1))
-    calc(12px * var(--rdfa-content-scale, 1));
+  padding: calc(6px * var(--rdfa-content-scale, 1))
+    calc(6px * var(--rdfa-content-scale, 1));
   background: var(--rdfa-window-bg);
 }
 
@@ -759,7 +759,7 @@
 .rdfa-window-url {
   flex: 1;
   padding: calc(3px * var(--rdfa-content-scale, 1))
-    calc(10px * var(--rdfa-content-scale, 1));
+    calc(6px * var(--rdfa-content-scale, 1));
   border-radius: 6px;
   background: var(--rdfa-surface);
   color: var(--rdfa-muted);
@@ -773,7 +773,7 @@
 .rdfa-content-body {
   background: var(--rdfa-surface);
   color: var(--rdfa-text);
-  padding: calc(10px * var(--rdfa-content-scale, 1))
+  padding: calc(6px * var(--rdfa-content-scale, 1))
     calc(12px * var(--rdfa-content-scale, 1));
   font-size: calc(12.5px * var(--rdfa-content-scale, 1));
   line-height: 1.5;
