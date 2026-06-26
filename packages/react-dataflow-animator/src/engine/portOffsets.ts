@@ -1,4 +1,5 @@
-import type { DataFlowSpec, Action } from '../types';
+import type { DataFlowSpec, Action, Direction } from '../types';
+import { connectionAxis } from './layout';
 
 /** Espacement (px) entre deux arêtes d'une même paire ou d'un fan-out. */
 export const PORT_SPACING = 30;
@@ -102,7 +103,8 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
 export function computePortOffsets(
   connections: ConnectionRef[],
   layout: Record<string, { cx: number; cy: number }>,
-  aspect = 1
+  aspect = 1,
+  direction: Direction = 'left-to-right'
 ): Record<string, { start: number; end: number }> {
   // On groupe par paire de nœuds (indépendamment de la direction)
   const pairConnections: Record<string, ConnectionRef[]> = {};
@@ -121,8 +123,10 @@ export function computePortOffsets(
     const p2 = layout[to] ?? { cx: 0.5, cy: 0.5 };
     const dx = p2.cx - p1.cx;
     const dy = p2.cy - p1.cy;
-    // Multiplie dx par l'aspect (largeur/hauteur) pour comparer en pixels, pas en ratios.
-    const isHorizontal = Math.abs(dx * aspect) >= Math.abs(dy);
+    // Orientation dérivée du FLUX du layout (cf. connectionAxis) — la MÊME décision
+    // que l'accroche de `connection`, pour que fan-out et extrémités s'accordent.
+    const isHorizontal =
+      connectionAxis(p1, p2, direction, aspect) === 'horizontal';
 
     const faceFrom = isHorizontal
       ? dx >= 0
@@ -167,7 +171,8 @@ export function computePortOffsets(
       const p2 = layout[to] ?? { cx: 0.5, cy: 0.5 };
       const dx = p2.cx - p1.cx;
       const dy = p2.cy - p1.cy;
-      const isHorizontal = Math.abs(dx * aspect) >= Math.abs(dy);
+      const isHorizontal =
+        connectionAxis(p1, p2, direction, aspect) === 'horizontal';
 
       const faceFrom = isHorizontal
         ? dx >= 0

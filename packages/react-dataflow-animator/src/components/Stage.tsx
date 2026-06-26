@@ -24,7 +24,7 @@ import {
   type SetVisibleClip,
   type Timeline,
 } from '../engine/timeline';
-import { computeLayout } from '../engine/layout';
+import { computeLayout, connectionAxis } from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
 import { computePlacements, computeContentLimits } from '../engine/placements';
 import {
@@ -199,11 +199,22 @@ export function Stage({
 
   const active = evaluate(timeline, t);
 
+  const direction = spec.direction ?? 'left-to-right';
   const lineConnections = useMemo(() => collectArrowConnections(spec), [spec]);
   const portOffsets = useMemo(
-    () => computePortOffsets(lineConnections, layout, aspect),
-    [lineConnections, layout, aspect]
+    () => computePortOffsets(lineConnections, layout, aspect, direction),
+    [lineConnections, layout, aspect, direction]
   );
+
+  // Axe d'accroche d'une connexion, dérivé du FLUX du layout (cf. connectionAxis) :
+  // la même décision que computePortOffsets, passée à connection/ArrowLine pour que
+  // l'accroche et la répartition fan-out s'accordent. undefined si un nœud manque
+  // du layout (connection retombe alors sur l'axe pixel dominant).
+  const axisFor = (fromId: string, toId: string) => {
+    const p1 = layout[fromId];
+    const p2 = layout[toId];
+    return p1 && p2 ? connectionAxis(p1, p2, direction, aspect) : undefined;
+  };
 
   // Capture la géométrie "icône" des nœuds qui viennent d'entrer en mode
   // set_content. S'exécute après le commit DOM, avant que le ResizeObserver
@@ -306,6 +317,9 @@ export function Stage({
     }
     const lH = lerp(iconGeom.labelH ?? 0, currGeom.labelH ?? 0, p);
     const lW = lerp(iconGeom.labelW ?? 0, currGeom.labelW ?? 0, p);
+    // Débord de la pastille teintée : se résorbe vers 0 à mesure que le panneau
+    // set_content (non teinté) prend le pas, évitant un saut d'accroche.
+    const bo = lerp(iconGeom.borderOutset ?? 0, currGeom.borderOutset ?? 0, p);
     effectiveGeometry[nodeId] = {
       id: currGeom.id,
       x: lerp(iconGeom.x, currGeom.x, p),
@@ -314,6 +328,7 @@ export function Stage({
       height: lerp(iconGeom.height, currGeom.height, p),
       ...(lH > 0 ? { labelH: lH } : {}),
       ...(lW > 0 ? { labelW: lW } : {}),
+      ...(bo > 0 ? { borderOutset: bo } : {}),
     };
   }
   const allEffectiveNodes = hasSetContentTransition
@@ -454,6 +469,7 @@ export function Stage({
               progress={1}
               highlighted={!!link.id && highlightedIds.has(link.id)}
               obstacles={allEffectiveNodes}
+              axis={axisFor(link.from, link.to)}
             />
           );
         })}
@@ -485,6 +501,7 @@ export function Stage({
               text={clip.text}
               progress={a.progress}
               obstacles={allEffectiveNodes}
+              axis={axisFor(clip.fromId, clip.toId)}
             />
           );
         })}
@@ -567,7 +584,9 @@ export function Stage({
             tg,
             allEffectiveNodes,
             movePorts.start,
-            movePorts.end
+            movePorts.end,
+            undefined,
+            axisFor(clip.fromId, clip.toId)
           );
           const pt = pathTip(conn, easeInOutCubic(a.progress));
           const opacity = clipOpacity(clip, t);

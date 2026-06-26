@@ -12,6 +12,7 @@
  */
 
 import type { Point } from './geometry';
+import type { ConnectionAxis } from './layout';
 import type { PathShape } from '../types';
 
 /** Échantillons par segment de courbe de Bézier (points strictement intérieurs). */
@@ -28,7 +29,13 @@ const STRAIGHT_EPS = 0.5;
 
 export function shapeWaypoints(
   control: Point[],
-  shape: PathShape
+  shape: PathShape,
+  /**
+   * Axe d'accroche des extrémités (face E/O ⇒ `horizontal`, N/S ⇒ `vertical`).
+   * Oriente les poignées de courbe / le premier coin pour que le tracé parte et
+   * arrive PERPENDICULAIREMENT à la face, indépendamment de la pente de la corde.
+   */
+  endpointAxis?: ConnectionAxis
 ): Point[] | undefined {
   // control = [start, …détours anti-collision, end] (longueur ≥ 2).
   switch (shape) {
@@ -37,12 +44,12 @@ export function shapeWaypoints(
       return control.length > 2 ? control.slice(1, -1) : undefined;
     case 'step':
     case 'smoothstep':
-      return stepWaypoints(control, shape === 'smoothstep');
+      return stepWaypoints(control, shape === 'smoothstep', endpointAxis);
     case 'simplebezier':
-      return curveWaypoints(control, true);
+      return curveWaypoints(control, true, endpointAxis);
     case 'bezier':
     default:
-      return curveWaypoints(control, false);
+      return curveWaypoints(control, false, endpointAxis);
   }
 }
 
@@ -70,11 +77,18 @@ function cubicAt(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point {
 }
 
 /** Points STRICTEMENT intérieurs (a et b exclus) d'une cubique a→b dont les
- *  poignées suivent l'axe dominant du segment. */
-function bezierBetween(a: Point, b: Point, simple: boolean): Point[] {
+ *  poignées suivent l'axe dominant du segment — ou `forceHorizontal` quand
+ *  l'extrémité s'accroche à une face imposée (la courbe part alors le long de la
+ *  normale à la face, pas de la corde). */
+function bezierBetween(
+  a: Point,
+  b: Point,
+  simple: boolean,
+  forceHorizontal?: boolean
+): Point[] {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
-  const horizontal = Math.abs(dx) >= Math.abs(dy);
+  const horizontal = forceHorizontal ?? Math.abs(dx) >= Math.abs(dy);
   let cp1: Point;
   let cp2: Point;
   if (horizontal) {
@@ -95,15 +109,19 @@ function bezierBetween(a: Point, b: Point, simple: boolean): Point[] {
 
 function curveWaypoints(
   control: Point[],
-  simple: boolean
+  simple: boolean,
+  endpointAxis?: ConnectionAxis
 ): Point[] | undefined {
   if (control.length === 2) {
     const [a, b] = control;
-    const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+    // Axe imposé par la face (cf. shapeWaypoints) ; sinon axe dominant de la corde.
+    const horizontal = endpointAxis
+      ? endpointAxis === 'horizontal'
+      : Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
     const crossDelta = horizontal ? b.y - a.y : b.x - a.x;
     // Aucun décalage transverse → la cubique se confond avec le segment droit.
     if (Math.abs(crossDelta) < STRAIGHT_EPS) return undefined;
-    return bezierBetween(a, b, simple);
+    return bezierBetween(a, b, simple, horizontal);
   }
   // Détour(s) présents : on enchaîne une cubique par segment de contrôle, en
   // réinsérant chaque point de jonction pour que la courbe le traverse.
@@ -117,11 +135,13 @@ function curveWaypoints(
 
 // ─── Step / SmoothStep ───────────────────────────────────────────────────────
 
-/** Deux coins orthogonaux reliant a→b (mi-parcours sur l'axe dominant). */
-function stepCorners(a: Point, b: Point): Point[] {
+/** Deux coins orthogonaux reliant a→b (mi-parcours sur l'axe dominant, ou
+ *  `forceHorizontal` quand l'extrémité s'accroche à une face imposée). */
+function stepCorners(a: Point, b: Point, forceHorizontal?: boolean): Point[] {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
-  if (Math.abs(dx) >= Math.abs(dy)) {
+  const horizontal = forceHorizontal ?? Math.abs(dx) >= Math.abs(dy);
+  if (horizontal) {
     const mx = (a.x + b.x) / 2;
     return [
       { x: mx, y: a.y },
@@ -144,11 +164,20 @@ function dedupe(pts: Point[]): Point[] {
   return out;
 }
 
-function stepWaypoints(control: Point[], smooth: boolean): Point[] | undefined {
+function stepWaypoints(
+  control: Point[],
+  smooth: boolean,
+  endpointAxis?: ConnectionAxis
+): Point[] | undefined {
+  // Sans détour (un seul segment), le premier coin part le long de la face imposée.
+  const forceH =
+    control.length === 2 && endpointAxis
+      ? endpointAxis === 'horizontal'
+      : undefined;
   // Polyligne orthogonale complète (extrémités incluses).
   const ortho: Point[] = [control[0]];
   for (let i = 0; i < control.length - 1; i++) {
-    ortho.push(...stepCorners(control[i], control[i + 1]));
+    ortho.push(...stepCorners(control[i], control[i + 1], forceH));
     ortho.push(control[i + 1]);
   }
   const poly = dedupe(ortho);

@@ -199,3 +199,49 @@ export function computeLayout(
   resolveCollisions(map, nodes, direction);
   return map;
 }
+
+/** Axe d'accroche d'une flèche : horizontal → faces Est/Ouest, vertical → Nord/Sud. */
+export type ConnectionAxis = 'horizontal' | 'vertical';
+
+/** Sous ce seuil de ratio, deux nœuds partagent la même coordonnée de FLUX :
+ *  ils sont dans la même lane (empilés), pas séparés par le flux. */
+const SAME_LANE_EPS = 1e-3;
+
+/**
+ * Axe sur lequel une connexion A→B s'accroche, dérivé du **flux du layout** et non
+ * de l'axe pixel dominant (qui dépend du viewport : sur un Stage portrait, deux
+ * nœuds de lanes voisines peuvent être plus éloignés verticalement et basculer à
+ * tort en vertical).
+ *
+ * - Flux horizontal (`left-to-right` / `right-to-left`) : une connexion **inter-lane**
+ *   part/arrive horizontalement (faces Est/Ouest) ; deux nœuds d'une **même lane**
+ *   (même `cx`, empilés) se relient verticalement.
+ * - Flux vertical (`top-to-bottom` / `bottom-to-top`) : symétrique.
+ * - `circular` : pas d'axe de flux → axe dominant en **pixels** (ratios × aspect),
+ *   ce qui correspond à ce que l'œil voit sur l'anneau.
+ *
+ * Décision UNIQUE, partagée par {@link computePortOffsets} (répartition fan-out) et
+ * l'accroche de `connection` : les deux ne peuvent donc pas se contredire.
+ */
+export function connectionAxis(
+  from: NodePlacement,
+  to: NodePlacement,
+  direction: Direction,
+  aspect = 1
+): ConnectionAxis {
+  const dCx = to.cx - from.cx;
+  const dCy = to.cy - from.cy;
+  switch (direction) {
+    case 'left-to-right':
+    case 'right-to-left':
+      return Math.abs(dCx) > SAME_LANE_EPS ? 'horizontal' : 'vertical';
+    case 'top-to-bottom':
+    case 'bottom-to-top':
+      return Math.abs(dCy) > SAME_LANE_EPS ? 'vertical' : 'horizontal';
+    case 'circular':
+    default:
+      return Math.abs(dCx * aspect) >= Math.abs(dCy)
+        ? 'horizontal'
+        : 'vertical';
+  }
+}

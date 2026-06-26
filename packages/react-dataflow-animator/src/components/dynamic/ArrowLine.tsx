@@ -8,6 +8,7 @@ import {
   visiblePath,
   type NodeGeom,
 } from '../../engine/geometry';
+import type { ConnectionAxis } from '../../engine/layout';
 import type { LineStyle, PathShape } from '../../types';
 
 /**
@@ -31,6 +32,9 @@ export interface ArrowLineProps {
   highlighted?: boolean;
   /** Tous les nœuds du stage — pour éviter les labels lors du routage. */
   obstacles?: NodeGeom[];
+  /** Axe d'accroche dérivé du flux du layout (cf. `connectionAxis`). Détermine la
+   *  face (E/O vs N/S) et l'orientation de départ/arrivée du tracé. */
+  axis?: ConnectionAxis;
 }
 
 const HEAD = 9;
@@ -48,6 +52,7 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     highlighted,
     obstacles,
     arrow_head,
+    axis,
   }: ArrowLineProps) {
     const headStyle = arrow_head ?? 'forward';
     const renderForward = headStyle === 'forward' || headStyle === 'both';
@@ -61,7 +66,8 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
       obstacles,
       startPortOffset,
       endPortOffset,
-      path
+      path,
+      axis
     );
 
     // Position et angle de la pointe au paramètre `progress`.

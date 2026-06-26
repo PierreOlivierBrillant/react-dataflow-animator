@@ -253,11 +253,12 @@ describe('computePortOffsets', () => {
     expect(result['ab'].start).not.toBeCloseTo(result['ac'].start);
   });
 
-  it('aspect 3:1 — dx=0.3 dy=0.4 est horizontal en pixels, vertical en ratios', () => {
-    // A→B : dx=0.3, dy=0.4 → |dy|>|dx| en ratios (vertical) mais |0.3×3|=0.9>0.4 en pixels (horizontal)
-    // A→C : dx=0.3, dy=-0.2 → horizontal dans les deux cas (face A|RIGHT)
-    // Avec aspect=3, A→B rejoint A→C sur la face A|RIGHT → fan-out → ac.start ≠ 0
-    // Sans aspect (=1), A→B va sur A|BOTTOM → ac seul sur A|RIGHT → ac.start = 0
+  it('circular : l’aspect départage l’axe dominant (pixels vs ratios)', () => {
+    // Sans axe de flux (circular), l'orientation reste l'axe dominant en pixels.
+    // A→B : dx=0.3, dy=0.4 → vertical en ratios mais |0.3×3|=0.9>0.4 en pixels.
+    // A→C : dx=0.3, dy=-0.2 → horizontal dans les deux cas (face A|RIGHT).
+    // aspect=3 : A→B rejoint A→C sur A|RIGHT → fan-out → ac.start ≠ 0.
+    // aspect=1 : A→B passe sur A|BOTTOM → ac seul sur A|RIGHT → ac.start = 0.
     const connections = [
       { key: 'ab1', from: 'A', to: 'B' },
       { key: 'ab2', from: 'A', to: 'B' },
@@ -268,11 +269,58 @@ describe('computePortOffsets', () => {
       B: { cx: 0.5, cy: 0.9 },
       C: { cx: 0.5, cy: 0.3 },
     };
-    const withAspect = computePortOffsets(connections, layout, 3);
+    const withAspect = computePortOffsets(connections, layout, 3, 'circular');
     expect(withAspect['ac'].start).toBeCloseTo(-PORT_SPACING / 2);
 
-    const withoutAspect = computePortOffsets(connections, layout);
+    const withoutAspect = computePortOffsets(
+      connections,
+      layout,
+      1,
+      'circular'
+    );
     expect(withoutAspect['ac'].start).toBeCloseTo(0);
+  });
+
+  it('flux left-to-right : l’orientation suit le flux, pas l’aspect', () => {
+    // A en lane 1, B et C en lane 2 (cx=0.8) de part et d'autre : connexions
+    // INTER-lane → horizontales (faces A|RIGHT) quel que soit l'aspect. Les deux
+    // paires partagent donc la face → fan-out distinct, à tout aspect (≠ ancien
+    // comportement où un Stage portrait basculait A→B en vertical).
+    const connections = [
+      { key: 'ab', from: 'A', to: 'B' },
+      { key: 'ac', from: 'A', to: 'C' },
+    ];
+    const layout = {
+      A: { cx: 0.2, cy: 0.5 },
+      B: { cx: 0.8, cy: 0.95 }, // très bas → dy ≫ dx en ratios
+      C: { cx: 0.8, cy: 0.05 }, // très haut
+    };
+    for (const aspect of [0.3, 1, 3]) {
+      const r = computePortOffsets(
+        connections,
+        layout,
+        aspect,
+        'left-to-right'
+      );
+      expect(r['ab'].start).not.toBeCloseTo(r['ac'].start);
+    }
+  });
+
+  it('flux left-to-right : deux nœuds d’une même lane (même cx) → axe vertical', () => {
+    // A et B partagent cx=0.5 (empilés) → connexion INTRA-lane → verticale :
+    // faces A|BOTTOM / B|TOP. Une 2e paire A→B vérifie l'écartement sur cet axe.
+    const connections = [
+      { key: 'ab1', from: 'A', to: 'B' },
+      { key: 'ab2', from: 'A', to: 'B' },
+    ];
+    const layout = {
+      A: { cx: 0.5, cy: 0.2 },
+      B: { cx: 0.5, cy: 0.8 },
+    };
+    const r = computePortOffsets(connections, layout, 1.6, 'left-to-right');
+    // Offsets intra-paire opposés et symétriques (peu importe l'axe).
+    expect(r['ab1'].start).toBeCloseTo(-r['ab2'].start);
+    expect(Math.abs(r['ab1'].start)).toBeCloseTo(PORT_SPACING / 2);
   });
 
   it('connexion vers un id absent du layout → ne plante pas (utilise 0.5/0.5)', () => {

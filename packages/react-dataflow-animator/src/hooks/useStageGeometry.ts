@@ -51,12 +51,21 @@ function sameGeometry(a: GeometryMap, b: GeometryMap): boolean {
       x.width !== y.width ||
       x.height !== y.height ||
       x.labelH !== y.labelH ||
-      x.labelW !== y.labelW
+      x.labelW !== y.labelW ||
+      x.borderOutset !== y.borderOutset
     )
       return false;
   }
   return true;
 }
+
+/**
+ * Débord (px, avant échelle) de la pastille des pictogrammes teintés au-delà du
+ * glyphe. DOIT rester synchronisé avec le CSS :
+ * `.rdfa-node--tinted .rdfa-node-icon::before { inset: calc(-5px * var(--rdfa-scale)) }`.
+ * La mesure DOM ne voit pas ce pseudo-élément (hors flux), on le reconstitue donc.
+ */
+const PASTILLE_INSET = 5;
 
 /**
  * @param signature chaîne qui change quand l'ensemble des nœuds change, pour
@@ -102,6 +111,18 @@ export function useStageGeometry(signature: string): StageGeometry {
         const lr = labelEl.getBoundingClientRect();
         node.labelH = lr.height;
         node.labelW = lr.width;
+      }
+      // Pictogramme teinté : la pastille (`background_color`) déborde du glyphe
+      // mesuré. Les flèches s'accrochent sur ce contour coloré → on expose le
+      // débord, à l'échelle courante (--rdfa-scale), comme `borderOutset`.
+      if (
+        el.classList.contains('rdfa-node--tinted') &&
+        el.querySelector('.rdfa-node-icon')
+      ) {
+        const scale =
+          parseFloat(getComputedStyle(el).getPropertyValue('--rdfa-scale')) ||
+          1;
+        node.borderOutset = PASTILLE_INSET * scale;
       }
       map[id] = node;
     });

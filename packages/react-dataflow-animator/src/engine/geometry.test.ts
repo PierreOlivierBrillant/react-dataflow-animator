@@ -20,7 +20,8 @@ const mkNode = (
   w = 40,
   h = 40,
   labelH = 0,
-  labelW?: number
+  labelW?: number,
+  borderOutset?: number
 ): NodeGeom => ({
   id,
   x,
@@ -29,6 +30,7 @@ const mkNode = (
   height: h,
   ...(labelH > 0 ? { labelH } : {}),
   ...(labelW !== undefined ? { labelW } : {}),
+  ...(borderOutset !== undefined ? { borderOutset } : {}),
 });
 
 const makeConn = (
@@ -164,8 +166,99 @@ describe('connection', () => {
     const noOffset = connection(from, to);
     const withOffset = connection(from, to, undefined, 10);
     expect(noOffset.start.y).toBeCloseTo(0, 5);
-    // tExit = 34/200 → start.y = 10 × (1 - 34/200) = 10 × 0.83 = 8.3
-    expect(withOffset.start.y).toBeCloseTo(8.3, 5);
+    // Accroche cardinale Est : start.y = centre (0) + portOffset (10).
+    expect(withOffset.start.y).toBeCloseTo(10, 5);
+  });
+});
+
+// ─── Accroche cardinale (NSEW) ───────────────────────────────────────────────
+
+describe('accroche cardinale', () => {
+  // ── Sélection de face par l'axe dominant ──────────────────────────────────
+  it('axe horizontal dominant : source Est, destination Ouest', () => {
+    // dx=300, dy=80 → |dx| ≥ |dy| → horizontal. Faces opposées E/O à hauteur des
+    // centres (pas de label), pas au point d'intersection oblique.
+    const from = mkNode('fh', 0, 0);
+    const to = mkNode('th', 300, 80);
+    const c = connection(from, to);
+    expect(c.start.x).toBeCloseTo(34, 5); // 0 + 20 + 14
+    expect(c.start.y).toBeCloseTo(0, 5); // face Est → y du centre source
+    expect(c.end.x).toBeCloseTo(266, 5); // 300 - 20 - 14
+    expect(c.end.y).toBeCloseTo(80, 5); // face Ouest → y du centre destination
+  });
+
+  it('axe vertical dominant : source Nord, destination Sud', () => {
+    // dy=-300, dx=80 → vertical, dy<0 → source Nord, destination Sud.
+    const from = mkNode('fv', 0, 0);
+    const to = mkNode('tv', 80, -300);
+    const c = connection(from, to);
+    expect(c.start.x).toBeCloseTo(0, 5); // face Nord → x du centre source
+    expect(c.start.y).toBeCloseTo(-34, 5); // 0 - 20 - 14
+    expect(c.end.x).toBeCloseTo(80, 5);
+    expect(c.end.y).toBeCloseTo(-300 + 20 + 14, 5); // face Sud sans label
+  });
+
+  // ── Abaissement latéral quand le nœud a un label (centre de gravité) ──────
+  it('label sous le visuel : le point latéral descend au centre du bloc', () => {
+    // labelH=20 → descente = (LABEL_GAP + labelH)/2 = (6 + 20)/2 = 13.
+    const from = mkNode('fl', 0, 0, 40, 40, 20, 80);
+    const to = mkNode('tl', 300, 0);
+    const c = connection(from, to);
+    expect(c.start.y).toBeCloseTo(13, 5);
+    expect(c.end.y).toBeCloseTo(0, 5); // destination sans label : reste centrée
+  });
+
+  // ── borderOutset : la pastille pousse l'accroche vers l'extérieur ─────────
+  it('borderOutset pousse le point Est/Ouest de o px supplémentaires', () => {
+    const from = mkNode('fo', 0, 0, 40, 40, 0, undefined, 5);
+    const to = mkNode('to', 300, 0);
+    const c = connection(from, to);
+    expect(c.start.x).toBeCloseTo(39, 5); // 0 + 20 + 5 (outset) + 14
+  });
+
+  // ── portOffset sur une face verticale décale x ────────────────────────────
+  it('portOffset sur une face Nord/Sud décale la coordonnée x', () => {
+    const from = mkNode('fpv', 0, 0);
+    const to = mkNode('tpv', 0, 300); // vertical → source Sud
+    const c = connection(from, to, undefined, 10);
+    expect(c.start.x).toBeCloseTo(10, 5); // face Sud → x = centre (0) + portOffset
+    expect(c.start.y).toBeCloseTo(34, 5); // 0 + 20 + 14, sans label
+  });
+
+  // ── axis imposé : la face suit le flux, pas l'axe pixel dominant ──────────
+  it('axis horizontal forcé : faces E/O même si surtout séparés verticalement', () => {
+    const from = mkNode('fa', 0, 0);
+    const to = mkNode('ta', 40, 300); // |dy| ≫ |dx| en pixels
+    // Sans axis : pixel dominant → face Sud.
+    expect(connection(from, to).start.y).toBeGreaterThan(from.y);
+    // Avec axis horizontal : faces Est/Ouest.
+    const forced = connection(
+      from,
+      to,
+      undefined,
+      0,
+      0,
+      'bezier',
+      'horizontal'
+    );
+    expect(forced.start.x).toBeCloseTo(34, 5); // Est : 0 + 20 + 14
+    expect(forced.start.y).toBeCloseTo(0, 5);
+    expect(forced.end.x).toBeCloseTo(6, 5); // Ouest : 40 - 20 - 14
+    expect(forced.end.y).toBeCloseTo(300, 5);
+    // Le tracé PART horizontalement : le 1er point reste ~à la hauteur du départ
+    // (la poignée de Bézier suit la normale à la face, pas la corde verticale).
+    expect(forced.waypoints![0].y).toBeLessThan(10);
+  });
+
+  it('axis vertical forcé : faces N/S même si surtout séparés horizontalement', () => {
+    const from = mkNode('fb', 0, 0);
+    const to = mkNode('tb', 300, 40); // |dx| ≫ |dy| en pixels
+    const forced = connection(from, to, undefined, 0, 0, 'bezier', 'vertical');
+    expect(forced.start.y).toBeCloseTo(34, 5); // Sud : 0 + 20 + 14
+    expect(forced.start.x).toBeCloseTo(0, 5);
+    expect(forced.end.y).toBeCloseTo(6, 5); // Nord : 40 - 20 - 14
+    // Le tracé part verticalement : 1er point ~à l'abscisse du départ.
+    expect(forced.waypoints![0].x).toBeLessThan(10);
   });
 });
 

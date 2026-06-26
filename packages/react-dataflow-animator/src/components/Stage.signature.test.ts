@@ -49,6 +49,30 @@ describe('buildStageSignature', () => {
     expect(after).not.toBe(before);
   });
 
+  it('change quand background_color change (influe sur borderOutset)', () => {
+    const before = buildStageSignature(base);
+    const after = buildStageSignature({
+      ...base,
+      nodes: [
+        { id: 'a', type: 'server', lane: 1, background_color: '#bfdbfe' },
+        { id: 'b', type: 'server', lane: 2 },
+      ],
+    });
+    expect(after).not.toBe(before);
+  });
+
+  it('change quand type change', () => {
+    const before = buildStageSignature(base);
+    const after = buildStageSignature({
+      ...base,
+      nodes: [
+        { id: 'a', type: 'circle', lane: 1 },
+        { id: 'b', type: 'server', lane: 2 },
+      ],
+    });
+    expect(after).not.toBe(before);
+  });
+
   it('est stable à spec identique', () => {
     expect(buildStageSignature(base)).toBe(buildStageSignature(base));
   });

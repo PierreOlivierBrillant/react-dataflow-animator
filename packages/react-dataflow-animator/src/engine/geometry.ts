@@ -5,6 +5,7 @@
  */
 
 import type { PathShape } from '../types';
+import type { ConnectionAxis } from './layout';
 import { shapeWaypoints } from './pathShapes';
 
 export interface Point {
@@ -24,6 +25,13 @@ export interface NodeGeom {
   labelH?: number;
   /** Largeur du label textuel (px). */
   labelW?: number;
+  /**
+   * Débord (px) du contour coloré au-delà du bord visuel mesuré : la pastille
+   * d'un pictogramme teinté (`background_color`) déborde du glyphe. Les flèches
+   * s'accrochent sur ce contour, donc on ajoute ce débord à la demi-extension du
+   * nœud. 0/absent pour formes et panneaux (leur bord coloré = la boîte mesurée).
+   */
+  borderOutset?: number;
 }
 
 export type GeometryMap = Record<string, NodeGeom>;
@@ -106,12 +114,62 @@ function segmentIntersectsRect(
   return { tEntry: tMin, tExit: tMax };
 }
 
+/** Les 4 faces cardinales sur lesquelles une flèche peut s'accrocher. */
+type Face = 'east' | 'west' | 'north' | 'south';
+
+/**
+ * Point d'accroche cardinal d'une flèche sur une face du nœud : posé sur le
+ * contour coloré (bord visuel + `borderOutset`, la pastille des pictogrammes
+ * teintés) puis écarté de `NODE_GAP`.
+ *
+ * - Faces latérales (est/ouest) : la coordonnée transverse `y` descend au centre
+ *   de gravité du bloc *visuel + label* — un label sous le nœud le déséquilibre
+ *   vers le bas, donc l'accroche latérale au centre du seul visuel paraîtrait trop
+ *   haute — et reçoit `portOffset` (écartement intra-paire / fan-out).
+ * - Face sud : passe SOUS le label, qui fait partie de l'empreinte basse du nœud.
+ * - Faces verticales (nord/sud) : `portOffset` décale la coordonnée `x`.
+ */
+function cardinalAttach(node: NodeGeom, face: Face, portOffset: number): Point {
+  const halfW = node.width / 2;
+  const halfH = node.height / 2;
+  const outset = node.borderOutset ?? 0;
+  const labelH = node.labelH ?? 0;
+  // Centre de gravité vertical du bloc : descend de la moitié de l'extension
+  // ajoutée par le label sous le visuel (gap + hauteur du label).
+  const lateralY = node.y + (labelH > 0 ? (LABEL_GAP + labelH) / 2 : 0);
+  switch (face) {
+    case 'east':
+      return {
+        x: node.x + halfW + outset + NODE_GAP,
+        y: lateralY + portOffset,
+      };
+    case 'west':
+      return {
+        x: node.x - halfW - outset - NODE_GAP,
+        y: lateralY + portOffset,
+      };
+    case 'north':
+      return { x: node.x + portOffset, y: node.y - halfH - outset - NODE_GAP };
+    case 'south': {
+      const bottom = labelH > 0 ? halfH + LABEL_GAP + labelH : halfH + outset;
+      return { x: node.x + portOffset, y: node.y + bottom + NODE_GAP };
+    }
+  }
+}
+
 /**
  * Points de connexion entre deux nœuds.
  *
- * - Rogne les extrémités pour qu'elles touchent le bord des nœuds (pas le centre).
- * - `obstacles` : liste de tous les nœuds → repousse start/end hors des labels
- *   source/destination et insère un waypoint si le segment croise un label tiers.
+ * - Accroche les extrémités à l'un des 4 points cardinaux (N/S/E/O) du nœud, sur
+ *   son contour coloré (cf. {@link cardinalAttach}). L'axe est fourni par `axis`
+ *   (dérivé du flux du layout, cf. `connectionAxis`) — la MÊME décision que
+ *   `computePortOffsets`, pour qu'accroche et fan-out ne se contredisent jamais.
+ *   À défaut d'`axis` (tests/usage isolé), on retombe sur l'axe pixel dominant.
+ * - Le tracé part/arrive perpendiculairement à la face : `axis` est aussi passé à
+ *   `shapeWaypoints` pour orienter les poignées de courbe (sinon une courbe entre
+ *   deux faces E/O mais à fort dénivelé repartirait verticalement).
+ * - `obstacles` : liste de tous les nœuds → insère un waypoint si le segment
+ *   croise un label tiers.
  */
 export function connection(
   from: NodeGeom,
@@ -119,66 +177,34 @@ export function connection(
   obstacles?: NodeGeom[],
   startPortOffset = 0,
   endPortOffset = 0,
-  shape: PathShape = 'bezier'
+  shape: PathShape = 'bezier',
+  axis?: ConnectionAxis
 ): Connection {
-  const c1 = { x: from.x, y: from.y };
-  const c2 = { x: to.x, y: to.y };
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const isHorizontal = axis
+    ? axis === 'horizontal'
+    : Math.abs(dx) >= Math.abs(dy);
 
-  const lbFrom = labelBounds(from);
-  const fromBottom = lbFrom
-    ? Math.max(from.y + from.height / 2, lbFrom.y + lbFrom.h)
-    : from.y + from.height / 2;
-  const fromRect = {
-    x: from.x - from.width / 2 - NODE_GAP,
-    y: from.y - from.height / 2 - NODE_GAP,
-    w: from.width + 2 * NODE_GAP,
-    h: fromBottom - (from.y - from.height / 2) + 2 * NODE_GAP,
-  };
+  // Faces cardinales opposées : la source pointe vers la destination, la
+  // destination reçoit la face inverse.
+  const fromFace: Face = isHorizontal
+    ? dx >= 0
+      ? 'east'
+      : 'west'
+    : dy >= 0
+      ? 'south'
+      : 'north';
+  const toFace: Face = isHorizontal
+    ? dx >= 0
+      ? 'west'
+      : 'east'
+    : dy >= 0
+      ? 'north'
+      : 'south';
 
-  const lbTo = labelBounds(to);
-  const toBottom = lbTo
-    ? Math.max(to.y + to.height / 2, lbTo.y + lbTo.h)
-    : to.y + to.height / 2;
-  const toRect = {
-    x: to.x - to.width / 2 - NODE_GAP,
-    y: to.y - to.height / 2 - NODE_GAP,
-    w: to.width + 2 * NODE_GAP,
-    h: toBottom - (to.y - to.height / 2) + 2 * NODE_GAP,
-  };
-
-  const dx = c2.x - c1.x;
-  const dy = c2.y - c1.y;
-  const isHorizontal = Math.abs(dx) >= Math.abs(dy);
-
-  const c1_s = { x: c1.x, y: c1.y };
-  const c2_s = { x: c2.x, y: c2.y };
-
-  if (isHorizontal) {
-    c1_s.y += startPortOffset;
-    c2_s.y += endPortOffset;
-  } else {
-    c1_s.x += startPortOffset;
-    c2_s.x += endPortOffset;
-  }
-
-  const isectFrom = segmentIntersectsRect(c1_s, c2_s, fromRect);
-  const startBase = isectFrom
-    ? {
-        x: c1_s.x + (c2_s.x - c1_s.x) * isectFrom.tExit,
-        y: c1_s.y + (c2_s.y - c1_s.y) * isectFrom.tExit,
-      }
-    : c1_s;
-
-  const isectTo = segmentIntersectsRect(c1_s, c2_s, toRect);
-  const endBase = isectTo
-    ? {
-        x: c1_s.x + (c2_s.x - c1_s.x) * isectTo.tEntry,
-        y: c1_s.y + (c2_s.y - c1_s.y) * isectTo.tEntry,
-      }
-    : c2_s;
-
-  const start: Point = startBase;
-  const end: Point = endBase;
+  const start: Point = cardinalAttach(from, fromFace, startPortOffset);
+  const end: Point = cardinalAttach(to, toFace, endPortOffset);
 
   // Détecte le premier label tiers que le segment traverse et insère un détour
   // juste au-dessus/à côté pour le contourner. Ce détour est indépendant de la
@@ -220,7 +246,11 @@ export function connection(
   // `shapeWaypoints` renvoie les points intermédiaires effectifs (échantillons de
   // courbe, coins…), parcourus par longueur d'arc comme un simple polyligne.
   const control: Point[] = detour ? [start, ...detour, end] : [start, end];
-  const waypoints = shapeWaypoints(control, shape);
+  const waypoints = shapeWaypoints(
+    control,
+    shape,
+    isHorizontal ? 'horizontal' : 'vertical'
+  );
 
   // Angle du dernier segment (pour la pointe de flèche).
   const lastPt =

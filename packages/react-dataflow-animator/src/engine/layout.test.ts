@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DataFlowSpec } from '../types';
-import { computeLayout } from './layout';
+import { computeLayout, connectionAxis } from './layout';
 
 describe('computeLayout — linéaire', () => {
   it('left-to-right : lane croissante = x croissant', () => {
@@ -168,5 +168,54 @@ describe('computeLayout — circular', () => {
     const layout = computeLayout(spec);
     expect(layout.a).toBeDefined();
     expect(layout.b).toBeDefined();
+  });
+});
+
+describe('connectionAxis', () => {
+  it('left-to-right : inter-lane → horizontal, même avec un fort dénivelé', () => {
+    // Δcx significatif (lanes différentes) → horizontal, quel que soit Δcy.
+    const a = { cx: 0.2, cy: 0.5 };
+    const auth = { cx: 0.8, cy: 0.1 }; // bien plus haut → Δcy > Δcx
+    expect(connectionAxis(a, auth, 'left-to-right')).toBe('horizontal');
+  });
+
+  it('left-to-right : même lane (même cx) → vertical', () => {
+    const a = { cx: 0.5, cy: 0.2 };
+    const b = { cx: 0.5, cy: 0.8 };
+    expect(connectionAxis(a, b, 'left-to-right')).toBe('vertical');
+  });
+
+  it('right-to-left : inter-lane → horizontal', () => {
+    expect(
+      connectionAxis(
+        { cx: 0.8, cy: 0.5 },
+        { cx: 0.2, cy: 0.2 },
+        'right-to-left'
+      )
+    ).toBe('horizontal');
+  });
+
+  it('top-to-bottom : inter-lane → vertical ; même lane → horizontal', () => {
+    expect(
+      connectionAxis(
+        { cx: 0.5, cy: 0.2 },
+        { cx: 0.1, cy: 0.8 },
+        'top-to-bottom'
+      )
+    ).toBe('vertical');
+    expect(
+      connectionAxis(
+        { cx: 0.2, cy: 0.5 },
+        { cx: 0.8, cy: 0.5 },
+        'top-to-bottom'
+      )
+    ).toBe('horizontal');
+  });
+
+  it('circular : axe dominant en pixels (l’aspect départage)', () => {
+    const a = { cx: 0.2, cy: 0.5 };
+    const b = { cx: 0.5, cy: 0.9 }; // Δcx=0.3, Δcy=0.4
+    expect(connectionAxis(a, b, 'circular', 1)).toBe('vertical');
+    expect(connectionAxis(a, b, 'circular', 3)).toBe('horizontal'); // 0.3×3 > 0.4
   });
 });
