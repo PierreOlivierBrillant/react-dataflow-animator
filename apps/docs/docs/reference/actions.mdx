@@ -3,6 +3,19 @@ title: Action types
 slug: /reference/actions
 ---
 
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import {
+  moveExample,
+  arrowExample,
+  parallelExample,
+  loadingExample,
+  setContentExample,
+  commentExample,
+  setVisibleExample,
+  rotateExample,
+  highlightExample,
+} from './_actions/examples';
+
 The following action types are available. All share a set of common fields
 ([timeline lifecycle](../concepts/timeline.mdx): `id`, `duration`,
 `wait_for`, `keep_until`, `keep_until_next`, `keep_until_end`).
@@ -24,6 +37,8 @@ Moves a dynamic object from `from` to `to`.
 Produces two breakpoints: appearance and arrival. By default, the object
 disappears at the end of its animation.
 
+<DataFlowPlayer spec={moveExample} theme="auto" height={300} />
+
 ## `arrow`
 
 Draws an animated arrow between two nodes (progressive drawing).
@@ -43,6 +58,8 @@ Draws an animated arrow between two nodes (progressive drawing).
 For **permanent** arrows (decor displayed right from the initialization),
 use the `connections` root array instead.
 
+<DataFlowPlayer spec={arrowExample} theme="auto" height={300} />
+
 ## `parallel`
 
 Wraps child actions executed at the same time.
@@ -58,7 +75,10 @@ Wraps child actions executed at the same time.
 ```
 
 The `wait_for` and `keep_until` inside a `parallel` continue to
-work normally.
+work normally. Here a `move` and an `arrow` of different types start at the
+same instant.
+
+<DataFlowPlayer spec={parallelExample} theme="auto" height={320} />
 
 ## `loading`
 
@@ -67,6 +87,8 @@ Displays a loading spinner on a target node (simulates processing).
 ```ts
 { type: 'loading', object: 'db', duration: 900 }
 ```
+
+<DataFlowPlayer spec={loadingExample} theme="auto" height={300} />
 
 ## `set_content`
 
@@ -141,6 +163,10 @@ the wrapping object.
 | `columns`   | table           | Column headers.                                  |
 | `rows_data` | table           | Data rows.                                       |
 
+The three modes, side by side (`code`, `text`, then `table`):
+
+<DataFlowPlayer spec={setContentExample} theme="auto" height={340} />
+
 ## `comment`
 
 Displays a text bubble fading in near a node, identified by `object`.
@@ -162,6 +188,11 @@ is not attached to any specific component.
 { type: 'comment', text: 'Step 2 — Authentication' }
 ```
 
+Below, an omniscient comment (top of the scene) followed by two bubbles
+attached to nodes:
+
+<DataFlowPlayer spec={commentExample} theme="auto" height={320} />
+
 ## `set_visible`
 
 Shows or hides a static node with a fade. If this parameter is `false` (or
@@ -174,20 +205,40 @@ a contrary `set_visible`).
 { type: 'set_visible', object: 'cache', visible: true }
 ```
 
+<DataFlowPlayer spec={setVisibleExample} theme="auto" height={300} />
+
 ## `rotate`
 
-Animates the visual rotation of a node toward an **absolute** angle `to`
-(degrees, clockwise). The starting angle is the node's current rotation — its
-static [`rotation`](../concepts/nodes.mdx#rotation--node-orientation) field, or the
-target of a previous `rotate` — so successive rotations **chain**. Only the
-visual rotates; the label below stays upright. The final angle **persists**
-until the end of the timeline.
+Animates the visual rotation of a node. Two **mutually exclusive** modes; only
+the visual rotates (the label below stays upright), and the angle reached when
+the rotation ends **persists** until the end of the timeline.
+
+**Target angle** `to` (degrees, clockwise): a single _eased_ rotation. The
+starting angle is the node's current rotation — its static
+[`rotation`](../concepts/nodes.mdx#rotation--node-orientation) field, or the
+target of a previous `rotate` — so successive rotations **chain**.
 
 ```ts
 { type: 'rotate', object: 'gear', to: 90, duration: 600 }
 ```
 
-A full spin is just `to: 360` (from `0`); rotate back with `to: 0`.
+A full turn is just `to: 360` (from `0`); rotate back with `to: 0`.
+
+**Continuous spin** `spin` (degrees per second, signed — positive turns
+clockwise, negative counter-clockwise): the node turns at a constant speed
+(_linear_, no easing). How long it spins reuses the usual
+[timing](../concepts/timeline.mdx) fields — `duration`, `keep_until`, or
+`keep_until_end` — instead of a target angle.
+
+```ts
+{ type: 'rotate', object: 'gear', spin: 360, keep_until_end: true } // until the end
+{ type: 'rotate', object: 'gear', spin: -180, duration: 3000 }      // 3 s, counter-clockwise
+{ type: 'rotate', object: 'gear', spin: 90, keep_until: 'response' } // until action "response"
+```
+
+If both `to` and `spin` are given, `spin` wins.
+
+<DataFlowPlayer spec={rotateExample} theme="auto" height={300} />
 
 ## `highlight`
 
@@ -197,6 +248,11 @@ identified by their `id`.
 ```ts
 { type: 'highlight', object: 'db' }
 ```
+
+Here the halo pulses first on the `db` node, then on the permanent
+connection `link`:
+
+<DataFlowPlayer spec={highlightExample} theme="auto" height={300} />
 
 ## `wait`
 
