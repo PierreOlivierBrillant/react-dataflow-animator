@@ -139,6 +139,44 @@ describe('StaticNode — formes géométriques', () => {
   });
 });
 
+describe('StaticNode — rotation', () => {
+  it('applies a rotate transform to the visual, label stays untransformed', () => {
+    const { container } = render(
+      <StaticNode
+        object={{ id: 'arm', type: 'triangle', text: '45°' }}
+        placement={placement}
+        rotation={45}
+        highlight={highlightCode}
+      />
+    );
+    const visual = container.querySelector('.rdfa-node-visual') as HTMLElement;
+    expect(visual.style.transform).toBe('rotate(45deg)');
+    // The label sits outside .rdfa-node-visual, so it is never rotated.
+    const label = container.querySelector('.rdfa-node-label') as HTMLElement;
+    expect(label.style.transform).toBe('');
+  });
+
+  it('no rotation (or 0) leaves the visual without a transform', () => {
+    const { container } = renderNode({ id: 'arm', type: 'triangle' });
+    const visual = container.querySelector('.rdfa-node-visual') as HTMLElement;
+    expect(visual.style.transform).toBe('');
+  });
+
+  it('rotates the visual even when a set_content is active', () => {
+    const { container } = render(
+      <StaticNode
+        object={{ id: 'arm', type: 'triangle' }}
+        placement={placement}
+        rotation={90}
+        content={{ type: 'text', value: 'x' }}
+        highlight={highlightCode}
+      />
+    );
+    const visual = container.querySelector('.rdfa-node-visual') as HTMLElement;
+    expect(visual.style.transform).toBe('rotate(90deg)');
+  });
+});
+
 describe('StaticNode — couleurs (background_color / border_color)', () => {
   it('pose --rdfa-fill et --rdfa-stroke sur la racine du nœud', () => {
     const { container } = renderNode({

@@ -11,6 +11,7 @@ import {
   shapesExample,
   colorsExample,
   revealExample,
+  rotationExample,
 } from './_nodes/examples';
 
 Les **nœuds** (`nodes`) sont les objets statiques de la scène : serveurs,
@@ -278,5 +279,29 @@ nodes: [
 ],
 timeline: [
   { type: 'set_visible', object: 'cache', visible: true }, // … puis révélé
+],
+```
+
+## `rotation` — orientation du nœud
+
+`rotation` oriente le **visuel** du nœud (pictogramme, forme ou panneau) d'un
+angle en **degrés** (sens horaire, défaut `0`). Le label sous le nœud reste droit,
+et l'ancrage des flèches est calculé sur la boîte non pivotée — un nœud pivoté se
+connecte donc exactement comme un nœud droit.
+
+L'orientation peut être **animée** à l'exécution avec l'action
+[`rotate`](../reference/actions.mdx#rotate), qui amène le nœud vers un angle cible
+absolu. Les rotations successives s'enchaînent depuis l'angle courant.
+
+<DataFlowPlayer spec={rotationExample} theme="auto" height={320} />
+
+```ts
+nodes: [
+  { id: 'arm', type: 'triangle', text: '45°', rotation: 45 }, // orientation statique
+  { id: 'spin', type: 'width_rectangle', text: 'rotate' },
+],
+timeline: [
+  { type: 'rotate', object: 'spin', to: 180 }, // anime vers 180°
+  { type: 'rotate', object: 'spin', to: 360 }, // … puis un tour complet
 ],
 ```

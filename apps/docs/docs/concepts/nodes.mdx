@@ -11,6 +11,7 @@ import {
   shapesExample,
   colorsExample,
   revealExample,
+  rotationExample,
 } from './_nodes/examples';
 
 **Nodes** (`nodes`) are the static objects of the scene: servers,
@@ -278,5 +279,29 @@ nodes: [
 ],
 timeline: [
   { type: 'set_visible', object: 'cache', visible: true }, // … then revealed
+],
+```
+
+## `rotation` — node orientation
+
+`rotation` orients the node's **visual** (pictogram, shape or panel) by an angle
+in **degrees** (clockwise, default `0`). The label below the node stays upright,
+and arrow anchoring is computed on the unrotated box — so a rotated node connects
+exactly like a straight one.
+
+The orientation can be **animated** at runtime with the
+[`rotate`](../reference/actions.mdx#rotate) action, which moves the node toward an
+absolute target angle. Successive rotations chain from the current angle.
+
+<DataFlowPlayer spec={rotationExample} theme="auto" height={320} />
+
+```ts
+nodes: [
+  { id: 'arm', type: 'triangle', text: '45°', rotation: 45 }, // static orientation
+  { id: 'spin', type: 'width_rectangle', text: 'rotate' },
+],
+timeline: [
+  { type: 'rotate', object: 'spin', to: 180 }, // animate toward 180°
+  { type: 'rotate', object: 'spin', to: 360 }, // … then a full turn
 ],
 ```

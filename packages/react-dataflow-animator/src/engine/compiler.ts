@@ -12,6 +12,7 @@ import type {
   HighlightClip,
   LoadingClip,
   MoveClip,
+  RotateClip,
   SetContentClip,
   SetVisibleClip,
   Step,
@@ -49,6 +50,7 @@ const DEFAULT_DURATION: Record<ActionType, number> = {
   highlight: 600,
   parallel: 0,
   set_visible: 300,
+  rotate: 600,
   wait: 1000,
 };
 
@@ -61,6 +63,7 @@ const DEFAULT_KEEP_NEXT: Partial<Record<ActionType, boolean>> = {
   highlight: true,
   loading: false,
   set_visible: false,
+  rotate: false,
 };
 
 /** Normalizes line style (accepts historical alias `full`). */
@@ -95,6 +98,12 @@ interface Ctx {
   timingById: Map<string, { startMs: number; endMs: number }>;
   warnings: string[];
   counter: number;
+  /**
+   * Running rotation angle (deg) per node, seeded from `node.rotation`.
+   * Each `rotate` action reads it as the interpolation start, then updates it
+   * to its target — so chained rotations accumulate in declaration order.
+   */
+  rotationById: Map<string, number>;
 }
 
 function makeId(ctx: Ctx, action: Action): string {
@@ -310,6 +319,34 @@ function compileAction(
       if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
       break;
     }
+    case 'rotate': {
+      if (!action.object || typeof action.to !== 'number') {
+        ctx.warnings.push(`rotate "${id}": object/to (number) required.`);
+        break;
+      }
+      const fromDeg = ctx.rotationById.get(action.object) ?? 0;
+      const clip: RotateClip = {
+        ...base,
+        kind: 'rotate',
+        objectId: action.object,
+        fromDeg,
+        toDeg: action.to,
+        // keepEnd forced to true: the final angle persists until the end of the
+        // timeline so Stage can read the node's rotation at any later instant.
+        keepEnd: true,
+      };
+      // Update the running angle for chaining (next rotate on this node starts here).
+      ctx.rotationById.set(action.object, action.to);
+      ctx.pending.push({
+        clip,
+        keepUntil: undefined,
+        keepNext: false,
+        keepEnd: true,
+        stepIndex,
+      });
+      if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
+      break;
+    }
     default: {
       throw new Error(
         `Unrecognized action type: "${(action as Record<string, unknown>).type}"`
@@ -326,6 +363,11 @@ export function compile(spec: DataFlowSpec): CompileResult {
     timingById: new Map(),
     warnings: [],
     counter: 0,
+    rotationById: new Map(
+      spec.nodes
+        .filter((n) => typeof n.rotation === 'number')
+        .map((n) => [n.id, n.rotation as number])
+    ),
   };
 
   const steps: Step[] = [];

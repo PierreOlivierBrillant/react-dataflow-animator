@@ -212,6 +212,7 @@ function walkActions(
       case 'loading':
       case 'set_content':
       case 'comment':
+      case 'rotate':
         checkRef(`${p}/object`, a.object, staticIds, errors);
         break;
       case 'highlight': {

@@ -250,6 +250,11 @@ function build(locale: Locale): ApiExamples {
       packets: [],
       timeline: [],
     },
+    'Node.rotation': {
+      nodes: [{ id: 'n', type: 'triangle', text: '45°', rotation: 45 }],
+      packets: [],
+      timeline: [],
+    },
 
     // ── Connection ──────────────────────────────────────────────────────────
     'Connection.style': {
@@ -509,6 +514,10 @@ function build(locale: Locale): ApiExamples {
     'Node.language': tr(
       '`language: "sql"` colors the node text.',
       '`language: "sql"` colore le texte du nœud.'
+    ),
+    'Node.rotation': tr(
+      '`rotation: 45` orients the visual; the label stays upright.',
+      '`rotation: 45` oriente le visuel ; le label reste droit.'
     ),
 
     'Connection.style': tr(
@@ -915,6 +924,35 @@ function build(locale: Locale): ApiExamples {
           note: tr(
             '`object`: node (or connection) to highlight.',
             '`object` : nœud (ou connexion) à surligner.'
+          ),
+        },
+      ],
+    },
+    {
+      defName: 'RotateAction',
+      scene: [{ id: 'a', type: 'width_rectangle', text: 'rotate' }],
+      core: { type: 'rotate', object: 'a', to: 90 },
+      refNode: 'a',
+      fields: [
+        {
+          name: 'type',
+          note: tr(
+            'Animated rotation of the node visual.',
+            'Rotation animée du visuel du nœud.'
+          ),
+        },
+        {
+          name: 'object',
+          note: tr(
+            '`object`: the node to rotate.',
+            '`object` : le nœud à faire pivoter.'
+          ),
+        },
+        {
+          name: 'to',
+          note: tr(
+            '`to`: absolute target angle in degrees.',
+            '`to` : angle cible absolu en degrés.'
           ),
         },
       ],

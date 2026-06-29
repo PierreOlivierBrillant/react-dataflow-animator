@@ -60,7 +60,14 @@ an HTTP packet) and eight **geometric shapes** (`square`, `diamond`,
 `circle`, `triangle`, `parallelogram`, `width_rectangle`, `height_rectangle`, `star`).
 Each node can receive: a `text` (label), a `subicon` (known tech, registered icon
 **or free text**), an `url` (making the node clickable), an
-initial `content`, and **colors** `background_color` / `border_color`.
+initial `content`, **colors** `background_color` / `border_color`, and a
+`rotation` (orientation in degrees).
+
+**Rotation** (`rotation`, degrees, clockwise, default 0): orients the node's
+**visual** (pictogram, shape or panel) without rotating its label (which stays
+upright) nor its layout box — arrow anchoring is computed on the unrotated box, so
+a rotated node connects exactly like a straight one. The orientation can be
+**animated** at runtime via the [`rotate` action](#5-animation-engine-and-actions).
 
 **Colors** (`background_color`, `border_color`, `text_color`): change the background,
 border, and text of the node — fill/stroke of a shape, background/border of a
@@ -140,6 +147,11 @@ The timeline compiles an array of ordered actions. See
 9. **set_visible**: shows or hides a static node (`object`) with a fade.
    The visibility state persists until the end of the chronology (or a
    contrary `set_visible`); complements the initial `visible` field of the nodes.
+10. **rotate**: animates the visual rotation of a node (`object`) toward an
+    absolute angle `to` (degrees). The start angle is the node's current
+    rotation (its static `rotation`, or a previous `rotate`), so successive
+    rotations chain in declaration order. Like `set_visible`, the final angle
+    persists until the end of the chronology.
 
 ## 6. Temporal lifecycle
 

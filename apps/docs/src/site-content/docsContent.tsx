@@ -371,6 +371,7 @@ const ACTION_DEFS = [
   'SetContentAction',
   'CommentAction',
   'HighlightAction',
+  'RotateAction',
 ] as const;
 
 /** Discriminant `type` affiché pour une action (fallback : nom de la définition). */

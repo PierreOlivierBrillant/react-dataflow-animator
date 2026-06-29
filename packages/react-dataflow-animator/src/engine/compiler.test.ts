@@ -493,6 +493,64 @@ describe('compile — set_visible', () => {
   });
 });
 
+describe('compile — rotate', () => {
+  type RotateClip = import('./timeline').RotateClip;
+
+  it('produces a rotate clip persisting to the end, fromDeg=0 by default', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'rotate', id: 'ROT', object: 'a', to: 90 },
+        { type: 'arrow', id: 'AR', from: 'a', to: 'b', duration: 300 },
+      ])
+    );
+    const rot = timeline.clips.find((c) => c.id === 'ROT')! as RotateClip;
+    expect(rot.kind).toBe('rotate');
+    expect(rot.keepEnd).toBe(true);
+    expect(rot.visibleUntilMs).toBe(timeline.durationMs);
+    expect(rot.fromDeg).toBe(0);
+    expect(rot.toDeg).toBe(90);
+  });
+
+  it('seeds fromDeg from the node static rotation', () => {
+    const { timeline } = compile({
+      nodes: [
+        { id: 'a', type: 'client', rotation: 30 },
+        { id: 'b', type: 'server' },
+      ],
+      packets,
+      timeline: [{ type: 'rotate', id: 'ROT', object: 'a', to: 120 }],
+    });
+    const rot = timeline.clips.find((c) => c.id === 'ROT')! as RotateClip;
+    expect(rot.fromDeg).toBe(30);
+    expect(rot.toDeg).toBe(120);
+  });
+
+  it('chains: the second rotate starts from the first target', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'rotate', id: 'R1', object: 'a', to: 90 },
+        { type: 'rotate', id: 'R2', object: 'a', to: 180 },
+      ])
+    );
+    const r1 = timeline.clips.find((c) => c.id === 'R1')! as RotateClip;
+    const r2 = timeline.clips.find((c) => c.id === 'R2')! as RotateClip;
+    expect(r1.toDeg).toBe(90);
+    expect(r2.fromDeg).toBe(90);
+    expect(r2.toDeg).toBe(180);
+  });
+
+  it('emits a warning if object is missing or `to` is not a number', () => {
+    const { timeline, warnings } = compile(
+      specOf([
+        { type: 'rotate', to: 90 } as unknown as Action,
+        { type: 'rotate', object: 'a' } as unknown as Action,
+      ])
+    );
+    expect(timeline.clips).toHaveLength(0);
+    expect(warnings.filter((w) => w.includes('rotate'))).toHaveLength(2);
+  });
+});
+
 describe('compile — wait', () => {
   it('does not emit any clip but creates a step that shifts the following ones', () => {
     const { timeline } = compile(

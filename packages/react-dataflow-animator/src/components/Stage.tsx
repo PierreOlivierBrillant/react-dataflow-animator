@@ -20,6 +20,7 @@ import {
   type CommentClip,
   type HighlightClip,
   type MoveClip,
+  type RotateClip,
   type SetContentClip,
   type SetVisibleClip,
   type Timeline,
@@ -363,6 +364,26 @@ export function Stage({
     }
   }
 
+  // Rotation angle (deg) by node: initialized from `node.rotation`, then
+  // updated by active rotate clips. Like set_visible, rotate clips have
+  // keepEnd=true so they persist in `active`; iterating in startMs order means
+  // the most recent rotate on a node wins (the one whose animation covers t).
+  const nodeRotation: Record<string, number> = {};
+  for (const node of spec.nodes) {
+    if (typeof node.rotation === 'number')
+      nodeRotation[node.id] = node.rotation;
+  }
+  for (const a of active) {
+    if (a.clip.kind === 'rotate') {
+      const clip = a.clip as RotateClip;
+      nodeRotation[clip.objectId] = lerp(
+        clip.fromDeg,
+        clip.toDeg,
+        easeInOutCubic(a.progress)
+      );
+    }
+  }
+
   const loadingNodes = useMemo(() => {
     const set = new Set<string>();
     for (const a of active)
@@ -526,6 +547,7 @@ export function Stage({
             highlighted={highlightedIds.has(o.id)}
             highlight={highlight}
             opacity={nodeOpacity < 1 ? nodeOpacity : undefined}
+            rotation={nodeRotation[o.id]}
             reveal={revealByNode[o.id]}
             contentLimit={
               contentLimits[o.id]

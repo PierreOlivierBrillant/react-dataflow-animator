@@ -16,7 +16,8 @@ export type ClipKind =
   | 'set_content'
   | 'comment'
   | 'highlight'
-  | 'set_visible';
+  | 'set_visible'
+  | 'rotate';
 
 interface ClipBase {
   /** Unique clip identifier (= action id if provided, otherwise generated). */
@@ -92,6 +93,16 @@ export interface SetVisibleClip extends ClipBase {
   visible: boolean;
 }
 
+export interface RotateClip extends ClipBase {
+  kind: 'rotate';
+  /** ID of the rotated static node. */
+  objectId: string;
+  /** Angle (deg) before this clip — interpolation start. */
+  fromDeg: number;
+  /** Absolute target angle (deg). */
+  toDeg: number;
+}
+
 export type Clip =
   | MoveClip
   | ArrowClip
@@ -99,7 +110,8 @@ export type Clip =
   | SetContentClip
   | CommentClip
   | HighlightClip
-  | SetVisibleClip;
+  | SetVisibleClip
+  | RotateClip;
 
 export interface Step {
   index: number;

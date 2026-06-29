@@ -218,6 +218,13 @@ export interface Node {
    * see {@link HighlightLanguage}.
    */
   language?: HighlightLanguage | (string & {});
+  /**
+   * Clockwise rotation of the node visual, in degrees. The label below the
+   * node stays upright and arrow anchoring is unchanged (the layout box is not
+   * rotated). Can be animated with the `rotate` action. Default: 0.
+   * @example 45
+   */
+  rotation?: number;
 }
 
 /** Rectangular region enclosing a group of nodes and/or other zones. */
@@ -330,6 +337,7 @@ export type ActionType =
   | 'comment'
   | 'highlight'
   | 'set_visible'
+  | 'rotate'
   | 'wait';
 
 /** Common fields to all actions (sequencing and lifecycle). */
@@ -451,6 +459,23 @@ interface SetVisibleAction extends ActionBase {
 }
 
 /**
+ * Animates the visual rotation of a node toward an absolute angle.
+ * The starting angle is the node's current rotation (its static `rotation`,
+ * or the target of a previous `rotate`). Only the visual rotates; the label
+ * stays upright. The final angle persists until the end of the timeline.
+ */
+interface RotateAction extends ActionBase {
+  type: 'rotate';
+  /** ID of the node to rotate. */
+  object: string;
+  /**
+   * Target angle in degrees (absolute, clockwise).
+   * @example 90
+   */
+  to: number;
+}
+
+/**
  * Dead time: nothing happens for `duration` ms (default: 1000). Does not produce
  * any clip; simply inserts a pause between two steps (elements
  * maintained via `keep_until_next` remain displayed during the wait).
@@ -469,6 +494,7 @@ export type Action =
   | CommentAction
   | HighlightAction
   | SetVisibleAction
+  | RotateAction
   | WaitAction;
 
 export interface DataFlowSpec {

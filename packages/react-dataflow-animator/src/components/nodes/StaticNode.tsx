@@ -25,6 +25,8 @@ export interface StaticNodeProps {
   highlight: Highlighter;
   /** Global node opacity (show/hide fade of set_visible). */
   opacity?: number;
+  /** Clockwise rotation (deg) of the node visual. The label stays upright. */
+  rotation?: number;
   /** Revealed fraction [0..1] of the panel during a set_content transition. The
    *  reveal happens from TOP to bottom via `clip-path` — which does not change the
    *  layout size, so the ResizeObserver always measures the full panel
@@ -49,6 +51,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     highlighted,
     highlight,
     opacity,
+    rotation,
     reveal,
     contentLimit,
     codeFontScale,
@@ -93,14 +96,25 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     // measures the full panel → geometry remains stable (no loop freezing
     // the morph to the icon size), and the panel no longer opens
     // "from the center upwards and downwards".
-    const visualStyle: CSSProperties | undefined = content
-      ? {
-          opacity: contentOpacity,
-          ...(reveal != null && reveal < 1
-            ? { clipPath: `inset(0 0 ${((1 - reveal) * 100).toFixed(2)}% 0)` }
-            : {}),
-        }
-      : undefined;
+    // Rotation lives on the visual (not the whole .rdfa-node) so the label stays
+    // upright and the node's layout box — used for arrow anchoring — is unchanged.
+    const rotated = rotation != null && rotation !== 0;
+    const visualStyle: CSSProperties | undefined =
+      content || rotated
+        ? {
+            ...(content
+              ? {
+                  opacity: contentOpacity,
+                  ...(reveal != null && reveal < 1
+                    ? {
+                        clipPath: `inset(0 0 ${((1 - reveal) * 100).toFixed(2)}% 0)`,
+                      }
+                    : {}),
+                }
+              : {}),
+            ...(rotated ? { transform: `rotate(${rotation}deg)` } : {}),
+          }
+        : undefined;
     const inner = object.url ? (
       <a
         className="rdfa-node-link"

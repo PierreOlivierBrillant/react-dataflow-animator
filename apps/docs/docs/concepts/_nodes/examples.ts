@@ -177,3 +177,35 @@ export const revealExample: DataFlowSpec = {
     },
   ],
 };
+
+/** Rotation : le champ statique `rotation` (degrés) oriente le visuel ; l'action
+ *  `rotate` l'anime. Le label sous le nœud reste droit. Libellés invariants. */
+export const rotationExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: [
+    { id: 'r0', type: 'triangle', text: '0°', body: '0°', lane: 1 },
+    {
+      id: 'r45',
+      type: 'triangle',
+      text: '45°',
+      body: '45°',
+      rotation: 45,
+      lane: 2,
+    },
+    {
+      id: 'r90',
+      type: 'triangle',
+      text: '90°',
+      body: '90°',
+      rotation: 90,
+      lane: 3,
+    },
+    // Animé : demi-tour puis tour complet (les `rotate` s'enchaînent).
+    { id: 'spin', type: 'width_rectangle', text: 'rotate', body: '↻', lane: 4 },
+  ],
+  packets: [],
+  timeline: [
+    { type: 'rotate', object: 'spin', to: 180, duration: 700 },
+    { type: 'rotate', object: 'spin', to: 360, duration: 700 },
+  ],
+};

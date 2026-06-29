@@ -176,6 +176,22 @@ un `set_visible` contraire).
 Voir [Nœuds → `visible`](../concepts/nodes.mdx#visible--visibilité-initiale)
 pour l'usage combiné avec la visibilité initiale.
 
+## `rotate`
+
+Anime la rotation du visuel d'un nœud vers un angle **absolu** `to` (en degrés,
+sens horaire). L'angle de départ est la rotation courante du nœud — son champ
+statique [`rotation`](../concepts/nodes.mdx#rotation--orientation-du-nœud), ou la
+cible d'un `rotate` précédent — si bien que les rotations successives
+**s'enchaînent**. Seul le visuel pivote ; le label en dessous reste droit.
+L'angle final **persiste** jusqu'à la fin de la chronologie.
+
+```ts
+{ type: 'rotate', object: 'gear', to: 90, duration: 600 }
+```
+
+Un tour complet s'écrit simplement `to: 360` (depuis `0`) ; on revient avec
+`to: 0`.
+
 ## `highlight`
 
 Surligne (halo pulsé) un nœud statique **ou** une connexion permanente,
