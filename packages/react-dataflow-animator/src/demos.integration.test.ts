@@ -49,7 +49,15 @@ function collectRefs(actions: Action[]): string[] {
 
 const KNOWN_BROKEN = new Set<string>();
 
-const demos: Array<[string, DataFlowSpec]> = [
+// Les specs de démos sont désormais des builders localisés
+// `(locale) => DataFlowSpec` (certaines peuvent rester des objets). On compile
+// CHAQUE locale : la structure (étapes, références) doit être valide quelle que
+// soit la langue — seul le texte change.
+type SpecOrBuilder = DataFlowSpec | ((locale: 'en' | 'fr') => DataFlowSpec);
+const resolveSpec = (s: SpecOrBuilder, locale: 'en' | 'fr'): DataFlowSpec =>
+  typeof s === 'function' ? s(locale) : s;
+
+const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['clientServer', clientServer],
   ['microservices', microservices],
   ['signalr', signalr],
@@ -72,6 +80,14 @@ const demos: Array<[string, DataFlowSpec]> = [
   ['circular', circular],
   ['collision', collision],
 ];
+
+const LOCALES = ['en', 'fr'] as const;
+const demos: Array<[string, DataFlowSpec]> = demoBuilders.flatMap(([name, s]) =>
+  LOCALES.map(
+    (locale) =>
+      [`${name} (${locale})`, resolveSpec(s, locale)] as [string, DataFlowSpec]
+  )
+);
 
 describe.each(demos)('demo %s', (name, spec) => {
   const result = compile(spec);
