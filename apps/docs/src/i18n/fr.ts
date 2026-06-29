@@ -89,6 +89,7 @@ export const fr = {
   footer: {
     taglineLine1: "Animations d'architecture",
     taglineLine2: 'pilotées par JSON.',
+    repoAria: 'Dépôt GitHub du projet',
     // Les libellés/colonnes du footer viennent de la config Docusaurus (FR).
     // On les retraduit à l'affichage via cette table, en gardant la config
     // comme source de la structure (hrefs/ordre).
@@ -193,6 +194,62 @@ export const fr = {
         desc: ' — générée depuis le JSON Schema.',
       },
     ],
+  },
+  examples: {
+    pageTitle: 'Exemples',
+    pageDescription:
+      "Parcourez la galerie d'exemples : aperçus animés, recherche et filtres par catégorie.",
+    gallery: 'Galerie',
+    title: 'Explorez les exemples',
+    subtitle:
+      "Survolez une vignette pour voir l'animation, recherchez par mot-clé ou filtrez par catégorie. Cliquez pour ouvrir l'aperçu en grand, puis chargez la spec dans le Playground.",
+  },
+  gallery: {
+    searchPlaceholder:
+      'Rechercher un exemple (ex. « chiffrement », « cache », « alice »)…',
+    searchAria: 'Rechercher un exemple',
+    clearSearch: 'Effacer la recherche',
+    allCategory: 'Toutes',
+    openLarge: 'Cliquez pour ouvrir en grand',
+    close: 'Fermer',
+    openInPlayground: 'Ouvrir dans le Playground',
+    resetFilters: 'Réinitialiser les filtres',
+    noResults: (query: string) => `Aucun exemple ne correspond à « ${query} ».`,
+    categories: {
+      'web-api': 'Web & API',
+      realtime: 'Temps réel',
+      security: 'Sécurité',
+      infrastructure: 'Infrastructure',
+      distributed: 'Systèmes distribués',
+      engine: 'Concepts moteur',
+    },
+  },
+  playground: {
+    pageTitle: 'Playground',
+    pageDescription: 'Éditeur interactif pour tester vos spécifications JSON.',
+    title: 'Playground',
+    subtitle:
+      "Éditez la spec JSON à gauche — l'animation se met à jour en temps réel.",
+    format: 'Formater',
+    densityCompact: 'Compact',
+    densityComfortable: 'Confortable',
+    densitySpacious: 'Spacieux',
+    copy: 'Copier',
+    loadingEditor: "Chargement de l'éditeur...",
+    invalidJson: 'JSON invalide :',
+    emptyState: "Entrez une spec JSON valide pour voir l'animation.",
+  },
+  apiRef: {
+    property: 'Propriété',
+    examples: 'Exemples',
+    linkTo: (name: string) => `Lien vers ${name}`,
+    rootIntro: "L'objet racine de la spécification.",
+    nodeIntro:
+      'Un nœud (serveur, base, client…). Placé automatiquement selon `direction`/`lane`.',
+    connectionIntro: 'Flèche permanente (décor) entre deux nœuds.',
+    packetIntro: 'Un paquet déplaçable, référencé par une action `move`.',
+    actionsIntro:
+      'Union discriminée sur `type`. Tous les types partagent les champs de timing (`id`, `duration`, `wait_for`, `keep_until`, `keep_until_next`).',
   },
 };
 

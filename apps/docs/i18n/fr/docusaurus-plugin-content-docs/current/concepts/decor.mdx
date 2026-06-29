@@ -1,0 +1,229 @@
+---
+title: Connexions et zones
+slug: /concepts/decor
+---
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import {
+  lineStyleExample,
+  pathShapeExample,
+  arrowHeadExample,
+  zonesExample,
+  nestedZonesExample,
+} from './_decor/examples';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Deux éléments de **décor** structurent la scène en arrière-plan, indépendamment
+de la timeline : les **connexions** (liens permanents entre nœuds) et les
+**zones** (régions englobant un groupe de nœuds). Tous deux sont affichés dès
+l'initialisation, sans animation à déclencher.
+
+## Connexions permanentes
+
+Le tableau racine `connections` déclare des liens **affichés en permanence**
+(le décor du diagramme). À distinguer de l'action
+[`arrow`](../reference/actions.mdx#arrow), qui trace une flèche **animée** à un
+instant précis de la timeline.
+
+```ts
+connections: [
+  { from: 'browser', to: 'api', style: 'dashed', arrow_head: 'both' },
+  { from: 'api', to: 'db', style: 'dashed' },
+],
+```
+
+### `style` — style de ligne
+
+Quatre styles, partagés avec l'action `arrow` (l'alias historique `full` est
+toléré pour `solid`) :
+
+<Tabs
+  defaultValue="solid"
+  values={[
+    { label: 'solid', value: 'solid' },
+    { label: 'dotted', value: 'dotted' },
+    { label: 'dashed', value: 'dashed' },
+    { label: 'animated', value: 'animated' },
+  ]}
+>
+  <TabItem value="solid">
+    <DataFlowPlayer
+      spec={lineStyleExample('solid')}
+      theme="auto"
+      controls={false}
+      height={260}
+    />
+  </TabItem>
+  <TabItem value="dotted">
+    <DataFlowPlayer
+      spec={lineStyleExample('dotted')}
+      theme="auto"
+      controls={false}
+      height={260}
+    />
+  </TabItem>
+  <TabItem value="dashed">
+    <DataFlowPlayer
+      spec={lineStyleExample('dashed')}
+      theme="auto"
+      controls={false}
+      height={260}
+    />
+  </TabItem>
+  <TabItem value="animated">
+    <DataFlowPlayer
+      spec={lineStyleExample('animated')}
+      theme="auto"
+      controls={false}
+      height={260}
+    />
+  </TabItem>
+</Tabs>
+
+Le style `animated` fait défiler les tirets pour suggérer un flux continu
+(connexion temps réel, WebSocket…).
+
+### `path` — forme du tracé
+
+Indépendamment du style de trait, `path` règle la **forme** du chemin. Cinq
+valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
+
+<Tabs
+  defaultValue="bezier"
+  values={[
+    { label: 'bezier', value: 'bezier' },
+    { label: 'simplebezier', value: 'simplebezier' },
+    { label: 'straight', value: 'straight' },
+    { label: 'step', value: 'step' },
+    { label: 'smoothstep', value: 'smoothstep' },
+  ]}
+>
+  <TabItem value="bezier">
+    <DataFlowPlayer
+      spec={pathShapeExample('bezier')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="simplebezier">
+    <DataFlowPlayer
+      spec={pathShapeExample('simplebezier')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="straight">
+    <DataFlowPlayer
+      spec={pathShapeExample('straight')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="step">
+    <DataFlowPlayer
+      spec={pathShapeExample('step')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="smoothstep">
+    <DataFlowPlayer
+      spec={pathShapeExample('smoothstep')}
+      theme="auto"
+      controls={false}
+      height={300}
+    />
+  </TabItem>
+</Tabs>
+
+```ts
+{ from: 'lb', to: 'api1', path: 'bezier' }     // courbe douce (défaut)
+{ from: 'lb', to: 'api1', path: 'simplebezier' } // courbe plus discrète
+{ from: 'lb', to: 'api1', path: 'straight' }   // segment direct
+{ from: 'lb', to: 'api1', path: 'step' }       // angles droits
+{ from: 'lb', to: 'api1', path: 'smoothstep' } // angles droits arrondis
+```
+
+La courbure n'apparaît qu'en présence d'un **décalage transverse** (lanes
+différentes, fan-out, voies bidirectionnelles) : entre deux nœuds parfaitement
+alignés, toutes les formes se confondent avec un trait droit. Les paquets d'une
+action [`move`](../reference/actions.mdx#move) épousent le tracé `bezier` par
+défaut.
+
+### `arrow_head` — pointes de flèche
+
+`arrow_head` contrôle les extrémités fléchées (`forward` par défaut) :
+
+<DataFlowPlayer
+  spec={arrowHeadExample}
+  theme="auto"
+  controls={false}
+  height={420}
+/>
+
+```ts
+{ from: 'a', to: 'b', arrow_head: 'forward' }  // pointe à l'arrivée (défaut)
+{ from: 'a', to: 'b', arrow_head: 'backward' } // pointe au départ
+{ from: 'a', to: 'b', arrow_head: 'both' }     // double sens
+{ from: 'a', to: 'b', arrow_head: 'none' }     // simple trait, sans pointe
+```
+
+### `text` — étiquette médiane
+
+Un `text` optionnel s'affiche au milieu du lien (ex. un protocole, un port) :
+
+```ts
+{ from: 'api', to: 'db', text: 'TCP 5432' }
+```
+
+## Zones
+
+Le tableau racine `zones` dessine des **rectangles d'arrière-plan** englobant un
+groupe de nœuds : pratique pour matérialiser un réseau, un cluster, une frontière
+de confiance. Une zone se dimensionne **automatiquement** pour contenir tous ses
+membres.
+
+```ts
+zones: [
+  { contains: ['browser'], label: 'Client', color: '#3b82f6' },
+  { contains: ['api', 'db'], label: 'Infrastructure', color: '#22c55e' },
+],
+```
+
+<DataFlowPlayer
+  spec={zonesExample}
+  theme="auto"
+  controls={false}
+  height={340}
+/>
+
+| Champ      | Rôle                                                              |
+| ---------- | ----------------------------------------------------------------- |
+| `contains` | IDs des nœuds **et/ou** des zones englobés (requis).              |
+| `color`    | Couleur CSS de la bordure et du fond semi-transparent.            |
+| `label`    | Texte affiché en haut à gauche de la zone.                        |
+| `id`       | Optionnel — requis seulement pour imbriquer la zone (ci-dessous). |
+
+### Zones imbriquées
+
+Une zone peut en contenir une autre : référencez l'`id` de la zone interne dans
+le `contains` de la zone externe. La zone englobante s'étend pour la couvrir.
+
+```ts
+zones: [
+  { id: 'core', contains: ['svc', 'data'], label: 'Cœur métier', color: '#a855f7' },
+  { contains: ['gw', 'core'], label: 'Cluster', color: '#64748b' }, // englobe la zone `core`
+],
+```
+
+<DataFlowPlayer
+  spec={nestedZonesExample}
+  theme="auto"
+  controls={false}
+  height={340}
+/>

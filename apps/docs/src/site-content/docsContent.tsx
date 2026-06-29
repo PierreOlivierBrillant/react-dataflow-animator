@@ -7,8 +7,18 @@ import {
   dataFlowSchema,
 } from 'react-dataflow-animator';
 import type { DataFlowSpec, Node, NodeType } from 'react-dataflow-animator';
-import { demosById } from './demos';
-import { apiExampleSpecs, apiExampleNotes } from './apiExamples';
+import { demosById, getSpec } from './demos';
+import { getApiExamples } from './apiExamples';
+import { useLocale, useTranslation } from '../i18n';
+
+// Lecteur d'une démo référencée par id, avec spec résolue selon la locale
+// courante (les specs peuvent être des builders localisés).
+function DemoPlayer({ demoId }: { demoId: string }) {
+  const locale = useLocale();
+  return (
+    <DataFlowPlayer theme="auto" spec={getSpec(demosById[demoId], locale)} />
+  );
+}
 
 interface DocPage {
   id: string;
@@ -260,23 +270,26 @@ function rowsOf(node: SchemaNode): Row[] {
 }
 
 function PropsTable({ node, defName }: { node: SchemaNode; defName: string }) {
+  const t = useTranslation();
+  const locale = useLocale();
+  const { specs, notes } = getApiExamples(locale);
   const rows = rowsOf(node);
   // Chaque exemple est un player démontrant la propriété (registre `apiExamples`,
   // clé `${defName}.${prop}`). Les énums (options acceptées) restent dans la
   // Description. Si aucun champ de la table n'a de démo, pas de colonne Exemples.
   const demoOf = (row: Row): DataFlowSpec | undefined =>
-    apiExampleSpecs[`${defName}.${row.name}`];
+    specs[`${defName}.${row.name}`];
   const noteOf = (row: Row): string | undefined =>
-    apiExampleNotes[`${defName}.${row.name}`];
+    notes[`${defName}.${row.name}`];
   const hasExamples = rows.some((row) => demoOf(row) != null);
   return (
     <table className="api-table">
       <thead>
         <tr>
-          <th>Propriété</th>
+          <th>{t.apiRef.property}</th>
           <th>Type</th>
           <th>Description</th>
-          {hasExamples ? <th>Exemples</th> : null}
+          {hasExamples ? <th>{t.apiRef.examples}</th> : null}
         </tr>
       </thead>
       <tbody>
@@ -295,7 +308,7 @@ function PropsTable({ node, defName }: { node: SchemaNode; defName: string }) {
                 <a
                   className="api-prop-anchor"
                   href={`#api-${defName}-${row.name}`}
-                  aria-label={`Lien vers ${row.name}`}
+                  aria-label={t.apiRef.linkTo(row.name)}
                 >
                   #
                 </a>
@@ -366,6 +379,7 @@ function actionTypeLabel(key: (typeof ACTION_DEFS)[number]): string {
 }
 
 export function ApiReference() {
+  const t = useTranslation();
   // Le browser tente le scroll vers le hash avant que React ait rendu le
   // contenu dynamique. On relit le hash après hydration et on force le scroll.
   useEffect(() => {
@@ -378,33 +392,27 @@ export function ApiReference() {
   return (
     <>
       <Heading as="h2" id="api-dataflowspec">
-        DataFlowSpec (racine)
+        DataFlowSpec
       </Heading>
+      <p>{renderInlineMarkdown(t.apiRef.rootIntro)}</p>
       <PropsTable node={root} defName="DataFlowSpec" />
 
       <Heading as="h2" id="api-node">
         Node
       </Heading>
-      <p>
-        Un nœud (serveur, base, client…). Placé automatiquement selon{' '}
-        <code className="inline">direction</code>/
-        <code className="inline">lane</code>.
-      </p>
+      <p>{renderInlineMarkdown(t.apiRef.nodeIntro)}</p>
       <PropsTable node={defs.Node} defName="Node" />
 
       <Heading as="h2" id="api-connection">
         Connection
       </Heading>
-      <p>Flèche permanente (décor) entre deux nœuds.</p>
+      <p>{renderInlineMarkdown(t.apiRef.connectionIntro)}</p>
       <PropsTable node={defs.Connection} defName="Connection" />
 
       <Heading as="h2" id="api-packet">
         Packet
       </Heading>
-      <p>
-        Un paquet déplaçable, référencé par une action{' '}
-        <code className="inline">move</code>.
-      </p>
+      <p>{renderInlineMarkdown(t.apiRef.packetIntro)}</p>
       <PropsTable node={defs.Packet} defName="Packet" />
 
       <Heading as="h2" id="api-content">
@@ -415,14 +423,7 @@ export function ApiReference() {
       <Heading as="h2" id="api-actions">
         Actions
       </Heading>
-      <p>
-        Union discriminée sur <code className="inline">type</code>. Tous les
-        types partagent les champs de timing (<code className="inline">id</code>
-        , <code className="inline">duration</code>,{' '}
-        <code className="inline">wait_for</code>,{' '}
-        <code className="inline">keep_until</code>,{' '}
-        <code className="inline">keep_until_next</code>).
-      </p>
+      <p>{renderInlineMarkdown(t.apiRef.actionsIntro)}</p>
       {ACTION_DEFS.map((key) => {
         const node = defs[key];
         return (
@@ -456,7 +457,7 @@ interface TocItem {
  * `ACTION_DEFS` que le rendu pour ne pas se désynchroniser.
  */
 export const apiReferenceToc: TocItem[] = [
-  { value: 'DataFlowSpec (racine)', id: 'api-dataflowspec', level: 2 },
+  { value: 'DataFlowSpec', id: 'api-dataflowspec', level: 2 },
   { value: 'Node', id: 'api-node', level: 2 },
   { value: 'Connection', id: 'api-connection', level: 2 },
   { value: 'Packet', id: 'api-packet', level: 2 },
@@ -492,7 +493,7 @@ export const docPages: DocPage[] = [
           <strong>actions</strong>. Le moteur place les nœuds, trace les
           connexions et joue les actions sur une chronologie.
         </p>
-        <DataFlowPlayer theme="auto" spec={demosById.clientServer.spec} />
+        <DemoPlayer demoId="clientServer" />
         <h2 id="principes">Principes</h2>
         <ul>
           <li>
@@ -565,7 +566,7 @@ export const docPages: DocPage[] = [
           <code className="inline">main</code> est au centre et les autres sont
           répartis sur un cercle.
         </p>
-        <DataFlowPlayer theme="auto" spec={demosById.circular.spec} />
+        <DemoPlayer demoId="circular" />
       </>
     ),
   },
@@ -664,7 +665,7 @@ export const docPages: DocPage[] = [
           paquets), le moteur décale automatiquement les trajets sur des voies
           parallèles pour éviter la superposition.
         </p>
-        <DataFlowPlayer theme="auto" spec={demosById.collision.spec} />
+        <DemoPlayer demoId="collision" />
       </>
     ),
   },

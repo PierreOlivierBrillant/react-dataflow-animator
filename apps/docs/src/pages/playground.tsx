@@ -6,7 +6,8 @@ import {
   type DataFlowPlayerProps,
   dataFlowSchema,
 } from 'react-dataflow-animator';
-import { demos, demosById } from '../site-content/demos';
+import { demos, demosById, getSpec, pickLocale } from '../site-content/demos';
+import { useLocale, useTranslation } from '../i18n';
 import type { SpecError } from '../site-content/validateSpec';
 import { motion } from 'motion/react';
 import { Copy, Check, AlertCircle, ChevronDown, WrapText } from 'lucide-react';
@@ -75,11 +76,15 @@ function clearMonacoRefMarkers(
 /* ────────────── Component ────────────── */
 
 export default function PlaygroundPage() {
+  const locale = useLocale();
+  const t = useTranslation();
   const [demoId, setDemoId] = useState<string>(demos[0].id);
   const [jsonText, setJsonText] = useState(() =>
-    JSON.stringify(demos[0].spec, null, 2)
+    JSON.stringify(getSpec(demos[0], locale), null, 2)
   );
-  const [spec, setSpec] = useState<DataFlowSpec | null>(() => demos[0].spec);
+  const [spec, setSpec] = useState<DataFlowSpec | null>(() =>
+    getSpec(demos[0], locale)
+  );
   const [parseError, setParseError] = useState<string | null>(null);
 
   const [schemaErrors, setSchemaErrors] = useState<SpecError[]>([]);
@@ -102,10 +107,10 @@ export default function PlaygroundPage() {
     const id = new URLSearchParams(window.location.search).get('demo');
     if (id && demosById[id] && id !== demos[0].id) {
       setDemoId(id);
-      setJsonText(JSON.stringify(demosById[id].spec, null, 2));
-      setSpec(demosById[id].spec);
+      setJsonText(JSON.stringify(getSpec(demosById[id], locale), null, 2));
+      setSpec(getSpec(demosById[id], locale));
     }
-  }, []);
+  }, [locale]);
 
   // Sync URL when demoId changes — skip the initial mount to avoid
   // overwriting a ?demo= param before the URL-reading effect above has run.
@@ -148,7 +153,7 @@ export default function PlaygroundPage() {
         parsed = JSON.parse(jsonText);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : '';
-        setParseError(`JSON invalide : ${msg}`);
+        setParseError(`${t.playground.invalidJson} ${msg}`);
         setSchemaErrors([]);
         clearMonacoRefMarkers(editorRef.current, monacoRef.current);
         return;
@@ -168,8 +173,8 @@ export default function PlaygroundPage() {
   const handleTemplateChange = (key: string) => {
     setDemoId(key);
     const demo = demosById[key] ?? demos[0];
-    setJsonText(JSON.stringify(demo.spec, null, 2));
-    setSpec(demo.spec);
+    setJsonText(JSON.stringify(getSpec(demo, locale), null, 2));
+    setSpec(getSpec(demo, locale));
     setParseError(null);
     setSchemaErrors([]);
     clearMonacoRefMarkers(editorRef.current, monacoRef.current);
@@ -192,19 +197,18 @@ export default function PlaygroundPage() {
 
   return (
     <Layout
-      title="Playground"
-      description="Éditeur interactif pour tester vos spécifications JSON."
+      title={t.playground.pageTitle}
+      description={t.playground.pageDescription}
     >
       <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:dark]">
         {/* Page header — gouttière px-5 alignée sur la navbar et le reste du site */}
         <div className="flex-none px-5 py-4 border-b border-white/[.06] flex items-center gap-4">
           <div>
             <h1 className="text-white mb-0 font-heading text-xl font-bold leading-tight tracking-tight">
-              Playground
+              {t.playground.title}
             </h1>
             <p className="text-xs mt-0.5 mb-0 text-white/35 font-sans">
-              Éditez la spec JSON à gauche — l'animation se met à jour en temps
-              réel.
+              {t.playground.subtitle}
             </p>
           </div>
         </div>
@@ -232,7 +236,7 @@ export default function PlaygroundPage() {
                 >
                   {demos.map((demo) => (
                     <option key={demo.id} value={demo.id}>
-                      {demo.title}
+                      {pickLocale(demo.title, locale)}
                     </option>
                   ))}
                 </select>
@@ -248,7 +252,7 @@ export default function PlaygroundPage() {
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer bg-white/[.04] border border-white/[.08] text-white/50 font-sans"
               >
                 <WrapText size={11} />
-                Formater
+                {t.playground.format}
               </button>
 
               {/* Density */}
@@ -264,9 +268,13 @@ export default function PlaygroundPage() {
                   }
                   className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-white/[.04] border border-white/[.08] text-white/45 font-sans"
                 >
-                  <option value="compact">Compact</option>
-                  <option value="comfortable">Confortable</option>
-                  <option value="spacious">Spacieux</option>
+                  <option value="compact">{t.playground.densityCompact}</option>
+                  <option value="comfortable">
+                    {t.playground.densityComfortable}
+                  </option>
+                  <option value="spacious">
+                    {t.playground.densitySpacious}
+                  </option>
                 </select>
                 <ChevronDown
                   size={11}
@@ -278,7 +286,7 @@ export default function PlaygroundPage() {
               <button
                 onClick={handleCopy}
                 className={`ml-auto p-1.5 rounded-lg transition-colors cursor-pointer bg-transparent border-none outline-none ${copied ? 'text-[#34d399]' : 'text-white/30'}`}
-                title="Copier"
+                title={t.playground.copy}
               >
                 {copied ? <Check size={13} /> : <Copy size={13} />}
               </button>
@@ -335,7 +343,7 @@ export default function PlaygroundPage() {
                 }}
                 loading={
                   <div className="flex items-center justify-center w-full h-full text-white/30 text-sm font-sans">
-                    Chargement de l'éditeur...
+                    {t.playground.loadingEditor}
                   </div>
                 }
               />
@@ -382,7 +390,7 @@ export default function PlaygroundPage() {
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <div className="text-center text-sm text-white/20 font-sans">
-                    Entrez une spec JSON valide pour voir l'animation.
+                    {t.playground.emptyState}
                   </div>
                 </div>
               )}

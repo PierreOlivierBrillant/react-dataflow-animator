@@ -1,0 +1,173 @@
+---
+title: Timeline et étapes
+slug: /concepts/timeline
+---
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import { stepsExample, fanOutExample } from './_timeline/examples';
+
+Le moteur compile votre tableau `timeline` en une **chronologie pure** : à
+chaque instant `t` (ms), l'état visuel est déterminé par une fonction
+`evaluate(timeline, t)`. Le seek arrière, la navigation par étapes et le SSR
+en découlent gratuitement.
+
+## Étapes logiques
+
+Chaque action **racine** (au premier niveau de `timeline`) constitue une
+**étape logique**. Les boutons « Précédent » / « Suivant » du lecteur
+naviguent d'une étape à l'autre.
+
+Une courte pause (`STEP_GAP`) sépare deux étapes consécutives : l'arrêt
+« Suivant » montre ainsi l'étape « posée » seule, sans chevaucher
+l'apparition de la suivante.
+
+Dans l'exemple ci-dessous, les **cinq** actions racines forment cinq étapes :
+utilisez « Précédent » / « Suivant » pour avancer pas à pas.
+
+<DataFlowPlayer spec={stepsExample} theme="auto" height={340} />
+
+```ts
+timeline: [
+  { type: 'comment', object: 'browser', text: '1. …' }, // étape 1
+  { type: 'move', object: 'req', from: 'browser', to: 'api' }, // étape 2
+  { type: 'loading', id: 'work', object: 'api' }, // étape 3
+  { type: 'move', object: 'res', from: 'api', to: 'browser', wait_for: 'work' }, // étape 4
+  { type: 'comment', object: 'browser', text: '2. …', keep_until_end: true }, // étape 5
+],
+```
+
+## Points d'arrêt
+
+Les actions produisent des **points d'arrêt** sur lesquels la navigation
+peut se caler :
+
+- Un `move` produit **deux** points : à l'apparition de l'objet à son
+  origine, puis à son arrivée à destination.
+- `arrow`, `loading`, `set_content`, `comment`, `highlight` produisent
+  **un** point : leur état « posé » à la fin de l'animation.
+
+## Synchronisation entre actions
+
+Trois mécanismes permettent de coordonner les actions :
+
+### `wait_for`
+
+L'action démarre à la **fin** d'une autre action référencée par son `id` :
+
+```ts
+{ type: 'loading', id: 'dbwork', object: 'db', duration: 900 },
+{
+  type: 'move',
+  object: 'rows',
+  from: 'db',
+  to: 'api',
+  wait_for: 'dbwork', // démarre quand le loading se termine
+},
+```
+
+### `parallel`
+
+Encapsule plusieurs actions exécutées au **même instant** :
+
+```ts
+{
+  type: 'parallel',
+  actions: [
+    { type: 'move', object: 'p1', from: 'a', to: 'b' },
+    { type: 'move', object: 'p2', from: 'c', to: 'd' },
+  ],
+}
+```
+
+Ici, un gateway diffuse trois requêtes vers ses services : les trois paquets
+partent **simultanément**.
+
+<DataFlowPlayer spec={fanOutExample(false)} theme="auto" height={340} />
+
+### Durées personnalisées
+
+Chaque action accepte une `duration` (ms). Les défauts sont :
+
+| Type d'action                             | Défaut (ms) |
+| ----------------------------------------- | ----------- |
+| `move`, `arrow`, `set_content`, `comment` | 500         |
+| `loading`                                 | 1200        |
+| `highlight`                               | 600         |
+| `set_visible`                             | 300         |
+| `wait`                                    | 1000        |
+
+## Persistance visuelle
+
+Par défaut, un élément animé reste visible un court instant après la fin de
+son animation (`ARRIVE_HOLD`) puis disparaît. Trois props prolongent cette
+présence :
+
+### `keep_until`
+
+Reste visible jusqu'au **début** d'une action ciblée par `id` :
+
+```ts
+{ type: 'arrow', id: 'A', from: 'a', to: 'b', keep_until: 'C' },
+{ type: 'move', object: 'p', from: 'a', to: 'b' },
+{ type: 'comment', id: 'C', object: 'a', text: 'fin' },
+// La flèche A reste affichée jusqu'au début du commentaire C.
+```
+
+### `keep_until_next`
+
+Reste visible jusqu'au **début de l'étape racine suivante** (donc à travers
+la pause inter-étapes). Défauts par type d'action :
+
+| Type d'action                                  | `keep_until_next` par défaut |
+| ---------------------------------------------- | ---------------------------- |
+| `arrow`, `comment`, `set_content`, `highlight` | `true`                       |
+| `move`, `loading`, `set_visible`               | `false`                      |
+
+### `keep_until_end`
+
+Reste visible jusqu'à la **fin** de la chronologie :
+
+```ts
+{ type: 'highlight', object: 'db', keep_until_end: true },
+```
+
+## Décalage et fondus
+
+Trois champs affinent le **timing fin** d'une action, au-delà de son
+ordonnancement logique.
+
+### `delay_ms`
+
+Décale le démarrage de `delay_ms` millisecondes, **après** la résolution de
+`wait_for` et le calage sur l'étape. Son usage principal est de **séquencer des
+actions à l'intérieur d'un `parallel`** (effet « cascade ») :
+
+```ts
+{
+  type: 'parallel',
+  actions: [
+    { type: 'move', object: 'p1', from: 'a', to: 'b' },
+    { type: 'move', object: 'p2', from: 'a', to: 'b', delay_ms: 150 },
+    { type: 'move', object: 'p3', from: 'a', to: 'b', delay_ms: 300 },
+  ],
+}
+```
+
+Le même `fan-out` que ci-dessus, mais avec un `delay_ms` croissant : les paquets
+s'égrènent au lieu de partir d'un bloc.
+
+<DataFlowPlayer spec={fanOutExample(true)} theme="auto" height={340} />
+
+Appliqué à un `parallel` entier, il retarde tout le groupe.
+
+### `fade_in_ms` / `fade_out_ms`
+
+Contrôlent la durée des fondus d'apparition et de disparition (en ms). `0`
+donne une transition **instantanée**. `fade_out_ms` est sans effet si
+`keep_until_end` est vrai (l'élément ne disparaît jamais).
+
+```ts
+{ type: 'comment', object: 'db', text: 'Lecture', fade_in_ms: 0, fade_out_ms: 600 }
+```
+
+Défauts : `fade_out_ms` → 250 ; `fade_in_ms` → 250 (300 pour `move`).

@@ -1,14 +1,15 @@
 import Heading from '@theme/Heading';
 import Link from '@docusaurus/Link';
 import { DataFlowPlayer } from 'react-dataflow-animator';
-import { demosById } from './demos';
-import { useTranslation } from '../i18n';
+import { demosById, getSpec } from './demos';
+import { useLocale, useTranslation } from '../i18n';
 
 // Contenu de /docs/intro rendu côté client à partir du dictionnaire i18n.
 // Les `id` d'ancres sont fixes (indépendants de la langue) pour garder des
 // liens profonds stables d'une locale à l'autre.
 export function IntroDoc() {
   const { intro } = useTranslation();
+  const locale = useLocale();
 
   return (
     <>
@@ -34,7 +35,10 @@ export function IntroDoc() {
       </ul>
       <p>{intro.overviewOutro}</p>
 
-      <DataFlowPlayer theme="auto" spec={demosById.clientServer.spec} />
+      <DataFlowPlayer
+        theme="auto"
+        spec={getSpec(demosById.clientServer, locale)}
+      />
 
       <Heading as="h2" id="principles">
         {intro.principlesTitle}

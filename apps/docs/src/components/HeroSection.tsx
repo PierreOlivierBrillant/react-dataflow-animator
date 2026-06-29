@@ -2,14 +2,15 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Copy, Check, ArrowRight, BookOpen } from 'lucide-react';
 import { DataFlowPlayer } from 'react-dataflow-animator';
-import { demosById } from '../site-content';
+import { demosById, getSpec } from '../site-content';
 import Link from '@docusaurus/Link';
-import { useTranslation } from '../i18n';
+import { useLocale, useTranslation } from '../i18n';
 
 const INSTALL_CMD = 'npm install react-dataflow-animator';
 
 export function HeroSection() {
   const t = useTranslation();
+  const locale = useLocale();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -130,7 +131,7 @@ export function HeroSection() {
           <div className="relative rounded-2xl overflow-hidden bg-[#0c0a1e] border border-white/[0.07] shadow-[0_25px_50px_rgba(0,0,0,0.5)]">
             <DataFlowPlayer
               theme="dark"
-              spec={demosById.clientServer.spec}
+              spec={getSpec(demosById.clientServer, locale)}
               autoPlay
               loop
               controls={false}

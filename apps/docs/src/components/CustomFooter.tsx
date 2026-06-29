@@ -26,7 +26,10 @@ export function CustomFooter({
             <FooterLinkColumn key={index} section={linkSection} />
           ))}
         </div>
-        {FooterCopyright({ copyright: footerData.copyright })}
+        {FooterCopyright({
+          copyright: footerData.copyright,
+          repoAria: t.footer.repoAria,
+        })}
       </div>
     </footer>
   );
@@ -43,7 +46,8 @@ function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
 
   // La config Docusaurus fournit la structure (FR) ; on retraduit chaque
   // libellé affiché via la table `footer.labels`, en repli sur l'original.
-  const tr = (label: string) => t.footer.labels[label] ?? label;
+  const tr = (label: string | undefined) =>
+    label ? (t.footer.labels[label] ?? label) : '';
 
   return (
     <div>
@@ -68,7 +72,13 @@ function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
   );
 }
 
-function FooterCopyright({ copyright }: { copyright?: string }) {
+function FooterCopyright({
+  copyright,
+  repoAria,
+}: {
+  copyright?: string;
+  repoAria: string;
+}) {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-8 border-t border-white/5">
       <p className="text-xs m-0 text-white/20 font-sans">{copyright || ''}</p>
@@ -77,7 +87,7 @@ function FooterCopyright({ copyright }: { copyright?: string }) {
           href="https://github.com/PierreOlivierBrillant/react-dataflow-animator"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Dépôt GitHub du projet"
+          aria-label={repoAria}
           className="text-white/20 hover:text-white/50 transition-colors no-underline"
         >
           <Github size={15} />

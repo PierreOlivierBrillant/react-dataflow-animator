@@ -1,0 +1,282 @@
+---
+title: Nœuds
+slug: /concepts/nodes
+---
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import {
+  nodeTypesExample,
+  iconsExample,
+  textNodesExample,
+  shapesExample,
+  colorsExample,
+  revealExample,
+} from './_nodes/examples';
+
+Les **nœuds** (`nodes`) sont les objets statiques de la scène : serveurs,
+clients, bases de données… Le moteur les place automatiquement (voir
+[Disposition](./layout.mdx)) ; vous ne décrivez que leur identité et leur
+apparence. Chaque nœud porte un `id` **unique** réutilisé partout ailleurs
+(`from`/`to` des actions, `connections`, `zones`, `object` des commentaires…).
+
+## Types de nœuds
+
+Le champ `type` choisit l'apparence. Dix types affichent un **pictogramme** :
+
+<DataFlowPlayer
+  spec={nodeTypesExample}
+  theme="auto"
+  controls={false}
+  height={460}
+  density="compact"
+/>
+
+```ts
+{ id: 'web', type: 'server', text: 'Serveur Web' }
+```
+
+| Catégorie   | Types                         |
+| ----------- | ----------------------------- |
+| Postes      | `desktop`, `laptop`, `mobile` |
+| Réseau      | `client`, `server`, `cloud`   |
+| Données     | `database`                    |
+| Acteurs     | `user`, `admin`, `users`      |
+| Personnages | `alice`, `bob`, `eve`         |
+
+Deux types supplémentaires affichent **du texte** plutôt qu'un pictogramme :
+`simple_node` et `complex_node` (voir [ci-dessous](#nœuds-textuels--simple_node-et-complex_node)).
+Huit types dessinent une **forme géométrique** pouvant contenir un court texte :
+`square`, `diamond`, `circle`, `triangle`, `parallelogram`, `width_rectangle`,
+`height_rectangle` et `star` (voir [Formes géométriques](#formes-géométriques)).
+
+## Nœuds textuels : `simple_node` et `complex_node`
+
+Quand un nœud doit montrer du **texte** (un extrait de code, un en-tête HTTP, une
+clé de config…) plutôt qu'un pictogramme, utilisez :
+
+- **`simple_node`** — une boîte de texte (champ `body`). Pas de gros pictogramme,
+  mais le `subicon` (`icon`) reste possible.
+- **`complex_node`** — comme `simple_node`, plus un **`header`** affiché au-dessus du
+  corps et séparé par un trait : le nœud prend l'allure d'un **paquet HTTP**.
+
+Le champ `language` applique la **coloration syntaxique** à _toutes_ les zones de
+texte du nœud (l'en-tête **et** le corps). Les valeurs reconnues sont les mêmes que
+pour [`content`](#content--contenu-initial) (`javascript`, `json`, `sql`, `http`…).
+
+<DataFlowPlayer
+  spec={textNodesExample}
+  theme="auto"
+  controls={false}
+  height={320}
+/>
+
+```ts
+nodes: [
+  // simple_node : corps de texte + subicon, sans pictogramme.
+  {
+    id: 'snippet',
+    type: 'simple_node',
+    icon: 'node',
+    body: 'const total = a + b;',
+    language: 'javascript',
+  },
+  // complex_node : en-tête + corps, à la manière d'un paquet HTTP.
+  {
+    id: 'request',
+    type: 'complex_node',
+    header: 'GET /api/users HTTP/1.1',
+    body: 'Host: api.example.com\nAccept: application/json',
+    language: 'http', // colore l'en-tête ET le corps
+  },
+],
+```
+
+:::note `body`/`header` vs `text`
+
+`text` reste le **label sous le nœud** (commun à tous les types). Pour les nœuds
+textuels, le contenu de la boîte se met dans `body` (et `header` pour `complex_node`).
+Un [`set_content`](../reference/actions.mdx#set_content) actif remplace le panneau
+textuel, exactement comme il masque un pictogramme.
+
+:::
+
+## Formes géométriques
+
+Huit types dessinent une **forme** plutôt qu'un pictogramme : `square`, `diamond`,
+`circle`, `triangle`, `parallelogram`, `width_rectangle`, `height_rectangle` et
+`star`. Chaque forme peut contenir un **court texte centré** via `body`.
+
+<DataFlowPlayer
+  spec={shapesExample}
+  theme="auto"
+  controls={false}
+  height={460}
+  density="compact"
+/>
+
+```ts
+nodes: [
+  { id: 'cache', type: 'circle', text: 'Cache', body: 'Redis' },
+  { id: 'choix', type: 'diamond', text: 'Routage', body: 'GET ?' },
+  { id: 'file', type: 'height_rectangle', body: 'Queue' },
+],
+```
+
+:::caution Gardez le texte court
+
+Le `body` d'une forme est pensé pour une **étiquette brève** (un mot, un nombre,
+un sigle). La forme s'agrandit pour accueillir le texte, mais celui-ci est borné
+(`max-width`) et **recadré au besoin** pour ne jamais déborder du tracé : un
+paragraphe entier serait tronqué. Pour du texte long, préférez un
+[`simple_node`](#nœuds-textuels--simple_node-et-complex_node).
+
+:::
+
+## Couleurs : `background_color` et `border_color`
+
+Deux champs ajustent les couleurs d'un nœud :
+
+- **`background_color`** — le fond : remplissage d'une forme, fond d'un panneau
+  (`simple_node`/`complex_node`), ou pastille derrière un pictogramme.
+- **`border_color`** — la bordure : trait d'une forme, bordure d'un panneau, ou
+  couleur des traits d'un pictogramme.
+- **`text_color`** — la couleur du texte **dans** le nœud (corps d'une forme,
+  en-tête/corps d'un panneau), **uniquement si la coloration syntaxique est
+  désactivée** (sans `language`). Avec `language`, les couleurs de la syntaxe priment.
+
+Chaque champ accepte une **couleur prédéfinie** (n'importe quel nom CSS : `tomato`,
+`steelblue`, `gold`…) **ou** une **valeur hexadécimale** exacte (`#3b82f6`).
+
+<DataFlowPlayer
+  spec={colorsExample}
+  theme="auto"
+  controls={false}
+  height={320}
+/>
+
+```ts
+nodes: [
+  // background_color seul → bordure ET texte dérivés automatiquement.
+  { id: 'api', type: 'server', background_color: '#bfdbfe' },
+  // nom prédéfini + bordure explicite, sur une forme.
+  {
+    id: 'cache',
+    type: 'circle',
+    body: 'Cache',
+    background_color: 'gold',
+    border_color: 'darkgoldenrod',
+  },
+  // fond sombre, texte auto-contrasté (blanc) ; ou text_color explicite.
+  { id: 'note', type: 'simple_node', body: 'TODO', background_color: '#1e3a8a' },
+  {
+    id: 'tag',
+    type: 'square',
+    body: 'SALE',
+    background_color: '#fee2e2',
+    text_color: '#b91c1c',
+  },
+],
+```
+
+:::tip Bordure et texte automatiques
+
+Si vous donnez un `background_color` **sans** `border_color`, la bordure est
+**dérivée du fond** (une variante plus sombre qui s'agence bien). De même, sans
+`text_color`, la couleur du texte interne est choisie pour offrir un **très fort
+contraste** avec le fond (noir ou blanc selon sa luminance) — un fond sombre reste
+donc lisible sans rien régler. Précisez `border_color` / `text_color` pour forcer
+une teinte. Avec `language` (coloration syntaxique), les couleurs des tokens priment
+sur `text_color`.
+
+:::
+
+## `text` — le label
+
+Le `text` s'affiche **sous** le nœud. Il est optionnel mais recommandé pour
+lever toute ambiguïté entre deux nœuds du même type.
+
+```ts
+{ id: 'authdb', type: 'database', text: 'Base Auth' }
+```
+
+## `icon` — le badge techno
+
+Le champ `icon` superpose un petit badge en coin du nœud. Trois sources sont
+acceptées, dans cet ordre de résolution :
+
+1. une **techno connue** (icône [react-icons](https://react-icons.github.io/react-icons/)
+   intégrée) — ex. `react`, `node`, `postgres`, `mongodb`, `redis`, `nginx`,
+   `docker`, `kubernetes`, `dotnet`, `python`, `typescript`, `go`, `rust`,
+   `git`, `azure`, `aws`, `graphql`, des protocoles (`http`, `dns`, `oidc`,
+   `wifi`, `bluetooth`, `5g`) et des marques de paiement (`visa`, `mastercard`,
+   `googlepay`, `applepay`)… ;
+2. une icône **enregistrée** par vous via `registerSubIcon` ;
+3. à défaut, un **texte libre** affiché en pastille (tronqué à 4 caractères).
+
+<DataFlowPlayer
+  spec={iconsExample}
+  theme="auto"
+  controls={false}
+  height={320}
+/>
+
+```ts
+{ id: 'spa',  type: 'laptop',   text: 'react',    icon: 'react' },   // techno connue
+{ id: 'edge', type: 'cloud',    text: 'v2',       icon: 'v2' },      // texte libre → pastille
+```
+
+:::tip Enregistrer ses propres badges
+
+`registerSubIcon(name, node)` ajoute une techno au registre global. Appelez-la
+**une seule fois au démarrage** de l'application (jamais dans un corps de
+composant) — voir l'avertissement dans la [Référence API](../reference/api.mdx).
+
+:::
+
+## `url` — rendre un nœud cliquable
+
+Fournir une `url` rend le nœud cliquable : il ouvre le lien dans un nouvel
+onglet. Pratique pour pointer vers la doc d'un service.
+
+```ts
+{ id: 'api', type: 'server', text: 'API', url: 'https://exemple.com/api' }
+```
+
+## `content` — contenu initial
+
+Un nœud peut afficher un **contenu dès l'initialisation** (avant toute action),
+via le champ `content`. Il utilise la même forme que l'action
+[`set_content`](../reference/actions.mdx#set_content) : un terminal de code,
+une fenêtre de navigateur, une image ou un tableau.
+
+```ts
+{
+  id: 'editor',
+  type: 'laptop',
+  text: 'Éditeur',
+  content: {
+    type: 'code',
+    language: 'javascript',
+    value: 'const add = (a, b) => a + b;',
+  },
+}
+```
+
+## `visible` — visibilité initiale
+
+Par défaut, tout nœud est visible (`visible: true`). Passez `visible: false`
+pour le **masquer au départ** et le révéler plus tard avec l'action
+[`set_visible`](../reference/actions.mdx#set_visible) — utile pour montrer
+l'ajout d'un composant (cache, réplica…) au fil de la narration.
+
+<DataFlowPlayer spec={revealExample} theme="auto" height={320} />
+
+```ts
+nodes: [
+  { id: 'app',   type: 'server',   text: 'App' },
+  { id: 'cache', type: 'database', text: 'Cache', visible: false }, // caché au départ
+],
+timeline: [
+  { type: 'set_visible', object: 'cache', visible: true }, // … puis révélé
+],
+```

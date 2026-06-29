@@ -131,6 +131,52 @@ Garde-fous — la règle n'est PAS « redessine souvent » :
   l'API publique ou la spec, **expose l'option et son coût à l'utilisateur**
   avant de t'engager — ne refonds pas en douce une large surface.
 
+## Internationalisation (i18n) — CHAQUE string doit être traduite
+
+Le site `apps/docs` est bilingue **anglais (source, `/`) / français (`/fr/`)** via
+l'i18n **natif** Docusaurus (cf. mémoire/`docusaurus.config.ts`). **Règle dure :
+tout texte visible par l'utilisateur DOIT exister dans les deux langues** — y
+compris le texte _à l'intérieur des specs d'exemples_ (libellés de nœuds,
+commentaires de timeline, en-têtes/corps de paquets, `set_content`…). Une chaîne
+identique FR/EN n'est tolérée que pour un vrai invariant de langue (nom propre,
+identifiant technique : `parallel`, `GET`, `SQL`, `npm`…).
+
+Selon l'endroit, le mécanisme diffère :
+
+1. **UI (composants / pages React)** → dictionnaire `src/i18n/fr.ts` (SOURCE de
+   vérité, `type Messages = typeof fr`) + `src/i18n/en.ts` (mêmes clés, sinon
+   erreur TS). Dans le composant : `const t = useTranslation();` puis
+   `t.section.cle`. Jamais de français en dur dans le JSX.
+2. **Specs de démos** (`src/site-content/demos/*.ts`) → exporte un builder
+   `(locale: Locale) => DataFlowSpec` avec une table `const strings = { en, fr }`
+   et reconstruis la spec via `s = strings[locale]`. **Référence :
+   `demos/clientServer.ts`.** Tant qu'une démo n'est pas traduite elle peut rester
+   un objet `DataFlowSpec` (FR dans les deux langues) ; le resolver
+   `getSpec(demo, locale)` accepte les deux formes.
+3. **Métadonnées de démos** (`demos.ts`) → `Localized<T> = { fr: T; en?: T }`
+   (repli FR via `pickLocale`). `category` = CLÉ stable ; les libellés affichés
+   sont traduits dans `gallery.categories`.
+4. **Docs MDX** → l'anglais est la SOURCE dans `docs/*.mdx` ; le français vit dans
+   `i18n/fr/docusaurus-plugin-content-docs/current/*.mdx`. Exception : `intro.mdx`
+   rend `<IntroDoc>` qui s'auto-localise (pas de copie i18n/fr).
+5. **Référence API** (`docsContent.tsx`, `apiExamples.ts`) → mêmes règles : prose
+   et `note:`/`text:` des exemples passent par le dictionnaire / une table
+   localisée, pas de français en dur.
+
+La locale courante pour le contenu (specs, champs localisés) s'obtient avec
+`useLocale()` (`src/i18n`).
+
+**Vérification (obligatoire quand tu touches l'i18n) :**
+
+- `cd apps/docs && npx tsc --noEmit` — le build Docusaurus NE type-check PAS ;
+  c'est ce `tsc` qui attrape un `en.ts` désaligné de `fr.ts` et les erreurs de
+  type. À lancer avant de considérer une tâche i18n terminée.
+- `npm run build:docs && (cd apps/docs && npx docusaurus serve)` — teste les deux
+  locales comme en prod (`docusaurus start` n'en sert qu'une).
+- Chasse au français résiduel : `grep -rnE "[éèàçœêîôûù]" apps/docs/src/components
+apps/docs/src/pages` (hors `fr.ts`, commentaires) ne doit rien rendre de
+  visible par l'utilisateur.
+
 ## Points de vigilance (issus de revues de code)
 
 Pièges déjà rencontrés dans ce dépôt — vérifie-les quand tu touches la zone

@@ -82,6 +82,7 @@ export const en: Messages = {
   footer: {
     taglineLine1: 'Architecture animations',
     taglineLine2: 'driven by JSON.',
+    repoAria: 'Project GitHub repository',
     labels: {
       SITE: 'SITE',
       PROJET: 'PROJECT',
@@ -183,5 +184,61 @@ export const en: Messages = {
         desc: ' — generated from the JSON Schema.',
       },
     ],
+  },
+  examples: {
+    pageTitle: 'Examples',
+    pageDescription:
+      'Browse the gallery of examples: animated previews, search, and category filters.',
+    gallery: 'Gallery',
+    title: 'Explore the examples',
+    subtitle:
+      'Hover over a thumbnail to see the animation, search by keyword or filter by category. Click to open the full preview, then load the spec in the Playground.',
+  },
+  gallery: {
+    searchPlaceholder:
+      'Search an example (e.g. “encryption”, “cache”, “alice”)…',
+    searchAria: 'Search an example',
+    clearSearch: 'Clear search',
+    allCategory: 'All',
+    openLarge: 'Click to open full size',
+    close: 'Close',
+    openInPlayground: 'Open in the Playground',
+    resetFilters: 'Reset filters',
+    noResults: (query: string) => `No example matches “${query}”.`,
+    categories: {
+      'web-api': 'Web & API',
+      realtime: 'Real-time',
+      security: 'Security',
+      infrastructure: 'Infrastructure',
+      distributed: 'Distributed systems',
+      engine: 'Engine concepts',
+    },
+  },
+  playground: {
+    pageTitle: 'Playground',
+    pageDescription: 'Interactive editor to test your JSON specifications.',
+    title: 'Playground',
+    subtitle:
+      'Edit the JSON spec on the left — the animation updates in real time.',
+    format: 'Format',
+    densityCompact: 'Compact',
+    densityComfortable: 'Comfortable',
+    densitySpacious: 'Spacious',
+    copy: 'Copy',
+    loadingEditor: 'Loading editor...',
+    invalidJson: 'Invalid JSON:',
+    emptyState: 'Enter a valid JSON spec to see the animation.',
+  },
+  apiRef: {
+    property: 'Property',
+    examples: 'Examples',
+    linkTo: (name: string) => `Link to ${name}`,
+    rootIntro: 'The root object of the specification.',
+    nodeIntro:
+      'A node (server, database, client…). Placed automatically based on `direction`/`lane`.',
+    connectionIntro: 'Permanent arrow (scenery) between two nodes.',
+    packetIntro: 'A movable packet, referenced by a `move` action.',
+    actionsIntro:
+      'Discriminated union on `type`. All types share the timing fields (`id`, `duration`, `wait_for`, `keep_until`, `keep_until_next`).',
   },
 };

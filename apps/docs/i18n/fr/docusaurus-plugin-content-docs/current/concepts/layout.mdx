@@ -1,0 +1,182 @@
+---
+title: Disposition
+slug: /concepts/layout
+---
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import {
+  orientationExample,
+  circularExample,
+  circularHubExample,
+} from './_layout/orientations';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+La disposition des nœuds repose sur quatre concepts : `direction`, `lane`,
+`align_with`, et le mode `circular`. Vous ne fournissez **aucune
+coordonnée** — le moteur place chaque nœud en ratios relatifs au conteneur,
+ce qui rend l'animation responsive sans calcul manuel.
+
+## `direction`
+
+Cinq valeurs possibles pour `direction` (au niveau racine de la spec) :
+
+<Tabs
+  defaultValue="left-to-right"
+  values={[
+    { label: 'left-to-right', value: 'left-to-right' },
+    { label: 'right-to-left', value: 'right-to-left' },
+    { label: 'top-to-bottom', value: 'top-to-bottom' },
+    { label: 'bottom-to-top', value: 'bottom-to-top' },
+    { label: 'circular', value: 'circular' },
+  ]}
+>
+  <TabItem value="left-to-right">
+    <DataFlowPlayer
+      spec={orientationExample('left-to-right')}
+      theme="auto"
+      controls={false}
+      height={500}
+      density="spacious"
+    />
+  </TabItem>
+  <TabItem value="right-to-left">
+    <DataFlowPlayer
+      spec={orientationExample('right-to-left')}
+      theme="auto"
+      controls={false}
+      height={500}
+      density="spacious"
+    />
+  </TabItem>
+  <TabItem value="top-to-bottom">
+    <DataFlowPlayer
+      spec={orientationExample('top-to-bottom')}
+      theme="auto"
+      controls={false}
+      height={500}
+      density="spacious"
+    />
+  </TabItem>
+  <TabItem value="bottom-to-top">
+    <DataFlowPlayer
+      spec={orientationExample('bottom-to-top')}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+  <TabItem value="circular">
+    <DataFlowPlayer
+      spec={circularExample}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+</Tabs>
+
+Les **quatre directions linéaires** partagent exactement la même spec : seule la
+valeur de `direction` change. Voici le code des aperçus ci-dessus (le mode
+`circular`, structurellement différent, est [détaillé plus bas](#mode-circulaire)) :
+
+```ts
+{
+  direction: 'left-to-right', // ou 'right-to-left' | 'top-to-bottom' | 'bottom-to-top'
+  nodes: [
+    { id: 'a', type: 'server', text: 'A', lane: 1 },
+    { id: 'b', type: 'server', text: 'B', lane: 2 },
+    { id: 'c', type: 'server', text: 'C', lane: 3 },
+  ],
+  connections: [
+    { from: 'a', to: 'b', style: 'animated' },
+    { from: 'b', to: 'c', style: 'animated' },
+  ],
+}
+```
+
+## Grilles et lanes
+
+En mode linéaire (les quatre premières directions), la propriété `lane`
+contrôle la position du nœud **le long du flux**. Les nœuds qui partagent
+la même `lane` sont **empilés** sur l'axe transverse.
+
+```ts
+{
+  direction: 'left-to-right',
+  nodes: [
+    { id: 'web1', type: 'server', lane: 2 },
+    { id: 'web2', type: 'server', lane: 2 }, // même colonne que web1
+    { id: 'db',   type: 'database', lane: 3 },
+  ],
+}
+```
+
+Quand peu de lanes sont définies (2-3), les nœuds s'étalent vers les bords
+du canevas ; au-delà, ils se resserrent vers le centre.
+
+## Alignement transverse (`align_with`)
+
+`align_with` permet d'aligner un nœud sur l'**axe transverse** d'un autre,
+identifié par son `id`. Pratique pour aligner deux nœuds de lanes
+différentes :
+
+```ts
+{
+  nodes: [
+    { id: 'client', type: 'laptop', lane: 1 },
+    { id: 'api',    type: 'server', lane: 2 },
+    { id: 'cache',  type: 'database', lane: 3, align_with: 'api' },
+  ],
+}
+```
+
+Ignoré en mode `circular`.
+
+## Mode circulaire
+
+En `circular`, le nœud marqué `main: true` est placé au centre ; les autres
+sont répartis à équidistance sur un cercle. Les `lane` et `align_with` sont
+ignorés — c'est le seul nœud `main` qui structure la disposition.
+
+```ts
+{
+  direction: 'circular',
+  nodes: [
+    { id: 'gateway', type: 'server', text: 'Gateway', icon: 'nginx', main: true },
+    { id: 'auth', type: 'server', text: 'Auth', icon: 'dotnet' },
+    { id: 'orders', type: 'server', text: 'Orders', icon: 'node' },
+    { id: 'billing', type: 'server', text: 'Billing', icon: 'java' },
+    { id: 'search', type: 'server', text: 'Search', icon: 'python' },
+  ],
+  connections: [
+    { from: 'auth', to: 'gateway', style: 'animated' },
+    { from: 'orders', to: 'gateway', style: 'animated' },
+    { from: 'billing', to: 'gateway', style: 'animated' },
+    { from: 'search', to: 'gateway', style: 'animated' },
+  ],
+}
+```
+
+<DataFlowPlayer
+  theme="auto"
+  controls={false}
+  height={500}
+  spec={circularHubExample}
+/>
+
+## Mise à l'échelle responsive
+
+Le composant calcule une **« cellule »** (plus petite distance entre deux
+nœuds, en px) qui pilote :
+
+- un facteur d'échelle global (`--rdfa-scale`) : icônes et polices plus
+  grandes en plein écran, plus petites si l'espace est serré ;
+- la largeur maximale des panneaux et paquets (`--rdfa-maxw`) pour qu'ils
+  ne débordent jamais sur les voisins ;
+- la position de chaque nœud, bornée selon sa taille mesurée pour éviter
+  les débordements du canevas.
+
+La prop `density` (`'compact' | 'comfortable' | 'spacious'`) module ces
+réglages pour adapter le visuel à un contexte dense (sidebar) ou aéré
+(plein écran).

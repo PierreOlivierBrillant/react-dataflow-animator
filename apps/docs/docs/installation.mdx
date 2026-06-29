@@ -10,9 +10,9 @@ slug: /installation
 npm install react-dataflow-animator
 ```
 
-`react` et `react-dom` (≥ 18) sont attendus en `peerDependencies`.
+`react` and `react-dom` (≥ 18) are expected in `peerDependencies`.
 
-## Utilisation minimale
+## Minimal usage
 
 ```tsx
 import { DataFlowPlayer } from 'react-dataflow-animator';
@@ -21,7 +21,7 @@ import 'react-dataflow-animator/styles.css';
 const spec = {
   direction: 'left-to-right',
   nodes: [
-    { id: 'browser', type: 'laptop', text: 'Navigateur', lane: 1 },
+    { id: 'browser', type: 'laptop', text: 'Browser', lane: 1 },
     { id: 'api', type: 'server', text: 'API', lane: 2 },
   ],
   packets: [
@@ -39,31 +39,27 @@ export default function Example() {
 }
 ```
 
-## Dans Docusaurus
+## In Docusaurus
 
-Importez le CSS une seule fois dans `src/css/custom.css` puis utilisez le
-composant dans n'importe quel fichier MDX :
+Import the CSS once in `src/css/custom.css` then use the component in any MDX file:
 
 ```css title="src/css/custom.css"
 @import 'react-dataflow-animator/styles.css';
 ```
 
-```mdx title="docs/mon-article.mdx"
+```mdx title="docs/my-article.mdx"
 import { DataFlowPlayer } from 'react-dataflow-animator';
 
 <DataFlowPlayer spec={spec} theme="auto" />
 ```
 
-Le thème `auto` (défaut) suit `prefers-color-scheme` ET un ancêtre
-`[data-theme]` (convention Docusaurus), donc le composant se synchronise
-automatiquement avec le bouton de thème de l'hôte.
+The `auto` theme (default) follows `prefers-color-scheme` AND a `[data-theme]` ancestor (Docusaurus convention), so the component automatically syncs with the host's theme toggle.
 
-## Dans Next.js (App Router)
+## In Next.js (App Router)
 
-Le composant utilise `useState`/`useEffect` : marquez le fichier appelant
-comme client component.
+The component uses `useState`/`useEffect`: mark the calling file as a client component.
 
-```tsx title="app/exemple/page.tsx"
+```tsx title="app/example/page.tsx"
 'use client';
 
 import { DataFlowPlayer } from 'react-dataflow-animator';
@@ -74,11 +70,9 @@ export default function Page() {
 }
 ```
 
-## Auto-complétion JSON dans VS Code {#autocomplete-json-vscode}
+## JSON auto-completion in VS Code {#autocomplete-json-vscode}
 
-Ajoutez cette configuration dans `.vscode/settings.json` pour activer
-l'auto-complétion et la validation inline sur tous vos fichiers
-`*.dataflow.json` :
+Add this configuration in `.vscode/settings.json` to enable auto-completion and inline validation on all your `*.dataflow.json` files:
 
 ```json title=".vscode/settings.json"
 {
@@ -91,18 +85,12 @@ l'auto-complétion et la validation inline sur tous vos fichiers
 }
 ```
 
-Le même chemin fonctionne avec n'importe quel validateur compatible
-JSON Schema draft-07 (Ajv, ajv-cli, etc.). Si vous hébergez le schéma
-publiquement, il peut également être référencé depuis le
-[JSON Schema Store](https://www.schemastore.org/).
+The same path works with any JSON Schema draft-07 compatible validator (Ajv, ajv-cli, etc.). If you host the schema publicly, it can also be referenced from the [JSON Schema Store](https://www.schemastore.org/).
 
-## SSR et hydratation
+## SSR and hydration
 
-Le composant ne touche jamais au DOM pendant le rendu (mesure et horloge
-confinées à des effets). Aucun risque de divergence SSR ↔ client. Pour
-afficher un placeholder pendant l'hydratation, utilisez la prop
-`fallback` :
+The component never touches the DOM during render (measurement and clock are confined to effects). No risk of SSR ↔ client mismatch. To display a placeholder during hydration, use the `fallback` prop:
 
 ```tsx
-<DataFlowPlayer spec={spec} fallback={<div>Chargement de l'animation…</div>} />
+<DataFlowPlayer spec={spec} fallback={<div>Loading animation...</div>} />
 ```

@@ -1,5 +1,5 @@
 ---
-title: Disposition
+title: Layout
 slug: /concepts/layout
 ---
 
@@ -12,14 +12,14 @@ import {
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-La disposition des nœuds repose sur quatre concepts : `direction`, `lane`,
-`align_with`, et le mode `circular`. Vous ne fournissez **aucune
-coordonnée** — le moteur place chaque nœud en ratios relatifs au conteneur,
-ce qui rend l'animation responsive sans calcul manuel.
+Node layout relies on four concepts: `direction`, `lane`, `align_with`,
+and the `circular` mode. You provide **no coordinates** — the engine
+places each node in relative ratios to the container, which makes the
+animation responsive without manual calculations.
 
 ## `direction`
 
-Cinq valeurs possibles pour `direction` (au niveau racine de la spec) :
+Five possible values for `direction` (at the root level of the spec):
 
 <Tabs
   defaultValue="left-to-right"
@@ -76,13 +76,13 @@ Cinq valeurs possibles pour `direction` (au niveau racine de la spec) :
   </TabItem>
 </Tabs>
 
-Les **quatre directions linéaires** partagent exactement la même spec : seule la
-valeur de `direction` change. Voici le code des aperçus ci-dessus (le mode
-`circular`, structurellement différent, est [détaillé plus bas](#mode-circulaire)) :
+The **four linear directions** share exactly the same spec: only the
+`direction` value changes. Here is the code for the previews above (the
+`circular` mode, which is structurally different, is [detailed below](#circular-mode)):
 
 ```ts
 {
-  direction: 'left-to-right', // ou 'right-to-left' | 'top-to-bottom' | 'bottom-to-top'
+  direction: 'left-to-right', // or 'right-to-left' | 'top-to-bottom' | 'bottom-to-top'
   nodes: [
     { id: 'a', type: 'server', text: 'A', lane: 1 },
     { id: 'b', type: 'server', text: 'B', lane: 2 },
@@ -95,31 +95,31 @@ valeur de `direction` change. Voici le code des aperçus ci-dessus (le mode
 }
 ```
 
-## Grilles et lanes
+## Grids and lanes
 
-En mode linéaire (les quatre premières directions), la propriété `lane`
-contrôle la position du nœud **le long du flux**. Les nœuds qui partagent
-la même `lane` sont **empilés** sur l'axe transverse.
+In linear mode (the first four directions), the `lane` property
+controls the node's position **along the flow**. Nodes that share
+the same `lane` are **stacked** on the transverse axis.
 
 ```ts
 {
   direction: 'left-to-right',
   nodes: [
     { id: 'web1', type: 'server', lane: 2 },
-    { id: 'web2', type: 'server', lane: 2 }, // même colonne que web1
+    { id: 'web2', type: 'server', lane: 2 }, // same column as web1
     { id: 'db',   type: 'database', lane: 3 },
   ],
 }
 ```
 
-Quand peu de lanes sont définies (2-3), les nœuds s'étalent vers les bords
-du canevas ; au-delà, ils se resserrent vers le centre.
+When few lanes are defined (2-3), nodes spread out towards the edges
+of the canvas; beyond that, they tighten towards the center.
 
-## Alignement transverse (`align_with`)
+## Transverse alignment (`align_with`)
 
-`align_with` permet d'aligner un nœud sur l'**axe transverse** d'un autre,
-identifié par son `id`. Pratique pour aligner deux nœuds de lanes
-différentes :
+`align_with` allows you to align a node on the **transverse axis** of another,
+identified by its `id`. Handy for aligning two nodes from different
+lanes:
 
 ```ts
 {
@@ -131,13 +131,13 @@ différentes :
 }
 ```
 
-Ignoré en mode `circular`.
+Ignored in `circular` mode.
 
-## Mode circulaire
+## Circular mode
 
-En `circular`, le nœud marqué `main: true` est placé au centre ; les autres
-sont répartis à équidistance sur un cercle. Les `lane` et `align_with` sont
-ignorés — c'est le seul nœud `main` qui structure la disposition.
+In `circular`, the node marked `main: true` is placed in the center; the others
+are distributed equidistantly on a circle. `lane` and `align_with` are
+ignored — only the `main` node structures the layout.
 
 ```ts
 {
@@ -165,18 +165,18 @@ ignorés — c'est le seul nœud `main` qui structure la disposition.
   spec={circularHubExample}
 />
 
-## Mise à l'échelle responsive
+## Responsive scaling
 
-Le composant calcule une **« cellule »** (plus petite distance entre deux
-nœuds, en px) qui pilote :
+The component calculates a **"cell"** (smallest distance between two
+nodes, in px) which drives:
 
-- un facteur d'échelle global (`--rdfa-scale`) : icônes et polices plus
-  grandes en plein écran, plus petites si l'espace est serré ;
-- la largeur maximale des panneaux et paquets (`--rdfa-maxw`) pour qu'ils
-  ne débordent jamais sur les voisins ;
-- la position de chaque nœud, bornée selon sa taille mesurée pour éviter
-  les débordements du canevas.
+- a global scale factor (`--rdfa-scale`): icons and fonts are
+  larger in full screen, smaller if space is tight;
+- the maximum width of panels and packets (`--rdfa-maxw`) so that they
+  never overflow onto neighbors;
+- the position of each node, bounded by its measured size to avoid
+  overflowing the canvas.
 
-La prop `density` (`'compact' | 'comfortable' | 'spacious'`) module ces
-réglages pour adapter le visuel à un contexte dense (sidebar) ou aéré
-(plein écran).
+The `density` prop (`'compact' | 'comfortable' | 'spacious'`) modulates these
+settings to adapt the visual to a dense context (sidebar) or airy context
+(full screen).

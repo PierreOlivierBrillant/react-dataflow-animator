@@ -1,0 +1,206 @@
+---
+title: Types d'actions
+slug: /reference/actions
+---
+
+Les types d'actions suivants sont disponibles. Tous partagent un jeu de champs
+communs ([cycle de vie](../concepts/timeline.mdx) : `id`, `duration`,
+`wait_for`, `keep_until`, `keep_until_next`, `keep_until_end`).
+
+## `move`
+
+Déplace un objet dynamique de `from` vers `to`.
+
+```ts
+{
+  type: 'move',
+  object: 'req',     // id d'un packet
+  from: 'browser',   // id d'un node
+  to: 'api',         // id d'un node
+  duration: 600,
+}
+```
+
+Produit deux points d'arrêt : apparition et arrivée. Par défaut, l'objet
+disparaît à la fin de son animation.
+
+## `arrow`
+
+Trace une flèche animée entre deux nœuds (dessin progressif).
+
+```ts
+{
+  type: 'arrow',
+  from: 'a',
+  to: 'b',
+  style: 'dashed',         // 'solid' | 'dotted' | 'dashed' | 'animated'
+  path: 'bezier',          // 'bezier' | 'simplebezier' | 'straight' | 'step' | 'smoothstep'
+  arrow_head: 'both',      // 'forward' | 'backward' | 'both' | 'none'
+  text: 'requête',
+}
+```
+
+Pour des flèches **permanentes** (décor affiché dès l'initialisation),
+utilisez plutôt le tableau racine `connections`.
+
+## `parallel`
+
+Encapsule des actions enfants exécutées au même instant.
+
+```ts
+{
+  type: 'parallel',
+  actions: [
+    { type: 'move', object: 'p1', from: 'a', to: 'b' },
+    { type: 'arrow', from: 'c', to: 'd' },
+  ],
+}
+```
+
+Les `wait_for` et `keep_until` à l'intérieur d'un `parallel` continuent de
+fonctionner normalement.
+
+## `loading`
+
+Affiche un spinner de chargement sur un nœud cible (simule un traitement).
+
+```ts
+{ type: 'loading', object: 'db', duration: 900 }
+```
+
+## `set_content`
+
+Mute le contenu d'un nœud. Le contenu suit la forme `ObjectContent`, partagée
+avec le champ [`content`](../concepts/nodes.mdx#content--contenu-initial) d'un
+nœud. Quatre modes via `type` :
+
+- **`code`** : terminal sombre avec coloration Prism, sans barre d'URL ; la
+  police s'ajuste pour faire tenir la ligne la plus longue sans wrap.
+- **`text`** : fenêtre de navigateur avec barre d'URL paramétrable (`url`).
+- **`image`** : image (`value` = chemin/URL) affichée dans une fenêtre.
+- **`table`** : tableau de données (`columns` + `rows_data`).
+
+:::caution Le texte est dans `value`
+
+Le champ porte-contenu s'appelle **`value`** (pas `content`). Le `content` est
+l'objet englobant.
+
+:::
+
+Mode `code` :
+
+```ts
+{
+  type: 'set_content',
+  object: 'editor',
+  content: {
+    type: 'code',
+    language: 'javascript',
+    value: 'const add = (a, b) => a + b;',
+  },
+}
+```
+
+Mode `text` (fenêtre de navigateur avec barre d'adresse) :
+
+```ts
+{
+  type: 'set_content',
+  object: 'browser',
+  content: {
+    type: 'text',
+    url: 'exemple.com/users',
+    value: 'Alice\nBob',
+  },
+}
+```
+
+Mode `table` :
+
+```ts
+{
+  type: 'set_content',
+  object: 'admin',
+  content: {
+    type: 'table',
+    columns: ['id', 'nom'],
+    rows_data: [
+      [1, 'Alice'],
+      [2, 'Bob'],
+    ],
+  },
+}
+```
+
+| Champ       | Modes concernés | Rôle                                             |
+| ----------- | --------------- | ------------------------------------------------ |
+| `type`      | tous            | `code` \| `text` \| `image` \| `table`.          |
+| `value`     | code/text/image | Texte source, ou chemin d'image.                 |
+| `language`  | code            | Langage de coloration (cf. `HighlightLanguage`). |
+| `url`       | text            | Barre d'adresse de la fenêtre.                   |
+| `columns`   | table           | En-têtes de colonnes.                            |
+| `rows_data` | table           | Lignes de données.                               |
+
+## `comment`
+
+Affiche une bulle de texte en fondu près d'un nœud, identifié par `object`.
+
+```ts
+{
+  type: 'comment',
+  object: 'browser',
+  text: 'L\'utilisateur clique',
+  duration: 400,
+}
+```
+
+**Commentaire omniscient** : omettez `object` pour afficher la bulle **en haut
+de la scène** plutôt qu'à côté d'un nœud — idéal pour une narration générale qui
+ne se rattache à aucun composant précis.
+
+```ts
+{ type: 'comment', text: 'Étape 2 — Authentification' }
+```
+
+## `set_visible`
+
+Affiche ou cache un nœud statique avec un fondu. Le nœud cible peut démarrer
+caché (`visible: false` dans sa déclaration) puis être révélé, ou inversement.
+L'état de visibilité **persiste** jusqu'à la fin de la chronologie (ou jusqu'à
+un `set_visible` contraire).
+
+```ts
+{ type: 'set_visible', object: 'cache', visible: true }
+```
+
+Voir [Nœuds → `visible`](../concepts/nodes.mdx#visible--visibilité-initiale)
+pour l'usage combiné avec la visibilité initiale.
+
+## `highlight`
+
+Surligne (halo pulsé) un nœud statique **ou** une connexion permanente,
+identifiés par leur `id`.
+
+```ts
+{ type: 'highlight', object: 'db' }
+```
+
+## `wait`
+
+Insère un temps mort : rien ne se passe pendant `duration` ms (défaut :
+1000). L'action ne produit aucun élément à l'écran ; elle se contente de
+décaler l'étape suivante. Le contenu déjà posé (via `keep_until_next`)
+reste affiché **pendant** l'attente, ce qui fige l'image le temps voulu.
+
+```ts
+{ type: 'wait', duration: 1500 }
+```
+
+Utile pour laisser le spectateur lire une étape avant de poursuivre, ou
+pour rythmer une lecture en `autoPlay`.
+
+## Référence complète
+
+Pour la liste exhaustive des champs (types, valeurs par défaut,
+contraintes), voir la [référence API](./api.mdx) générée à partir du
+JSON Schema.

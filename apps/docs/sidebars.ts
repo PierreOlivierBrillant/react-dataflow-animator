@@ -17,7 +17,7 @@ const sidebars = {
     },
     {
       type: 'category',
-      label: 'Référence',
+      label: 'Reference',
       className: 'menu-icon-reference',
       items: ['reference/actions', 'reference/components', 'reference/api'],
     },

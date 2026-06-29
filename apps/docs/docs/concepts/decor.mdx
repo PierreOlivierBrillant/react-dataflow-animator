@@ -1,5 +1,5 @@
 ---
-title: Connexions et zones
+title: Connections and zones
 slug: /concepts/decor
 ---
 
@@ -14,17 +14,17 @@ import {
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Deux éléments de **décor** structurent la scène en arrière-plan, indépendamment
-de la timeline : les **connexions** (liens permanents entre nœuds) et les
-**zones** (régions englobant un groupe de nœuds). Tous deux sont affichés dès
-l'initialisation, sans animation à déclencher.
+Two elements of **decor** structure the scene in the background, independently
+from the timeline: **connections** (permanent links between nodes) and
+**zones** (regions enclosing a group of nodes). Both are displayed right
+from the initialization, with no animation to trigger.
 
-## Connexions permanentes
+## Permanent connections
 
-Le tableau racine `connections` déclare des liens **affichés en permanence**
-(le décor du diagramme). À distinguer de l'action
-[`arrow`](../reference/actions.mdx#arrow), qui trace une flèche **animée** à un
-instant précis de la timeline.
+The `connections` root array declares links that are **permanently displayed**
+(the diagram's decor). This is distinct from the
+[`arrow`](../reference/actions.mdx#arrow) action, which draws an **animated** arrow at a
+specific moment in the timeline.
 
 ```ts
 connections: [
@@ -33,10 +33,10 @@ connections: [
 ],
 ```
 
-### `style` — style de ligne
+### `style` — line style
 
-Quatre styles, partagés avec l'action `arrow` (l'alias historique `full` est
-toléré pour `solid`) :
+Four styles, shared with the `arrow` action (the historical `full` alias is
+tolerated for `solid`):
 
 <Tabs
   defaultValue="solid"
@@ -81,13 +81,13 @@ toléré pour `solid`) :
   </TabItem>
 </Tabs>
 
-Le style `animated` fait défiler les tirets pour suggérer un flux continu
-(connexion temps réel, WebSocket…).
+The `animated` style scrolls the dashes to suggest a continuous flow
+(real-time connection, WebSocket...).
 
-### `path` — forme du tracé
+### `path` — trace shape
 
-Indépendamment du style de trait, `path` règle la **forme** du chemin. Cinq
-valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
+Independently of the line style, `path` sets the **shape** of the path. Five
+values, shared with the `arrow` action (`bezier` by default):
 
 <Tabs
   defaultValue="bezier"
@@ -142,22 +142,22 @@ valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
 </Tabs>
 
 ```ts
-{ from: 'lb', to: 'api1', path: 'bezier' }     // courbe douce (défaut)
-{ from: 'lb', to: 'api1', path: 'simplebezier' } // courbe plus discrète
-{ from: 'lb', to: 'api1', path: 'straight' }   // segment direct
-{ from: 'lb', to: 'api1', path: 'step' }       // angles droits
-{ from: 'lb', to: 'api1', path: 'smoothstep' } // angles droits arrondis
+{ from: 'lb', to: 'api1', path: 'bezier' }     // smooth curve (default)
+{ from: 'lb', to: 'api1', path: 'simplebezier' } // more discreet curve
+{ from: 'lb', to: 'api1', path: 'straight' }   // direct segment
+{ from: 'lb', to: 'api1', path: 'step' }       // right angles
+{ from: 'lb', to: 'api1', path: 'smoothstep' } // rounded right angles
 ```
 
-La courbure n'apparaît qu'en présence d'un **décalage transverse** (lanes
-différentes, fan-out, voies bidirectionnelles) : entre deux nœuds parfaitement
-alignés, toutes les formes se confondent avec un trait droit. Les paquets d'une
-action [`move`](../reference/actions.mdx#move) épousent le tracé `bezier` par
-défaut.
+The curvature only appears when there is a **transverse offset** (different
+lanes, fan-out, bidirectional lanes): between two perfectly aligned nodes,
+all shapes blend into a straight line. Packets of a
+[`move`](../reference/actions.mdx#move) action follow the `bezier` path by
+default.
 
-### `arrow_head` — pointes de flèche
+### `arrow_head` — arrowheads
 
-`arrow_head` contrôle les extrémités fléchées (`forward` par défaut) :
+`arrow_head` controls the arrow tips (`forward` by default):
 
 <DataFlowPlayer
   spec={arrowHeadExample}
@@ -167,15 +167,15 @@ défaut.
 />
 
 ```ts
-{ from: 'a', to: 'b', arrow_head: 'forward' }  // pointe à l'arrivée (défaut)
-{ from: 'a', to: 'b', arrow_head: 'backward' } // pointe au départ
-{ from: 'a', to: 'b', arrow_head: 'both' }     // double sens
-{ from: 'a', to: 'b', arrow_head: 'none' }     // simple trait, sans pointe
+{ from: 'a', to: 'b', arrow_head: 'forward' }  // tip at destination (default)
+{ from: 'a', to: 'b', arrow_head: 'backward' } // tip at start
+{ from: 'a', to: 'b', arrow_head: 'both' }     // both ways
+{ from: 'a', to: 'b', arrow_head: 'none' }     // simple line, no tip
 ```
 
-### `text` — étiquette médiane
+### `text` — middle label
 
-Un `text` optionnel s'affiche au milieu du lien (ex. un protocole, un port) :
+An optional `text` is displayed in the middle of the link (e.g., a protocol, a port):
 
 ```ts
 { from: 'api', to: 'db', text: 'TCP 5432' }
@@ -183,10 +183,9 @@ Un `text` optionnel s'affiche au milieu du lien (ex. un protocole, un port) :
 
 ## Zones
 
-Le tableau racine `zones` dessine des **rectangles d'arrière-plan** englobant un
-groupe de nœuds : pratique pour matérialiser un réseau, un cluster, une frontière
-de confiance. Une zone se dimensionne **automatiquement** pour contenir tous ses
-membres.
+The `zones` root array draws **background rectangles** encompassing a group
+of nodes: handy for materializing a network, a cluster, a trust boundary.
+A zone resizes **automatically** to contain all its members.
 
 ```ts
 zones: [
@@ -202,22 +201,22 @@ zones: [
   height={340}
 />
 
-| Champ      | Rôle                                                              |
-| ---------- | ----------------------------------------------------------------- |
-| `contains` | IDs des nœuds **et/ou** des zones englobés (requis).              |
-| `color`    | Couleur CSS de la bordure et du fond semi-transparent.            |
-| `label`    | Texte affiché en haut à gauche de la zone.                        |
-| `id`       | Optionnel — requis seulement pour imbriquer la zone (ci-dessous). |
+| Field      | Role                                                      |
+| ---------- | --------------------------------------------------------- |
+| `contains` | IDs of nodes **and/or** enclosed zones (required).        |
+| `color`    | CSS color for the border and semi-transparent background. |
+| `label`    | Text displayed at the top left of the zone.               |
+| `id`       | Optional — only required to nest the zone (see below).    |
 
-### Zones imbriquées
+### Nested zones
 
-Une zone peut en contenir une autre : référencez l'`id` de la zone interne dans
-le `contains` de la zone externe. La zone englobante s'étend pour la couvrir.
+A zone can contain another: reference the `id` of the inner zone in the
+`contains` of the outer zone. The enclosing zone expands to cover it.
 
 ```ts
 zones: [
-  { id: 'core', contains: ['svc', 'data'], label: 'Cœur métier', color: '#a855f7' },
-  { contains: ['gw', 'core'], label: 'Cluster', color: '#64748b' }, // englobe la zone `core`
+  { id: 'core', contains: ['svc', 'data'], label: 'Core business', color: '#a855f7' },
+  { contains: ['gw', 'core'], label: 'Cluster', color: '#64748b' }, // encloses the `core` zone
 ],
 ```
 

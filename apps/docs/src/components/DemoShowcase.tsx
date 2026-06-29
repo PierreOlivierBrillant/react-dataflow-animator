@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from '@docusaurus/Link';
 import { DataFlowPlayer } from 'react-dataflow-animator';
-import { demos } from '../site-content';
-import { useTranslation } from '../i18n';
+import { demos, getSpec, pickLocale } from '../site-content';
+import { useLocale, useTranslation } from '../i18n';
 
 // Quelques exemples mis en avant sur l'accueil ; la galerie complète
 // (recherche + filtres) vit sur la page /examples.
@@ -11,6 +11,7 @@ const featured = demos.slice(0, 6);
 
 export function DemoShowcase() {
   const t = useTranslation();
+  const locale = useLocale();
   const [activeId, setActiveId] = useState(featured[0].id);
   const active = demos.find((d) => d.id === activeId)!;
   const [codeVisible, setCodeVisible] = useState(false);
@@ -62,7 +63,7 @@ export function DemoShowcase() {
               onClick={() => setActiveId(demo.id)}
               className={`w-full sm:w-auto px-4 py-2 rounded-lg text-sm transition-all cursor-pointer font-sans ${activeId === demo.id ? 'bg-violet-600/20 border border-violet-600/50 text-violet-300' : 'bg-white/[0.03] border border-white/[0.07] text-white/45'}`}
             >
-              {demo.title}
+              {pickLocale(demo.title, locale)}
             </button>
           ))}
         </div>
@@ -77,13 +78,13 @@ export function DemoShowcase() {
             transition={{ duration: 0.3 }}
           >
             <p className="text-center mb-6 text-sm text-white/35 font-sans">
-              {active.description}
+              {pickLocale(active.description, locale)}
             </p>
 
             <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-[#0c0a1e] border border-white/[0.07]">
               <DataFlowPlayer
                 theme="dark"
-                spec={active.spec}
+                spec={getSpec(active, locale)}
                 autoPlay
                 loop
                 controls
@@ -115,7 +116,9 @@ export function DemoShowcase() {
                       {active.id}.json
                     </div>
                     <pre className="p-5 text-xs overflow-x-auto font-mono text-violet-400/90 leading-7 m-0 bg-transparent">
-                      <code>{JSON.stringify(active.spec, null, 2)}</code>
+                      <code>
+                        {JSON.stringify(getSpec(active, locale), null, 2)}
+                      </code>
                     </pre>
                   </div>
                 </motion.div>

@@ -16,11 +16,17 @@ const config = {
       onBrokenMarkdownLinks: 'warn',
     },
   },
-  // L'anglais est la langue par défaut (HTML statique + SSR). La bascule FR/EN
-  // est gérée côté client (src/i18n) : détection navigateur puis repli anglais.
+  // i18n natif : l'anglais est la langue source (servie à la racine `/`), le
+  // français est une locale traduite (`/fr/`). Chaque locale produit du HTML
+  // statique distinct → DocSearch peut indexer les deux. La détection navigateur
+  // (1ʳᵉ visite) est gérée par une redirection client dans `src/theme/Root.tsx`.
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en', 'fr'],
+    localeConfigs: {
+      en: { label: 'English', htmlLang: 'en' },
+      fr: { label: 'Français', htmlLang: 'fr' },
+    },
   },
   presets: [
     [
@@ -120,7 +126,10 @@ const config = {
       apiKey: '6ab54371d9c7838ec9038b1e45831c11',
       indexName: 'React Dataflow Animator documentation website',
       searchPagePath: 'search',
-      contextualSearch: false,
+      // Filtre les résultats par locale courante (facette `language`). Suppose que
+      // le crawler DocSearch indexe les deux locales (cf. balise docsearch:language
+      // émise par Docusaurus pour /en et /fr).
+      contextualSearch: true,
     },
   },
 };

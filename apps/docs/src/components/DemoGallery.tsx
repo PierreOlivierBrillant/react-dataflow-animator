@@ -7,9 +7,12 @@ import {
   demos,
   demosById,
   demoCategories,
+  getSpec,
+  pickLocale,
   type Demo,
   type DemoCategory,
 } from '../site-content/demos';
+import { useLocale, useTranslation } from '../i18n';
 
 /** Insensibilise une chaîne aux accents et à la casse pour la recherche. */
 const fold = (s: string): string =>
@@ -77,6 +80,10 @@ function DemoThumbnail({ spec }: { spec: DataFlowSpec }) {
 // ─── Carte ──────────────────────────────────────────────────────────────────
 
 function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
+  const t = useTranslation();
+  const locale = useLocale();
+  const tags = demo.tags ? pickLocale(demo.tags, locale) : [];
+
   return (
     <motion.button
       type="button"
@@ -88,27 +95,27 @@ function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
     >
       {/* Aperçu */}
       <div className="relative aspect-[16/9] overflow-hidden bg-[#0c0a1e] border-b border-white/[0.06]">
-        <DemoThumbnail spec={demo.spec} />
+        <DemoThumbnail spec={getSpec(demo, locale)} />
         <span className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider bg-black/55 backdrop-blur-sm text-violet-300 border border-violet-500/30">
-          {demo.category}
+          {t.gallery.categories[demo.category]}
         </span>
         <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center gap-1.5 py-2 text-[11px] font-sans text-white/90 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
           <Sparkles size={12} className="text-violet-300" />
-          Cliquez pour ouvrir en grand
+          {t.gallery.openLarge}
         </div>
       </div>
 
       {/* Corps */}
       <div className="flex flex-col flex-1 p-4">
         <h3 className="text-white text-[15px] font-semibold mb-1.5 font-heading leading-snug">
-          {demo.title}
+          {pickLocale(demo.title, locale)}
         </h3>
         <p className="text-[13px] leading-relaxed text-white/45 font-sans line-clamp-2 mb-3">
-          {demo.description}
+          {pickLocale(demo.description, locale)}
         </p>
-        {demo.tags && demo.tags.length > 0 && (
+        {tags.length > 0 && (
           <div className="mt-auto flex flex-wrap gap-1.5">
-            {demo.tags.slice(0, 4).map((tag) => (
+            {tags.slice(0, 4).map((tag) => (
               <span
                 key={tag}
                 className="px-1.5 py-0.5 rounded text-[10px] font-mono text-white/40 bg-white/[0.04] border border-white/[0.06]"
@@ -126,6 +133,10 @@ function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
 // ─── Modale d'aperçu ──────────────────────────────────────────────────────────
 
 function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
+  const t = useTranslation();
+  const locale = useLocale();
+  const title = pickLocale(demo.title, locale);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -148,7 +159,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={demo.title}
+      aria-label={title}
     >
       <motion.div
         className="relative w-full max-w-4xl rounded-2xl overflow-hidden border border-white/10 bg-[#0c0a1e] shadow-2xl"
@@ -162,16 +173,16 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
         <div className="flex items-start gap-4 px-5 py-4 border-b border-white/[0.07]">
           <div className="flex-1 min-w-0">
             <span className="inline-block mb-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-violet-300 bg-violet-500/10 border border-violet-500/25">
-              {demo.category}
+              {t.gallery.categories[demo.category]}
             </span>
             <h2 className="text-white text-lg font-bold font-heading leading-tight mb-0">
-              {demo.title}
+              {title}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Fermer"
+            aria-label={t.gallery.close}
             className="shrink-0 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer bg-transparent border-none"
           >
             <X size={18} />
@@ -182,7 +193,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
         <div className="bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,0.08)_0%,transparent_70%)]">
           <DataFlowPlayer
             key={demo.id}
-            spec={demo.spec}
+            spec={getSpec(demo, locale)}
             theme="dark"
             controls
             autoPlay
@@ -195,13 +206,13 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
         {/* Pied */}
         <div className="px-5 py-4 border-t border-white/[0.07]">
           <p className="text-[13px] leading-relaxed text-white/55 font-sans mb-3">
-            {demo.description}
+            {pickLocale(demo.description, locale)}
           </p>
           <Link
             to={`/playground?demo=${demo.id}`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans text-white bg-violet-600/90 hover:bg-violet-600 transition-colors no-underline"
           >
-            Ouvrir dans le Playground
+            {t.gallery.openInPlayground}
             <ExternalLink size={14} />
           </Link>
         </div>
@@ -213,6 +224,8 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
 // ─── Galerie ──────────────────────────────────────────────────────────────────
 
 export function DemoGallery() {
+  const t = useTranslation();
+  const locale = useLocale();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<DemoCategory | 'all'>('all');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -230,11 +243,17 @@ export function DemoGallery() {
       if (category !== 'all' && d.category !== category) return false;
       if (terms.length === 0) return true;
       const haystack = fold(
-        [d.title, d.description, d.category, d.id, ...(d.tags ?? [])].join(' ')
+        [
+          pickLocale(d.title, locale),
+          pickLocale(d.description, locale),
+          t.gallery.categories[d.category],
+          d.id,
+          ...(d.tags ? pickLocale(d.tags, locale) : []),
+        ].join(' ')
       );
-      return terms.every((t) => haystack.includes(t));
+      return terms.every((term) => haystack.includes(term));
     });
-  }, [query, category]);
+  }, [query, category, locale, t]);
 
   const openDemo = openId ? demosById[openId] : null;
 
@@ -250,15 +269,15 @@ export function DemoGallery() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher un exemple (ex. « chiffrement », « cache », « alice »)…"
-          aria-label="Rechercher un exemple"
+          placeholder={t.gallery.searchPlaceholder}
+          aria-label={t.gallery.searchAria}
           className="w-full pl-10 pr-10 py-3 rounded-xl text-sm font-sans text-white bg-white/[0.03] border border-white/[0.09] outline-none placeholder:text-white/30 focus:border-violet-500/50 transition-colors"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
-            aria-label="Effacer la recherche"
+            aria-label={t.gallery.clearSearch}
             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded text-white/30 hover:text-white/70 transition-colors cursor-pointer bg-transparent border-none"
           >
             <X size={15} />
@@ -269,7 +288,7 @@ export function DemoGallery() {
       {/* Filtres par catégorie */}
       <div className="flex flex-wrap items-center gap-2 mb-8">
         <CategoryChip
-          label="Toutes"
+          label={t.gallery.allCategory}
           count={counts.all}
           active={category === 'all'}
           onClick={() => setCategory('all')}
@@ -277,7 +296,7 @@ export function DemoGallery() {
         {demoCategories.map((c) => (
           <CategoryChip
             key={c}
-            label={c}
+            label={t.gallery.categories[c]}
             count={counts[c]}
             active={category === c}
             onClick={() => setCategory(c)}
@@ -299,7 +318,7 @@ export function DemoGallery() {
       ) : (
         <div className="text-center py-20">
           <p className="text-white/50 font-sans mb-1">
-            Aucun exemple ne correspond à « {query} ».
+            {t.gallery.noResults(query)}
           </p>
           <button
             type="button"
@@ -309,7 +328,7 @@ export function DemoGallery() {
             }}
             className="text-sm text-violet-400 hover:text-violet-300 cursor-pointer bg-transparent border-none font-sans"
           >
-            Réinitialiser les filtres
+            {t.gallery.resetFilters}
           </button>
         </div>
       )}

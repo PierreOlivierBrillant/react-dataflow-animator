@@ -1,32 +1,32 @@
 ---
-title: Types d'actions
+title: Action types
 slug: /reference/actions
 ---
 
-Les types d'actions suivants sont disponibles. Tous partagent un jeu de champs
-communs ([cycle de vie](../concepts/timeline.mdx) : `id`, `duration`,
+The following action types are available. All share a set of common fields
+([timeline lifecycle](../concepts/timeline.mdx): `id`, `duration`,
 `wait_for`, `keep_until`, `keep_until_next`, `keep_until_end`).
 
 ## `move`
 
-Déplace un objet dynamique de `from` vers `to`.
+Moves a dynamic object from `from` to `to`.
 
 ```ts
 {
   type: 'move',
-  object: 'req',     // id d'un packet
-  from: 'browser',   // id d'un node
-  to: 'api',         // id d'un node
+  object: 'req',     // id of a packet
+  from: 'browser',   // id of a node
+  to: 'api',         // id of a node
   duration: 600,
 }
 ```
 
-Produit deux points d'arrêt : apparition et arrivée. Par défaut, l'objet
-disparaît à la fin de son animation.
+Produces two breakpoints: appearance and arrival. By default, the object
+disappears at the end of its animation.
 
 ## `arrow`
 
-Trace une flèche animée entre deux nœuds (dessin progressif).
+Draws an animated arrow between two nodes (progressive drawing).
 
 ```ts
 {
@@ -36,16 +36,16 @@ Trace une flèche animée entre deux nœuds (dessin progressif).
   style: 'dashed',         // 'solid' | 'dotted' | 'dashed' | 'animated'
   path: 'bezier',          // 'bezier' | 'simplebezier' | 'straight' | 'step' | 'smoothstep'
   arrow_head: 'both',      // 'forward' | 'backward' | 'both' | 'none'
-  text: 'requête',
+  text: 'request',
 }
 ```
 
-Pour des flèches **permanentes** (décor affiché dès l'initialisation),
-utilisez plutôt le tableau racine `connections`.
+For **permanent** arrows (decor displayed right from the initialization),
+use the `connections` root array instead.
 
 ## `parallel`
 
-Encapsule des actions enfants exécutées au même instant.
+Wraps child actions executed at the same time.
 
 ```ts
 {
@@ -57,12 +57,12 @@ Encapsule des actions enfants exécutées au même instant.
 }
 ```
 
-Les `wait_for` et `keep_until` à l'intérieur d'un `parallel` continuent de
-fonctionner normalement.
+The `wait_for` and `keep_until` inside a `parallel` continue to
+work normally.
 
 ## `loading`
 
-Affiche un spinner de chargement sur un nœud cible (simule un traitement).
+Displays a loading spinner on a target node (simulates processing).
 
 ```ts
 { type: 'loading', object: 'db', duration: 900 }
@@ -70,24 +70,24 @@ Affiche un spinner de chargement sur un nœud cible (simule un traitement).
 
 ## `set_content`
 
-Mute le contenu d'un nœud. Le contenu suit la forme `ObjectContent`, partagée
-avec le champ [`content`](../concepts/nodes.mdx#content--contenu-initial) d'un
-nœud. Quatre modes via `type` :
+Mutates the content of a node. The content follows the `ObjectContent` shape, shared
+avec `node.content` (voir [`content`](../concepts/nodes.mdx#content--initial-content))
+:
 
-- **`code`** : terminal sombre avec coloration Prism, sans barre d'URL ; la
-  police s'ajuste pour faire tenir la ligne la plus longue sans wrap.
-- **`text`** : fenêtre de navigateur avec barre d'URL paramétrable (`url`).
-- **`image`** : image (`value` = chemin/URL) affichée dans une fenêtre.
-- **`table`** : tableau de données (`columns` + `rows_data`).
+- **`code`**: dark terminal with Prism highlighting, no URL bar; the
+  font adjusts to fit the longest line without wrapping.
+- **`text`**: browser window with a configurable URL bar (`url`).
+- **`image`**: image (`value` = path/URL) displayed in a window.
+- **`table`**: data table (`columns` + `rows_data`).
 
-:::caution Le texte est dans `value`
+:::caution The text is in `value`
 
-Le champ porte-contenu s'appelle **`value`** (pas `content`). Le `content` est
-l'objet englobant.
+The content-bearing field is named **`value`** (not `content`). The `content` is
+the wrapping object.
 
 :::
 
-Mode `code` :
+`code` mode:
 
 ```ts
 {
@@ -101,7 +101,7 @@ Mode `code` :
 }
 ```
 
-Mode `text` (fenêtre de navigateur avec barre d'adresse) :
+`text` mode (browser window with address bar):
 
 ```ts
 {
@@ -115,7 +115,7 @@ Mode `text` (fenêtre de navigateur avec barre d'adresse) :
 }
 ```
 
-Mode `table` :
+`table` mode:
 
 ```ts
 {
@@ -132,54 +132,52 @@ Mode `table` :
 }
 ```
 
-| Champ       | Modes concernés | Rôle                                             |
+| Field       | Affected modes  | Role                                             |
 | ----------- | --------------- | ------------------------------------------------ |
-| `type`      | tous            | `code` \| `text` \| `image` \| `table`.          |
-| `value`     | code/text/image | Texte source, ou chemin d'image.                 |
-| `language`  | code            | Langage de coloration (cf. `HighlightLanguage`). |
-| `url`       | text            | Barre d'adresse de la fenêtre.                   |
-| `columns`   | table           | En-têtes de colonnes.                            |
-| `rows_data` | table           | Lignes de données.                               |
+| `type`      | all             | `code` \| `text` \| `image` \| `table`.          |
+| `value`     | code/text/image | Source text, or image path.                      |
+| `language`  | code            | Highlighting language (cf. `HighlightLanguage`). |
+| `url`       | text            | Address bar of the window.                       |
+| `columns`   | table           | Column headers.                                  |
+| `rows_data` | table           | Data rows.                                       |
 
 ## `comment`
 
-Affiche une bulle de texte en fondu près d'un nœud, identifié par `object`.
+Displays a text bubble fading in near a node, identified by `object`.
 
 ```ts
 {
   type: 'comment',
   object: 'browser',
-  text: 'L\'utilisateur clique',
+  text: 'The user clicks',
   duration: 400,
 }
 ```
 
-**Commentaire omniscient** : omettez `object` pour afficher la bulle **en haut
-de la scène** plutôt qu'à côté d'un nœud — idéal pour une narration générale qui
-ne se rattache à aucun composant précis.
+**Omniscient comment**: omit `object` to display the bubble **at the top
+of the scene** rather than next to a node — ideal for a general narration that
+is not attached to any specific component.
 
 ```ts
-{ type: 'comment', text: 'Étape 2 — Authentification' }
+{ type: 'comment', text: 'Step 2 — Authentication' }
 ```
 
 ## `set_visible`
 
-Affiche ou cache un nœud statique avec un fondu. Le nœud cible peut démarrer
-caché (`visible: false` dans sa déclaration) puis être révélé, ou inversement.
-L'état de visibilité **persiste** jusqu'à la fin de la chronologie (ou jusqu'à
-un `set_visible` contraire).
+Shows or hides a static node with a fade. If this parameter is `false` (or
+if the node has no initial `visible` in its configuration [see
+Nodes](../concepts/nodes.mdx#visible--initial-visibility)), it appears hidden.
+The visibility state **persists** until the end of the timeline (or until
+a contrary `set_visible`).
 
 ```ts
 { type: 'set_visible', object: 'cache', visible: true }
 ```
 
-Voir [Nœuds → `visible`](../concepts/nodes.mdx#visible--visibilité-initiale)
-pour l'usage combiné avec la visibilité initiale.
-
 ## `highlight`
 
-Surligne (halo pulsé) un nœud statique **ou** une connexion permanente,
-identifiés par leur `id`.
+Highlights (pulsing halo) a static node **or** a permanent connection,
+identified by their `id`.
 
 ```ts
 { type: 'highlight', object: 'db' }
@@ -187,20 +185,20 @@ identifiés par leur `id`.
 
 ## `wait`
 
-Insère un temps mort : rien ne se passe pendant `duration` ms (défaut :
-1000). L'action ne produit aucun élément à l'écran ; elle se contente de
-décaler l'étape suivante. Le contenu déjà posé (via `keep_until_next`)
-reste affiché **pendant** l'attente, ce qui fige l'image le temps voulu.
+Inserts a dead time: nothing happens for `duration` ms (default:
+1000). The action produces no element on screen; it simply
+delays the next step. Content already placed (via `keep_until_next`)
+remains displayed **during** the wait, which freezes the frame for the desired time.
 
 ```ts
 { type: 'wait', duration: 1500 }
 ```
 
-Utile pour laisser le spectateur lire une étape avant de poursuivre, ou
-pour rythmer une lecture en `autoPlay`.
+Useful to let the viewer read a step before continuing, or
+to pace a playback in `autoPlay`.
 
-## Référence complète
+## Complete reference
 
-Pour la liste exhaustive des champs (types, valeurs par défaut,
-contraintes), voir la [référence API](./api.mdx) générée à partir du
+For the exhaustive list of fields (types, default values,
+constraints), see the [API reference](./api.mdx) generated from the
 JSON Schema.

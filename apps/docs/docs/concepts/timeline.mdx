@@ -1,58 +1,58 @@
 ---
-title: Timeline et étapes
+title: Timeline and steps
 slug: /concepts/timeline
 ---
 
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import { stepsExample, fanOutExample } from './_timeline/examples';
 
-Le moteur compile votre tableau `timeline` en une **chronologie pure** : à
-chaque instant `t` (ms), l'état visuel est déterminé par une fonction
-`evaluate(timeline, t)`. Le seek arrière, la navigation par étapes et le SSR
-en découlent gratuitement.
+The engine compiles your `timeline` array into a **pure chronology**: at
+any given time `t` (ms), the visual state is determined by an
+`evaluate(timeline, t)` function. Backward seeking, step-by-step navigation,
+and SSR come for free from this design.
 
-## Étapes logiques
+## Logical steps
 
-Chaque action **racine** (au premier niveau de `timeline`) constitue une
-**étape logique**. Les boutons « Précédent » / « Suivant » du lecteur
-naviguent d'une étape à l'autre.
+Each **root** action (at the first level of `timeline`) constitutes a
+**logical step**. The "Previous" / "Next" buttons of the player
+navigate from one step to another.
 
-Une courte pause (`STEP_GAP`) sépare deux étapes consécutives : l'arrêt
-« Suivant » montre ainsi l'étape « posée » seule, sans chevaucher
-l'apparition de la suivante.
+A short pause (`STEP_GAP`) separates two consecutive steps: the "Next"
+stop thus shows the "settled" step on its own, without overlapping
+the appearance of the next one.
 
-Dans l'exemple ci-dessous, les **cinq** actions racines forment cinq étapes :
-utilisez « Précédent » / « Suivant » pour avancer pas à pas.
+In the example below, the **five** root actions form five steps:
+use "Previous" / "Next" to step forward.
 
 <DataFlowPlayer spec={stepsExample} theme="auto" height={340} />
 
 ```ts
 timeline: [
-  { type: 'comment', object: 'browser', text: '1. …' }, // étape 1
-  { type: 'move', object: 'req', from: 'browser', to: 'api' }, // étape 2
-  { type: 'loading', id: 'work', object: 'api' }, // étape 3
-  { type: 'move', object: 'res', from: 'api', to: 'browser', wait_for: 'work' }, // étape 4
-  { type: 'comment', object: 'browser', text: '2. …', keep_until_end: true }, // étape 5
+  { type: 'comment', object: 'browser', text: '1. …' }, // step 1
+  { type: 'move', object: 'req', from: 'browser', to: 'api' }, // step 2
+  { type: 'loading', id: 'work', object: 'api' }, // step 3
+  { type: 'move', object: 'res', from: 'api', to: 'browser', wait_for: 'work' }, // step 4
+  { type: 'comment', object: 'browser', text: '2. …', keep_until_end: true }, // step 5
 ],
 ```
 
-## Points d'arrêt
+## Breakpoints
 
-Les actions produisent des **points d'arrêt** sur lesquels la navigation
-peut se caler :
+Actions produce **breakpoints** on which navigation
+can snap:
 
-- Un `move` produit **deux** points : à l'apparition de l'objet à son
-  origine, puis à son arrivée à destination.
-- `arrow`, `loading`, `set_content`, `comment`, `highlight` produisent
-  **un** point : leur état « posé » à la fin de l'animation.
+- A `move` produces **two** points: when the object appears at its
+  origin, then when it arrives at its destination.
+- `arrow`, `loading`, `set_content`, `comment`, `highlight` produce
+  **one** point: their "settled" state at the end of the animation.
 
-## Synchronisation entre actions
+## Synchronization between actions
 
-Trois mécanismes permettent de coordonner les actions :
+Three mechanisms allow you to coordinate actions:
 
 ### `wait_for`
 
-L'action démarre à la **fin** d'une autre action référencée par son `id` :
+The action starts at the **end** of another action referenced by its `id`:
 
 ```ts
 { type: 'loading', id: 'dbwork', object: 'db', duration: 900 },
@@ -61,13 +61,13 @@ L'action démarre à la **fin** d'une autre action référencée par son `id` :
   object: 'rows',
   from: 'db',
   to: 'api',
-  wait_for: 'dbwork', // démarre quand le loading se termine
+  wait_for: 'dbwork', // starts when the loading finishes
 },
 ```
 
 ### `parallel`
 
-Encapsule plusieurs actions exécutées au **même instant** :
+Wraps multiple actions executed at the **same time**:
 
 ```ts
 {
@@ -79,68 +79,68 @@ Encapsule plusieurs actions exécutées au **même instant** :
 }
 ```
 
-Ici, un gateway diffuse trois requêtes vers ses services : les trois paquets
-partent **simultanément**.
+Here, a gateway broadcasts three requests to its services: the three packets
+depart **simultaneously**.
 
 <DataFlowPlayer spec={fanOutExample(false)} theme="auto" height={340} />
 
-### Durées personnalisées
+### Custom durations
 
-Chaque action accepte une `duration` (ms). Les défauts sont :
+Each action accepts a `duration` (ms). The defaults are:
 
-| Type d'action                             | Défaut (ms) |
-| ----------------------------------------- | ----------- |
-| `move`, `arrow`, `set_content`, `comment` | 500         |
-| `loading`                                 | 1200        |
-| `highlight`                               | 600         |
-| `set_visible`                             | 300         |
-| `wait`                                    | 1000        |
+| Action type                               | Default (ms) |
+| ----------------------------------------- | ------------ |
+| `move`, `arrow`, `set_content`, `comment` | 500          |
+| `loading`                                 | 1200         |
+| `highlight`                               | 600          |
+| `set_visible`                             | 300          |
+| `wait`                                    | 1000         |
 
-## Persistance visuelle
+## Visual persistence
 
-Par défaut, un élément animé reste visible un court instant après la fin de
-son animation (`ARRIVE_HOLD`) puis disparaît. Trois props prolongent cette
-présence :
+By default, an animated element remains visible for a short time after the end of
+its animation (`ARRIVE_HOLD`) and then disappears. Three props extend this
+presence:
 
 ### `keep_until`
 
-Reste visible jusqu'au **début** d'une action ciblée par `id` :
+Remains visible until the **start** of an action targeted by `id`:
 
 ```ts
 { type: 'arrow', id: 'A', from: 'a', to: 'b', keep_until: 'C' },
 { type: 'move', object: 'p', from: 'a', to: 'b' },
 { type: 'comment', id: 'C', object: 'a', text: 'fin' },
-// La flèche A reste affichée jusqu'au début du commentaire C.
+// The arrow A remains displayed until the start of comment C.
 ```
 
 ### `keep_until_next`
 
-Reste visible jusqu'au **début de l'étape racine suivante** (donc à travers
-la pause inter-étapes). Défauts par type d'action :
+Remains visible until the **start of the next root step** (thus through
+the inter-step pause). Defaults by action type:
 
-| Type d'action                                  | `keep_until_next` par défaut |
-| ---------------------------------------------- | ---------------------------- |
-| `arrow`, `comment`, `set_content`, `highlight` | `true`                       |
-| `move`, `loading`, `set_visible`               | `false`                      |
+| Action type                                    | `keep_until_next` default |
+| ---------------------------------------------- | ------------------------- |
+| `arrow`, `comment`, `set_content`, `highlight` | `true`                    |
+| `move`, `loading`, `set_visible`               | `false`                   |
 
 ### `keep_until_end`
 
-Reste visible jusqu'à la **fin** de la chronologie :
+Remains visible until the **end** of the chronology:
 
 ```ts
 { type: 'highlight', object: 'db', keep_until_end: true },
 ```
 
-## Décalage et fondus
+## Offsets and fades
 
-Trois champs affinent le **timing fin** d'une action, au-delà de son
-ordonnancement logique.
+Three fields refine the **fine timing** of an action, beyond its
+logical sequencing.
 
 ### `delay_ms`
 
-Décale le démarrage de `delay_ms` millisecondes, **après** la résolution de
-`wait_for` et le calage sur l'étape. Son usage principal est de **séquencer des
-actions à l'intérieur d'un `parallel`** (effet « cascade ») :
+Delays the start by `delay_ms` milliseconds, **after** the resolution of
+`wait_for` and snapping to the step. Its main use is to **sequence
+actions within a `parallel`** ("cascade" effect):
 
 ```ts
 {
@@ -153,21 +153,21 @@ actions à l'intérieur d'un `parallel`** (effet « cascade ») :
 }
 ```
 
-Le même `fan-out` que ci-dessus, mais avec un `delay_ms` croissant : les paquets
-s'égrènent au lieu de partir d'un bloc.
+The same `fan-out` as above, but with an increasing `delay_ms`: the packets
+stagger instead of departing as a block.
 
 <DataFlowPlayer spec={fanOutExample(true)} theme="auto" height={340} />
 
-Appliqué à un `parallel` entier, il retarde tout le groupe.
+Applied to an entire `parallel`, it delays the whole group.
 
 ### `fade_in_ms` / `fade_out_ms`
 
-Contrôlent la durée des fondus d'apparition et de disparition (en ms). `0`
-donne une transition **instantanée**. `fade_out_ms` est sans effet si
-`keep_until_end` est vrai (l'élément ne disparaît jamais).
+Control the duration of the fade-in and fade-out (in ms). `0`
+gives an **instantaneous** transition. `fade_out_ms` has no effect if
+`keep_until_end` is true (the element never disappears).
 
 ```ts
 { type: 'comment', object: 'db', text: 'Lecture', fade_in_ms: 0, fade_out_ms: 600 }
 ```
 
-Défauts : `fade_out_ms` → 250 ; `fade_in_ms` → 250 (300 pour `move`).
+Defaults: `fade_out_ms` → 250; `fade_in_ms` → 250 (300 for `move`).

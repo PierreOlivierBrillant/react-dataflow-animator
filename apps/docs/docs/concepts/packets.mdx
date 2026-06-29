@@ -1,36 +1,36 @@
 ---
-title: Paquets (objets dynamiques)
+title: Packets (dynamic objects)
 slug: /concepts/packets
 ---
 
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import { packetsExample } from './_packets/examples';
 
-Là où les [nœuds](./nodes.mdx) sont statiques, les **paquets** (`packets`) sont
-les objets **dynamiques** : les charges utiles qui se déplacent d'un nœud à
-l'autre. Vous les déclarez une fois dans le tableau racine `packets`, puis vous
-les animez par leur `id` avec l'action [`move`](../reference/actions.mdx#move).
+Where [nodes](./nodes.mdx) are static, **packets** (`packets`) are the
+**dynamic** objects: the payloads that move from one node to
+another. You declare them once in the `packets` root array, then you
+animate them by their `id` with the [`move`](../reference/actions.mdx#move) action.
 
-Un même paquet peut être déplacé **plusieurs fois** dans la timeline (aller,
-puis retour, puis transfert…) : c'est la même entité visuelle qui voyage.
+A single packet can be moved **multiple times** in the timeline (forward,
+then back, then transferred...): it is the exact same visual entity traveling.
 
 <DataFlowPlayer spec={packetsExample} theme="auto" height={360} />
 
-## `kind` — la nature du paquet
+## `kind` — the packet nature
 
-Le `kind` détermine l'apparence et les champs de contenu disponibles :
+The `kind` determines the appearance and available content fields:
 
-| `kind`         | Représente               | Champ de contenu   |
+| `kind`         | Represents               | Content field      |
 | -------------- | ------------------------ | ------------------ |
-| `http_packet`  | Une requête/réponse HTTP | `packet_content`   |
-| `sql_request`  | Une requête SQL          | `request_content`  |
-| `sql_response` | Un résultat SQL          | `response_content` |
+| `http_packet`  | An HTTP request/response | `packet_content`   |
+| `sql_request`  | A SQL query              | `request_content`  |
+| `sql_response` | A SQL result             | `response_content` |
 
 ## `http_packet` — `packet_content`
 
-Une enveloppe avec un **en-tête** (`header`, ex. la ligne de requête) et un
-**corps** (`body`) optionnel. Le corps accepte du texte (avec coloration
-syntaxique facultative) ou une image.
+An envelope with a **header** (`header`, e.g., the request line) and an
+optional **body** (`body`). The body accepts text (with optional syntax
+highlighting) or an image.
 
 ```ts
 {
@@ -43,7 +43,7 @@ syntaxique facultative) ou une image.
 }
 ```
 
-Pour une réponse, on réutilise la même forme avec un corps coloré :
+For a response, we reuse the same shape with a highlighted body:
 
 ```ts
 {
@@ -58,32 +58,32 @@ Pour une réponse, on réutilise la même forme avec un corps coloré :
 
 ## `sql_request` — `request_content`
 
-Le plus simple : une chaîne représentant la requête. Elle s'affiche dans le
-paquet pendant son déplacement vers la base.
+The simplest: a string representing the query. It is displayed inside the
+packet as it moves to the database.
 
 ```ts
 {
   id: 'sql',
   kind: 'sql_request',
-  request_content: 'SELECT id, nom FROM users',
+  request_content: 'SELECT id, name FROM users',
 }
 ```
 
 ## `sql_response` — `response_content`
 
-Le résultat renvoyé par la base. On y indique le nombre de lignes (`rows`), un
-en-tête optionnel (`header`), et un corps (`body`) qui peut être **du texte**
-ou **un tableau** :
+The result returned by the database. It specifies the number of rows (`rows`), an
+optional header (`header`), and a body (`body`) which can be **text**
+or **a table**:
 
 ```ts
 {
   id: 'rows',
   kind: 'sql_response',
   response_content: {
-    header: '2 lignes',
+    header: '2 rows',
     body: {
       type: 'table',
-      columns: ['id', 'nom'],
+      columns: ['id', 'name'],
       rows_data: [
         [1, 'Alice'],
         [2, 'Bob'],
@@ -95,15 +95,15 @@ ou **un tableau** :
 
 :::note `rows` vs `body`
 
-`rows` est un simple compteur affiché dans l'en-tête ; `body` porte le contenu
-réellement rendu (texte ou tableau). Un `sql_response` sans `body` n'affiche
-que son en-tête.
+`rows` is a simple counter displayed in the header; `body` carries the actual
+rendered content (text or table). A `sql_response` without a `body` only
+displays its header.
 
 :::
 
-## Mettre un paquet en mouvement
+## Setting a packet in motion
 
-Déclarer un paquet ne l'affiche pas : il n'apparaît qu'au moment d'un `move`.
+Declaring a packet does not display it: it only appears during a `move`.
 
 ```ts
 timeline: [
@@ -112,5 +112,5 @@ timeline: [
 ],
 ```
 
-Voir [Types d'actions → `move`](../reference/actions.mdx#move) pour les durées,
-le décalage des voies bidirectionnelles et la persistance.
+See [Action types → `move`](../reference/actions.mdx#move) for durations,
+the bidirectional lane offset and persistence.

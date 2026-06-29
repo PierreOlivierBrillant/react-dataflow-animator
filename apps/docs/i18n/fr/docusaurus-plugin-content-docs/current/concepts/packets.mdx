@@ -1,0 +1,116 @@
+---
+title: Paquets (objets dynamiques)
+slug: /concepts/packets
+---
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import { packetsExample } from './_packets/examples';
+
+Là où les [nœuds](./nodes.mdx) sont statiques, les **paquets** (`packets`) sont
+les objets **dynamiques** : les charges utiles qui se déplacent d'un nœud à
+l'autre. Vous les déclarez une fois dans le tableau racine `packets`, puis vous
+les animez par leur `id` avec l'action [`move`](../reference/actions.mdx#move).
+
+Un même paquet peut être déplacé **plusieurs fois** dans la timeline (aller,
+puis retour, puis transfert…) : c'est la même entité visuelle qui voyage.
+
+<DataFlowPlayer spec={packetsExample} theme="auto" height={360} />
+
+## `kind` — la nature du paquet
+
+Le `kind` détermine l'apparence et les champs de contenu disponibles :
+
+| `kind`         | Représente               | Champ de contenu   |
+| -------------- | ------------------------ | ------------------ |
+| `http_packet`  | Une requête/réponse HTTP | `packet_content`   |
+| `sql_request`  | Une requête SQL          | `request_content`  |
+| `sql_response` | Un résultat SQL          | `response_content` |
+
+## `http_packet` — `packet_content`
+
+Une enveloppe avec un **en-tête** (`header`, ex. la ligne de requête) et un
+**corps** (`body`) optionnel. Le corps accepte du texte (avec coloration
+syntaxique facultative) ou une image.
+
+```ts
+{
+  id: 'req',
+  kind: 'http_packet',
+  packet_content: {
+    header: 'GET /users',
+    body: { type: 'text', value: 'Accept: application/json' },
+  },
+}
+```
+
+Pour une réponse, on réutilise la même forme avec un corps coloré :
+
+```ts
+{
+  id: 'res',
+  kind: 'http_packet',
+  packet_content: {
+    header: '200 OK',
+    body: { type: 'text', value: '[{ "id": 1 }]', language: 'json' },
+  },
+}
+```
+
+## `sql_request` — `request_content`
+
+Le plus simple : une chaîne représentant la requête. Elle s'affiche dans le
+paquet pendant son déplacement vers la base.
+
+```ts
+{
+  id: 'sql',
+  kind: 'sql_request',
+  request_content: 'SELECT id, nom FROM users',
+}
+```
+
+## `sql_response` — `response_content`
+
+Le résultat renvoyé par la base. On y indique le nombre de lignes (`rows`), un
+en-tête optionnel (`header`), et un corps (`body`) qui peut être **du texte**
+ou **un tableau** :
+
+```ts
+{
+  id: 'rows',
+  kind: 'sql_response',
+  response_content: {
+    header: '2 lignes',
+    body: {
+      type: 'table',
+      columns: ['id', 'nom'],
+      rows_data: [
+        [1, 'Alice'],
+        [2, 'Bob'],
+      ],
+    },
+  },
+}
+```
+
+:::note `rows` vs `body`
+
+`rows` est un simple compteur affiché dans l'en-tête ; `body` porte le contenu
+réellement rendu (texte ou tableau). Un `sql_response` sans `body` n'affiche
+que son en-tête.
+
+:::
+
+## Mettre un paquet en mouvement
+
+Déclarer un paquet ne l'affiche pas : il n'apparaît qu'au moment d'un `move`.
+
+```ts
+timeline: [
+  { type: 'move', object: 'req', from: 'browser', to: 'api' },
+  { type: 'move', object: 'sql', from: 'api', to: 'db' },
+],
+```
+
+Voir [Types d'actions → `move`](../reference/actions.mdx#move) pour les durées,
+le décalage des voies bidirectionnelles et la persistance.

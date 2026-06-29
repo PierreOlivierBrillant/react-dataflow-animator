@@ -5,6 +5,6 @@ export {
   docPages,
   docPagesById,
 } from './docsContent';
-export { demos, demosById } from './demos';
+export { demos, demosById, getSpec, pickLocale } from './demos';
 export type { Demo } from './demos';
 export { IntroDoc } from './IntroDoc';
