@@ -8,6 +8,8 @@ import { spa } from '../../../apps/docs/src/site-content/demos/spa';
 import { crypto } from '../../../apps/docs/src/site-content/demos/crypto';
 import { tls } from '../../../apps/docs/src/site-content/demos/tls';
 import { oauth } from '../../../apps/docs/src/site-content/demos/oauth';
+import { dos } from '../../../apps/docs/src/site-content/demos/dos';
+import { ddos } from '../../../apps/docs/src/site-content/demos/ddos';
 import { dns } from '../../../apps/docs/src/site-content/demos/dns';
 import { cicd } from '../../../apps/docs/src/site-content/demos/cicd';
 import { raft } from '../../../apps/docs/src/site-content/demos/raft';
@@ -65,6 +67,8 @@ const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['crypto', crypto],
   ['tls', tls],
   ['oauth', oauth],
+  ['dos', dos],
+  ['ddos', ddos],
   ['dns', dns],
   ['cicd', cicd],
   ['raft', raft],

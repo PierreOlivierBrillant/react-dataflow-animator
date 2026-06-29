@@ -7,6 +7,8 @@ import { clientServer } from './demos/clientServer';
 import { crypto } from './demos/crypto';
 import { tls } from './demos/tls';
 import { oauth } from './demos/oauth';
+import { dos } from './demos/dos';
+import { ddos } from './demos/ddos';
 import { dns } from './demos/dns';
 import { cicd } from './demos/cicd';
 import { raft } from './demos/raft';
@@ -199,6 +201,40 @@ export const demos: Demo[] = [
       en: ['oauth2', 'oidc', 'token', 'authentication', 'sso'],
     },
     spec: oauth,
+  },
+  {
+    id: 'dos',
+    title: {
+      fr: 'Attaque par déni de service (DoS)',
+      en: 'Denial-of-service attack (DoS)',
+    },
+    description: {
+      fr: 'Une seule machine inonde le serveur de requêtes jusqu’à le saturer ; l’utilisateur légitime est alors privé de service. Comme tout vient d’une IP unique, l’attaque reste blocable.',
+      en: 'A single machine floods the server with requests until it saturates; the legitimate user is then denied service. Since everything comes from one IP, the attack stays blockable.',
+    },
+    category: 'security',
+    tags: {
+      fr: ['dos', 'flood', 'saturation', 'déni de service', 'attaque'],
+      en: ['dos', 'flood', 'saturation', 'denial of service', 'attack'],
+    },
+    spec: dos,
+  },
+  {
+    id: 'ddos',
+    title: {
+      fr: 'Attaque par déni de service distribué (DDoS)',
+      en: 'Distributed denial-of-service attack (DDoS)',
+    },
+    description: {
+      fr: 'Un serveur de commande (C&C) ordonne à un botnet d’attaquer : tous les bots inondent la cible simultanément. Le trafic venant de milliers d’IP, on ne peut pas simplement bloquer une adresse.',
+      en: 'A command-and-control server (C&C) orders a botnet to attack: every bot floods the target simultaneously. With traffic coming from thousands of IPs, you cannot just block one address.',
+    },
+    category: 'security',
+    tags: {
+      fr: ['ddos', 'botnet', 'flood', 'c&c', 'déni de service', 'attaque'],
+      en: ['ddos', 'botnet', 'flood', 'c&c', 'denial of service', 'attack'],
+    },
+    spec: ddos,
   },
   {
     id: 'dns',
