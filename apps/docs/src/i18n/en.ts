@@ -1,6 +1,6 @@
 import type { Messages } from './fr';
 
-// Doit refléter exactement la structure de `fr` (type `Messages`).
+// Must reflect exactly the structure of `fr` (`Messages` type).
 export const en: Messages = {
   nav: {
     documentation: 'Documentation',

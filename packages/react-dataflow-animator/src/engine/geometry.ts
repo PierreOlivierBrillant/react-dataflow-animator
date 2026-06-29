@@ -1,7 +1,7 @@
 /**
- * Calcul vectoriel : points de connexion entre nœuds, décalage anti-collision
- * (path shifting) et utilitaires de tracé. Toutes les coordonnées sont relatives
- * au conteneur « Stage ».
+ * Vector math: connection points between nodes, anti-collision offset
+ * (path shifting) and drawing utilities. All coordinates are relative
+ * to the "Stage" container.
  */
 
 import type { PathShape } from '../types';
@@ -13,64 +13,64 @@ export interface Point {
   y: number;
 }
 
-/** Position et taille mesurées d'un nœud statique, relatives au Stage. */
+/** Measured position and size of a static node, relative to Stage. */
 export interface NodeGeom {
   id: string;
-  /** Centre du nœud. */
+  /** Node center. */
   x: number;
   y: number;
   width: number;
   height: number;
-  /** Hauteur du label textuel situé sous le visuel (px). Indéfini si pas de label. */
+  /** Height of text label located under visual (px). Undefined if no label. */
   labelH?: number;
-  /** Largeur du label textuel (px). */
+  /** Text label width (px). */
   labelW?: number;
   /**
-   * Débord (px) du contour coloré au-delà du bord visuel mesuré : la pastille
-   * d'un pictogramme teinté (`background_color`) déborde du glyphe. Les flèches
-   * s'accrochent sur ce contour, donc on ajoute ce débord à la demi-extension du
-   * nœud. 0/absent pour formes et panneaux (leur bord coloré = la boîte mesurée).
+   * Outset (px) of the colored contour beyond the measured visual border: the badge
+   * of a tinted pictogram (`background_color`) extends beyond the glyph. Arrows
+   * anchor on this contour, so we add this outset to the node's half-extension.
+   * 0/missing for shapes and panels (their colored border = measured box).
    */
   borderOutset?: number;
   /**
-   * Échelle du Stage (`--rdfa-scale`) à la mesure. Met les marges de routage
-   * (détour anti-label, ancre de label) à l'échelle des nœuds. Défaut : 1.
+   * Stage scale (`--rdfa-scale`) at measurement. Scales routing margins
+   * (anti-label detour, label anchor) to match nodes. Default: 1.
    */
   scale?: number;
 }
 
 export type GeometryMap = Record<string, NodeGeom>;
 
-/** Marge de routage (px, à l'échelle 1) : détour autour d'un label tiers et
- *  décalage de l'ancre de label médian. PAS l'accroche (la flèche touche le bord).
- *  Mise à l'échelle par `NodeGeom.scale` dans {@link connection}. */
+/** Routing margin (px, at scale 1): detour around a third-party label and
+ *  median label anchor shift. NOT the anchor (arrow touches border).
+ *  Scaled by `NodeGeom.scale` in {@link connection}. */
 const NODE_GAP = 14;
 
-/** Espacement (px) entre le bas du visuel et le haut du label (CSS gap). */
+/** Spacing (px) between visual bottom and label top (CSS gap). */
 const LABEL_GAP = 6;
 
 export interface Connection {
   start: Point;
   end: Point;
   /**
-   * Points intermédiaires du tracé, parcourus par longueur d'arc. Selon la
-   * {@link PathShape} : détours anti-collision (straight), coins (step) ou
-   * échantillons de courbe (bezier/simplebezier/smoothstep). Indéfini = trait
-   * droit direct.
+   * Intermediate path points, traversed by arc length. Depending on
+   * {@link PathShape}: anti-collision detours (straight), corners (step) or
+   * curve samples (bezier/simplebezier/smoothstep). Undefined = direct
+   * straight line.
    */
   waypoints?: Point[];
-  /** Angle du dernier segment en degrés (utile pour orienter une pointe de flèche). */
+  /** Last segment angle in degrees (useful for orienting an arrowhead). */
   angleDeg: number;
   /**
-   * Ancre du label médian. Indéfinie quand le milieu du chemin est dégagé (le
-   * rendu retombe alors sur ce milieu) ; définie et décalée perpendiculairement
-   * au trait quand le milieu tomberait sur le visuel d'un nœud intercalé.
+   * Median label anchor. Undefined when path midpoint is clear (render
+   * then falls back on this midpoint); defined and shifted perpendicularly
+   * to the line when midpoint would fall on an interleaved node's visual.
    */
   labelAnchor?: Point;
 }
 
 /**
- * Bounding rect du label d'un nœud (sous le visuel), ou null si pas de label.
+ * Bounding rect of a node's label (under visual), or null if no label.
  */
 function labelBounds(
   node: NodeGeom
@@ -86,8 +86,8 @@ function labelBounds(
 }
 
 /**
- * Renvoie les paramètres t d'entrée/sortie d'un segment p1→p2 dans un rect,
- * ou null si pas d'intersection (méthode des slabs).
+ * Returns entry/exit t parameters of a p1→p2 segment in a rect,
+ * or null if no intersection (slabs method).
  */
 function segmentIntersectsRect(
   p1: Point,
@@ -121,29 +121,29 @@ function segmentIntersectsRect(
   return { tEntry: tMin, tExit: tMax };
 }
 
-/** Les 4 faces cardinales sur lesquelles une flèche peut s'accrocher. */
+/** The 4 cardinal faces on which an arrow can anchor. */
 type Face = 'east' | 'west' | 'north' | 'south';
 
 /**
- * Point d'accroche cardinal d'une flèche : posé EXACTEMENT sur le contour du nœud
- * (bord visuel + `borderOutset`, c.-à-d. la bordure colorée pour un nœud teinté)
- * — la flèche TOUCHE le bord, sans marge ajoutée (cf. demande utilisateur).
+ * Cardinal anchor point for an arrow: placed EXACTLY on node contour
+ * (visual border + `borderOutset`, i.e. colored border for a tinted node)
+ * — arrow TOUCHES border, no margin added (per user request).
  *
- * - Faces latérales (est/ouest) : la coordonnée transverse `y` descend au centre
- *   de gravité du bloc *visuel + label* — un label sous le nœud le déséquilibre
- *   vers le bas, donc l'accroche latérale au centre du seul visuel paraîtrait trop
- *   haute — et reçoit `portOffset` (écartement intra-paire / fan-out).
- * - Face sud : passe SOUS le label (qui fait partie de l'empreinte basse) ; elle ne
- *   touche donc pas le bord coloré, le label s'interposant (seule exception voulue).
- * - Faces verticales (nord/sud) : `portOffset` décale la coordonnée `x`.
+ * - Lateral faces (east/west): transverse coordinate `y` goes down to center
+ *   of gravity of *visual + label* block — label under node unbalances it
+ *   downwards, so lateral anchor at center of visual alone would look too
+ *   high — and receives `portOffset` (intra-pair spread / fan-out).
+ * - South face: passes UNDER label (which is part of bottom footprint); thus
+ *   does not touch colored border, label intervenes (only intended exception).
+ * - Vertical faces (north/south): `portOffset` shifts `x` coordinate.
  */
 function cardinalAttach(node: NodeGeom, face: Face, portOffset: number): Point {
   const halfW = node.width / 2;
   const halfH = node.height / 2;
   const outset = node.borderOutset ?? 0;
   const labelH = node.labelH ?? 0;
-  // Centre de gravité vertical du bloc : descend de la moitié de l'extension
-  // ajoutée par le label sous le visuel (gap CSS + hauteur du label).
+  // Vertical center of gravity of the block: descends by half the extension
+  // added by the label under the visual (CSS gap + label height).
   const lateralY = node.y + (labelH > 0 ? (LABEL_GAP + labelH) / 2 : 0);
   switch (face) {
     case 'east':
@@ -160,19 +160,19 @@ function cardinalAttach(node: NodeGeom, face: Face, portOffset: number): Point {
 }
 
 /**
- * Points de connexion entre deux nœuds.
+ * Connection points between two nodes.
  *
- * - Accroche les extrémités à l'un des 4 points cardinaux (N/S/E/O) du nœud,
- *   EXACTEMENT sur son contour coloré (cf. {@link cardinalAttach}) : la flèche
- *   touche le bord. L'axe est fourni par `axis` (dérivé du flux du layout, cf.
- *   `connectionAxis`) — la MÊME décision que `computePortOffsets`, pour qu'accroche
- *   et fan-out ne se contredisent jamais. À défaut d'`axis` (tests/usage isolé), on
- *   retombe sur l'axe pixel dominant.
- * - Le tracé part/arrive perpendiculairement à la face : `axis` est aussi passé à
- *   `shapeWaypoints` pour orienter les poignées de courbe (sinon une courbe entre
- *   deux faces E/O mais à fort dénivelé repartirait verticalement).
- * - `obstacles` : liste de tous les nœuds → insère un waypoint si le segment
- *   croise un label tiers.
+ * - Anchors extremities to one of the 4 cardinal points (N/S/E/W) of the node,
+ *   EXACTLY on its colored contour (see {@link cardinalAttach}): arrow touches
+ *   border. Axis is provided by `axis` (derived from layout flow, see
+ *   `connectionAxis`) — SAME decision as `computePortOffsets`, so anchor
+ *   and fan-out never contradict. If `axis` is missing (tests/isolated use),
+ *   it falls back to dominant pixel axis.
+ * - Path starts/arrives perpendicularly to face: `axis` is also passed to
+ *   `shapeWaypoints` to orient curve handles (otherwise a curve between
+ *   two E/W faces with high elevation difference would start vertically).
+ * - `obstacles`: list of all nodes → inserts a waypoint if the segment
+ *   crosses a third-party label.
  */
 export function connection(
   from: NodeGeom,
@@ -189,12 +189,12 @@ export function connection(
     ? axis === 'horizontal'
     : Math.abs(dx) >= Math.abs(dy);
 
-  // Marge de routage (détour anti-label, ancre de label médian), à l'échelle du
-  // Stage. NB : l'accroche elle-même ne l'utilise PAS — la flèche touche le bord.
+  // Routing margin (anti-label detour, median label anchor), scaled to Stage.
+  // NB: the anchor itself does NOT use it — the arrow touches the border.
   const gap = NODE_GAP * (from.scale ?? 1);
 
-  // Faces cardinales opposées : la source pointe vers la destination, la
-  // destination reçoit la face inverse.
+  // Opposite cardinal faces: source points to destination,
+  // destination receives opposite face.
   const fromFace: Face = isHorizontal
     ? dx >= 0
       ? 'east'
@@ -213,9 +213,9 @@ export function connection(
   const start: Point = cardinalAttach(from, fromFace, startPortOffset);
   const end: Point = cardinalAttach(to, toFace, endPortOffset);
 
-  // Détecte le premier label tiers que le segment traverse et insère un détour
-  // juste au-dessus/à côté pour le contourner. Ce détour est indépendant de la
-  // forme : toutes les formes le traversent (cf. control ci-dessous).
+  // Detects the first third-party label the segment crosses and inserts a detour
+  // just above/beside to bypass it. This detour is shape-independent:
+  // all shapes pass through it (see control below).
   let detour: Point[] | undefined;
   if (obstacles && obstacles.length > 0) {
     let firstT = Infinity;
@@ -231,12 +231,12 @@ export function connection(
           const xAt = start.x + (end.x - start.x) * isect.tEntry;
           bestWps = [{ x: xAt, y: lb.y - gap }];
         } else {
-          // Segment quasi-vertical : contourner latéralement plutôt que de
-          // rebrousser vers le haut, ce qui produit un détour non naturel.
+          // Quasi-vertical segment: bypass laterally rather than
+          // doubling back upwards, which produces an unnatural detour.
           const yAt = start.y + (end.y - start.y) * isect.tEntry;
-          // start.x strictement à gauche de l'obstacle → contourner à gauche.
-          // start.x au même x ou à droite (ex. même lane) → contourner à droite
-          // pour éviter les croisements avec les flèches partant vers la gauche.
+          // start.x strictly left of obstacle → bypass left.
+          // start.x at same x or right (e.g. same lane) → bypass right
+          // to avoid crosses with arrows going left.
           bestWps = [
             {
               x: start.x < obs.x ? lb.x - gap : lb.x + lb.w + gap,
@@ -249,9 +249,9 @@ export function connection(
     if (bestWps) detour = bestWps;
   }
 
-  // Polyligne de contrôle = extrémités + détours, puis application de la forme.
-  // `shapeWaypoints` renvoie les points intermédiaires effectifs (échantillons de
-  // courbe, coins…), parcourus par longueur d'arc comme un simple polyligne.
+  // Control polyline = extremities + detours, then shape application.
+  // `shapeWaypoints` returns actual intermediate points (curve samples,
+  // corners...), traversed by arc length like a simple polyline.
   const control: Point[] = detour ? [start, ...detour, end] : [start, end];
   const waypoints = shapeWaypoints(
     control,
@@ -259,17 +259,17 @@ export function connection(
     isHorizontal ? 'horizontal' : 'vertical'
   );
 
-  // Angle du dernier segment (pour la pointe de flèche).
+  // Last segment angle (for arrowhead).
   const lastPt =
     waypoints && waypoints.length > 0 ? waypoints[waypoints.length - 1] : start;
   const angleDeg =
     (Math.atan2(end.y - lastPt.y, end.x - lastPt.x) * 180) / Math.PI;
 
-  // Ancre du label médian. Le texte d'une connexion est posé au milieu du
-  // chemin ; si ce milieu tombe sur le VISUEL d'un nœud intercalé (ex. une
-  // connexion A→C qui enjambe un nœud B placé entre les deux), on décale l'ancre
-  // perpendiculairement au trait pour dégager le texte. Sans ça il se superpose
-  // au nœud — et, le label vivant sous la couche des nœuds, passe derrière lui.
+  // Median label anchor. Connection text is placed at path midpoint;
+  // if this midpoint falls on VISUAL of an interleaved node (e.g. A→C connection
+  // spanning a B node between them), we shift anchor perpendicularly to line
+  // to clear text. Otherwise it overlaps node — and since label lives under
+  // nodes layer, it hides behind it.
   let labelAnchor: Point | undefined;
   if (obstacles && obstacles.length > 0) {
     const mid = pathTip({ start, end, waypoints, angleDeg }, 0.5);
@@ -282,12 +282,12 @@ export function connection(
         Math.abs(mid.y - obs.y) <= halfH + gap
       ) {
         labelAnchor = isHorizontal
-          ? // Trait horizontal : on remonte le label au-dessus du nœud. La marge
-            // verticale ne dépend pas de la largeur (inconnue) du texte.
+          ? // Horizontal line: move label above node. Vertical margin
+            // does not depend on (unknown) text width.
             { x: mid.x, y: obs.y - halfH - gap }
-          : // Trait vertical : on dégage latéralement. Le label restant ancré au
-            // centre (textAnchor=middle) et sa largeur étant inconnue ici, on
-            // garantit au moins que son centre quitte le nœud.
+          : // Vertical line: clear laterally. Label remains anchored at
+            // center (textAnchor=middle) and width is unknown, so we
+            // guarantee at least its center leaves the node.
             {
               x: obs.x + (mid.x <= obs.x ? -1 : 1) * (halfW + gap),
               y: mid.y,
@@ -306,7 +306,7 @@ export function connection(
   };
 }
 
-/** Point intermédiaire d'un segment, pour positionner un paquet en mouvement. */
+/** Intermediate point on a segment, for positioning a moving packet. */
 export function pointOnSegment(start: Point, end: Point, t: number): Point {
   return {
     x: start.x + (end.x - start.x) * t,
@@ -315,9 +315,9 @@ export function pointOnSegment(start: Point, end: Point, t: number): Point {
 }
 
 /**
- * Position et angle au paramètre t ∈ [0,1] le long du chemin complet
- * (start → waypoints → end). Utilisé pour animer la pointe de flèche
- * et les paquets en mouvement.
+ * Position and angle at parameter t ∈ [0,1] along the full path
+ * (start → waypoints → end). Used to animate arrowhead
+ * and moving packets.
  */
 export function pathTip(
   conn: Connection,
@@ -358,9 +358,9 @@ export function pathTip(
 }
 
 /**
- * Points du chemin visible de start jusqu'à la position t.
- * Retourne start + éventuels waypoints déjà dépassés + tip courant.
- * Utilisé par ArrowLine pour tracer le trait progressif.
+ * Points of visible path from start up to position t.
+ * Returns start + any waypoints already passed + current tip.
+ * Used by ArrowLine to draw the progressive stroke.
  */
 export function visiblePath(conn: Connection, t: number): Point[] {
   if (!conn.waypoints?.length) {

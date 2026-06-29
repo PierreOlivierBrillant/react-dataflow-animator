@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { computeScale } from './scale';
 
 describe('computeScale', () => {
-  it('a. layout vide → valeurs par défaut', () => {
+  it('a. empty layout → default values', () => {
     expect(computeScale({}, 800, 500, 'comfortable')).toEqual({
       scale: 1,
       maxW: 240,
@@ -11,7 +11,7 @@ describe('computeScale', () => {
     });
   });
 
-  it('b. width=0 ou height=0 → valeurs par défaut', () => {
+  it('b. width=0 or height=0 → default values', () => {
     const layout = { a: { cx: 0.5, cy: 0.5 } };
     expect(computeScale(layout, 0, 500, 'comfortable')).toEqual({
       scale: 1,
@@ -27,7 +27,7 @@ describe('computeScale', () => {
     });
   });
 
-  it('c. 2 nœuds, 800×500, comfortable → scale ∈ [0.3, 1.6], maxW = 320', () => {
+  it('c. 2 nodes, 800×500, comfortable → scale ∈ [0.3, 1.6], maxW = 320', () => {
     const layout = { a: { cx: 0.25, cy: 0.5 }, b: { cx: 0.75, cy: 0.5 } };
     const result = computeScale(layout, 800, 500, 'comfortable');
     expect(result.scale).toBeGreaterThanOrEqual(0.3);
@@ -35,14 +35,14 @@ describe('computeScale', () => {
     expect(result.maxW).toBe(320);
   });
 
-  it('d. compact produit un scale inférieur à spacious', () => {
+  it('d. compact produces a smaller scale than spacious', () => {
     const layout = { a: { cx: 0.25, cy: 0.5 }, b: { cx: 0.75, cy: 0.5 } };
     const compact = computeScale(layout, 800, 500, 'compact');
     const spacious = computeScale(layout, 800, 500, 'spacious');
     expect(compact.scale).toBeLessThan(spacious.scale);
   });
 
-  it('e. nœud unique → scale plafonné par sizeScale, jamais < 0.3', () => {
+  it('e. single node → scale capped by sizeScale, never < 0.3', () => {
     const layout = { a: { cx: 0.5, cy: 0.5 } };
     const result = computeScale(layout, 800, 500, 'comfortable');
     expect(result.scale).toBeGreaterThanOrEqual(0.3);
@@ -50,13 +50,13 @@ describe('computeScale', () => {
     expect(result.scale).toBeCloseTo(sizeScale, 3);
   });
 
-  it('f. contentMaxW conservateur (~0,38 largeur), contentMaxH à 88 % de la hauteur', () => {
+  it('f. conservative contentMaxW (~0.38 width), contentMaxH at 88% height', () => {
     const layout = { a: { cx: 0.25, cy: 0.5 }, b: { cx: 0.75, cy: 0.5 } };
     const result = computeScale(layout, 800, 500, 'comfortable');
     expect(result.contentMaxW).toBe(304); // 800×0.38, dans [120, 420]
     expect(result.contentMaxH).toBe(440); // 500×0.88, dans [100, 560]
-    // Indépendant du nombre/écart des nœuds : c'est l'écartement (computePlacements)
-    // qui ménage la place, pas un rétrécissement de la boîte ici.
+    // Independent of number/gap of nodes: spacing (computePlacements)
+    // makes room, not shrinking the box here.
     const dense = computeScale(
       { a: { cx: 0.48, cy: 0.5 }, b: { cx: 0.52, cy: 0.5 } },
       800,
@@ -66,7 +66,7 @@ describe('computeScale', () => {
     expect(dense.contentMaxW).toBe(304);
   });
 
-  it('g. petit lecteur (miniature) → panneau plus petit (0,38 largeur, 88 % hauteur)', () => {
+  it('g. small viewer (thumbnail) → smaller panel (0.38 width, 88% height)', () => {
     const result = computeScale(
       { a: { cx: 0.25, cy: 0.5 }, b: { cx: 0.75, cy: 0.5 } },
       360,

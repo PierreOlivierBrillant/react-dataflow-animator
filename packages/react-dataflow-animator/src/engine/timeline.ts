@@ -1,12 +1,12 @@
 import type { LineStyle, ObjectContent, PathShape } from '../types';
 
 /**
- * Représentation intermédiaire (IR) déterministe de la chronologie.
+ * Deterministic intermediate representation (IR) of the timeline.
  *
- * Le compilateur (`compiler.ts`) transforme `spec.actions` en `Timeline`.
- * Le runtime se résume à une fonction PURE `evaluate(timeline, t)` : aucune
- * dépendance au DOM, au temps réel ou à une librairie d'animation. Le lecteur
- * se contente d'avancer `t` (via requestAnimationFrame) et de re-rendre.
+ * The compiler (`compiler.ts`) transforms `spec.actions` into `Timeline`.
+ * The runtime boils down to a PURE function `evaluate(timeline, t)`: no
+ * dependency on the DOM, real-time, or any animation library. The player
+ * merely advances `t` (via requestAnimationFrame) and re-renders.
  */
 
 export type ClipKind =
@@ -19,30 +19,30 @@ export type ClipKind =
   | 'set_visible';
 
 interface ClipBase {
-  /** Identifiant unique du clip (= id d'action si fourni, sinon généré). */
+  /** Unique clip identifier (= action id if provided, otherwise generated). */
   id: string;
   kind: ClipKind;
-  /** Instant (ms) où l'élément apparaît (monté/visible). */
+  /** Instant (ms) when the element appears (mounted/visible). */
   startMs: number;
-  /** Début de l'ANIMATION (>= startMs). Avant : maintenu à l'état initial. */
+  /** Start of ANIMATION (>= startMs). Before: maintained at initial state. */
   animStartMs: number;
-  /** Fin de l'animation, en ms (l'élément est « posé »). */
+  /** End of animation, in ms (the element is "placed"). */
   endMs: number;
-  /** Instant (ms) jusqu'auquel l'élément reste monté/visible (>= endMs). */
+  /** Instant (ms) until which the element remains mounted/visible (>= endMs). */
   visibleUntilMs: number;
-  /** Index de l'étape racine à laquelle ce clip appartient. */
+  /** Index of the root step this clip belongs to. */
   stepIndex: number;
-  /** Vrai si l'action source avait keep_until_end : supprime le fondu de sortie. */
+  /** True if the source action had keep_until_end: removes the exit fade. */
   keepEnd?: boolean;
-  /** Durée du fondu d'apparition (ms). Absent = comportement par défaut. */
+  /** Fade-in duration (ms). Absent = default behavior. */
   fadeInMs?: number;
-  /** Durée du fondu de disparition (ms). Absent = comportement par défaut (250 ms). */
+  /** Fade-out duration (ms). Absent = default behavior (250 ms). */
   fadeOutMs?: number;
 }
 
 export interface MoveClip extends ClipBase {
   kind: 'move';
-  /** ID de l'objet dynamique déplacé (paquet, requête…). */
+  /** ID of the moved dynamic object (packet, request...). */
   objectId: string;
   fromId: string;
   toId: string;
@@ -60,35 +60,35 @@ export interface ArrowClip extends ClipBase {
 
 export interface LoadingClip extends ClipBase {
   kind: 'loading';
-  /** ID du nœud statique cible. */
+  /** Target static node ID. */
   objectId: string;
 }
 
 export interface SetContentClip extends ClipBase {
   kind: 'set_content';
-  /** ID du nœud statique muté. */
+  /** Mutated static node ID. */
   objectId: string;
   content: ObjectContent;
 }
 
 export interface CommentClip extends ClipBase {
   kind: 'comment';
-  /** ID du nœud statique de référence. Absent = commentaire omniscient (haut du stage). */
+  /** Reference static node ID. Absent = omniscient comment (top of stage). */
   nextToId?: string;
   text: string;
 }
 
 export interface HighlightClip extends ClipBase {
   kind: 'highlight';
-  /** ID du nœud statique OU de la connexion à surligner. */
+  /** ID of the static node OR connection to highlight. */
   targetId: string;
 }
 
 export interface SetVisibleClip extends ClipBase {
   kind: 'set_visible';
-  /** ID du nœud statique dont la visibilité change. */
+  /** ID of the static node whose visibility changes. */
   objectId: string;
-  /** true = le nœud apparaît, false = le nœud disparaît. */
+  /** true = the node appears, false = the node disappears. */
   visible: boolean;
 }
 
@@ -104,11 +104,11 @@ export type Clip =
 export interface Step {
   index: number;
   startMs: number;
-  /** Fin de l'étape (= début de la suivante, ou durée totale). */
+  /** End of the step (= start of the next one, or total duration). */
   endMs: number;
-  /** ID de l'action racine, si fourni. */
+  /** Root action ID, if provided. */
   actionId?: string;
-  /** Sous-ensemble des clips actifs pendant cette étape (pré-calculé pour opti). */
+  /** Subset of clips active during this step (pre-computed for optimization). */
   activeClips?: Clip[];
 }
 
@@ -116,9 +116,9 @@ export interface Timeline {
   clips: Clip[];
   steps: Step[];
   /**
-   * Points d'arrêt (ms) pour la navigation et les marques de la timeline. Un
-   * `move` en produit deux : à l'apparition et à l'arrivée ; les autres actions
-   * un seul (état « posé »).
+   * Stop points (ms) for navigation and timeline markers. A
+   * `move` produces two: on appearance and on arrival; other actions
+   * only one ("placed" state).
    */
   stops: number[];
   durationMs: number;
@@ -126,9 +126,9 @@ export interface Timeline {
 
 export interface ActiveClip {
   clip: Clip;
-  /** Progression de l'animation dans [0, 1] (1 si terminée mais maintenue). */
+  /** Animation progress in [0, 1] (1 if finished but maintained). */
   progress: number;
-  /** Vrai si l'animation est en cours (animStartMs <= t < endMs). */
+  /** True if the animation is in progress (animStartMs <= t < endMs). */
   animating: boolean;
 }
 
@@ -143,17 +143,17 @@ export function clamp(value: number, min: number, max: number): number {
   return value < min ? min : value > max ? max : value;
 }
 
-/** Easing « ease-in-out » cubique, pour des mouvements moins mécaniques. */
+/** Cubic "ease-in-out" easing, for less mechanical movements. */
 export function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 /**
- * Cœur du runtime : pour un instant `tMs`, renvoie les clips visibles avec leur
- * progression. Fonction pure et déterministe (le scrubbing arrière est gratuit).
+ * Runtime core: for a given instant `tMs`, returns visible clips with their
+ * progression. Pure and deterministic function (backwards scrubbing is free).
  */
 export function evaluate(timeline: Timeline, tMs: number): ActiveClip[] {
-  // Optimisation O(K) : si les clips actifs ont été pré-calculés par étape
+  // Optimization O(K): if active clips were pre-computed per step
   if (timeline.steps.length > 0) {
     const stepIdx = stepIndexAt(timeline, tMs);
     const step = timeline.steps[stepIdx];
@@ -164,7 +164,7 @@ export function evaluate(timeline: Timeline, tMs: number): ActiveClip[] {
 
   const active: ActiveClip[] = [];
 
-  // Fallback O(log N + K) : recherche dichotomique pour trouver le dernier clip démarré
+  // Fallback O(log N + K): binary search to find the last started clip
   let low = 0;
   let high = timeline.clips.length - 1;
   let maxIdx = -1;
@@ -180,11 +180,11 @@ export function evaluate(timeline: Timeline, tMs: number): ActiveClip[] {
 
   for (let i = 0; i <= maxIdx; i++) {
     const clip = timeline.clips[i];
-    // Borne supérieure INCLUSIVE : un élément reste visible à l'instant exact de
-    // sa disparition (fin d'étape), pour que l'arrêt « Suivant » montre l'étape.
-    if (tMs > clip.visibleUntilMs) continue; // déjà disparu
-    // La progression court sur [animStartMs, endMs] : avant, l'élément est
-    // maintenu à l'état initial (progress 0) ; après, à l'état final (progress 1).
+    // INCLUSIVE upper bound: an element remains visible at the exact instant of
+    // its disappearance (end of step), so the "Next" stop shows the step.
+    if (tMs > clip.visibleUntilMs) continue; // already disappeared
+    // Progression runs over [animStartMs, endMs]: before, the element is
+    // maintained at initial state (progress 0); after, at final state (progress 1).
     const duration = clip.endMs - clip.animStartMs;
     const progress =
       duration <= 0 ? 1 : clamp((tMs - clip.animStartMs) / duration, 0, 1);
@@ -214,7 +214,7 @@ function evaluateSubset(clips: Clip[], tMs: number): ActiveClip[] {
   return active;
 }
 
-/** Index de l'étape contenant `tMs` (la dernière étape dont le start <= t). */
+/** Index of the step containing `tMs` (the last step with start <= t). */
 export function stepIndexAt(timeline: Timeline, tMs: number): number {
   const { steps } = timeline;
   let low = 0;
@@ -234,7 +234,7 @@ export function stepIndexAt(timeline: Timeline, tMs: number): number {
 
 const STOP_TOLERANCE = 1; // ms
 
-/** Prochain point d'arrêt strictement après `tMs` (sinon la fin). */
+/** Next stop point strictly after `tMs` (otherwise the end). */
 export function nextStop(timeline: Timeline, tMs: number): number {
   for (const stop of timeline.stops) {
     if (stop > tMs + STOP_TOLERANCE) return stop;
@@ -242,7 +242,7 @@ export function nextStop(timeline: Timeline, tMs: number): number {
   return timeline.durationMs;
 }
 
-/** Point d'arrêt précédent strictement avant `tMs` (sinon le début). */
+/** Previous stop point strictly before `tMs` (otherwise the start). */
 export function prevStop(timeline: Timeline, tMs: number): number {
   let previous = 0;
   for (const stop of timeline.stops) {

@@ -44,8 +44,8 @@ function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
       ? section.title
       : '';
 
-  // La config Docusaurus fournit la structure (FR) ; on retraduit chaque
-  // libellé affiché via la table `footer.labels`, en repli sur l'original.
+  // The Docusaurus config provides the structure (FR); we re-translate each
+  // displayed label via the `footer.labels` table, falling back to the original.
   const tr = (label: string | undefined) =>
     label ? (t.footer.labels[label] ?? label) : '';
 

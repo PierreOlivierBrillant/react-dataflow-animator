@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 import type { Highlighter, Node } from '../../types';
 
 /**
- * Panneau textuel des nœuds `simple_node` / `complex_node` : remplace le
- * pictogramme par une boîte de texte. `complex_node` ajoute un en-tête séparé du
- * corps par un trait (allure d'un paquet HTTP) ; `simple_node` n'affiche que le
- * corps. `language` colore TOUTES les zones (header + body) via le highlighter.
+ * Text panel for `simple_node` / `complex_node` nodes: replaces the
+ * pictogram with a text box. `complex_node` adds a header separated from the
+ * body by a line (resembling an HTTP packet); `simple_node` only displays the
+ * body. `language` syntax highlights ALL areas (header + body) via the highlighter.
  */
 export function NodePanel({
   object,

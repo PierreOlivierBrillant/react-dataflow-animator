@@ -1,25 +1,25 @@
 /**
- * Harnais de validation visuelle — pas un composant publié.
+ * Visual validation harness — not a published component.
  *
- * Deux canaux, tous deux déterministes (le moteur est `evaluate(timeline, t)`) :
+ * Two channels, both deterministic (the engine is `evaluate(timeline, t)`):
  *
- *  - CLARTÉ → une « planche-contact » : un Stage figé à chaque `timeline.stops[]`.
- *    Une IA de vision juge d'un coup les chevauchements, la lisibilité, le
- *    hors-cadre, sur tout le scénario. Mesure DOM réelle → on voit aussi le
- *    re-layout d'un `set_content` (refit de police, ResizeObserver), pas
- *    seulement le mouvement « voulu ».
+ *  - CLARITY → a "contact sheet": a frozen Stage at each `timeline.stops[]`.
+ *    A vision AI judges at a glance overlaps, readability, out-of-bounds,
+ *    across the whole scenario. Real DOM measurement → we also see the
+ *    re-layout of a `set_content` (font refit, ResizeObserver), not
+ *    just the "intended" movement.
  *
- *  - FLUIDITÉ → la courbe de la valeur-dans-le-temps. La fluidité n'est PAS dans
- *    une frame : c'est une propriété de la dérivée. Pour chaque `set_content`, on
- *    trace l'opacité RÉELLEMENT rendue (`contentCrossfade`, qui pilote aussi le
- *    lerp de géométrie côté Stage) contre l'ancien crossfade linéaire
- *    (`clipOpacity` brut) en référence. La courbe rendue est désormais une S de
- *    `easeInOutCubic` — départ et arrivée ralentis ; l'à-coup affiché chiffre le
- *    gain par rapport au linéaire.
+ *  - FLUIDITY → the curve of the value-over-time. Fluidity is NOT in
+ *    a frame: it's a property of the derivative. For each `set_content`, we
+ *    plot the REALLY rendered opacity (`contentCrossfade`, which also drives the
+ *    geometry lerp on the Stage side) against the old linear crossfade
+ *    (`clipOpacity` raw) as a reference. The rendered curve is now an S of
+ *    `easeInOutCubic` — slowed down start and arrival; the displayed jerk quantifies
+ *    the gain compared to linear.
  *
- * On réutilise les VRAIES fonctions du rendu (`contentCrossfade`, `clipOpacity`,
- * `compile`, `Stage`) importées depuis `src` : une seule source de vérité, aucune
- * duplication à resynchroniser à la main.
+ * We reuse the TRUE render functions (`contentCrossfade`, `clipOpacity`,
+ * `compile`, `Stage`) imported from `src`: a single source of truth, no
+ * duplication to manually resync.
  */
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -40,38 +40,38 @@ const params = new URLSearchParams(window.location.search);
 const demoId = params.get('demo') ?? 'spa';
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
 
-// demosById mappe id → { id, title, spec, … } (métadonnées de galerie) : le
-// spec brut est sous `.spec`, pas l'objet lui-même.
+// demosById maps id → { id, title, spec, … } (gallery metadata): the
+// raw spec is under `.spec`, not the object itself.
 const catalog = demosById as Record<string, { id: string; spec: DataFlowSpec }>;
 const spec = catalog[demoId]?.spec;
 
-// ─── Échantillonnage des courbes de fluidité ────────────────────────────────
+// ─── Fluidity curve sampling ────────────────────────────────
 
 interface CurveSample {
   t: number;
-  /** Ce que Stage affiche : contentCrossfade (clipOpacity adouci par easeInOutCubic). */
+  /** What Stage displays: contentCrossfade (clipOpacity softened by easeInOutCubic). */
   rendered: number;
-  /** Référence « avant » : le crossfade linéaire de clipOpacity brut. */
+  /** "Before" reference: the linear crossfade of raw clipOpacity. */
   linear: number;
 }
 
-// On trace la RÉGION DE FONDU D'ENTRÉE (l'apparition du contenu + le morph de
-// géométrie), pas toute la durée de vie du clip : un hold de plusieurs secondes
-// écraserait la rampe et un échantillonnage proportionnel deviendrait trop
-// grossier pour résoudre la forme eased. Pas fixe et fin → métrique fiable.
+// We plot the FADE-IN REGION (the content's appearance + the geometry morph),
+// not the clip's whole lifetime: a hold of several seconds
+// would crush the ramp and proportional sampling would become too
+// coarse to resolve the eased shape. Not fixed and fine → reliable metric.
 const STEP_MS = 6;
 const MAX_FADE_MS = 2000;
 
 function sampleCrossfade(clip: Clip, durationMs: number): CurveSample[] {
   const start = Math.max(0, clip.startMs);
   const hardEnd = Math.min(durationMs, clip.visibleUntilMs);
-  // Fin du fondu = premier instant où le rendu atteint ~1 (plafonné).
+  // End of fade = first instant the render reaches ~1 (capped).
   let fadeEnd = start;
   for (let t = start; t <= hardEnd && t <= start + MAX_FADE_MS; t += STEP_MS) {
     fadeEnd = t;
     if (contentCrossfade(clip, t) >= 0.999) break;
   }
-  const end = Math.min(hardEnd, fadeEnd + 120); // marge : montre l'entrée dans le hold
+  const end = Math.min(hardEnd, fadeEnd + 120); // margin: shows entry into the hold
   const out: CurveSample[] = [];
   for (let t = start; t <= end + 0.5; t += STEP_MS) {
     const tt = Math.min(t, end);
@@ -85,8 +85,8 @@ function sampleCrossfade(clip: Clip, durationMs: number): CurveSample[] {
 }
 
 /**
- * Durée réelle du fondu d'entrée, LUE sur les échantillons (donc fidèle au
- * fondu par défaut de `clipOpacity`, qu'aucun champ de la spec n'expose).
+ * Real duration of the fade-in, READ on the samples (therefore faithful to
+ * the default fade of `clipOpacity`, which no spec field exposes).
  */
 function riseMs(samples: CurveSample[]): number | null {
   if (samples.length === 0) return null;
@@ -96,7 +96,7 @@ function riseMs(samples: CurveSample[]): number | null {
   return null;
 }
 
-/** Plus grande discontinuité de vélocité (coin) sur la série, en /seconde. */
+/** Largest velocity discontinuity (corner) on the series, in /second. */
 function maxJerk(
   samples: CurveSample[],
   pick: (s: CurveSample) => number
@@ -113,7 +113,7 @@ function maxJerk(
   return max;
 }
 
-// ─── Rendu ──────────────────────────────────────────────────────────────────
+// ─── Render ──────────────────────────────────────────────────────────────────
 
 const W = 320;
 const H = 90;
@@ -145,8 +145,8 @@ function CurvePanel({ clip, timeline }: { clip: Clip; timeline: Timeline }) {
       <div className="curve-head">
         <strong>set_content</strong> → <code>{objectId}</code>
         <span className="curve-meta">
-          fenêtre {Math.round(clip.startMs)}–{Math.round(clip.visibleUntilMs)}ms
-          {rise !== null ? ` · fondu d'entrée ≈ ${rise}ms` : ''}
+          window {Math.round(clip.startMs)}–{Math.round(clip.visibleUntilMs)}ms
+          {rise !== null ? ` · fade-in ≈ ${rise}ms` : ''}
         </span>
       </div>
       <svg
@@ -158,10 +158,10 @@ function CurvePanel({ clip, timeline }: { clip: Clip; timeline: Timeline }) {
         <path d={path(samples, (s) => s.rendered)} className="curve-rendered" />
       </svg>
       <div className="curve-legend">
-        <span className="dot dot-rendered" /> rendu (eased)
-        <span className="dot dot-linear" /> avant : linéaire
+        <span className="dot dot-rendered" /> rendered (eased)
+        <span className="dot dot-linear" /> before: linear
         <span className="curve-jerk">
-          à-coup : rendu ≈ {jerkRendered.toFixed(2)}/s · avant ≈{' '}
+          jerk: rendered ≈ {jerkRendered.toFixed(2)}/s · before ≈{' '}
           {jerkLinear.toFixed(2)}/s
         </span>
       </div>
@@ -200,13 +200,13 @@ function Filmstrip({
   );
 }
 
-// Sonde LIVE : un seul Stage qui JOUE en continu (rAF) une boucle courte autour
-// du set_content. Le morph de géométrie icône→panneau est émergent de la
-// choréographie image-par-image (capture d'`iconGeomByNode` quand le clip
-// devient actif, puis forceRemeasure/ResizeObserver) — un Stage figé ou des
-// sauts de `t` ne le reproduisent pas. La boucle repasse par l'état icône à
-// chaque cycle, ce qui re-capture proprement la géométrie. On lit le bord haut
-// au fil de la lecture (poll DOM) pour vérifier l'ancrage.
+// LIVE probe: a single Stage that continuously PLAYS (rAF) a short loop around
+// the set_content. The icon→panel geometry morph is emergent from the
+// frame-by-frame choreography (capturing `iconGeomByNode` when the clip
+// becomes active, then forceRemeasure/ResizeObserver) — a frozen Stage or
+// jumps in `t` do not reproduce it. The loop passes through the icon state at
+// each cycle, which properly re-captures the geometry. We read the top edge
+// as it plays (DOM poll) to verify the anchoring.
 const PROBE_PRE_MS = 700;
 const PROBE_POST_MS = 700;
 const PROBE_SPEED = 0.18;
@@ -222,8 +222,8 @@ function LiveProbe({
 }) {
   const lo = Math.max(0, clip.startMs - PROBE_PRE_MS);
   const hi = clip.startMs + PROBE_POST_MS;
-  // ?probeT=<ms> fige la sonde à un instant précis (capture déterministe d'un
-  // mi-parcours) ; sinon elle joue en boucle.
+  // ?probeT=<ms> freezes the probe at a precise instant (deterministic capture of a
+  // mid-point); otherwise it loops.
   const frozenParam = params.get('probeT');
   const frozen = frozenParam != null ? Number(frozenParam) : null;
   const [t, setT] = useState(frozen ?? lo);
@@ -253,7 +253,7 @@ function LiveProbe({
   return (
     <div className="probe">
       <div className="probe-head">
-        sonde live · <code>{'objectId' in clip ? clip.objectId : '?'}</code> ·
+        live probe · <code>{'objectId' in clip ? clip.objectId : '?'}</code> ·
         t=
         {Math.round(t)}ms
       </div>
@@ -278,7 +278,7 @@ function App() {
   if (!spec) {
     return (
       <div className="harness-error">
-        Démo inconnue : <code>{demoId}</code>. Démos disponibles :{' '}
+        Unknown demo: <code>{demoId}</code>. Available demos:{' '}
         {Object.keys(catalog).sort().join(', ')}
       </div>
     );
@@ -288,8 +288,8 @@ function App() {
     (c) => c.kind === 'set_content'
   );
 
-  // Exposé pour une lecture machine (chrome-devtools MCP → evaluate_script,
-  // ou un script Playwright) sans avoir à OCR la planche-contact.
+  // Exposed for machine reading (chrome-devtools MCP → evaluate_script,
+  // or a Playwright script) without having to OCR the contact sheet.
   (window as unknown as { __VALIDATION__: unknown }).__VALIDATION__ = {
     demo: demoId,
     durationMs: timeline.durationMs,
@@ -308,7 +308,7 @@ function App() {
           {demoId}{' '}
           <span>
             · {Math.round(timeline.durationMs)}ms · {timeline.stops.length}{' '}
-            arrêts
+            stops
           </span>
         </h1>
         <nav>
@@ -327,13 +327,13 @@ function App() {
       </header>
 
       <section>
-        <h2>Clarté — planche-contact (un Stage figé par arrêt)</h2>
+        <h2>Clarity — contact sheet (one frozen Stage per stop)</h2>
         <Filmstrip spec={spec} timeline={timeline} />
       </section>
 
       {setContentClips.length > 0 && (
         <section className="probe-section">
-          <h2>Sonde live — apparition réelle (géométrie animée)</h2>
+          <h2>Live probe — actual appearance (animated geometry)</h2>
           <LiveProbe
             spec={spec}
             timeline={timeline}
@@ -343,9 +343,11 @@ function App() {
       )}
 
       <section>
-        <h2>Fluidité — crossfade des {setContentClips.length} set_content</h2>
+        <h2>
+          Fluidity — crossfade of the {setContentClips.length} set_content
+        </h2>
         {setContentClips.length === 0 ? (
-          <p className="muted">Aucun set_content dans cette démo.</p>
+          <p className="muted">No set_content in this demo.</p>
         ) : (
           <div className="curves">
             {setContentClips.map((clip, i) => (
@@ -358,7 +360,7 @@ function App() {
   );
 }
 
-// Pas de StrictMode : il double-invoque les effets, ce qui perturbe la séquence
-// précise capture iconGeom → forceRemeasure du set_content. On reste fidèle au
-// rendu réel (Docusaurus n'enveloppe pas le player dans StrictMode).
+// No StrictMode: it double-invokes effects, which disrupts the precise
+// iconGeom capture → forceRemeasure sequence of set_content. We remain faithful to
+// the real render (Docusaurus doesn't wrap the player in StrictMode).
 createRoot(document.getElementById('root')!).render(<App />);

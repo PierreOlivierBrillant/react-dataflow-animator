@@ -14,24 +14,24 @@ import {
 } from '../site-content/demos';
 import { useLocale, useTranslation } from '../i18n';
 
-/** Insensibilise une chaîne aux accents et à la casse pour la recherche. */
+/** Makes a string case and accent insensitive for search. */
 const fold = (s: string): string =>
   s
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase();
 
-// ─── Miniature ────────────────────────────────────────────────────────────────
+// ─── Thumbnail ────────────────────────────────────────────────────────────────
 
 /**
- * Aperçu animé d'une démo. Monté paresseusement à la première entrée dans le
- * viewport (IntersectionObserver), puis la lecture est pilotée par la
- * VISIBILITÉ : une carte à l'écran joue son animation (`autoPlay` + `loop`) dès
- * l'arrivée sur la page ; dès qu'elle sort du champ on la remonte en image
- * figée (clé `idle`, aucune boucle rAF). On borne ainsi le nombre d'animations
- * actives à ce qui est réellement visible — sans ce garde-fou, 21 boucles rAF
- * tourneraient en permanence (enjeu de performance). La lecture reprend au
- * défilement.
+ * Animated preview of a demo. Lazily mounted on first entry into the
+ * viewport (IntersectionObserver), then playback is driven by
+ * VISIBILITY: an on-screen card plays its animation (`autoPlay` + `loop`) upon
+ * entering the page; as soon as it leaves the view it is remounted as a static
+ * image (`idle` key, no rAF loop). This limits the number of active animations
+ * to what is actually visible — without this safeguard, 21 rAF loops
+ * would run constantly (performance issue). Playback resumes on
+ * scroll.
  */
 function DemoThumbnail({ spec }: { spec: DataFlowSpec }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -77,7 +77,7 @@ function DemoThumbnail({ spec }: { spec: DataFlowSpec }) {
   );
 }
 
-// ─── Carte ──────────────────────────────────────────────────────────────────
+// ─── Card ──────────────────────────────────────────────────────────────────
 
 function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
   const t = useTranslation();
@@ -93,7 +93,7 @@ function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
       transition={{ duration: 0.25 }}
       className="group flex flex-col text-left appearance-none p-0 rounded-2xl overflow-hidden border border-white/[0.07] bg-white/[0.02] hover:border-violet-500/40 hover:bg-white/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60"
     >
-      {/* Aperçu */}
+      {/* Preview */}
       <div className="relative aspect-[16/9] overflow-hidden bg-[#0c0a1e] border-b border-white/[0.06]">
         <DemoThumbnail spec={getSpec(demo, locale)} />
         <span className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider bg-black/55 backdrop-blur-sm text-violet-300 border border-violet-500/30">
@@ -105,7 +105,7 @@ function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
         </div>
       </div>
 
-      {/* Corps */}
+      {/* Body */}
       <div className="flex flex-col flex-1 p-4">
         <h3 className="text-white text-[15px] font-semibold mb-1.5 font-heading leading-snug">
           {pickLocale(demo.title, locale)}
@@ -130,7 +130,7 @@ function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
   );
 }
 
-// ─── Modale d'aperçu ──────────────────────────────────────────────────────────
+// ─── Preview Modal ──────────────────────────────────────────────────────────
 
 function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
   const t = useTranslation();
@@ -169,7 +169,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
         transition={{ duration: 0.2 }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* En-tête */}
+        {/* Header */}
         <div className="flex items-start gap-4 px-5 py-4 border-b border-white/[0.07]">
           <div className="flex-1 min-w-0">
             <span className="inline-block mb-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-violet-300 bg-violet-500/10 border border-violet-500/25">
@@ -189,7 +189,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
           </button>
         </div>
 
-        {/* Lecteur */}
+        {/* Player */}
         <div className="bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,0.08)_0%,transparent_70%)]">
           <DataFlowPlayer
             key={demo.id}
@@ -203,7 +203,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
           />
         </div>
 
-        {/* Pied */}
+        {/* Footer */}
         <div className="px-5 py-4 border-t border-white/[0.07]">
           <p className="text-[13px] leading-relaxed text-white/55 font-sans mb-3">
             {pickLocale(demo.description, locale)}
@@ -221,7 +221,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
   );
 }
 
-// ─── Galerie ──────────────────────────────────────────────────────────────────
+// ─── Gallery ──────────────────────────────────────────────────────────────────
 
 export function DemoGallery() {
   const t = useTranslation();
@@ -259,7 +259,7 @@ export function DemoGallery() {
 
   return (
     <div className="max-w-6xl mx-auto px-5 py-12">
-      {/* Recherche */}
+      {/* Search */}
       <div className="relative mb-5">
         <Search
           size={16}
@@ -285,7 +285,7 @@ export function DemoGallery() {
         )}
       </div>
 
-      {/* Filtres par catégorie */}
+      {/* Category filters */}
       <div className="flex flex-wrap items-center gap-2 mb-8">
         <CategoryChip
           label={t.gallery.allCategory}
@@ -304,7 +304,7 @@ export function DemoGallery() {
         ))}
       </div>
 
-      {/* Grille */}
+      {/* Grid */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((demo) => (

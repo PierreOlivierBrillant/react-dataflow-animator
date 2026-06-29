@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import type { NodeType } from '../../types';
 
 /**
- * Registre des icônes de nœuds (par `type`). SVG inline, en `currentColor`
- * (la couleur suit le thème). Extensible via `registerNodeIcon`.
+ * Node icons registry (by `type`). Inline SVG, using `currentColor`
+ * (color follows the theme). Extensible via `registerNodeIcon`.
  */
 
 const svg = (children: ReactNode): ReactNode => (
@@ -86,7 +86,7 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
   alice: svg(
     <>
       <circle cx="12" cy="8.5" r="3.5" />
-      {/* chignon */}
+      {/* bun */}
       <circle cx="12" cy="4" r="1.5" />
       <path d="M5 21c0-3.5 3-6 7-6s7 2.5 7 6" />
     </>
@@ -94,7 +94,7 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
   bob: svg(
     <>
       <circle cx="12" cy="9" r="3.5" />
-      {/* casquette */}
+      {/* cap */}
       <path d="M9 7c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5h-6z" />
       <path d="M7.5 7h9" />
       <path d="M5 21c0-3.5 3-6 7-6s7 2.5 7 6" />
@@ -103,7 +103,7 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
   eve: svg(
     <>
       <circle cx="12" cy="8.5" r="3" />
-      {/* casque d'écoute — rappelle visuellement l'espionne */}
+      {/* headphones — visually reminds of the spy */}
       <path d="M9 8.5a3 3 0 0 1 6 0" />
       <rect x="7.5" y="8" width="2" height="3" rx="1" />
       <rect x="14.5" y="8" width="2" height="3" rx="1" />
@@ -114,7 +114,7 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
 
 const fallback = svg(<rect x="4" y="4" width="16" height="16" rx="2" />);
 
-/** Enregistre/écrase l'icône d'un type de nœud (extensibilité). */
+/** Registers/overwrites the icon for a node type (extensibility). */
 export function registerNodeIcon(type: string, node: ReactNode): void {
   (icons as Record<string, ReactNode>)[type] = node;
 }

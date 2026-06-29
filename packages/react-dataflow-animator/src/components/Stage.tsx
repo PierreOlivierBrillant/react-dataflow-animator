@@ -46,7 +46,7 @@ import { Packet } from './dynamic/Packet';
 import { CommentBubble } from './CommentBubble';
 import { DebugOverlay } from './DebugOverlay';
 
-// SSR-safe : useLayoutEffect côté client, useEffect côté serveur.
+// SSR-safe: useLayoutEffect on client side, useEffect on server side.
 const useIsoLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
@@ -55,19 +55,19 @@ function lerp(a: number, b: number, t: number): number {
 }
 
 /**
- * Hauteur (px) de l'« espace de conception » de référence. L'échelle visuelle est
- * `designScale × (hauteur_réelle / DESIGN_H)` : tout est donc strictement
- * proportionnel à la taille du lecteur (cf. calcul de `scale` dans Stage).
+ * Height (px) of the reference "design space". Visual scale is
+ * `designScale × (actual_height / DESIGN_H)`: everything is thus strictly
+ * proportional to the player size (see `scale` calculation in Stage).
  */
 const DESIGN_H = 495;
 
-/** Espacement minimum (px) entre un élément contenu et la bordure de sa zone. */
+/** Minimum padding (px) between a contained element and its zone border. */
 const ZONE_PADDING = 20;
-/** Pixels supplémentaires réservés en haut d'une zone qui a un label, pour
- *  garantir que le texte du label (positionné à top: 8px) ne chevauche jamais
- *  l'arrière-plan du nœud le plus haut — indépendamment du z-index. */
+/** Extra pixels reserved at the top of a zone that has a label, to
+ *  ensure the label text (positioned at top: 8px) never overlaps
+ *  the background of the highest node — regardless of z-index. */
 const ZONE_LABEL_EXTRA_TOP = 20;
-/** Espace vertical (px) entre le bas du visuel d'un nœud et le haut de son label. */
+/** Vertical space (px) between the bottom of a node's visual and the top of its label. */
 const NODE_LABEL_GAP = 6;
 
 interface ZoneBounds {
@@ -78,8 +78,8 @@ interface ZoneBounds {
 }
 
 /**
- * Calcule les bornes (px, relatives au Stage) de chaque zone.
- * Les zones internes sont résolues avant les zones qui les contiennent.
+ * Computes the bounds (px, relative to Stage) of each zone.
+ * Inner zones are resolved before the zones that contain them.
  */
 function computeZoneBounds(
   zones: Zone[] | undefined,
@@ -116,9 +116,9 @@ function computeZoneBounds(
         minY = Math.min(minY, b.y);
         maxY = Math.max(maxY, b.y + b.height);
       } else if (keys.includes(id)) {
-        return false; // sous-zone pas encore calculée
+        return false; // sub-zone not yet computed
       }
-      // ID inconnu → ignoré silencieusement
+      // unknown ID → silently ignored
     }
     if (minX === Infinity) return false;
     const topExtra = zone.label ? ZONE_LABEL_EXTRA_TOP : 0;
@@ -131,7 +131,7 @@ function computeZoneBounds(
     return true;
   };
 
-  // Point fixe : continue tant que des zones sont résolues (gère l'imbrication).
+  // Fixed point: continues as long as zones are resolved (handles nesting).
   let progress = true;
   while (progress) {
     progress = false;
@@ -166,13 +166,13 @@ export function Stage({
     useStageGeometry(signature);
   const layout = useMemo(() => computeLayout(spec, { aspect }), [spec, aspect]);
 
-  // Proportionnalité EXACTE : on raisonne dans un « espace de conception » de
-  // hauteur fixe (DESIGN_H), de même aspect que le lecteur. Tout (échelle, tailles
-  // de panneau, ratios de police) y est calculé une fois — donc constant à aspect
-  // donné — puis multiplié par k = hauteur_réelle / DESIGN_H. Les tailles valent
-  // ainsi base × designScale × k (∝ k, donc à la taille du lecteur), les positions
-  // restent en %, et les ratios de réduction sont identiques à toute taille : un
-  // petit lecteur est une réduction strictement homogène d'un grand.
+  // EXACT proportionality: we reason in a "design space" of
+  // fixed height (DESIGN_H), with the same aspect ratio as the player. Everything (scale, panel
+  // sizes, font ratios) is computed once there — thus constant for a given
+  // aspect ratio — then multiplied by k = actual_height / DESIGN_H. Sizes are
+  // therefore base × designScale × k (∝ k, thus proportional to the player size), positions
+  // remain in %, and reduction ratios are identical at any size: a
+  // small player is a strictly homogeneous reduction of a large one.
   const k = height > 0 ? height / DESIGN_H : 1;
   const designW = width > 0 && k > 0 ? width / k : 700;
   const design = useMemo(
@@ -183,11 +183,11 @@ export function Stage({
   const maxW = design.maxW * k;
   const contentMaxW = design.contentMaxW * k;
   const contentMaxH = design.contentMaxH * k;
-  // Le contenu suit exactement l'échelle des icônes.
+  // Content perfectly follows icon scale.
   const contentScale = scale;
   const allNodes = useMemo(() => Object.values(geometry), [geometry]);
-  // Géométrie pré-ContentPanel (icône) par nodeId : capturée dans useLayoutEffect
-  // dès qu'un clip set_content devient actif, avant que le ResizeObserver tire.
+  // Pre-ContentPanel (icon) geometry by nodeId: captured in useLayoutEffect
+  // as soon as a set_content clip becomes active, before ResizeObserver triggers.
   const [iconGeomByNode, setIconGeomByNode] = useState<
     Record<string, NodeGeom>
   >({});
@@ -206,23 +206,23 @@ export function Stage({
     [lineConnections, layout, aspect, direction]
   );
 
-  // Axe d'accroche d'une connexion, dérivé du FLUX du layout (cf. connectionAxis) :
-  // la même décision que computePortOffsets, passée à connection/ArrowLine pour que
-  // l'accroche et la répartition fan-out s'accordent. undefined si un nœud manque
-  // du layout (connection retombe alors sur l'axe pixel dominant).
+  // Connection attachment axis, derived from layout FLOW (see connectionAxis):
+  // the same decision as computePortOffsets, passed to connection/ArrowLine so that
+  // attachment and fan-out distribution match. undefined if a node is missing
+  // from layout (connection then falls back to dominant pixel axis).
   const axisFor = (fromId: string, toId: string) => {
     const p1 = layout[fromId];
     const p2 = layout[toId];
     return p1 && p2 ? connectionAxis(p1, p2, direction, aspect) : undefined;
   };
 
-  // Capture la géométrie "icône" des nœuds qui viennent d'entrer en mode
-  // set_content. S'exécute après le commit DOM, avant que le ResizeObserver
-  // n'ait eu le temps de mettre à jour geometry avec les dimensions du ContentPanel.
+  // Captures "icon" geometry of nodes that just entered
+  // set_content mode. Runs after DOM commit, before ResizeObserver
+  // has time to update geometry with ContentPanel dimensions.
   //
-  // Quand un nouveau nœud set_content apparaît (hasNew), on appelle forceRemeasure()
-  // dans le même layout effect. React 18 batche setIconGeomByNode + setGeometry en
-  // un seul re-render, éliminant le flash intermédiaire ("effet 2 frames").
+  // When a new set_content node appears (hasNew), we call forceRemeasure()
+  // in the same layout effect. React 18 batches setIconGeomByNode + setGeometry into
+  // a single re-render, eliminating the intermediate flash ("2-frame effect").
   useIsoLayoutEffect(() => {
     const activeContentNodeIds = new Set<string>();
     for (const a of active) {
@@ -233,10 +233,10 @@ export function Stage({
     const hasNew = [...activeContentNodeIds].some(
       (nodeId) => !iconGeomByNode[nodeId] && geometry[nodeId]
     );
-    // Un nœud qui SORT du mode set_content rétrécit du panneau vers son icône :
-    // un déplacement (clamp anti-débordement qui se relâche) que le ResizeObserver
-    // peut manquer. Sans re-mesure, la géométrie reste sur la position du panneau
-    // et la flèche ne revient pas exactement à sa place initiale.
+    // A node EXITING set_content mode shrinks from panel back to its icon:
+    // a displacement (anti-overflow clamp releasing) that ResizeObserver
+    // might miss. Without re-measuring, geometry stays at the panel position
+    // and the arrow doesn't perfectly return to its initial spot.
     const hasGone = Object.keys(iconGeomByNode).some(
       (nodeId) => !activeContentNodeIds.has(nodeId)
     );
@@ -259,8 +259,8 @@ export function Stage({
     if (hasNew || hasGone) forceRemeasure();
   }, [active, geometry, iconGeomByNode, forceRemeasure]);
 
-  // Contenu effectif par nœud : contenu initial (opacité 1), puis set_content
-  // actif (avec fondu d'apparition/disparition).
+  // Effective content by node: initial content (opacity 1), then active
+  // set_content (with fade in/out).
   const contentByNode: Record<
     string,
     { content: ObjectContent; opacity: number }
@@ -274,17 +274,17 @@ export function Stage({
     const clip = a.clip as SetContentClip;
     contentByNode[clip.objectId] = {
       content: clip.content,
-      // Eased : pilote l'opacité du contenu ET le lerp de géométrie (l. 299).
+      // Eased: drives content opacity AND geometry lerp (l. 299).
       opacity: contentCrossfade(clip, t),
     };
   }
 
-  // Police de code SYNCHRONISÉE : chaque CodeBlock remonte (handleCodeFit) le ratio
-  // de réduction qu'il nécessiterait seul pour tenir dans sa boîte ; on applique à
-  // TOUS le minimum sur l'ENSEMBLE des panneaux de code déjà vus (pas seulement les
-  // actifs : ils n'apparaissent pas tous en même temps), si bien que tous les codes
-  // ont exactement la même taille de police à tout instant — et aucun ne déborde.
-  // Le facteur grandit quand le lecteur grandit (plus de place → moins de réduction).
+  // SYNCHRONIZED code font: each CodeBlock reports (handleCodeFit) the reduction
+  // ratio it would need alone to fit in its box; we apply to
+  // ALL the minimum across ALL code panels seen so far (not just
+  // active ones: they don't all appear at once), so that all code
+  // has exactly the same font size at all times — and none overflow.
+  // The factor grows when the player grows (more space → less reduction).
   const [codeRatios, setCodeRatios] = useState<Record<string, number>>({});
   useIsoLayoutEffect(() => setCodeRatios({}), [signature]);
   const handleCodeFit = useCallback((id: string, ratio: number) => {
@@ -296,10 +296,10 @@ export function Stage({
   }, []);
   const codeFontScale = Math.min(1, ...Object.values(codeRatios));
 
-  // Géométrie interpolée : pendant une transition set_content, lerp entre la
-  // géométrie pré-content (icône, dans iconGeomByNode) et la géométrie actuelle
-  // (ContentPanel mesuré). Facteur = contentCrossfade (eased) → le morph suit
-  // exactement le fondu visuel, départ et arrivée ralentis.
+  // Interpolated geometry: during a set_content transition, lerp between
+  // pre-content geometry (icon, in iconGeomByNode) and current geometry
+  // (measured ContentPanel). Factor = contentCrossfade (eased) → morph follows
+  // exactly the visual fade, eased start and end.
   let effectiveGeometry: GeometryMap = geometry;
   let hasSetContentTransition = false;
   for (const a of active) {
@@ -317,8 +317,8 @@ export function Stage({
     }
     const lH = lerp(iconGeom.labelH ?? 0, currGeom.labelH ?? 0, p);
     const lW = lerp(iconGeom.labelW ?? 0, currGeom.labelW ?? 0, p);
-    // Débord de la pastille teintée : se résorbe vers 0 à mesure que le panneau
-    // set_content (non teinté) prend le pas, évitant un saut d'accroche.
+    // Tinted badge outset: resolves toward 0 as the set_content
+    // panel (untinted) takes over, avoiding an attachment jump.
     const bo = lerp(iconGeom.borderOutset ?? 0, currGeom.borderOutset ?? 0, p);
     effectiveGeometry[nodeId] = {
       id: currGeom.id,
@@ -329,7 +329,7 @@ export function Stage({
       ...(lH > 0 ? { labelH: lH } : {}),
       ...(lW > 0 ? { labelW: lW } : {}),
       ...(bo > 0 ? { borderOutset: bo } : {}),
-      // Même échelle de Stage que l'icône (gap flèche↔nœud à l'échelle).
+      // Same Stage scale as icon (arrow↔node gap at scale).
       ...(currGeom.scale != null ? { scale: currGeom.scale } : {}),
     };
   }
@@ -337,19 +337,19 @@ export function Stage({
     ? Object.values(effectiveGeometry)
     : allNodes;
 
-  // Fraction révélée (0..1) par nœud : pilote le clip-path top-down de StaticNode.
-  // = l'opacité eased du crossfade (contentCrossfade). Découplé de la géométrie
-  // (pas de dépendance à la mesure / iconGeom) → robuste, marche aussi figé.
+  // Revealed fraction (0..1) by node: drives top-down clip-path of StaticNode.
+  // = eased opacity of crossfade (contentCrossfade). Decoupled from geometry
+  // (no dependency on measurement / iconGeom) → robust, works even frozen.
   const revealByNode: Record<string, number> = {};
   for (const nodeId of Object.keys(contentByNode)) {
     const op = contentByNode[nodeId].opacity;
     if (op < 1) revealByNode[nodeId] = op;
   }
 
-  // Opacité de visibilité par nœud : 0 = caché, 1 = visible, intermédiaire = fondu.
-  // Initialisé depuis `node.visible` puis mis à jour par les clips set_visible actifs.
-  // Les clips set_visible ont keepEnd=true : ils restent dans `active` après la fin
-  // de leur animation, ce qui permet de mémoriser le dernier état sans état mutable.
+  // Visibility opacity by node: 0 = hidden, 1 = visible, intermediate = fading.
+  // Initialized from `node.visible` then updated by active set_visible clips.
+  // set_visible clips have keepEnd=true: they remain in `active` after their
+  // animation ends, which allows remembering the last state without mutable state.
   const nodeVisibility: Record<string, number> = {};
   for (const node of spec.nodes) {
     if (node.visible === false) nodeVisibility[node.id] = 0;
@@ -370,7 +370,7 @@ export function Stage({
     return set;
   }, [active]);
 
-  // Cibles surlignées (nœuds statiques ou connexions) par l'action highlight.
+  // Highlighted targets (static nodes or connections) by highlight action.
   const highlightedIds = useMemo(() => {
     const set = new Set<string>();
     for (const a of active) {
@@ -382,17 +382,17 @@ export function Stage({
 
   const nodes = spec.nodes;
 
-  // Les nœuds ne se DÉPLACENT jamais : on les borne juste pour ne pas sortir du
-  // canevas. C'est le rétrécissement des panneaux (contentLimits) qui évite les
-  // chevauchements, pas un écartement.
+  // Nodes never MOVE: we just bound them so they don't go outside the
+  // canvas. The shrinking of panels (contentLimits) avoids
+  // overlaps, not spreading them out.
   const placements = useMemo(
     () => computePlacements(layout, geometry, width, height),
     [layout, geometry, width, height]
   );
 
-  // Taille de panneau maximale par nœud pour qu'un set_content ne recouvre jamais
-  // un voisin (positions FIXES connues d'avance) : au-delà, le contenu rétrécit.
-  // Calculée dans l'espace de CONCEPTION (constant) — le rendu applique ensuite ×k.
+  // Max panel size per node so a set_content never overlaps
+  // a neighbor (FIXED positions known in advance): beyond this, content shrinks.
+  // Computed in DESIGN space (constant) — rendering then applies ×k.
   const contentLimits = useMemo(
     () =>
       computeContentLimits(
@@ -426,7 +426,7 @@ export function Stage({
         } as CSSProperties
       }
     >
-      {/* Couche zones : derrière flèches et nœuds */}
+      {/* Zones layer: behind arrows and nodes */}
       {spec.zones?.map((zone, i) => {
         const key = zone.id ?? `__zone_${i}`;
         const b = zoneBounds[key];
@@ -448,9 +448,9 @@ export function Stage({
         );
       })}
 
-      {/* Couche arrière : flèches */}
+      {/* Back layer: arrows */}
       <svg className="rdfa-arrow-svg">
-        {/* Lignes de base */}
+        {/* Baseline connections */}
         {spec.connections?.map((link, i) => {
           const f = effectiveGeometry[link.from];
           const tg = effectiveGeometry[link.to];
@@ -509,7 +509,7 @@ export function Stage({
         })}
       </svg>
 
-      {/* Nœuds statiques */}
+      {/* Static nodes */}
       {nodes.map((o) => {
         const placement = placements[o.id];
         if (!placement) return null;
@@ -541,7 +541,7 @@ export function Stage({
         );
       })}
 
-      {/* Labels des zones : au-dessus des nœuds, en dessous des paquets animés */}
+      {/* Zone labels: above nodes, below animated packets */}
       {spec.zones?.map((zone, i) => {
         if (!zone.label) return null;
         const key = zone.id ?? `__zone_${i}`;
@@ -564,7 +564,7 @@ export function Stage({
         );
       })}
 
-      {/* Couche avant : paquets + commentaires */}
+      {/* Front layer: packets + comments */}
       <div className="rdfa-overlay">
         {active.map((a) => {
           if (a.clip.kind !== 'move') return null;
@@ -610,7 +610,7 @@ export function Stage({
           const n = clip.nextToId
             ? effectiveGeometry[clip.nextToId]
             : undefined;
-          // nextToId fourni mais nœud introuvable (mauvais ID) → on ignore
+          // nextToId provided but node not found (bad ID) → ignored
           if (clip.nextToId && !n) return null;
           return (
             <CommentBubble

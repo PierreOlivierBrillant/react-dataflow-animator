@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { DataFlowSpec } from '../types';
 import { computeLayout, connectionAxis } from './layout';
 
-describe('computeLayout — linéaire', () => {
-  it('left-to-right : lane croissante = x croissant', () => {
+describe('computeLayout — linear', () => {
+  it('left-to-right: increasing lane = increasing x', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
       nodes: [
@@ -17,11 +17,11 @@ describe('computeLayout — linéaire', () => {
     const layout = computeLayout(spec);
     expect(layout.a.cx).toBeLessThan(layout.b.cx);
     expect(layout.b.cx).toBeLessThan(layout.c.cx);
-    // alignés verticalement (une seule colonne par lane)
+    // aligned vertically (single column per lane)
     expect(layout.a.cy).toBeCloseTo(layout.b.cy);
   });
 
-  it('empile les nœuds d’une même lane sur l’axe transverse', () => {
+  it('stacks nodes of the same lane on the transverse axis', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
       nodes: [
@@ -36,7 +36,7 @@ describe('computeLayout — linéaire', () => {
     expect(layout.a.cy).not.toBeCloseTo(layout.b.cy);
   });
 
-  it('peu de nœuds : aérés (marge 0,2), pas collés aux bords', () => {
+  it('few nodes: spaced out (margin 0.2), not stuck to edges', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
       nodes: [
@@ -47,12 +47,12 @@ describe('computeLayout — linéaire', () => {
       timeline: [],
     };
     const layout = computeLayout(spec);
-    // marge d'aération plafonnée à 0,2 → extrémités à 0,2 et 0,8.
+    // spacing margin capped at 0.2 → ends at 0.2 and 0.8.
     expect(layout.a.cx).toBeCloseTo(0.2, 5);
     expect(layout.b.cx).toBeCloseTo(0.8, 5);
   });
 
-  it('beaucoup de nœuds : marge resserrée pour préserver la distance minimale', () => {
+  it('many nodes: tightened margin to preserve minimal distance', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
       nodes: Array.from({ length: 6 }, (_, i) => ({
@@ -64,14 +64,14 @@ describe('computeLayout — linéaire', () => {
       timeline: [],
     };
     const layout = computeLayout(spec);
-    // 6 lanes → m = 1/7 ≈ 0,143 < 0,2 : les extrémités sont plus proches des bords.
+    // 6 lanes → m = 1/7 ≈ 0.143 < 0.2: the ends are closer to the edges.
     expect(layout.n0.cx).toBeCloseTo(1 / 7, 5);
     expect(layout.n5.cx).toBeCloseTo(6 / 7, 5);
   });
 
-  it('align_with : le nœud aligné ne collision pas avec les nœuds libres de sa lane', () => {
-    // Reproduit le bug : lane 1 = [server, db, fcm(align_with)], lane 2 = [alice].
-    // Sans le fix, fcm hérite de cy=alice.cy=0.5, identique à db.cy — collision.
+  it('align_with: the aligned node does not collide with free nodes in its lane', () => {
+    // Reproduces the bug: lane 1 = [server, db, fcm(align_with)], lane 2 = [alice].
+    // Without the fix, fcm inherits cy=alice.cy=0.5, identical to db.cy — collision.
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
       nodes: [
@@ -84,18 +84,18 @@ describe('computeLayout — linéaire', () => {
       timeline: [],
     };
     const layout = computeLayout(spec);
-    // fcm doit être aligné sur alice (même cy)
+    // fcm must be aligned with alice (same cy)
     expect(layout.fcm.cy).toBeCloseTo(layout.alice.cy);
-    // les nœuds libres de la même lane ne doivent pas se superposer à fcm/alice
+    // free nodes in the same lane must not overlap with fcm/alice
     expect(layout.server.cy).not.toBeCloseTo(layout.alice.cy);
     expect(layout.db.cy).not.toBeCloseTo(layout.alice.cy);
-    // les nœuds libres ne se superposent pas entre eux
+    // free nodes do not overlap each other
     expect(layout.server.cy).not.toBeCloseTo(layout.db.cy);
   });
 
-  it('plusieurs align_with dans une même lane : pas de collision même si les cibles ont la même cy initiale', () => {
-    // Config problématique : bob et alice sont seuls dans leur lane → cy=0.5 tous les deux.
-    // Sans resolveCollisions, server, token_db et fcm se superposent tous à cy=0.5.
+  it('multiple align_with in the same lane: no collision even if targets have the same initial cy', () => {
+    // Problematic config: bob and alice are alone in their lane → cy=0.5 both.
+    // Without resolveCollisions, server, token_db and fcm all overlap at cy=0.5.
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
       nodes: [
@@ -109,16 +109,16 @@ describe('computeLayout — linéaire', () => {
       timeline: [],
     };
     const layout = computeLayout(spec);
-    // Aucune collision dans la lane 2
+    // No collision in lane 2
     expect(layout.server.cy).not.toBeCloseTo(layout.token_db.cy);
     expect(layout.server.cy).not.toBeCloseTo(layout.fcm.cy);
     expect(layout.token_db.cy).not.toBeCloseTo(layout.fcm.cy);
-    // Les contraintes align_with sont toujours honorées
+    // The align_with constraints are still honored
     expect(layout.token_db.cy).toBeCloseTo(layout.bob.cy);
     expect(layout.fcm.cy).toBeCloseTo(layout.alice.cy);
   });
 
-  it('top-to-bottom : lane croissante = y croissant', () => {
+  it('top-to-bottom: increasing lane = increasing y', () => {
     const spec: DataFlowSpec = {
       direction: 'top-to-bottom',
       nodes: [
@@ -134,7 +134,7 @@ describe('computeLayout — linéaire', () => {
 });
 
 describe('computeLayout — circular', () => {
-  it('place main au centre et les autres autour', () => {
+  it('places main in the center and others around it', () => {
     const spec: DataFlowSpec = {
       direction: 'circular',
       nodes: [
@@ -150,11 +150,11 @@ describe('computeLayout — circular', () => {
     expect(layout.hub).toEqual({ cx: 0.5, cy: 0.5 });
     for (const id of ['n1', 'n2', 'n3']) {
       const d = Math.hypot(layout[id].cx - 0.5, layout[id].cy - 0.5);
-      expect(d).toBeGreaterThan(0.2); // sur l’anneau
+      expect(d).toBeGreaterThan(0.2); // on the ring
     }
   });
 
-  it('place tous les nœuds statiques (les connexions ne sont pas des nœuds)', () => {
+  it('places all static nodes (connections are not nodes)', () => {
     const spec: DataFlowSpec = {
       direction: 'left-to-right',
       nodes: [
@@ -172,20 +172,20 @@ describe('computeLayout — circular', () => {
 });
 
 describe('connectionAxis', () => {
-  it('left-to-right : inter-lane → horizontal, même avec un fort dénivelé', () => {
-    // Δcx significatif (lanes différentes) → horizontal, quel que soit Δcy.
+  it('left-to-right: inter-lane → horizontal, even with steep slope', () => {
+    // significant Δcx (different lanes) → horizontal, regardless of Δcy.
     const a = { cx: 0.2, cy: 0.5 };
-    const auth = { cx: 0.8, cy: 0.1 }; // bien plus haut → Δcy > Δcx
+    const auth = { cx: 0.8, cy: 0.1 }; // much higher → Δcy > Δcx
     expect(connectionAxis(a, auth, 'left-to-right')).toBe('horizontal');
   });
 
-  it('left-to-right : même lane (même cx) → vertical', () => {
+  it('left-to-right: same lane (same cx) → vertical', () => {
     const a = { cx: 0.5, cy: 0.2 };
     const b = { cx: 0.5, cy: 0.8 };
     expect(connectionAxis(a, b, 'left-to-right')).toBe('vertical');
   });
 
-  it('right-to-left : inter-lane → horizontal', () => {
+  it('right-to-left: inter-lane → horizontal', () => {
     expect(
       connectionAxis(
         { cx: 0.8, cy: 0.5 },
@@ -195,7 +195,7 @@ describe('connectionAxis', () => {
     ).toBe('horizontal');
   });
 
-  it('top-to-bottom : inter-lane → vertical ; même lane → horizontal', () => {
+  it('top-to-bottom: inter-lane → vertical; same lane → horizontal', () => {
     expect(
       connectionAxis(
         { cx: 0.5, cy: 0.2 },
@@ -212,7 +212,7 @@ describe('connectionAxis', () => {
     ).toBe('horizontal');
   });
 
-  it('circular : axe dominant en pixels (l’aspect départage)', () => {
+  it('circular: dominant axis in pixels (aspect breaks the tie)', () => {
     const a = { cx: 0.2, cy: 0.5 };
     const b = { cx: 0.5, cy: 0.9 }; // Δcx=0.3, Δcy=0.4
     expect(connectionAxis(a, b, 'circular', 1)).toBe('vertical');

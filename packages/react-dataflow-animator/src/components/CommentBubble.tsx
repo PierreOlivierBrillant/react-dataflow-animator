@@ -31,7 +31,7 @@ export const CommentBubble = memo(function CommentBubble({
   const PAD = 8;
 
   if (!node) {
-    // Omniscient : centré en haut du stage, sans queue de bulle.
+    // Omniscient: centered at the top of the stage, without bubble tail.
     let left = stageW / 2 - size.w / 2;
     if (size.w > 0 && stageW > 0) {
       left = clamp(left, PAD, Math.max(PAD, stageW - size.w - PAD));

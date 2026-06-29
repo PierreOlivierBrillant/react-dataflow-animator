@@ -46,49 +46,49 @@ const timeline: Timeline = {
 };
 
 describe('evaluate', () => {
-  it('n’expose pas un clip avant son début', () => {
+  it('does not expose a clip before its start', () => {
     const active = evaluate(timeline, 50);
     expect(active.map((a) => a.clip.id)).toEqual(['arr']);
   });
 
-  it('calcule la progression sur [animStartMs, endMs]', () => {
+  it('calculates the progression on [animStartMs, endMs]', () => {
     const active = evaluate(timeline, 350);
     const m = active.find((a) => a.clip.id === 'm')!;
     expect(m.progress).toBeCloseTo((350 - 100) / 500);
     expect(m.animating).toBe(true);
   });
 
-  it('maintient un clip terminé mais gardé (progress=1, non animé)', () => {
+  it('maintains a finished but kept clip (progress=1, not animated)', () => {
     const active = evaluate(timeline, 700);
     const arr = active.find((a) => a.clip.id === 'arr')!;
     expect(arr.progress).toBe(1);
     expect(arr.animating).toBe(false);
-    // Le move a disparu (visibleUntil=600).
+    // The move has disappeared (visibleUntil=600).
     expect(active.find((a) => a.clip.id === 'm')).toBeUndefined();
   });
 });
 
-describe('navigation par points d’arrêt', () => {
-  it('stepIndexAt repère l’étape courante', () => {
+describe('navigation by stop points', () => {
+  it('stepIndexAt locates the current step', () => {
     expect(stepIndexAt(timeline, 0)).toBe(0);
     expect(stepIndexAt(timeline, 599)).toBe(0);
     expect(stepIndexAt(timeline, 600)).toBe(1);
   });
 
-  it('nextStop avance au prochain arrêt, puis à la fin', () => {
+  it('nextStop advances to the next stop, then to the end', () => {
     expect(nextStop(timeline, 0)).toBe(400);
     expect(nextStop(timeline, 400)).toBe(600);
-    expect(nextStop(timeline, 600)).toBe(1000); // plus d’arrêt -> durée totale
+    expect(nextStop(timeline, 600)).toBe(1000); // no more stops -> total duration
   });
 
-  it('prevStop recule à l’arrêt précédent, puis au début', () => {
+  it('prevStop goes back to the previous stop, then to the beginning', () => {
     expect(prevStop(timeline, 700)).toBe(600);
     expect(prevStop(timeline, 500)).toBe(400);
-    expect(prevStop(timeline, 400)).toBe(0); // pile sur un arrêt -> précédent (début)
+    expect(prevStop(timeline, 400)).toBe(0); // exactly on a stop -> previous (start)
   });
 });
 
-describe('evaluate — équivalence chemin optimisé vs fallback', () => {
+describe('evaluate — optimized path vs fallback equivalence', () => {
   const equivNodes: DataFlowSpec['nodes'] = [
     { id: 'a', type: 'client' },
     { id: 'b', type: 'server' },
@@ -102,7 +102,7 @@ describe('evaluate — équivalence chemin optimisé vs fallback', () => {
     return { nodes: equivNodes, packets: equivPackets, timeline: tl };
   }
 
-  // Force le chemin fallback (recherche dichotomique) en supprimant activeClips.
+  // Forces the fallback path (binary search) by stripping activeClips.
   function stripActiveClips(tl: Timeline): Timeline {
     return {
       ...tl,
@@ -110,7 +110,7 @@ describe('evaluate — équivalence chemin optimisé vs fallback', () => {
     };
   }
 
-  // Grille dense : tous les 50 ms + les bornes exactes de chaque clip (±1 ms).
+  // Dense grid: every 50 ms + the exact bounds of each clip (±1 ms).
   function makeGrid(tl: Timeline): number[] {
     const pts = new Set<number>();
     for (let t = 0; t <= tl.durationMs; t += 50) pts.add(t);
@@ -142,23 +142,23 @@ describe('evaluate — équivalence chemin optimisé vs fallback', () => {
 
       expect(
         cached.map((a) => a.clip.id),
-        `clip ids à t=${t}`
+        `clip ids at t=${t}`
       ).toEqual(fallback.map((a) => a.clip.id));
 
       for (let i = 0; i < cached.length; i++) {
         expect(
           cached[i].progress,
-          `progress[${cached[i].clip.id}] à t=${t}`
+          `progress[${cached[i].clip.id}] at t=${t}`
         ).toBe(fallback[i].progress);
         expect(
           cached[i].animating,
-          `animating[${cached[i].clip.id}] à t=${t}`
+          `animating[${cached[i].clip.id}] at t=${t}`
         ).toBe(fallback[i].animating);
       }
     }
   }
 
-  it('séquentiel : deux moves consécutifs', () => {
+  it('sequential: two consecutive moves', () => {
     const { timeline } = compile(
       specOf([
         {
@@ -182,7 +182,7 @@ describe('evaluate — équivalence chemin optimisé vs fallback', () => {
     assertEquivalence(timeline);
   });
 
-  it('parallel : move + arrow dans un bloc parallel, suivi d’un highlight', () => {
+  it('parallel: move + arrow in a parallel block, followed by a highlight', () => {
     const { timeline } = compile(
       specOf([
         {
@@ -205,7 +205,7 @@ describe('evaluate — équivalence chemin optimisé vs fallback', () => {
     assertEquivalence(timeline);
   });
 
-  it('wait_for + keep_until_end : arrow persistante, move décalé, loading final', () => {
+  it('wait_for + keep_until_end: persistent arrow, delayed move, final loading', () => {
     const { timeline } = compile(
       specOf([
         { type: 'arrow', id: 'arr', from: 'a', to: 'b', duration: 800 },

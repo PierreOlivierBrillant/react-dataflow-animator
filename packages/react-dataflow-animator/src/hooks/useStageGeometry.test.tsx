@@ -24,15 +24,15 @@ function makeRect(x: number, y: number, w: number, h: number): DOMRect {
   } as DOMRect;
 }
 
-// Dimensions du Stage contrôlables entre les tests.
+// Stage dimensions controllable between tests.
 let stageW = 800;
 let stageH = 600;
 
-// ── Composant de test ─────────────────────────────────────────────────────────
+// ── Test Component ────────────────────────────────────────────────────────────
 //
-// Les valeurs retournées par le hook sont sérialisées en data-attributes sur le
-// Stage afin de les inspecter depuis les tests, évitant toute mutation de
-// variable externe pendant le rendu.
+// The values returned by the hook are serialized into data-attributes on the
+// Stage in order to inspect them from the tests, avoiding any mutation of
+// external variable during rendering.
 
 function StageFixture({ signature }: { signature: string }) {
   const { geometry, aspect, width, height, stageRef } =
@@ -54,12 +54,12 @@ function StageFixture({ signature }: { signature: string }) {
       data-lw-a={ga?.labelW ?? ''}
       data-has-b={gb ? '1' : '0'}
     >
-      {/* node-a : a un label */}
+      {/* node-a: has a label */}
       <div data-node-id="a">
         <div className="rdfa-node-visual" />
         <span className="rdfa-node-label" />
       </div>
-      {/* node-b : pas de label */}
+      {/* node-b: no label */}
       <div data-node-id="b">
         <div className="rdfa-node-visual" />
       </div>
@@ -67,7 +67,7 @@ function StageFixture({ signature }: { signature: string }) {
   );
 }
 
-// ── Setup du mock getBoundingClientRect ───────────────────────────────────────
+// ── Mock Setup getBoundingClientRect ────────────────────────────────────────
 
 beforeEach(() => {
   stageW = 800;
@@ -92,7 +92,7 @@ describe('useStageGeometry', () => {
     render(<StageFixture signature="s1" />);
     const stage = screen.getByTestId('stage');
 
-    // Les deux nœuds doivent être présents dans la map.
+    // Both nodes must be present in the map.
     expect(stage.dataset.hasB).toBe('1');
 
     // x = r.left - sr.left + r.width/2  = 100 - 0 + 30 = 130
@@ -124,7 +124,7 @@ describe('useStageGeometry', () => {
     const { rerender } = render(<StageFixture signature="sig-v1" />);
     expect(Number(screen.getByTestId('stage').dataset.width)).toBe(800);
 
-    // Nouvelles dimensions simulées avant le re-rendu.
+    // New simulated dimensions before re-render.
     stageW = 1024;
     stageH = 768;
 

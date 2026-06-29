@@ -1,7 +1,7 @@
 import type { DataFlowSpec, Action, Direction } from '../types';
 import { connectionAxis } from './layout';
 
-/** Espacement (px) entre deux arêtes d'une même paire ou d'un fan-out. */
+/** Spacing (px) between two edges of the same pair or a fan-out. */
 export const PORT_SPACING = 30;
 
 export interface ConnectionRef {
@@ -11,25 +11,25 @@ export interface ConnectionRef {
 }
 
 /**
- * Collecte toutes les connexions référencées dans la spec (connections
- * permanentes + actions arrow + actions move, récursion dans les parallèles).
+ * Collects all connections referenced in the spec (permanent connections
+ * + arrow actions + move actions, recursing into parallels).
  *
- * Règle de déduplication :
- * - Connexions statiques et arrows : déduplication par clé (id ou composé).
- * - Moves : une direction donnée (from→to) n'est ajoutée que si aucune
- *   connexion statique ou arrow ne couvre déjà ce sens ; le move réutilise
- *   alors cette entrée via le fallback by-from/to de Stage.tsx. Cela garantit
- *   qu'un move et une arrow sur le même trajet partagent le même portOffset.
+ * Deduplication rules:
+ * - Static connections and arrows: deduplicated by key (id or compound).
+ * - Moves: a given direction (from→to) is only added if no
+ *   static connection or arrow already covers this direction; the move then reuses
+ *   this entry via Stage.tsx's by-from/to fallback. This ensures
+ *   that a move and an arrow on the same path share the same portOffset.
  */
 export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
   const all: ConnectionRef[] = [];
-  const keysSeen = new Set<string>(); // déduplication par clé (existant)
-  const directedSeen = new Set<string>(); // "from|to" : priorité connexions/arrows sur moves
-  // Directions ajoutées en passe 1 uniquement — utilisé en passe 2 pour éviter
-  // qu'un move en sens inverse ne duplique une paire déjà couverte par une ligne.
+  const keysSeen = new Set<string>(); // deduplication by key (existing)
+  const directedSeen = new Set<string>(); // "from|to": priority connections/arrows over moves
+  // Directions added in pass 1 only — used in pass 2 to prevent
+  // a reverse move from duplicating a pair already covered by a line.
   const passe1Directed = new Set<string>();
 
-  // Passe 1 : connexions statiques et arrows (établissent les directions prioritaires).
+  // Pass 1: static connections and arrows (establish priority directions).
   spec.connections?.forEach((c, i) => {
     const key = c.id ?? `${c.from}|${c.to}|${i}`;
     if (!keysSeen.has(key)) {
@@ -44,9 +44,9 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
     actions.forEach((a, i) => {
       if (a.type === 'arrow' && a.from && a.to) {
         const dk = `${a.from}|${a.to}`;
-        // Déduplication par direction : plusieurs arrows A→B (ou une arrow + une
-        // connexion statique sur le même trajet) représentent la même "voie" visuelle
-        // et ne doivent pas gonfler le compte de la paire.
+        // Deduplication by direction: multiple A→B arrows (or an arrow + a
+        // static connection on the same path) represent the same visual "lane"
+        // and shouldn't inflate the pair's count.
         if (!directedSeen.has(dk)) {
           directedSeen.add(dk);
           passe1Directed.add(dk);
@@ -63,11 +63,11 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
   };
   if (spec.timeline) extractArrows(spec.timeline);
 
-  // Passe 2 : moves — ajoutés seulement si :
-  //   1. la direction exacte n'est pas déjà couverte, ET
-  //   2. la direction inverse n'est pas couverte par une connexion/arrow de passe 1.
-  //      (un move B→A avec une ligne statique A→B doit partager le chemin central,
-  //      pas créer une 2e entrée dans la paire qui décalerait la ligne existante)
+  // Pass 2: moves — added only if:
+  //   1. the exact direction is not already covered, AND
+  //   2. the reverse direction is not covered by a pass 1 connection/arrow.
+  //      (a B→A move with a static A→B line must share the center path,
+  //      not create a 2nd entry in the pair which would shift the existing line)
   const extractMoves = (actions: Action[]) => {
     actions.forEach((a, i) => {
       if (a.type === 'move' && a.from && a.to) {
@@ -92,13 +92,13 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
 }
 
 /**
- * Calcule, pour chaque connexion, le décalage latéral (px) du port de départ
- * et d'arrivée en tenant compte de deux phénomènes :
+ * Calculates, for each connection, the lateral offset (px) of the start
+ * and end port accounting for two phenomena:
  *
- * - **intra-paire** : plusieurs arêtes entre les mêmes deux nœuds sont
- *   écartées perpendiculairement à leur axe.
- * - **fan-out** : plusieurs paires partageant la même face d'un nœud sont
- *   triées par position de l'autre extrémité pour éviter les croisements.
+ * - **intra-pair**: multiple edges between the same two nodes are
+ *   spaced out perpendicularly to their axis.
+ * - **fan-out**: multiple pairs sharing the same face of a node are
+ *   sorted by the other end's position to avoid crossings.
  */
 export function computePortOffsets(
   connections: ConnectionRef[],
@@ -106,7 +106,7 @@ export function computePortOffsets(
   aspect = 1,
   direction: Direction = 'left-to-right'
 ): Record<string, { start: number; end: number }> {
-  // On groupe par paire de nœuds (indépendamment de la direction)
+  // Group by node pair (independent of direction)
   const pairConnections: Record<string, ConnectionRef[]> = {};
   for (const c of connections) {
     const pair = [c.from, c.to].sort().join('-');
@@ -114,17 +114,17 @@ export function computePortOffsets(
     pairConnections[pair].push(c);
   }
 
-  // Calcul des faces de départ/arrivée pour chaque paire (fan-out)
+  // Compute start/end faces for each pair (fan-out)
   const nodeFaces: Record<string, { pairKey: string; coord: number }[]> = {};
   Object.keys(pairConnections).forEach((pairId) => {
     const conns = pairConnections[pairId];
-    const { from, to } = conns[0]; // On prend la première connexion comme référence
+    const { from, to } = conns[0]; // Use the first connection as reference
     const p1 = layout[from] ?? { cx: 0.5, cy: 0.5 };
     const p2 = layout[to] ?? { cx: 0.5, cy: 0.5 };
     const dx = p2.cx - p1.cx;
     const dy = p2.cy - p1.cy;
-    // Orientation dérivée du FLUX du layout (cf. connectionAxis) — la MÊME décision
-    // que l'accroche de `connection`, pour que fan-out et extrémités s'accordent.
+    // Orientation derived from layout FLOW (cf. connectionAxis) — the SAME decision
+    // as `connection`'s attachment, so fan-out and endpoints agree.
     const isHorizontal =
       connectionAxis(p1, p2, direction, aspect) === 'horizontal';
 

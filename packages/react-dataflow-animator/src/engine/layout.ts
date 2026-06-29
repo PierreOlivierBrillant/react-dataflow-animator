@@ -1,36 +1,35 @@
 import type { DataFlowSpec, Direction, Node } from '../types';
 
 /**
- * Moteur de disposition spatiale : calcule la position de chaque nœud statique
- * SANS coordonnées (x, y) en entrée, à partir de `direction` et de `lane`.
+ * Spatial layout engine: calculates the position of each static node
+ * WITHOUT (x, y) coordinates as input, based on `direction` and `lane`.
  *
- * Les positions sont renvoyées en RATIOS (0..1) relatifs au Stage : le placement
- * se fait alors en pur CSS (`left: cx%`, `top: cy%`), donc aucune mesure DOM
- * n'est nécessaire pour POSITIONNER les nœuds (la mesure ne sert qu'au tracé des
- * connexions).
+ * Positions are returned as RATIOS (0..1) relative to the Stage: placement
+ * is then done in pure CSS (`left: cx%`, `top: cy%`), so no DOM measurement
+ * is necessary to POSITION the nodes (measurement is only used for drawing
+ * connections).
  */
 
 export interface NodePlacement {
-  /** Centre horizontal, ratio 0..1. */
+  /** Horizontal center, ratio 0..1. */
   cx: number;
-  /** Centre vertical, ratio 0..1. */
+  /** Vertical center, ratio 0..1. */
   cy: number;
 }
 
 export type LayoutMap = Record<string, NodePlacement>;
 
 export interface LayoutOptions {
-  /** Ratio largeur/hauteur du Stage, pour garder un cercle rond en mode circular. */
+  /** Stage width/height ratio, to keep a round circle in circular mode. */
   aspect?: number;
 }
 
-/** Répartit n positions à intervalles réguliers avec marges aux extrémités. */
 /**
- * Répartit `count` positions sur l'axe, étalées entre une marge `[m, 1-m]`.
- * On garde une marge d'« aération » autour des nœuds par défaut (m plafonné à
- * 0,2) ; ce n'est QUE lorsqu'ils deviennent nombreux — donc serrés — que `m`
- * descend via `1/(count+1)` pour les écarter davantage et préserver une distance
- * minimale entre eux. Peu de nœuds restent ainsi aérés, pas collés aux bords.
+ * Distributes `count` positions on the axis, spread between a margin `[m, 1-m]`.
+ * We keep a default "breathing" margin around nodes (m capped at
+ * 0.2); it is ONLY when they become numerous — thus packed — that `m`
+ * goes down via `1/(count+1)` to spread them more and preserve a minimum
+ * distance between them. Few nodes thus remain airy, not glued to the edges.
  */
 function spread(index: number, count: number): number {
   if (count <= 1) return 0.5;
@@ -39,7 +38,7 @@ function spread(index: number, count: number): number {
 }
 
 function linearLayout(nodes: Node[], direction: Direction): LayoutMap {
-  // Regroupement par lane (défaut: 1), lanes triées en ordre croissant.
+  // Grouping by lane (default: 1), lanes sorted in ascending order.
   const byLane = new Map<number, Node[]>();
   for (const node of nodes) {
     const lane = node.lane ?? 1;
@@ -47,18 +46,18 @@ function linearLayout(nodes: Node[], direction: Direction): LayoutMap {
     if (list) list.push(node);
     else byLane.set(lane, [node]);
   }
-  // NB : `Array.from` plutôt que `[...byLane.keys()]`. Certains consommateurs
-  // (ex. Babel de Docusaurus en mode « loose ») retranspilent le spread d'un
-  // itérable en `[].concat(iterable)`, ce qui n'aplatit PAS un itérateur de Map
-  // et casse silencieusement le layout. `Array.from` est immunisé.
+  // NB: `Array.from` rather than `[...byLane.keys()]`. Some consumers
+  // (e.g. Docusaurus Babel in "loose" mode) transpile the spread of an
+  // iterable to `[].concat(iterable)`, which does NOT flatten a Map iterator
+  // and silently breaks the layout. `Array.from` is immune.
   const lanes = Array.from(byLane.keys()).sort((a, b) => a - b);
 
   const map: LayoutMap = {};
   lanes.forEach((lane, laneOrder) => {
     const main = spread(laneOrder, lanes.length);
     const members = byLane.get(lane)!;
-    // Les nœuds avec align_with auront leur position transverse écrasée par
-    // applyAlignment : on les exclut de la distribution pour éviter les collisions.
+    // Nodes with align_with will have their transverse position overwritten by
+    // applyAlignment: we exclude them from distribution to avoid collisions.
     const free = members.filter((n) => !n.align_with);
     let freeIdx = 0;
     members.forEach((node) => {
@@ -97,15 +96,15 @@ function circularLayout(nodes: Node[], aspect: number): LayoutMap {
 
   if (mainNode) map[mainNode.id] = { cx: 0.5, cy: 0.5 };
 
-  // Rayon en px = 0.4 * plus petite dimension ; converti en ratios par axe pour
-  // rester circulaire quelle que soit la forme du Stage.
+  // Radius in px = 0.4 * smallest dimension; converted to ratios per axis to
+  // remain circular regardless of Stage shape.
   const base = 0.4;
   const rx = aspect >= 1 ? base / aspect : base;
   const ry = aspect >= 1 ? base : base * aspect;
 
   const n = ring.length;
   ring.forEach((node, i) => {
-    // On démarre en haut (-90°) et on tourne dans le sens horaire.
+    // We start at the top (-90°) and turn clockwise.
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(1, n);
     map[node.id] = {
       cx: 0.5 + rx * Math.cos(angle),
@@ -116,8 +115,8 @@ function circularLayout(nodes: Node[], aspect: number): LayoutMap {
 }
 
 /**
- * Applique `align_with` : aligne un nœud sur l'axe TRANSVERSE d'un autre
- * (vertical si la direction est horizontale, et inversement).
+ * Applies `align_with`: aligns a node on the TRANSVERSE axis of another
+ * (vertical if the direction is horizontal, and vice versa).
  */
 function applyAlignment(
   map: LayoutMap,
@@ -137,9 +136,9 @@ function applyAlignment(
 }
 
 /**
- * Après align_with, plusieurs nœuds d'une même lane peuvent partager la même
- * position transverse (ex. deux cibles différentes qui ont toutes deux cy=0.5).
- * On redistribue les nœuds en collision et on synchronise leurs cibles.
+ * After align_with, several nodes in the same lane can share the same
+ * transverse position (e.g. two different targets that both have cy=0.5).
+ * We redistribute the colliding nodes and synchronize their targets.
  */
 function resolveCollisions(
   map: LayoutMap,
@@ -176,7 +175,7 @@ function resolveCollisions(
       colliders.forEach((node, k) => {
         const newCross = spread(k, colliders.length);
         setCross(node.id, newCross);
-        // Synchronise la cible pour que align_with reste cohérent visuellement.
+        // Synchronize the target so align_with stays visually consistent.
         if (node.align_with && map[node.align_with]) {
           setCross(node.align_with, newCross);
         }
@@ -200,28 +199,28 @@ export function computeLayout(
   return map;
 }
 
-/** Axe d'accroche d'une flèche : horizontal → faces Est/Ouest, vertical → Nord/Sud. */
+/** Arrow anchor axis: horizontal → East/West faces, vertical → North/South. */
 export type ConnectionAxis = 'horizontal' | 'vertical';
 
-/** Sous ce seuil de ratio, deux nœuds partagent la même coordonnée de FLUX :
- *  ils sont dans la même lane (empilés), pas séparés par le flux. */
+/** Below this ratio threshold, two nodes share the same FLOW coordinate:
+ *  they are in the same lane (stacked), not separated by flow. */
 const SAME_LANE_EPS = 1e-3;
 
 /**
- * Axe sur lequel une connexion A→B s'accroche, dérivé du **flux du layout** et non
- * de l'axe pixel dominant (qui dépend du viewport : sur un Stage portrait, deux
- * nœuds de lanes voisines peuvent être plus éloignés verticalement et basculer à
- * tort en vertical).
+ * Axis on which an A→B connection anchors, derived from the **layout flow** and not
+ * from the dominant pixel axis (which depends on the viewport: on a portrait Stage, two
+ * nodes from neighboring lanes can be further apart vertically and mistakenly switch
+ * to vertical).
  *
- * - Flux horizontal (`left-to-right` / `right-to-left`) : une connexion **inter-lane**
- *   part/arrive horizontalement (faces Est/Ouest) ; deux nœuds d'une **même lane**
- *   (même `cx`, empilés) se relient verticalement.
- * - Flux vertical (`top-to-bottom` / `bottom-to-top`) : symétrique.
- * - `circular` : pas d'axe de flux → axe dominant en **pixels** (ratios × aspect),
- *   ce qui correspond à ce que l'œil voit sur l'anneau.
+ * - Horizontal flow (`left-to-right` / `right-to-left`): an **inter-lane** connection
+ *   starts/arrives horizontally (East/West faces); two nodes from the **same lane**
+ *   (same `cx`, stacked) connect vertically.
+ * - Vertical flow (`top-to-bottom` / `bottom-to-top`): symmetric.
+ * - `circular`: no flow axis → dominant axis in **pixels** (ratios × aspect),
+ *   which matches what the eye sees on the ring.
  *
- * Décision UNIQUE, partagée par {@link computePortOffsets} (répartition fan-out) et
- * l'accroche de `connection` : les deux ne peuvent donc pas se contredire.
+ * SINGLE decision, shared by {@link computePortOffsets} (fan-out distribution) and
+ * `connection` anchoring: so both cannot contradict each other.
  */
 export function connectionAxis(
   from: NodePlacement,

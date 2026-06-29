@@ -57,14 +57,14 @@ export function CustomNavbar() {
             <LogoText logoSize={32} />
           </Link>
 
-          {/* Recherche Algolia */}
+          {/* Algolia search */}
           <div className="hidden md:flex items-center">
             <SearchBar />
           </div>
 
-          {/* Liens + actions */}
+          {/* Links + actions */}
           <div className="flex items-center gap-1 ml-auto">
-            {/* Liens desktop */}
+            {/* Desktop links */}
             <nav className="hidden md:flex items-center gap-1">
               <NavLink
                 to="/docs/intro"
@@ -84,12 +84,12 @@ export function CustomNavbar() {
               />
             </nav>
 
-            {/* Recherche mobile (Algolia) */}
+            {/* Mobile search (Algolia) */}
             <div className="md:hidden flex items-center">
               <SearchBar />
             </div>
 
-            {/* Séparateur + langue + GitHub (desktop) */}
+            {/* Separator + language + GitHub (desktop) */}
             <div className="hidden md:flex items-center gap-2">
               <div className="w-px h-4 bg-white/10 mx-1" />
               <LanguageSwitcher />
@@ -103,7 +103,7 @@ export function CustomNavbar() {
               </a>
             </div>
 
-            {/* Bouton menu mobile */}
+            {/* Mobile menu button */}
             <button
               className="md:hidden p-2 text-white/50 hover:text-white cursor-pointer bg-transparent border-none"
               onClick={() => setMobileOpen((v) => !v)}
@@ -115,7 +115,7 @@ export function CustomNavbar() {
           </div>
         </div>
 
-        {/* Menu mobile */}
+        {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
@@ -172,8 +172,8 @@ interface NavLinkProps {
 
 function NavLink({ to, label, icon, exact = false }: NavLinkProps) {
   const currentPath = useLocation().pathname;
-  // `to` est relatif à la racine du site ; useLocation renvoie le pathname réel,
-  // baseUrl compris (/react-dataflow-animator/…). On compare donc sur la même base.
+  // `to` is relative to the site root; useLocation returns the real pathname,
+  // including baseUrl (/react-dataflow-animator/...). So we compare on the same basis.
   const target = useBaseUrl(to);
 
   const isActive = exact

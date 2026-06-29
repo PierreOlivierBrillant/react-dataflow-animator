@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Harnais de validation visuelle : Vite sert CE dossier en racine et résout
-// directement les sources du package (Stage, clipOpacity, easeInOutCubic ne
-// sont PAS exportés publiquement — on les importe depuis src pour rester fidèle
-// au rendu réel sans polluer l'API publique). Aucune dépendance ajoutée :
-// vite + @vitejs/plugin-react sont déjà des devDeps du package.
+// Visual validation harness: Vite serves THIS folder at the root and resolves
+// the package sources directly (Stage, clipOpacity, easeInOutCubic are
+// NOT publicly exported — we import them from src to remain faithful
+// to the real render without polluting the public API). No added dependencies:
+// vite + @vitejs/plugin-react are already devDeps of the package.
 export default defineConfig({
   root: import.meta.dirname,
   server: { open: false, port: 5199 },

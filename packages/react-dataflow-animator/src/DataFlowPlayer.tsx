@@ -28,11 +28,11 @@ const JsonIcon = (
 );
 
 /**
- * Lecteur principal : compile une `spec` en chronologie déterministe puis la joue.
+ * Main player: compiles a `spec` into a deterministic timeline and plays it.
  *
- * SSR-safe : aucun accès au DOM pendant le rendu (la mesure et l'horloge sont
- * confinées à des effets côté client), donc le composant s'hydrate sans
- * divergence dans Docusaurus & co.
+ * SSR-safe: no DOM access during render (measurement and clock are
+ * confined to client-side effects), so the component hydrates without
+ * divergence in Docusaurus & co.
  */
 export function DataFlowPlayer({
   spec,
@@ -63,7 +63,7 @@ export function DataFlowPlayer({
   const rootRef = useRef<HTMLDivElement>(null);
   const [jsonOpen, setJsonOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // Vrai uniquement côté client (après hydratation), sans setState-in-effect.
+  // True only on client-side (after hydration), without setState-in-effect.
   const isClient = useSyncExternalStore(
     emptySubscribe,
     returnTrue,

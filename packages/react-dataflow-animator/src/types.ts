@@ -1,10 +1,10 @@
 import type { CSSProperties, ReactNode } from 'react';
 
 /**
- * Types TypeScript de la spécification DataFlow.
- * Le JSON Schema (`schema.ts`, exposé par la page Doc API) est GÉNÉRÉ depuis ces types
- * via `ts-json-schema-generator` (script `generate:schema`). Ne pas éditer le schéma
- * manuellement — modifier ici puis régénérer.
+ * TypeScript types of the DataFlow specification.
+ * The JSON Schema (`schema.ts`, exposed by the API Doc page) is GENERATED from these types
+ * via `ts-json-schema-generator` (`generate:schema` script). Do not edit the schema
+ * manually — modify here then regenerate.
  */
 
 export type Direction =
@@ -15,14 +15,14 @@ export type Direction =
   | 'circular';
 
 /**
- * Types de nœuds (apparence). Les flèches de décor vivent dans `connections`.
+ * Node types (appearance). Decor arrows live in `connections`.
  *
- * Trois familles :
- * - **Pictogrammes** (`desktop` … `cloud`) : une icône SVG fixe.
- * - **Nœuds textuels** (`simple_node`, `complex_node`) : une boîte de texte
- *   (corps seul, ou en-tête + corps à la manière d'un paquet HTTP).
- * - **Formes géométriques** (`square` … `star`) : une forme dessinée qui peut
- *   contenir un court texte centré (champ `body`).
+ * Three families:
+ * - **Pictograms** (`desktop` … `cloud`): a fixed SVG icon.
+ * - **Text nodes** (`simple_node`, `complex_node`): a text box
+ *   (body only, or header + body like an HTTP packet).
+ * - **Geometric shapes** (`square` … `star`): a drawn shape that can
+ *   contain short centered text (`body` field).
  */
 export type NodeType =
   | 'desktop'
@@ -51,22 +51,22 @@ export type NodeType =
 
 export type PacketKind = 'http_packet' | 'sql_request' | 'sql_response';
 
-/** Style de ligne (terminologie SVG/CSS). `full` est accepté en alias de `solid`. */
+/** Line style (SVG/CSS terminology). `full` is accepted as an alias for `solid`. */
 export type LineStyle = 'solid' | 'dotted' | 'dashed' | 'animated';
 
 /**
- * Forme du tracé d'une flèche / connexion — orthogonale à {@link LineStyle},
- * qui ne règle que le motif du trait (plein, pointillé…). Défaut: 'bezier'.
+ * Shape of the arrow / connection path — orthogonal to {@link LineStyle},
+ * which only sets the stroke pattern (solid, dotted…). Default: 'bezier'.
  *
- * - `bezier` : courbe douce en S, poignées le long de l'axe dominant (défaut) ;
- * - `simplebezier` : même esprit, courbure plus discrète ;
- * - `straight` : segment direct (contourne les labels intercalés) ;
- * - `step` : trajet orthogonal à angles droits ;
- * - `smoothstep` : trajet orthogonal aux angles arrondis.
+ * - `bezier`: smooth S curve, handles along the dominant axis (default);
+ * - `simplebezier`: same idea, more subtle curvature;
+ * - `straight`: direct segment (bypasses sandwiched labels);
+ * - `step`: orthogonal path with right angles;
+ * - `smoothstep`: orthogonal path with rounded angles.
  *
- * Sur deux nœuds parfaitement alignés (même rangée/colonne), toutes les formes
- * se confondent avec un trait droit : la courbure n'apparaît qu'en présence d'un
- * décalage transverse (lanes différentes, fan-out, voies bidirectionnelles).
+ * On two perfectly aligned nodes (same row/column), all shapes
+ * merge into a straight line: curvature only appears in the presence of a
+ * transverse offset (different lanes, fan-out, bidirectional tracks).
  */
 export type PathShape =
   | 'bezier'
@@ -75,10 +75,10 @@ export type PathShape =
   | 'step'
   | 'smoothstep';
 
-/** Modes de contenu pour `set_content` (action) et `content` (objet statique). */
+/** Content modes for `set_content` (action) and `content` (static object). */
 export type ContentType = 'image' | 'text' | 'code' | 'table';
 
-/** Langages supportés par le moteur de coloration syntaxique (Prism). */
+/** Languages supported by the syntax highlighting engine (Prism). */
 export type HighlightLanguage =
   | 'javascript'
   | 'js'
@@ -103,152 +103,151 @@ export type HighlightLanguage =
 
 export interface ObjectContent {
   /**
-   * Mode d'affichage du contenu : `code` (terminal coloré), `text` (fenêtre type
-   * navigateur), `image` (illustration) ou `table` (tableau de données).
+   * Content display mode: `code` (colored terminal), `text` (browser-like
+   * window), `image` (illustration) or `table` (data table).
    */
   type?: ContentType;
   /**
-   * Contenu textuel selon `type` : code source (`code`), texte (`text`) ou
-   * chemin/URL d'image (`image`).
+   * Textual content according to `type`: source code (`code`), text (`text`) or
+   * image path/URL (`image`).
    * @example "SELECT * FROM users;"
    */
   value?: string;
-  /** Langage pour la coloration syntaxique. Valeurs reconnues : voir {@link HighlightLanguage}. */
+  /** Language for syntax highlighting. Recognized values: see {@link HighlightLanguage}. */
   language?: HighlightLanguage | (string & {});
   /**
-   * (mode `text`) URL affichée dans la barre d'adresse de la fenêtre.
+   * (`text` mode) URL displayed in the window's address bar.
    * @example "https://app.example.com/login"
    */
   url?: string;
   /**
-   * (mode `table`) En-têtes de colonnes.
+   * (`table` mode) Column headers.
    * @example ["id", "email"]
    */
   columns?: string[];
   /**
-   * (mode `table`) Lignes de données.
+   * (`table` mode) Data rows.
    * @example [[1, "alice@corp.io"], [2, "bob@corp.io"]]
    */
   rows_data?: (string | number)[][];
 }
 
 export interface Node {
-  /** Identifiant unique du nœud (ex: 'serveur_web'). */
+  /** Unique node identifier (e.g., 'web_server'). */
   id: string;
   /**
-   * Apparence du nœud : pictogramme (serveur, client…), nœud textuel (panneau)
-   * ou forme géométrique. Voir les aperçus de chaque valeur ci-contre.
+   * Node appearance: pictogram (server, client…), text node (panel)
+   * or geometric shape. See previews of each value.
    */
   type: NodeType;
   /**
-   * Label affiché en dessous du nœud.
-   * @example "Serveur web"
+   * Label displayed below the node.
+   * @example "Web server"
    */
   text?: string;
   /**
-   * Visibilité initiale du nœud. Défaut: true.
-   * Un nœud caché peut être affiché via l'action `set_visible`.
+   * Initial visibility of the node. Default: true.
+   * A hidden node can be displayed via the `set_visible` action.
    */
   visible?: boolean;
   /**
-   * Badge superposé : nom d'une techno connue (ex: 'react', 'postgres'),
-   * nom d'une icône enregistrée, ou texte libre court (ex: 'v2', 'API').
+   * Overlaid badge: name of a known technology (e.g., 'react', 'postgres'),
+   * name of a registered icon, or short free text (e.g., 'v2', 'API').
    * @example "react"
    */
   icon?: string;
-  /** Rangée/colonne de placement (entier positif). Défaut: 1. */
+  /** Placement row/column (positive integer). Default: 1. */
   lane?: number;
-  /** (circular) Marque le nœud comme nœud central. Défaut: false. */
+  /** (circular) Marks the node as a central node. Default: false. */
   main?: boolean;
   /**
-   * Aligne ce nœud sur l'axe transverse d'un autre nœud (par ID) : utile pour
-   * aligner deux nœuds de lanes différentes. Ignoré en disposition circular.
+   * Aligns this node on the transverse axis of another node (by ID): useful for
+   * aligning two nodes from different lanes. Ignored in circular layout.
    */
   align_with?: string;
   /**
-   * URL rendant le nœud cliquable (ouvre dans un nouvel onglet).
+   * URL making the node clickable (opens in a new tab).
    * @example "https://status.example.com"
    */
   url?: string;
   /**
-   * Couleur de fond du nœud : remplissage des formes, fond des panneaux
-   * (`simple_node`/`complex_node`), pastille derrière un pictogramme. Accepte une
-   * couleur CSS **prédéfinie** (nom : `tomato`, `steelblue`, `teal`…) ou une valeur
-   * **hexadécimale exacte** (`#3b82f6`). Sans effet sur un `set_content` actif.
+   * Background color of the node: shape fill, panel background
+   * (`simple_node`/`complex_node`), pill behind a pictogram. Accepts a
+   * **predefined** CSS color (name: `tomato`, `steelblue`, `teal`…) or an
+   * **exact hex** value (`#3b82f6`). No effect on an active `set_content`.
    * @example "#3b82f6"
    */
   background_color?: string;
   /**
-   * Couleur de la bordure / du trait du nœud (stroke des formes, bordure des
-   * panneaux, couleur des traits d'un pictogramme). Même format que
-   * `background_color`. Si `background_color` est défini mais pas `border_color`,
-   * une bordure coordonnée (variante plus sombre du fond) est générée automatiquement.
+   * Node border / stroke color (shape stroke, panel borders,
+   * stroke color of a pictogram). Same format as `background_color`.
+   * If `background_color` is defined but not `border_color`,
+   * a coordinated border (darker variant of the background) is automatically generated.
    * @example "steelblue"
    */
   border_color?: string;
   /**
-   * Couleur du texte affiché DANS le nœud (corps d'une forme, en-tête/corps d'un
-   * panneau), **uniquement quand la coloration syntaxique est désactivée** (pas de
-   * `language` : sinon les couleurs de la syntaxe priment). Même format que
-   * `background_color` (nom prédéfini ou hex). Si elle n'est pas définie mais qu'un
-   * `background_color` l'est, une couleur à très fort contraste avec le fond
-   * (noir ou blanc) est choisie automatiquement.
+   * Color of the text displayed IN the node (shape body, panel header/body),
+   * **only when syntax highlighting is disabled** (no `language`: otherwise
+   * syntax colors take precedence). Same format as `background_color` (predefined
+   * name or hex). If not defined but a `background_color` is, a high-contrast
+   * color with the background (black or white) is automatically chosen.
    */
   text_color?: string;
-  /** Contenu initial affiché dans le nœud (terminal de code, fenêtre, etc.). */
+  /** Initial content displayed in the node (code terminal, window, etc.). */
   content?: ObjectContent;
   /**
-   * Texte affiché DANS le nœud, par opposition à `text` qui reste le label sous
-   * le nœud. Pour `simple_node` / `complex_node` : corps du panneau (retours à
-   * la ligne respectés, coloré selon `language` si fourni). Pour les formes
-   * géométriques (`square` … `star`) : court texte centré dans la forme (gardez-le
-   * bref pour qu'il ne déborde pas).
+   * Text displayed IN the node, as opposed to `text` which remains the label below
+   * the node. For `simple_node` / `complex_node`: panel body (line breaks
+   * respected, colored according to `language` if provided). For geometric
+   * shapes (`square` … `star`): short centered text in the shape (keep it
+   * brief so it doesn't overflow).
    * @example "Worker"
    */
   body?: string;
   /**
-   * (`complex_node`) En-tête affiché au-dessus du `body`, séparé par un trait —
-   * le nœud prend alors l'allure d'un paquet HTTP. Ignoré par `simple_node`.
-   * Coloré selon `language` si fourni.
+   * (`complex_node`) Header displayed above the `body`, separated by a line —
+   * the node then looks like an HTTP packet. Ignored by `simple_node`.
+   * Colored according to `language` if provided.
    * @example "POST /login"
    */
   header?: string;
   /**
-   * (`simple_node` / `complex_node`) Langage de coloration syntaxique appliqué
-   * à TOUTES les zones de texte du nœud (`header` et `body`). Valeurs reconnues :
-   * voir {@link HighlightLanguage}.
+   * (`simple_node` / `complex_node`) Syntax highlighting language applied
+   * to ALL text areas of the node (`header` and `body`). Recognized values:
+   * see {@link HighlightLanguage}.
    */
   language?: HighlightLanguage | (string & {});
 }
 
-/** Région rectangulaire englobant un groupe de nœuds et/ou d'autres zones. */
+/** Rectangular region enclosing a group of nodes and/or other zones. */
 export interface Zone {
-  /** Identifiant optionnel (requis pour être référencé dans le `contains` d'une autre zone). */
+  /** Optional identifier (required to be referenced in the `contains` of another zone). */
   id?: string;
-  /** IDs des nœuds et/ou des zones englobés. */
+  /** IDs of the enclosed nodes and/or zones. */
   contains: string[];
-  /** Couleur CSS de la bordure et du fond semi-transparent. */
+  /** CSS color of the border and semi-transparent background. */
   color?: string;
-  /** Label affiché en haut à gauche de la zone. */
+  /** Label displayed at the top left of the zone. */
   label?: string;
 }
 
-/** Lien/flèche permanent (décor), affiché dès l'initialisation. */
+/** Permanent link/arrow (decor), displayed upon initialization. */
 export interface Connection {
-  /** Identifiant optionnel. */
+  /** Optional identifier. */
   id?: string;
-  /** ID du nœud source. */
+  /** Source node ID. */
   from: string;
-  /** ID du nœud destination. */
+  /** Destination node ID. */
   to: string;
-  /** Style de la ligne. Défaut: 'solid'. */
+  /** Line style. Default: 'solid'. */
   style?: LineStyle;
-  /** Forme du tracé du lien. Défaut: 'bezier'. Voir {@link PathShape}. */
+  /** Shape of the link path. Default: 'bezier'. See {@link PathShape}. */
   path?: PathShape;
-  /** Pointe de la flèche. Défaut: 'forward'. */
+  /** Arrow head. Default: 'forward'. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   /**
-   * Texte médian optionnel.
+   * Optional median text.
    * @example "HTTPS"
    */
   text?: string;
@@ -257,17 +256,17 @@ export interface Connection {
 export interface PacketBody {
   type?: 'text' | 'image';
   /**
-   * Texte ou chemin d'image.
+   * Text or image path.
    * @example "{ \"token\": \"abc123\" }"
    */
   value?: string;
-  /** Langage pour la coloration syntaxique du texte (optionnel). Valeurs reconnues : voir {@link HighlightLanguage}. */
+  /** Language for text syntax highlighting (optional). Recognized values: see {@link HighlightLanguage}. */
   language?: HighlightLanguage | (string & {});
 }
 
 export interface PacketContent {
   /**
-   * En-tête visible dans le paquet (ex: 'GET /api').
+   * Header visible in the packet (e.g., 'GET /api').
    * @example "GET /api/users"
    */
   header?: string;
@@ -276,15 +275,15 @@ export interface PacketContent {
 
 export interface SqlResponseBody {
   type?: 'text' | 'table';
-  /** Texte pur si type est 'text' */
+  /** Pure text if type is 'text' */
   value?: string;
   /**
-   * Colonnes du tableau si type est 'table'
+   * Table columns if type is 'table'
    * @example ["id", "name"]
    */
   columns?: string[];
   /**
-   * Lignes de données si type est 'table'
+   * Data rows if type is 'table'
    * @example [[1, "Alice"], [2, "Bob"]]
    */
   rows_data?: (string | number)[][];
@@ -292,33 +291,33 @@ export interface SqlResponseBody {
 
 export interface SqlResponse {
   /**
-   * Nombre de lignes retournées.
+   * Number of rows returned.
    * @example 42
    */
   rows?: number;
-  /** En-tête optionnel visible dans le paquet. */
+  /** Optional header visible in the packet. */
   header?: string;
-  /** Corps de la réponse (texte pur ou tableau). */
+  /** Response body (pure text or table). */
   body?: SqlResponseBody;
 }
 
 export interface Packet {
-  /** Identifiant unique du paquet. */
+  /** Unique identifier of the packet. */
   id: string;
   /**
-   * Catégorie du paquet, qui fixe son apparence et le contenu attendu :
-   * `http_packet` (en-tête + corps via `packet_content`), `sql_request` (requête
-   * textuelle via `request_content`), `sql_response` (réponse via `response_content`).
+   * Packet category, which sets its appearance and expected content:
+   * `http_packet` (header + body via `packet_content`), `sql_request` (textual
+   * request via `request_content`), `sql_response` (response via `response_content`).
    */
   kind: PacketKind;
   /**
-   * Requête textuelle (ex: pour sql_request).
+   * Textual request (e.g., for sql_request).
    * @example "SELECT * FROM users WHERE id = 42"
    */
   request_content?: string;
-  /** Contenu d'un `sql_response` : nombre de lignes, en-tête et corps (texte ou tableau). */
+  /** Content of a `sql_response`: number of rows, header and body (text or table). */
   response_content?: SqlResponse;
-  /** Contenu d'un `http_packet` : en-tête (ex. 'GET /api') et corps optionnel. */
+  /** Content of an `http_packet`: header (e.g., 'GET /api') and optional body. */
   packet_content?: PacketContent;
 }
 
@@ -333,134 +332,134 @@ export type ActionType =
   | 'set_visible'
   | 'wait';
 
-/** Champs communs à toutes les actions (ordonnancement et cycle de vie). */
+/** Common fields to all actions (sequencing and lifecycle). */
 interface ActionBase {
-  /** ID de l'action pour s'y référer (wait_for / keep_until). */
+  /** Action ID to refer to it (wait_for / keep_until). */
   id?: string;
   /**
-   * Durée de l'animation en ms (défaut: 500, 1200 pour loading).
+   * Animation duration in ms (default: 500, 1200 for loading).
    * @minimum 1
    * @multipleOf 1
    */
   duration?: number;
-  /** ID d'une autre action : cette action démarre à la fin de celle-ci. */
+  /** ID of another action: this action starts at the end of that one. */
   wait_for?: string;
-  /** ID d'une action future : cette action reste visible jusqu'à son démarrage. */
+  /** ID of a future action: this action remains visible until its start. */
   keep_until?: string;
   /**
-   * Reste visible jusqu'au début de l'étape racine suivante.
-   * Défaut: false pour `move`/`loading`, true pour `arrow`/`comment`/`set_content`.
+   * Remains visible until the start of the next root step.
+   * Default: false for `move`/`loading`, true for `arrow`/`comment`/`set_content`.
    */
   keep_until_next?: boolean;
-  /** Si vrai, reste visible jusqu'à la fin de la chronologie. */
+  /** If true, remains visible until the end of the timeline. */
   keep_until_end?: boolean;
   /**
-   * Décalage de départ en ms, ajouté après la résolution de `wait_for` et le
-   * clamp de l'étape. Principalement utile dans un bloc `parallel` pour décaler
-   * des actions les unes par rapport aux autres (animations en séquence décalée).
-   * S'applique aussi à une action `parallel` entière pour retarder tout le groupe.
+   * Start offset in ms, added after resolving `wait_for` and the
+   * step clamp. Mainly useful in a `parallel` block to stagger
+   * actions against each other (staggered sequence animations).
+   * Also applies to an entire `parallel` action to delay the whole group.
    * @minimum 0
    * @multipleOf 1
    */
   delay_ms?: number;
   /**
-   * Durée du fondu d'apparition en ms. Défaut: période de maintien de départ
-   * pour `move` (300 ms), 250 ms pour les autres actions. 0 = apparition instantanée.
+   * Fade-in duration in ms. Default: initial hold period
+   * for `move` (300 ms), 250 ms for other actions. 0 = instant appearance.
    * @minimum 0
    * @multipleOf 1
    */
   fade_in_ms?: number;
   /**
-   * Durée du fondu de disparition en ms. Défaut: 250. 0 = disparition instantanée.
-   * Sans effet si `keep_until_end` est vrai.
+   * Fade-out duration in ms. Default: 250. 0 = instant disappearance.
+   * No effect if `keep_until_end` is true.
    * @minimum 0
    * @multipleOf 1
    */
   fade_out_ms?: number;
 }
 
-/** Déplace un paquet de `from` vers `to`. */
+/** Moves a packet from `from` to `to`. */
 interface MoveAction extends ActionBase {
   type: 'move';
-  /** ID du paquet (déclaré dans `packets`) à déplacer. */
+  /** ID of the packet (declared in `packets`) to move. */
   object: string;
-  /** ID du nœud de départ. */
+  /** Start node ID. */
   from: string;
-  /** ID du nœud d'arrivée. */
+  /** Arrival node ID. */
   to: string;
 }
 
-/** Trace une flèche animée entre deux nœuds. */
+/** Draws an animated arrow between two nodes. */
 interface ArrowAction extends ActionBase {
   type: 'arrow';
-  /** ID du nœud de départ de la flèche. */
+  /** Start node ID of the arrow. */
   from: string;
-  /** ID du nœud d'arrivée de la flèche. */
+  /** Arrival node ID of the arrow. */
   to: string;
-  /** Libellé affiché au milieu de la flèche. */
+  /** Label displayed in the middle of the arrow. */
   text?: string;
-  /** Style de ligne : plein, pointillé, tirets ou animé. Défaut: 'solid'. */
+  /** Line style: solid, dotted, dashed or animated. Default: 'solid'. */
   style?: LineStyle;
-  /** Forme du tracé : bezier, simplebezier, straight, step, smoothstep. Défaut: 'bezier'. */
+  /** Path shape: bezier, simplebezier, straight, step, smoothstep. Default: 'bezier'. */
   path?: PathShape;
-  /** Côté(s) où dessiner la pointe de la flèche. Défaut: 'forward'. */
+  /** Side(s) where to draw the arrow head. Default: 'forward'. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
 }
 
-/** Exécute plusieurs actions au même instant. */
+/** Executes multiple actions at the same time. */
 interface ParallelAction extends ActionBase {
   type: 'parallel';
   actions: Action[];
 }
 
-/** Affiche un spinner de chargement sur un nœud. */
+/** Displays a loading spinner on a node. */
 interface LoadingAction extends ActionBase {
   type: 'loading';
   object: string;
 }
 
-/** Mute le contenu d'un nœud (code, texte, image). */
+/** Mutates the content of a node (code, text, image). */
 interface SetContentAction extends ActionBase {
   type: 'set_content';
   object: string;
   content: ObjectContent;
 }
 
-/** Affiche une bulle de commentaire près d'un nœud, ou en haut du stage si `object` est omis. */
+/** Displays a comment bubble near a node, or at the top of the stage if `object` is omitted. */
 interface CommentAction extends ActionBase {
   type: 'comment';
-  /** ID du nœud près duquel afficher le commentaire. Omis = commentaire omniscient (haut du stage). */
+  /** ID of the node near which to display the comment. Omitted = omniscient comment (top of the stage). */
   object?: string;
   /** @example "Le serveur valide le token" */
   text: string;
 }
 
-/** Surligne un nœud statique ou une connexion (par ID). */
+/** Highlights a static node or a connection (by ID). */
 interface HighlightAction extends ActionBase {
   type: 'highlight';
-  /** ID d'un nœud statique OU d'une connexion à surligner. */
+  /** ID of a static node OR a connection to highlight. */
   object: string;
 }
 
-/** Affiche ou cache un nœud statique avec un fondu. */
+/** Shows or hides a static node with a fade. */
 interface SetVisibleAction extends ActionBase {
   type: 'set_visible';
-  /** ID du nœud à afficher ou cacher. */
+  /** ID of the node to show or hide. */
   object: string;
-  /** true = afficher, false = cacher. */
+  /** true = show, false = hide. */
   visible: boolean;
 }
 
 /**
- * Temps mort : rien ne se passe pendant `duration` ms (défaut: 1000). Ne produit
- * aucun clip ; insère simplement une pause entre deux étapes (les éléments
- * maintenus via `keep_until_next` restent affichés pendant l'attente).
+ * Dead time: nothing happens for `duration` ms (default: 1000). Does not produce
+ * any clip; simply inserts a pause between two steps (elements
+ * maintained via `keep_until_next` remain displayed during the wait).
  */
 interface WaitAction extends ActionBase {
   type: 'wait';
 }
 
-/** Union discriminée des actions (par `type`). */
+/** Discriminated union of actions (by `type`). */
 export type Action =
   | MoveAction
   | ArrowAction
@@ -474,80 +473,80 @@ export type Action =
 
 export interface DataFlowSpec {
   /**
-   * Sens de placement automatique des nœuds (aucune coordonnée à fournir).
-   * Défaut: 'left-to-right'.
+   * Automatic node placement direction (no coordinates to provide).
+   * Default: 'left-to-right'.
    */
   direction?: Direction;
   /**
-   * Éléments fixes de la scène (serveurs, clients, bases…). Ils forment le décor
-   * permanent et sont placés automatiquement selon `direction` et leur `lane`.
+   * Fixed elements of the scene (servers, clients, databases…). They form the permanent
+   * decor and are placed automatically according to `direction` and their `lane`.
    */
   nodes: Node[];
   /**
-   * Éléments mobiles (requêtes, réponses, messages). Déclarés ici, puis déplacés
-   * d'un nœud à l'autre par une action `move` de la `timeline`.
+   * Mobile elements (requests, responses, messages). Declared here, then moved
+   * from one node to another by a `move` action in the `timeline`.
    */
   packets: Packet[];
-  /** Flèches/liens permanents (décor) affichés dès l'initialisation. */
+  /** Permanent arrows/links (decor) displayed upon initialization. */
   connections?: Connection[];
-  /** Régions rectangulaires affichées en arrière-plan autour d'un groupe de nœuds. */
+  /** Rectangular regions displayed in the background around a group of nodes. */
   zones?: Zone[];
   /**
-   * Scénario animé : liste ordonnée d'actions (déplacements, flèches, commentaires…)
-   * jouées séquentiellement. Chaque action racine devient une étape navigable.
+   * Animated scenario: ordered list of actions (moves, arrows, comments…)
+   * played sequentially. Each root action becomes a navigable step.
    */
   timeline: Action[];
 }
 
-/** Fonction de coloration syntaxique : code source -> HTML. */
+/** Syntax highlighting function: source code -> HTML. */
 export type Highlighter = (code: string, language: string) => string;
 
 export interface DataFlowPlayerProps {
-  /** La spécification à animer. */
+  /** The specification to animate. */
   spec: DataFlowSpec;
-  /** Classe CSS additionnelle sur le conteneur racine. */
+  /** Additional CSS class on the root container. */
   className?: string;
-  /** Styles inline sur le conteneur racine. */
+  /** Inline styles on the root container. */
   style?: CSSProperties;
-  /** Hauteur de la scène (ex: 420, '60vh'). Défaut: 420. */
+  /** Scene height (e.g., 420, '60vh'). Default: 420. */
   height?: number | string;
-  /** Démarre la lecture automatiquement. Défaut: false. */
+  /** Starts playback automatically. Default: false. */
   autoPlay?: boolean;
-  /** Rejoue en boucle à la fin. Défaut: false. */
+  /** Replays in a loop at the end. Default: false. */
   loop?: boolean;
-  /** Affiche les contrôles de navigation. Défaut: true. */
+  /** Displays navigation controls. Default: true. */
   controls?: boolean;
   /**
-   * Ajoute un bouton dans la barre de contrôles qui ouvre la spécification JSON
-   * (colorée) dans une fenêtre, avec copie dans le presse-papier et
-   * téléchargement en fichier `.json`. Sans effet si `controls` est false.
-   * Défaut: false.
+   * Adds a button in the controls bar that opens the JSON specification
+   * (colored) in a window, with copy to clipboard and
+   * download as a `.json` file. No effect if `controls` is false.
+   * Default: false.
    */
   exportable?: boolean;
-  /** Thème visuel. Défaut: 'auto'. */
+  /** Visual theme. Default: 'auto'. */
   theme?: 'light' | 'dark' | 'auto';
   /**
-   * Densité visuelle : ajuste la taille des éléments par rapport à l'espace
-   * disponible. 'compact' = plus petit/aéré, 'spacious' = plus gros.
-   * Défaut: 'comfortable'.
+   * Visual density: adjusts the size of elements relative to the available
+   * space. 'compact' = smaller/airier, 'spacious' = larger.
+   * Default: 'comfortable'.
    */
   density?: 'compact' | 'comfortable' | 'spacious';
-  /** Affiche l'overlay de debug de la timeline. Défaut: false. */
+  /** Displays the timeline debug overlay. Default: false. */
   debug?: boolean;
-  /** Vitesse de lecture (1 = normal). Défaut: 1. */
+  /** Playback speed (1 = normal). Default: 1. */
   speed?: number;
-  /** Coloration syntaxique personnalisée (remplace Prism). */
+  /** Custom syntax highlighting (replaces Prism). */
   highlight?: Highlighter;
-  /** Contenu rendu pendant le SSR / avant hydratation (placeholder). */
+  /** Content rendered during SSR / before hydration (placeholder). */
   fallback?: ReactNode;
 }
 
-// ─── Aliases rétro-compatibles (supprimés en v2) ─────────────────────────────
-/** @deprecated Utiliser {@link Node} à la place. */
+// ─── Backward-compatible aliases (removed in v2) ─────────────────────────────
+/** @deprecated Use {@link Node} instead. */
 export type StaticObject = Node;
-/** @deprecated Utiliser {@link NodeType} à la place. */
+/** @deprecated Use {@link NodeType} instead. */
 export type StaticObjectType = NodeType;
-/** @deprecated Utiliser {@link Packet} à la place. */
+/** @deprecated Use {@link Packet} instead. */
 export type DynamicObject = Packet;
-/** @deprecated Utiliser {@link PacketKind} à la place. */
+/** @deprecated Use {@link PacketKind} instead. */
 export type DynamicObjectType = PacketKind;

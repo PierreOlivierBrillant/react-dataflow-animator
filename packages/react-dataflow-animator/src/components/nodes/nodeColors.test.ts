@@ -8,7 +8,7 @@ const node = (extra: Partial<Node>): Node => ({
   ...extra,
 });
 
-// nodeTint renvoie un objet CSSProperties ; on lit les custom properties par clé.
+// nodeTint returns a CSSProperties object; custom properties are read by key.
 const vars = (n: Node) => nodeTint(n) as Record<string, string | undefined>;
 
 describe('nodeTint — variables de teinte des nœuds', () => {
@@ -19,7 +19,7 @@ describe('nodeTint — variables de teinte des nœuds', () => {
   it('background_color seul : pose --rdfa-fill et dérive une bordure complémentaire', () => {
     const v = vars(node({ background_color: '#3b82f6' }));
     expect(v['--rdfa-fill']).toBe('#3b82f6');
-    // Bordure auto = fond assombri via color-mix (CSS pur, gère noms + hex).
+    // Auto border = darkened background via color-mix (pure CSS, handles names + hex).
     expect(v['--rdfa-stroke']).toBe('color-mix(in srgb, #3b82f6, #000 32%)');
   });
 
@@ -44,7 +44,7 @@ describe('nodeTint — variables de teinte des nœuds', () => {
   it('text_color explicite : pose --rdfa-ink tel quel', () => {
     const v = vars(node({ text_color: 'rebeccapurple' }));
     expect(v['--rdfa-ink']).toBe('rebeccapurple');
-    // text_color seul ne crée pas de fond ni de bordure.
+    // text_color alone does not create a background or border.
     expect(v['--rdfa-fill']).toBeUndefined();
     expect(v['--rdfa-stroke']).toBeUndefined();
   });

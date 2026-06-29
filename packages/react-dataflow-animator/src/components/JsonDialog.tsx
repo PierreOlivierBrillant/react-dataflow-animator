@@ -3,14 +3,14 @@ import type { Highlighter } from '../types';
 
 export interface JsonDialogProps {
   json: string;
-  /** Coloration syntaxique (Prism par défaut), appliquée en langage `json`. */
+  /** Syntax highlighting (Prism by default), applied to `json` language. */
   highlight: Highlighter;
   onCopy: () => Promise<void>;
   onDownload: () => void;
   onClose: () => void;
 }
 
-// Icônes au trait (façon Feather/Lucide).
+// Line icons (Feather/Lucide style).
 const CopyIcon = (
   <svg
     viewBox="0 0 24 24"
@@ -56,7 +56,7 @@ const DownloadIcon = (
   </svg>
 );
 
-/** Fenêtre modale affichant la spec JSON colorée, avec copie et téléchargement. */
+/** Modal window displaying the colored JSON spec, with copy and download options. */
 export function JsonDialog({
   json,
   highlight,

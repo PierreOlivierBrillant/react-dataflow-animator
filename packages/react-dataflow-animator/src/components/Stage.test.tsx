@@ -8,8 +8,8 @@ import type { DataFlowSpec } from '../types';
 
 afterEach(cleanup);
 
-// Géométrie mutable : les tests qui ont besoin d'un contexte différent
-// peuvent réassigner `mockGeometry` avant de rendre.
+// Mutable geometry: tests that need a different context
+// can reassign `mockGeometry` before rendering.
 let mockGeometry: Record<
   string,
   {
@@ -61,7 +61,7 @@ describe('Stage — rendu à t fixe', () => {
     };
     const { timeline } = compile(spec);
     // startMs=0, animStartMs=300, endMs=800, visibleUntilMs=1100
-    // à t=400 le clip est en animation (progress=0.2, opacity=1)
+    // at t=400 the clip is animating (progress=0.2, opacity=1)
     const { container } = render(
       <Stage
         spec={spec}
@@ -82,7 +82,7 @@ describe('Stage — rendu à t fixe', () => {
       ],
     };
     const { timeline } = compile(spec);
-    // arrow clip : startMs=0, endMs=500, actif à t=250 (progress=0.5)
+    // arrow clip: startMs=0, endMs=500, active at t=250 (progress=0.5)
     const { container } = render(
       <Stage
         spec={spec}
@@ -91,7 +91,7 @@ describe('Stage — rendu à t fixe', () => {
         highlight={highlightCode}
       />
     );
-    // Le SVG conteneur existe toujours ; la polyline confirme qu'ArrowLine est monté.
+    // The SVG container still exists; the polyline confirms ArrowLine is mounted.
     expect(container.querySelector('.rdfa-arrow-svg')).toBeTruthy();
     expect(container.querySelector('.rdfa-arrow-line')).toBeTruthy();
   });
@@ -110,7 +110,7 @@ describe('Stage — rendu à t fixe', () => {
       ],
     };
     const { timeline } = compile(spec);
-    // comment clip actif à t=250
+    // comment clip active at t=250
     const { container } = render(
       <Stage
         spec={spec}
@@ -144,7 +144,7 @@ describe('Stage — rendu à t fixe', () => {
     const bubble = container.querySelector('.rdfa-comment--omniscient');
     expect(bubble).toBeTruthy();
     expect(bubble!.textContent).toContain('Étape 1 : connexion');
-    // Pas de queue de bulle
+    // No bubble tail
     expect(bubble!.querySelector('.rdfa-comment-tail')).toBeNull();
   });
 
@@ -155,7 +155,7 @@ describe('Stage — rendu à t fixe', () => {
       timeline: [{ type: 'loading', object: 'server', duration: 500 }],
     };
     const { timeline } = compile(spec);
-    // loading clip : startMs=0, endMs=500, actif à t=250
+    // loading clip: startMs=0, endMs=500, active at t=250
     const { container } = render(
       <Stage
         spec={spec}
@@ -186,7 +186,7 @@ describe('Stage — rendu à t fixe', () => {
     const { container } = render(
       <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
     );
-    // client est visible, server ne doit pas être dans le DOM
+    // client is visible, server should not be in the DOM
     const nodes = container.querySelectorAll('[data-node-id]');
     const ids = Array.from(nodes).map((n) => n.getAttribute('data-node-id'));
     expect(ids).toContain('client');
@@ -206,8 +206,8 @@ describe('Stage — rendu à t fixe', () => {
     };
     const { timeline } = compile(spec);
     // set_visible startMs=0, endMs=300, durationMs=300.
-    // À t=300 (= durationMs), progress=1 → nodeOpacity=1 → nœud visible.
-    // evaluate() inclut les clips à t === visibleUntilMs (borne inclusive).
+    // At t=300 (= durationMs), progress=1 → nodeOpacity=1 → node visible.
+    // evaluate() includes clips at t === visibleUntilMs (inclusive bound).
     const { container } = render(
       <Stage
         spec={spec}
@@ -273,9 +273,9 @@ describe('Stage — rendu à t fixe', () => {
   });
 
   it('zone : englobe le label large (labelW > width) dans la dimension horizontale', () => {
-    // client : x=100, width=60 mais labelW=200 → la zone doit s'étendre de 0 à 200
-    // (100-100 à 100+100) avant padding (ZONE_PADDING=20).
-    // Avec padding : left = 0-20 = -20, width = 200+40 = 240.
+    // client: x=100, width=60 but labelW=200 → zone should extend from 0 to 200
+    // (100-100 to 100+100) before padding (ZONE_PADDING=20).
+    // With padding: left = 0-20 = -20, width = 200+40 = 240.
     mockGeometry = {
       client: {
         id: 'client',
@@ -299,11 +299,11 @@ describe('Stage — rendu à t fixe', () => {
     );
     const zone = container.querySelector('.rdfa-zone') as HTMLElement;
     expect(zone).toBeTruthy();
-    // left doit tenir compte du label : 100 - 200/2 - 20 = -20
+    // left must account for label: 100 - 200/2 - 20 = -20
     expect(parseFloat(zone.style.left)).toBeCloseTo(-20, 0);
-    // width doit couvrir toute la largeur du label : 200 + 2*20 = 240
+    // width must cover full label width: 200 + 2*20 = 240
     expect(parseFloat(zone.style.width)).toBeCloseTo(240, 0);
-    // Remet la géométrie par défaut pour les tests suivants.
+    // Resets default geometry for subsequent tests.
     mockGeometry = {
       client: { id: 'client', x: 100, y: 300, width: 60, height: 60 },
       server: { id: 'server', x: 700, y: 300, width: 60, height: 60 },
@@ -341,7 +341,7 @@ describe('Stage — rendu à t fixe', () => {
       ],
     };
     const { timeline } = compile(spec);
-    // À t=300 (= durationMs=endMs), progress=1 → opacity = 1-1 = 0 → nœud retiré.
+    // At t=300 (= durationMs=endMs), progress=1 → opacity = 1-1 = 0 → node removed.
     const { container } = render(
       <Stage
         spec={spec}

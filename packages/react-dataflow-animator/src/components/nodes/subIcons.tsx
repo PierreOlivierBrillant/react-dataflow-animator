@@ -55,9 +55,9 @@ import { MdHttp, MdDns, Md5G, MdWifi } from 'react-icons/md';
 import { TbApi } from 'react-icons/tb';
 
 /**
- * Sous-icônes technologiques (badge `subicon`), basées sur react-icons.
- * Extensible via `registerSubIcon`. Les couleurs sont choisies pour rester
- * lisibles sur fond clair comme sombre.
+ * Technological sub-icons (`subicon` badge), based on react-icons.
+ * Extensible via `registerSubIcon`. Colors are chosen to remain
+ * readable on both light and dark backgrounds.
  */
 
 interface IconDef {
@@ -132,12 +132,12 @@ const KNOWN: Record<string, IconDef> = {
 
 const custom: Record<string, ReactNode> = {};
 
-/** Enregistre une sous-icône personnalisée (composant react-icons, SVG, image…). */
+/** Registers a custom sub-icon (react-icons component, SVG, image...). */
 export function registerSubIcon(name: string, node: ReactNode): void {
   custom[name.toLowerCase()] = node;
 }
 
-/** Pastille de texte libre, pour les `subicon` qui ne sont pas des icônes connues. */
+/** Free text badge, for `subicon`s that are not known icons. */
 function renderText(text: string): ReactNode {
   const label = text.length > 4 ? text.slice(0, 4) : text;
   const fontSize =
@@ -168,8 +168,8 @@ function renderText(text: string): ReactNode {
 }
 
 /**
- * Résout un `subicon` : icône personnalisée enregistrée, sinon techno connue,
- * sinon pastille de texte libre (ex: 'v2', 'API', 'JWT').
+ * Resolves a `subicon`: registered custom icon, otherwise known tech,
+ * otherwise free text badge (e.g., 'v2', 'API', 'JWT').
  */
 export function getSubIcon(name: string): ReactNode {
   const key = name.toLowerCase();

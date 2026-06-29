@@ -2,8 +2,8 @@ import { motion } from 'motion/react';
 import { Zap, Layers, Code2, GitFork, Navigation, Palette } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
-// L'icône et la couleur sont du présentationnel pur : elles restent ici et
-// sont associées par index au texte traduit (`messages.features.items`).
+// Icon and color are purely presentational: they stay here and
+// are associated by index to the translated text (`messages.features.items`).
 const FEATURE_STYLES = [
   { icon: Zap, color: '#fbbf24' },
   { icon: Navigation, color: '#60a5fa' },

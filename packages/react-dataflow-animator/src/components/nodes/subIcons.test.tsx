@@ -6,8 +6,8 @@ import { getSubIcon } from './subIcons';
 
 afterEach(cleanup);
 
-// Une techno connue rend l'icône react-icons avec un <title> = nom passé ;
-// la pastille de texte libre, elle, rend un <circle> + <text> sans <title>.
+// A known technology renders the react-icons icon with a <title> = passed name;
+// the free text badge renders a <circle> + <text> without <title>.
 function renderSubIcon(name: string) {
   return render(getSubIcon(name) as ReactElement);
 }
@@ -35,7 +35,7 @@ describe('getSubIcon — icônes connues nouvellement câblées', () => {
     const { container } = renderSubIcon(name);
     const svg = container.querySelector('svg');
     expect(svg).toBeTruthy();
-    // Discriminant : react-icons place un <title> avec le nom ; la pastille non.
+    // Discriminator: react-icons places a <title> with the name; the badge does not.
     expect(svg?.querySelector('title')?.textContent).toBe(name);
     expect(svg?.querySelector('text')).toBeNull();
   });

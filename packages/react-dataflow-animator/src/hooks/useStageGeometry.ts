@@ -8,24 +8,24 @@ import {
 import type { GeometryMap, NodeGeom } from '../engine/geometry';
 
 /**
- * Mesure la position réelle des nœuds (BoundingClientRect) relativement au Stage,
- * et la garde à jour via un ResizeObserver (sur le Stage ET sur chaque nœud, afin
- * de réagir aux nœuds qui s'agrandissent — ex: `set_content`).
+ * Measures the actual position of the nodes (BoundingClientRect) relative to the Stage,
+ * and keeps it up to date via a ResizeObserver (on the Stage AND on each node, in order
+ * to react to nodes that grow — ex: `set_content`).
  *
- * SSR-safe : la mesure n'a lieu que dans des effets (côté client).
+ * SSR-safe: measurement only occurs in effects (client-side).
  */
 export interface StageGeometry {
   stageRef: React.RefObject<HTMLDivElement | null>;
   geometry: GeometryMap;
-  /** Ratio largeur/hauteur du Stage. */
+  /** Width/height ratio of the Stage. */
   aspect: number;
-  /** Dimensions mesurées du Stage (px). */
+  /** Measured dimensions of the Stage (px). */
   width: number;
   height: number;
   /**
-   * Force une nouvelle mesure DOM immédiate (synchrone dans un layout effect).
-   * Permet de batcher la capture de géométrie icône et la mesure ContentPanel
-   * en un seul cycle React pour éviter un flash intermédiaire.
+   * Forces a new immediate DOM measurement (synchronous in a layout effect).
+   * Allows batching icon geometry capture and ContentPanel measurement
+   * in a single React cycle to avoid an intermediate flash.
    */
   forceRemeasure: () => void;
 }
@@ -34,9 +34,9 @@ const useIsomorphicLayoutEffect =
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /**
- * Égalité de deux cartes de géométrie. Permet à `measure()` de NE PAS publier un
- * nouvel état quand rien n'a bougé : indispensable pour qu'une re-mesure
- * déclenchée par un changement de placements converge au lieu de boucler.
+ * Equality of two geometry maps. Allows `measure()` to NOT publish a
+ * new state when nothing has moved: essential so that a re-measurement
+ * triggered by a change in placements converges instead of looping.
  */
 function sameGeometry(a: GeometryMap, b: GeometryMap): boolean {
   const ka = Object.keys(a);
@@ -61,16 +61,16 @@ function sameGeometry(a: GeometryMap, b: GeometryMap): boolean {
 }
 
 /**
- * Débord (px, avant échelle) de la pastille des pictogrammes teintés au-delà du
- * glyphe. DOIT rester synchronisé avec le CSS :
+ * Overhang (px, before scale) of the tinted pictograms pill beyond the
+ * glyph. MUST stay synchronized with the CSS:
  * `.rdfa-node--tinted .rdfa-node-icon::before { inset: calc(-5px * var(--rdfa-scale)) }`.
- * La mesure DOM ne voit pas ce pseudo-élément (hors flux), on le reconstitue donc.
+ * DOM measurement does not see this pseudo-element (out of flow), so we reconstitute it.
  */
 const PASTILLE_INSET = 5;
 
 /**
- * @param signature chaîne qui change quand l'ensemble des nœuds change, pour
- *   forcer une nouvelle mesure (ajout/suppression de nœuds, nouvelle spec).
+ * @param signature string that changes when the set of nodes changes, to
+ *   force a new measurement (addition/removal of nodes, new spec).
  */
 export function useStageGeometry(signature: string): StageGeometry {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -91,9 +91,9 @@ export function useStageGeometry(signature: string): StageGeometry {
       );
     }
 
-    // Échelle du Stage (--rdfa-scale), inhérente à tous les nœuds : lue une seule
-    // fois sur le Stage. Sert à mettre à l'échelle le gap flèche↔nœud et le débord
-    // de pastille (tous deux exprimés à l'échelle 1 dans la géométrie).
+    // Stage scale (--rdfa-scale), inherent to all nodes: read only
+    // once on the Stage. Used to scale the arrow↔node gap and the pill
+    // overhang (both expressed at scale 1 in the geometry).
     const scale =
       parseFloat(getComputedStyle(stage).getPropertyValue('--rdfa-scale')) || 1;
 
@@ -101,8 +101,8 @@ export function useStageGeometry(signature: string): StageGeometry {
     stage.querySelectorAll<HTMLElement>('[data-node-id]').forEach((el) => {
       const id = el.getAttribute('data-node-id');
       if (!id) return;
-      // On mesure le visuel (icône / panneau de contenu), pas le label en dessous,
-      // pour que les connexions pointent au centre de l'élément.
+      // We measure the visual (icon / content panel), not the label below,
+      // so that the connections point to the center of the element.
       const target = el.querySelector<HTMLElement>('.rdfa-node-visual') ?? el;
       const r = target.getBoundingClientRect();
       const node: NodeGeom = {
@@ -113,16 +113,16 @@ export function useStageGeometry(signature: string): StageGeometry {
         height: r.height,
         scale,
       };
-      // Mesure le label textuel (sous le visuel) pour le routage des flèches.
+      // Measures the text label (under the visual) for arrow routing.
       const labelEl = el.querySelector<HTMLElement>('.rdfa-node-label');
       if (labelEl) {
         const lr = labelEl.getBoundingClientRect();
         node.labelH = lr.height;
         node.labelW = lr.width;
       }
-      // Pictogramme teinté : la pastille (`background_color`) déborde du glyphe
-      // mesuré. Les flèches s'accrochent sur ce contour coloré → on expose le
-      // débord, à l'échelle courante, comme `borderOutset`.
+      // Tinted pictogram: the pill (`background_color`) overhangs the measured
+      // glyph. Arrows snap to this colored outline → we expose the
+      // overhang, at the current scale, as `borderOutset`.
       if (
         el.classList.contains('rdfa-node--tinted') &&
         el.querySelector('.rdfa-node-icon')
@@ -136,12 +136,12 @@ export function useStageGeometry(signature: string): StageGeometry {
 
   useIsomorphicLayoutEffect(() => {
     measure();
-    // Après ce commit, les positions peuvent encore bouger : l'échelle se
-    // stabilise sur les premiers rendus (computeScale dépend de la taille mesurée),
-    // ce qui peut faire cesser le clamp anti-débordement d'un nœud de bord — un
-    // DÉPLACEMENT que le ResizeObserver ne voit pas (il ne capte que les tailles).
-    // On re-mesure sur quelques frames pour fixer la position définitive. Borné
-    // (pas piloté par les rendus) → aucune boucle ; idempotent → pas de churn.
+    // After this commit, positions can still move: the scale
+    // stabilizes on the first renders (computeScale depends on measured size),
+    // which can stop the anti-overflow clamp of an edge node — a
+    // MOVEMENT that the ResizeObserver does not see (it only catches sizes).
+    // We re-measure over a few frames to fix the final position. Bounded
+    // (not driven by renders) → no loop; idempotent → no churn.
     if (typeof requestAnimationFrame === 'undefined') return;
     let raf = 0;
     let n = 0;

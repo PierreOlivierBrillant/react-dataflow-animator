@@ -201,7 +201,7 @@ export default function PlaygroundPage() {
       description={t.playground.pageDescription}
     >
       <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:dark]">
-        {/* Page header — gouttière px-5 alignée sur la navbar et le reste du site */}
+        {/* Page header — px-5 gutter aligned with the navbar and the rest of the site */}
         <div className="flex-none px-5 py-4 border-b border-white/[.06] flex items-center gap-4">
           <div>
             <h1 className="text-white mb-0 font-heading text-xl font-bold leading-tight tracking-tight">

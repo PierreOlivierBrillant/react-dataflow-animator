@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useClock } from './useClock';
 
-// Chaque tick RAF vaut 16 ms — valeur fixe pour des assertions exactes.
+// Each RAF tick is 16 ms — fixed value for exact assertions.
 const TICK = 16;
 const DURATION = 1000;
 
@@ -74,7 +74,7 @@ describe('useClock', () => {
     });
     act(() => {
       vi.advanceTimersByTime(6 * TICK);
-    }); // aucun tick ne doit avancer t
+    }); // no tick should advance t
     expect(result.current.t).toBe(2 * TICK);
   });
 
@@ -91,7 +91,7 @@ describe('useClock', () => {
   });
 
   it('playTo(target) : t atteint target puis playing repasse à false', () => {
-    // 100 ms de cible, atteinte au 7e tick (112 ms cumulés)
+    // 100 ms target, reached at 7th tick (112 ms cumulative)
     const target = 100;
     const { result } = renderHook(() => useClock({ durationMs: DURATION }));
     act(() => {
@@ -111,13 +111,13 @@ describe('useClock', () => {
     });
     act(() => {
       result.current.playTo(200);
-    }); // 200 < 500 → seek direct
+    }); // 200 < 500 → direct seek
     expect(result.current.t).toBe(200);
     expect(result.current.playing).toBe(false);
   });
 
   it('loop=true : à durationMs, t recommence à 0 et continue', () => {
-    // durationMs = 2 ticks ; après 3 ticks, t doit être de retour à 1 tick
+    // durationMs = 2 ticks; after 3 ticks, t should be back to 1 tick
     const dur = 2 * TICK;
     const { result } = renderHook(() =>
       useClock({ durationMs: dur, loop: true })
@@ -127,7 +127,7 @@ describe('useClock', () => {
     });
     act(() => {
       vi.advanceTimersByTime(3 * TICK);
-    }); // boucle à 32 ms, t = 16 ms
+    }); // loop at 32 ms, t = 16 ms
     expect(result.current.t).toBe(TICK);
     expect(result.current.playing).toBe(true);
   });
@@ -142,7 +142,7 @@ describe('useClock', () => {
     });
     act(() => {
       vi.advanceTimersByTime(3 * TICK);
-    }); // s'arrête à durationMs
+    }); // stops at durationMs
     expect(result.current.t).toBe(dur);
     expect(result.current.playing).toBe(false);
   });
@@ -169,8 +169,8 @@ describe('useClock', () => {
   });
 
   it('tick géant (onglet inactif) : t avance au plus de MAX_DT × speed', () => {
-    // MAX_DT = 100 ms, défini dans useClock.ts. Si l'onglet est resté inactif
-    // plusieurs minutes, rAF reçoit un dt énorme — le plafond empêche le saut.
+    // MAX_DT = 100 ms, defined in useClock.ts. If tab was inactive
+    // for several minutes, rAF receives a huge dt — the ceiling prevents jumping.
     const MAX_DT = 100;
     let rafCb: ((t: number) => void) | null = null;
     vi.stubGlobal('requestAnimationFrame', (cb: (t: number) => void) => {
@@ -186,7 +186,7 @@ describe('useClock', () => {
       result.current.play();
     });
 
-    // Simule un retour après 1 minute d'onglet en arrière-plan.
+    // Simulates returning after 1 minute of background tab.
     act(() => {
       rafCb!(performance.now() + 60_000);
     });

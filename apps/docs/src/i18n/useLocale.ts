@@ -1,8 +1,8 @@
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import type { Locale } from './translations';
 
-// Locale active du build/URL Docusaurus, pour le contenu indexé par langue
-// (specs de démos, champs localisés). Repli anglais si locale inattendue.
+// Active locale of the Docusaurus build/URL, for language-indexed content
+// (demo specs, localized fields). English fallback if unexpected locale.
 export function useLocale(): Locale {
   return useDocusaurusContext().i18n.currentLocale === 'fr' ? 'fr' : 'en';
 }

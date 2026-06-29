@@ -1,29 +1,28 @@
 /**
- * Transforme une polyligne de contrôle (`[start, …détours, end]`) en points
- * intermédiaires selon la {@link PathShape} demandée. Le résultat est consommé
- * tel quel par `connection()` (champ `waypoints`) : `pathTip`/`visiblePath`
- * parcourent la polyligne par longueur d'arc, si bien qu'une courbe échantillonnée
- * en N points anime la pointe de flèche et les paquets exactement comme un trait.
+ * Transforms a control polyline (`[start, …detours, end]`) into intermediate
+ * points according to the requested {@link PathShape}. The result is consumed
+ * as is by `connection()` (field `waypoints`): `pathTip`/`visiblePath`
+ * traverse the polyline by arc length, so that a curve sampled in N points
+ * animates the arrowhead and packets exactly like a straight line.
  *
- * Renvoyer `undefined` signifie « aucun point intermédiaire » : le tracé est un
- * segment droit `start → end`. C'est le cas le plus courant (nœuds alignés), pour
- * lequel toutes les formes se confondent — on évite alors d'émettre des points
- * inutiles.
+ * Returning `undefined` means "no intermediate point": the path is a straight
+ * segment `start → end`. This is the most common case (aligned nodes), for
+ * which all shapes merge — we thus avoid emitting useless points.
  */
 
 import type { Point } from './geometry';
 import type { ConnectionAxis } from './layout';
 import type { PathShape } from '../types';
 
-/** Échantillons par segment de courbe de Bézier (points strictement intérieurs). */
+/** Samples per Bezier curve segment (strictly interior points). */
 const BEZIER_SAMPLES = 18;
-/** Échantillons pour arrondir un coin de smoothstep (quart de tour). */
+/** Samples to round a smoothstep corner (quarter turn). */
 const CORNER_SAMPLES = 6;
-/** Rayon (px) des coins arrondis de smoothstep. */
+/** Radius (px) of rounded smoothstep corners. */
 const SMOOTH_RADIUS = 14;
 /**
- * En-deçà de ce décalage transverse (px), une Bézier à 2 points de contrôle est
- * rectiligne : on n'émet aucun point intermédiaire (cas aligné le plus courant).
+ * Below this transverse shift (px), a 2-control-point Bezier is straight:
+ * we emit no intermediate point (the most common aligned case).
  */
 const STRAIGHT_EPS = 0.5;
 
@@ -31,16 +30,16 @@ export function shapeWaypoints(
   control: Point[],
   shape: PathShape,
   /**
-   * Axe d'accroche des extrémités (face E/O ⇒ `horizontal`, N/S ⇒ `vertical`).
-   * Oriente les poignées de courbe / le premier coin pour que le tracé parte et
-   * arrive PERPENDICULAIREMENT à la face, indépendamment de la pente de la corde.
+   * Anchor axis of extremities (E/W face ⇒ `horizontal`, N/S ⇒ `vertical`).
+   * Orients the curve handles / the first corner so that the path starts and
+   * arrives PERPENDICULARLY to the face, independently of the chord's slope.
    */
   endpointAxis?: ConnectionAxis
 ): Point[] | undefined {
-  // control = [start, …détours anti-collision, end] (longueur ≥ 2).
+  // control = [start, …anti-collision detours, end] (length ≥ 2).
   switch (shape) {
     case 'straight':
-      // Les seuls points intermédiaires sont les détours déjà calculés.
+      // The only intermediate points are the already calculated detours.
       return control.length > 2 ? control.slice(1, -1) : undefined;
     case 'step':
     case 'smoothstep':
@@ -53,12 +52,12 @@ export function shapeWaypoints(
   }
 }
 
-// ─── Bézier ──────────────────────────────────────────────────────────────────
+// ─── Bezier ──────────────────────────────────────────────────────────────────
 
 /**
- * Décalage des points de contrôle le long de l'axe dominant :
- * - bezier : moitié de l'écart → courbe en S marquée (façon React Flow) ;
- * - simplebezier : quart de l'écart → courbe plus discrète.
+ * Shift of control points along the dominant axis:
+ * - bezier: half the gap → pronounced S-curve (like React Flow);
+ * - simplebezier: quarter of the gap → more subtle curve.
  */
 function ctrlOffset(primaryDelta: number, simple: boolean): number {
   return (simple ? 0.25 : 0.5) * primaryDelta;
@@ -76,10 +75,10 @@ function cubicAt(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point {
   };
 }
 
-/** Points STRICTEMENT intérieurs (a et b exclus) d'une cubique a→b dont les
- *  poignées suivent l'axe dominant du segment — ou `forceHorizontal` quand
- *  l'extrémité s'accroche à une face imposée (la courbe part alors le long de la
- *  normale à la face, pas de la corde). */
+/** STRICTLY interior points (a and b excluded) of a cubic a→b whose
+ *  handles follow the segment's dominant axis — or `forceHorizontal` when
+ *  the extremity anchors to an imposed face (the curve then starts along the
+ *  face normal, not the chord). */
 function bezierBetween(
   a: Point,
   b: Point,
@@ -114,17 +113,17 @@ function curveWaypoints(
 ): Point[] | undefined {
   if (control.length === 2) {
     const [a, b] = control;
-    // Axe imposé par la face (cf. shapeWaypoints) ; sinon axe dominant de la corde.
+    // Axis imposed by face (see shapeWaypoints); otherwise dominant axis of chord.
     const horizontal = endpointAxis
       ? endpointAxis === 'horizontal'
       : Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
     const crossDelta = horizontal ? b.y - a.y : b.x - a.x;
-    // Aucun décalage transverse → la cubique se confond avec le segment droit.
+    // No transverse shift → the cubic merges with the straight segment.
     if (Math.abs(crossDelta) < STRAIGHT_EPS) return undefined;
     return bezierBetween(a, b, simple, horizontal);
   }
-  // Détour(s) présents : on enchaîne une cubique par segment de contrôle, en
-  // réinsérant chaque point de jonction pour que la courbe le traverse.
+  // Detour(s) present: we chain one cubic per control segment,
+  // reinserting each junction point so the curve passes through it.
   const out: Point[] = [];
   for (let i = 0; i < control.length - 1; i++) {
     out.push(...bezierBetween(control[i], control[i + 1], simple));
@@ -135,8 +134,8 @@ function curveWaypoints(
 
 // ─── Step / SmoothStep ───────────────────────────────────────────────────────
 
-/** Deux coins orthogonaux reliant a→b (mi-parcours sur l'axe dominant, ou
- *  `forceHorizontal` quand l'extrémité s'accroche à une face imposée). */
+/** Two orthogonal corners linking a→b (midway on dominant axis, or
+ *  `forceHorizontal` when extremity anchors to an imposed face). */
 function stepCorners(a: Point, b: Point, forceHorizontal?: boolean): Point[] {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -169,19 +168,19 @@ function stepWaypoints(
   smooth: boolean,
   endpointAxis?: ConnectionAxis
 ): Point[] | undefined {
-  // Sans détour (un seul segment), le premier coin part le long de la face imposée.
+  // Without detour (single segment), the first corner starts along the imposed face.
   const forceH =
     control.length === 2 && endpointAxis
       ? endpointAxis === 'horizontal'
       : undefined;
-  // Polyligne orthogonale complète (extrémités incluses).
+  // Complete orthogonal polyline (extremities included).
   const ortho: Point[] = [control[0]];
   for (let i = 0; i < control.length - 1; i++) {
     ortho.push(...stepCorners(control[i], control[i + 1], forceH));
     ortho.push(control[i + 1]);
   }
   const poly = dedupe(ortho);
-  // Tout est aligné → coins dégénérés supprimés → trait droit.
+  // Everything is aligned → degenerate corners removed → straight line.
   if (poly.length <= 2) return undefined;
   if (!smooth) return poly.slice(1, -1);
   return roundCorners(poly);
@@ -195,8 +194,8 @@ function quadAt(p0: Point, c: Point, p1: Point, t: number): Point {
   };
 }
 
-/** Remplace chaque sommet intérieur d'une polyligne orthogonale par un arc
- *  (quadratique, point de contrôle = le sommet). Renvoie les points intérieurs. */
+/** Replaces each interior vertex of an orthogonal polyline with an arc
+ *  (quadratic, control point = the vertex). Returns interior points. */
 function roundCorners(poly: Point[]): Point[] {
   const out: Point[] = [];
   for (let i = 1; i < poly.length - 1; i++) {

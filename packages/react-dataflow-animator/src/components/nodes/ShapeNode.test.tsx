@@ -34,7 +34,7 @@ describe('ShapeNode — formes géométriques', () => {
         <ShapeNode object={{ id: type, type, body: 'x' }} />
       );
       expect(container.querySelector(`.rdfa-shape--${type}`)).toBeTruthy();
-      // rect (carré/rectangles), ellipse (cercle) ou polygon (le reste).
+      // rect (square/rectangles), ellipse (circle) or polygon (the rest).
       expect(
         container.querySelector(
           '.rdfa-shape-bg rect, .rdfa-shape-bg ellipse, .rdfa-shape-bg polygon'

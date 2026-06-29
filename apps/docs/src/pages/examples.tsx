@@ -12,7 +12,7 @@ export default function ExamplesPage() {
       description={t.examples.pageDescription}
     >
       <main className="min-h-screen bg-surface-alt [color-scheme:dark]">
-        {/* En-tête */}
+        {/* Header */}
         <section className="relative overflow-hidden border-b border-white/[0.06]">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-px bg-[linear-gradient(90deg,transparent,rgba(124,58,237,0.5),transparent)]" />
           <div className="max-w-6xl mx-auto px-5 pt-16 pb-10 text-center">

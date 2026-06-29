@@ -1,92 +1,92 @@
-# Faire valider le rendu par une IA
+# Have the rendering validated by an AI
 
-Comment demander à une IA (de vision ou non) de juger si une animation est
-**claire** et **fluide**, en exploitant le fait que le moteur est une fonction
-pure `evaluate(timeline, t)`.
+How to ask an AI (vision or otherwise) to judge whether an animation is
+**clear** and **fluid**, exploiting the fact that the engine is a pure
+function `evaluate(timeline, t)`.
 
-## Principe : le temps est une donnée adressable
+## Principle: time is addressable data
 
-Faire regarder l'animation « en direct » à une IA est le pire médium : un modèle
-lit mal une vidéo, et le live ajoute de la flakiness inutile. Comme tout découle
-de `evaluate(timeline, t)`, on transforme le temps en données et on sépare deux
-questions qui n'ont rien à voir :
+Having an AI watch the animation "live" is the worst medium: a model
+reads video poorly, and live playback adds unnecessary flakiness. Since everything
+stems from `evaluate(timeline, t)`, we transform time into data and separate two
+unrelated questions:
 
-| Question                                            | Bon medium                            | Outil                             |
-| --------------------------------------------------- | ------------------------------------- | --------------------------------- |
-| « Est-ce **clair** ? » (chevauchements, lisibilité) | images fixes                          | harnais Vite → planche-contact    |
-| « Est-ce **fluide** ? » (`set_content`, `move`)     | **courbe de la valeur-dans-le-temps** | harnais Vite → panneaux de courbe |
-| Garde-fou structurel (CI, pré-commit)               | JSON                                  | `extract-curves.mjs` (headless)   |
+| Question                                   | Good medium                      | Tool                            |
+| ------------------------------------------ | -------------------------------- | ------------------------------- |
+| "Is it **clear**?" (overlaps, readability) | still images                     | Vite harness → contact sheet    |
+| "Is it **fluid**?" (`set_content`, `move`) | **curve of the value-over-time** | Vite harness → curve panels     |
+| Structural safeguard (CI, pre-commit)      | JSON                             | `extract-curves.mjs` (headless) |
 
-La fluidité **n'est pas dans une frame** : c'est une propriété de la dérivée. Un
-screenshot ne peut pas la révéler ; il faut tracer la courbe.
+Fluidity **is not in a frame**: it is a property of the derivative. A
+screenshot cannot reveal it; the curve must be drawn.
 
-## Outil 1 — harnais visuel (les deux canaux)
+## Tool 1 — visual harness (both channels)
 
-Vite sert un harnais qui, pour une démo, rend **un `Stage` figé à chaque
-`timeline.stops[]`** (planche-contact) et, pour chaque `set_content`, trace
-l'**opacité de crossfade réelle** (`clipOpacity`, qui pilote aussi le lerp de
-géométrie) contre la même courbe passée dans `easeInOutCubic`.
+Vite serves a harness that, for a given demo, renders **a frozen `Stage` at each
+`timeline.stops[]`** (contact sheet) and, for each `set_content`, plots
+the **actual crossfade opacity** (`clipOpacity`, which also drives the geometry
+lerp) against the same curve passed through `easeInOutCubic`.
 
 ```bash
 npm run harness -w react-dataflow-animator
 # → http://localhost:5199/?demo=spa&theme=light
 ```
 
-Paramètres d'URL : `?demo=<id>` (voir la barre de navigation pour la liste) et
+URL parameters: `?demo=<id>` (see the navigation bar for the list) and
 `?theme=light|dark`.
 
-Le harnais importe `Stage`, `clipOpacity`, `easeInOutCubic` **depuis `src`**
-(elles ne sont pas publiques) : une seule source de vérité, aucune duplication à
-resynchroniser. La mesure DOM est réelle → on voit aussi le **re-layout** d'un
-`set_content` (refit de police, ResizeObserver), pas seulement le mouvement
-« voulu » par le moteur.
+The harness imports `Stage`, `clipOpacity`, `easeInOutCubic` **from `src`**
+(they are not public): a single source of truth, no duplication to
+resync. The DOM measurement is real → we also see the **re-layout** of a
+`set_content` (font refit, ResizeObserver), not just the movement
+"intended" by the engine.
 
-### Comment une IA le consomme
+### How an AI consumes it
 
-Via le serveur MCP **chrome-devtools** déjà en place :
+Via the **chrome-devtools** MCP server already in place:
 
-1. `navigate_page` / `new_page` → l'URL ci-dessus.
-2. `take_screenshot` (`fullPage: true`) → **une seule image** donne la
-   planche-contact + les courbes. L'IA juge clarté et fluidité d'un coup.
-3. `evaluate_script` → `window.__VALIDATION__` expose les séries numériques
-   (`stops`, et par `set_content` les échantillons `{ t, actual, eased }`), pour
-   raisonner sur les chiffres sans OCR de la courbe.
+1. `navigate_page` / `new_page` → the URL above.
+2. `take_screenshot` (`fullPage: true`) → **a single image** provides the
+   contact sheet + the curves. The AI judges clarity and fluidity at once.
+3. `evaluate_script` → `window.__VALIDATION__` exposes the numerical series
+   (`stops`, and per `set_content` the `{ t, actual, eased }` samples), to
+   reason about the numbers without OCR-ing the curve.
 
-## Outil 2 — extracteur headless (structure, sans navigateur)
+## Tool 2 — headless extractor (structure, no browser)
 
-Détecte les défauts qui se décident à la compilation, sans rendre de pixels :
-fondus explicites coupés/courts, chevauchement de deux contenus sur le même
-nœud. Signal rapide pour la CI.
+Detects defects that are decided at compile time, without rendering pixels:
+cut/short explicit fades, overlap of two contents on the same
+node. Fast signal for CI.
 
 ```bash
-npm run build:lib                                   # le dist doit exister
-node scripts/extract-curves.mjs --demo spa          # résumé lisible
+npm run build:lib                                   # dist must exist
+node scripts/extract-curves.mjs --demo spa          # readable summary
 node scripts/extract-curves.mjs --demo spa --json   # JSON
 ```
 
-> Volontairement limité à l'API publique (`compile`) : il **ne réimplémente pas**
-> `clipOpacity`. La durée du fondu par DÉFAUT n'est donc pas visible ici — si la
-> spec ne fixe pas `fadeInMs`/`fadeOutMs`, c'est au harnais de montrer la courbe
-> réelle. L'outil n'invente aucun chiffre de fondu.
+> Intentionally limited to the public API (`compile`): it **does not reimplement**
+> `clipOpacity`. The DEFAULT fade duration is therefore not visible here — if the
+> spec does not set `fadeInMs`/`fadeOutMs`, it's up to the harness to show the real
+> curve. The tool invents no fade numbers.
 
-## Cas travaillé : « le `set_content` manque de fluidité »
+## Worked case: "the `set_content` lacks fluidity"
 
-Le harnais le rend évident. La courbe **rouge** (opacité réelle) est un
-**trapèze linéaire** : vélocité constante puis coupure nette aux coins
-(`discontinuité max ≈ 4/s`). La courbe **verte** montre le même crossfade passé
-dans `easeInOutCubic` — départ et arrivée adoucis. Le moteur a déjà la fonction
-d'easing ; le crossfade de `clipOpacity`, lui, est linéaire. C'est là que se
-gagne la fluidité, et l'IA voit immédiatement quoi changer et où.
+The harness makes it obvious. The **red** curve (actual opacity) is a
+**linear trapezoid**: constant velocity then sharp cut at the corners
+(`max discontinuity ≈ 4/s`). The **green** curve shows the same crossfade passed
+through `easeInOutCubic` — softened start and arrival. The engine already has the
+easing function; `clipOpacity`'s crossfade, however, is linear. This is where
+fluidity is won, and the AI immediately sees what to change and where.
 
-Le contraste est le plus parlant sur une **fenêtre courte** (peu de hold) : la
-démo `spa` a un second `set_content` de ~750 ms qui l'illustre bien.
+The contrast is most telling on a **short window** (little hold): the
+`spa` demo has a second `set_content` of ~750 ms that illustrates it well.
 
-## Pistes pour aller plus loin
+## Ideas to go further
 
-- **Automatiser en CI** : un script Playwright (utiliser `channel: 'chrome'`
-  pour réemployer le Chrome système, sans télécharger Chromium) qui charge le
-  harnais, attend la mesure, screenshote et lit `__VALIDATION__`.
-- **Régression visuelle** : comme le rendu est déterministe, des planches-contacts
-  de référence (golden) + un diff pixel (`odiff`, `pixelmatch`,
-  `jest-image-snapshot`) donnent des snapshots **non flaky** — le point douloureux
-  habituel disparaît.
+- **Automate in CI**: a Playwright script (use `channel: 'chrome'`
+  to reuse the system Chrome, without downloading Chromium) that loads the
+  harness, waits for measurement, screenshots, and reads `__VALIDATION__`.
+- **Visual regression**: since the rendering is deterministic, reference
+  contact sheets (golden) + a pixel diff (`odiff`, `pixelmatch`,
+  `jest-image-snapshot`) provide **non-flaky** snapshots — the usual pain
+  point disappears.

@@ -1,11 +1,11 @@
-// Point d'entrée de la librairie publiée sur npm.
+// Entry point of the library published on npm.
 //
-// N'oubliez pas d'importer la feuille de styles dans votre application :
+// Don't forget to import the stylesheet in your application:
 //   import 'react-dataflow-animator/styles.css';
 
 export { DataFlowPlayer } from './DataFlowPlayer';
 
-// Types de la spécification et des props.
+// Specification and props types.
 export type {
   DataFlowSpec,
   DataFlowPlayerProps,
@@ -28,30 +28,30 @@ export type {
   ContentType,
   Highlighter,
   HighlightLanguage,
-  // Aliases rétro-compatibles (supprimés en v2)
+  // Backward-compatible aliases (removed in v2)
   StaticObject,
   StaticObjectType,
   DynamicObject,
   DynamicObjectType,
 } from './types';
 
-// JSON Schema (pour la doc d'API / la validation).
+// JSON Schema (for API doc / validation).
 export { dataFlowSchema } from './schema';
 export type { DataFlowSchema } from './schema';
 
-// Extensibilité : enregistrer ses propres icônes.
+// Extensibility: register your own icons.
 export { registerNodeIcon, getNodeIcon } from './components/nodes/nodeIcons';
 export { registerSubIcon, getSubIcon } from './components/nodes/subIcons';
 
-// Rendu isolé du cœur visuel d'un nœud (pictogramme ou panneau), hors Stage —
-// utilisé par la doc pour la galerie des types, réutilisable côté consommateur.
+// Isolated rendering of the visual core of a node (pictogram or panel), outside Stage —
+// used by the doc for the types gallery, reusable by the consumer.
 export { NodeView } from './components/nodes/NodeView';
 export type { NodeViewProps } from './components/nodes/NodeView';
 
-// Coloration syntaxique par défaut (réutilisable / remplaçable).
+// Default syntax highlighting (reusable / replaceable).
 export { highlightCode, escapeHtml } from './highlight/highlight';
 
-// Moteur (API avancée : compilation et évaluation de la timeline).
+// Engine (advanced API: timeline compilation and evaluation).
 export { compile } from './engine/compiler';
 export type { CompileResult } from './engine/compiler';
 export {

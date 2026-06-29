@@ -19,25 +19,25 @@ import type {
 } from './timeline';
 
 /**
- * Compilateur : `spec.timeline` -> `Timeline` (IR déterministe).
+ * Compiler: `spec.timeline` -> `Timeline` (deterministic IR).
  *
- * Gère : ordonnancement séquentiel par défaut, blocs `parallel` (même timestamp),
- * synchronisation relative `wait_for`, cycle de vie `keep_until`/`keep_until_next`,
- * et découpage en étapes racines.
+ * Manages: default sequential ordering, `parallel` blocks (same timestamp),
+ * relative synchronization `wait_for`, lifecycle `keep_until`/`keep_until_next`,
+ * and splitting into root steps.
  */
 
 export interface CompileResult {
   timeline: Timeline;
-  /** Avertissements non bloquants (références manquantes, etc.). */
+  /** Non-blocking warnings (missing references, etc.). */
   warnings: string[];
 }
 
-/** Pause (ms) insérée entre deux étapes racines, pour des arrêts nets en navigation. */
+/** Pause (ms) inserted between two root steps, for clear stops in navigation. */
 export const STEP_GAP = 250;
 
-/** Temps (ms) pendant lequel un `move` reste à l'origine avant de partir. */
+/** Time (ms) during which a `move` stays at the origin before leaving. */
 export const APPEAR_HOLD = 300;
-/** Temps (ms) pendant lequel un `move` reste à destination avant de disparaître. */
+/** Time (ms) during which a `move` stays at destination before disappearing. */
 export const ARRIVE_HOLD = 300;
 
 const DEFAULT_DURATION: Record<ActionType, number> = {
@@ -52,7 +52,7 @@ const DEFAULT_DURATION: Record<ActionType, number> = {
   wait: 1000,
 };
 
-// Défaut de `keep_until_next` par type d'action (cf. schema).
+// Default for `keep_until_next` by action type (see schema).
 const DEFAULT_KEEP_NEXT: Partial<Record<ActionType, boolean>> = {
   move: false,
   arrow: true,
@@ -63,14 +63,14 @@ const DEFAULT_KEEP_NEXT: Partial<Record<ActionType, boolean>> = {
   set_visible: false,
 };
 
-/** Normalise le style de ligne (accepte l'alias historique `full`). */
+/** Normalizes line style (accepts historical alias `full`). */
 function normalizeStyle(style: string | undefined): LineStyle {
   if (style === 'dotted' || style === 'dashed' || style === 'animated')
     return style;
-  return 'solid'; // 'solid', 'full' (alias) ou absent
+  return 'solid'; // 'solid', 'full' (alias) or missing
 }
 
-/** Normalise la forme du tracé (bezier par défaut, y compris valeur inconnue). */
+/** Normalizes path shape (bezier by default, including unknown value). */
 function normalizePath(path: string | undefined): PathShape {
   if (
     path === 'straight' ||
@@ -103,18 +103,18 @@ function makeId(ctx: Ctx, action: Action): string {
 
 interface Window {
   startMs: number;
-  /** Fin de l'animation (arrivée). Sert de cible à wait_for. */
+  /** Animation end (arrival). Serves as target for wait_for. */
   animEndMs: number;
-  /** Fin de l'empreinte temporelle (anim + hold d'arrivée), pour séquencer. */
+  /** End of time footprint (anim + arrival hold), for sequencing. */
   occupiedEndMs: number;
 }
 
 /**
- * Compile une action et renvoie sa fenêtre temporelle.
+ * Compiles an action and returns its time window.
  *
- * @param minStartMs — plancher du startMs (utilisé pour les actions racines afin
- *   que wait_for ne puisse que retarder, jamais remonter avant le début de l'étape).
- *   Non transmis aux enfants de parallel, qui gardent la sémantique stricte.
+ * @param minStartMs — floor for startMs (used for root actions so
+ *   that wait_for can only delay, never go back before step start).
+ *   Not passed to parallel children, which keep strict semantics.
  */
 function compileAction(
   action: Action,
@@ -123,20 +123,20 @@ function compileAction(
   ctx: Ctx,
   minStartMs = 0
 ): Window {
-  // Résolution de wait_for (référence à une action déjà compilée).
+  // wait_for resolution (reference to an already compiled action).
   let startMs = baseStart;
   if (action.wait_for) {
     const ref = ctx.timingById.get(action.wait_for);
     if (ref) startMs = ref.endMs;
     else
       ctx.warnings.push(
-        `wait_for: action "${action.wait_for}" introuvable (ou définie plus tard).`
+        `wait_for: action "${action.wait_for}" not found (or defined later).`
       );
   }
-  // Borne inférieure : une action racine ne peut pas commencer avant son étape,
-  // même si wait_for pointe vers une action très antérieure.
+  // Lower bound: a root action cannot start before its step,
+  // even if wait_for points to a much earlier action.
   if (startMs < minStartMs) startMs = minStartMs;
-  // Décalage explicite (delay_ms), appliqué après le clamp : toujours additif.
+  // Explicit offset (delay_ms), applied after clamp: always additive.
   if (action.delay_ms) startMs += action.delay_ms;
 
   if (action.type === 'parallel') {
@@ -144,7 +144,7 @@ function compileAction(
     let animEndMs = startMs;
     let occupiedEndMs = startMs;
     for (const child of children) {
-      // minStartMs non transmis : les enfants conservent la sémantique stricte.
+      // minStartMs not passed: children keep strict semantics.
       const r = compileAction(child, startMs, stepIndex, ctx);
       if (r.animEndMs > animEndMs) animEndMs = r.animEndMs;
       if (r.occupiedEndMs > occupiedEndMs) occupiedEndMs = r.occupiedEndMs;
@@ -154,9 +154,9 @@ function compileAction(
   }
 
   if (action.type === 'wait') {
-    // Temps mort : aucun clip émis, on ne fait qu'occuper la fenêtre temporelle
-    // pour que l'étape suivante démarre plus tard. Les clips maintenus par les
-    // étapes précédentes (keep_until_next) restent affichés pendant l'attente.
+    // Dead time: no clip emitted, we only occupy the time window
+    // so the next step starts later. Clips kept by
+    // previous steps (keep_until_next) stay visible during wait.
     const endMs = startMs + (action.duration ?? DEFAULT_DURATION.wait);
     if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
     return { startMs, animEndMs: endMs, occupiedEndMs: endMs };
@@ -164,10 +164,10 @@ function compileAction(
 
   const duration = action.duration ?? DEFAULT_DURATION[action.type];
   const isMove = action.type === 'move';
-  // Un `move` est maintenu à l'origine (APPEAR_HOLD) puis à destination (ARRIVE_HOLD),
-  // ce qui crée deux instants de repos : apparition et arrivée.
+  // A `move` is held at origin (APPEAR_HOLD) then at destination (ARRIVE_HOLD),
+  // which creates two rest instances: appearance and arrival.
   const animStartMs = startMs + (isMove ? APPEAR_HOLD : 0);
-  const endMs = animStartMs + duration; // fin d'animation (arrivée)
+  const endMs = animStartMs + duration; // animation end (arrival)
   const occupiedEndMs = endMs + (isMove ? ARRIVE_HOLD : 0);
   const id = makeId(ctx, action);
   const keepNext =
@@ -184,7 +184,7 @@ function compileAction(
     if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
   };
 
-  // visibleUntilMs par défaut = fin d'empreinte (inclut le hold d'arrivée).
+  // visibleUntilMs default = footprint end (includes arrival hold).
   const keepEnd = action.keep_until_end ?? false;
   const base = {
     id,
@@ -201,7 +201,7 @@ function compileAction(
   switch (action.type) {
     case 'move': {
       if (!action.object || !action.from || !action.to) {
-        ctx.warnings.push(`move "${id}": object/from/to requis.`);
+        ctx.warnings.push(`move "${id}": object/from/to required.`);
         break;
       }
       const clip: MoveClip = {
@@ -216,7 +216,7 @@ function compileAction(
     }
     case 'arrow': {
       if (!action.from || !action.to) {
-        ctx.warnings.push(`arrow "${id}": from/to requis.`);
+        ctx.warnings.push(`arrow "${id}": from/to required.`);
         break;
       }
       const clip: ArrowClip = {
@@ -234,7 +234,7 @@ function compileAction(
     }
     case 'loading': {
       if (!action.object) {
-        ctx.warnings.push(`loading "${id}": object requis.`);
+        ctx.warnings.push(`loading "${id}": object required.`);
         break;
       }
       const clip: LoadingClip = {
@@ -247,7 +247,7 @@ function compileAction(
     }
     case 'set_content': {
       if (!action.object || !action.content) {
-        ctx.warnings.push(`set_content "${id}": object/content requis.`);
+        ctx.warnings.push(`set_content "${id}": object/content required.`);
         break;
       }
       const clip: SetContentClip = {
@@ -275,7 +275,7 @@ function compileAction(
     }
     case 'highlight': {
       if (!action.object) {
-        ctx.warnings.push(`highlight "${id}": object requis.`);
+        ctx.warnings.push(`highlight "${id}": object required.`);
         break;
       }
       const clip: HighlightClip = {
@@ -288,7 +288,7 @@ function compileAction(
     }
     case 'set_visible': {
       if (!action.object) {
-        ctx.warnings.push(`set_visible "${id}": object requis.`);
+        ctx.warnings.push(`set_visible "${id}": object required.`);
         break;
       }
       const clip: SetVisibleClip = {
@@ -296,8 +296,8 @@ function compileAction(
         kind: 'set_visible',
         objectId: action.object,
         visible: action.visible,
-        // keepEnd forcé à true : l'état de visibilité persiste jusqu'à la fin de la
-        // chronologie pour que Stage puisse interroger le clip à tout instant.
+        // keepEnd forced to true: visibility state persists until the end of the
+        // timeline so Stage can query the clip at any time.
         keepEnd: true,
       };
       ctx.pending.push({
@@ -312,7 +312,7 @@ function compileAction(
     }
     default: {
       throw new Error(
-        `Type d'action non reconnu : "${(action as Record<string, unknown>).type}"`
+        `Unrecognized action type: "${(action as Record<string, unknown>).type}"`
       );
     }
   }
@@ -331,14 +331,14 @@ export function compile(spec: DataFlowSpec): CompileResult {
   const steps: Step[] = [];
   let cursor = 0;
 
-  // Chaque action racine = une étape logique. Une courte pause (STEP_GAP) sépare
-  // les étapes : l'arrêt « Suivant » montre ainsi l'étape « posée » seule, sans
-  // chevaucher l'apparition de la suivante.
+  // Each root action = one logical step. A short pause (STEP_GAP) separates
+  // steps: the "Next" stop thus shows the "settled" step alone, without
+  // overlapping the next one's appearance.
   const lastIndex = spec.timeline.length - 1;
   spec.timeline.forEach((action, index) => {
     const stepStart = cursor;
-    // stepStart passé comme minStartMs : wait_for ne peut que retarder l'action racine,
-    // jamais la faire démarrer avant le début de son étape.
+    // stepStart passed as minStartMs: wait_for can only delay the root action,
+    // never start it before the beginning of its step.
     const { occupiedEndMs } = compileAction(
       action,
       stepStart,
@@ -356,49 +356,49 @@ export function compile(spec: DataFlowSpec): CompileResult {
     cursor = stepEnd + (index < lastIndex ? STEP_GAP : 0);
   });
 
-  // Durée totale : fin de la dernière étape, étendue si un clip dépasse (wait_for).
+  // Total duration: end of last step, extended if a clip overflows (wait_for).
   let durationMs = cursor;
   for (const { clip } of ctx.pending) {
     durationMs = Math.max(durationMs, clip.endMs, clip.visibleUntilMs);
   }
   if (steps.length > 0) steps[steps.length - 1].endMs = durationMs;
 
-  // Début de la prochaine étape « de contenu » après `stepIndex` : les étapes
-  // `wait` (temps morts sans clip) sont sautées pour que keep_until_next tienne
-  // le contenu posé PENDANT l'attente plutôt que de laisser un écran vide.
+  // Start of next "content" step after `stepIndex`: the steps
+  // `wait` (dead times without clip) are skipped so keep_until_next holds
+  // the content DURING the wait rather than leaving an empty screen.
   const nextContentStepStart = (stepIndex: number): number => {
     let i = stepIndex + 1;
     while (i < steps.length && spec.timeline[i]?.type === 'wait') i++;
     return steps[i]?.startMs ?? durationMs;
   };
 
-  // Passe 2 : résolution du cycle de vie (visibleUntilMs).
+  // Pass 2: lifecycle resolution (visibleUntilMs).
   for (const { clip, keepUntil, keepNext, keepEnd, stepIndex } of ctx.pending) {
     if (keepUntil) {
       const ref = ctx.timingById.get(keepUntil);
       if (ref) clip.visibleUntilMs = ref.startMs;
-      else ctx.warnings.push(`keep_until: action "${keepUntil}" introuvable.`);
+      else ctx.warnings.push(`keep_until: action "${keepUntil}" not found.`);
     } else if (keepEnd) {
-      // Visible jusqu'à la fin de la chronologie.
+      // Visible until timeline end.
       clip.visibleUntilMs = durationMs;
     } else if (keepNext) {
-      // Visible jusqu'au DÉBUT de l'étape de contenu suivante (à travers la
-      // pause inter-étapes et les éventuels temps morts `wait`).
+      // Visible until the START of the next content step (through the
+      // inter-step pause and any `wait` dead times).
       clip.visibleUntilMs = nextContentStepStart(stepIndex);
     }
-    // sinon : visibleUntilMs reste = fin d'empreinte (disparaît après son hold).
+    // else: visibleUntilMs remains = footprint end (disappears after its hold).
   }
 
-  // Points d'arrêt : un move s'arrête à l'apparition (animStart) ET à l'arrivée
-  // (end) ; les autres clips s'arrêtent une fois « posés » (end).
+  // Stop points: a move stops at appearance (animStart) AND at arrival
+  // (end); other clips stop once "settled" (end).
   const stopSet = new Set<number>();
   for (const { clip } of ctx.pending) {
     if (clip.kind === 'move') stopSet.add(clip.animStartMs);
     stopSet.add(clip.endMs);
   }
-  // NB : `Array.from` plutôt que `[...stopSet]`. Docusaurus Babel en mode
-  // « loose » retranspile le spread d'un itérable en `[].concat(iterable)`,
-  // ce qui n'aplatit PAS un Set et produit un tableau vide après le filtre.
+  // NB: `Array.from` rather than `[...stopSet]`. Docusaurus Babel in mode
+  // "loose" transpiles iterable spread to `[].concat(iterable)`,
+  // which does NOT flatten a Set and produces an empty array after filter.
   const stops = Array.from(stopSet)
     .filter((s) => s > 0 && s <= durationMs)
     .sort((a, b) => a - b);
@@ -407,7 +407,7 @@ export function compile(spec: DataFlowSpec): CompileResult {
     .map((p) => p.clip)
     .sort((a, b) => a.startMs - b.startMs);
 
-  // Passe 3 : pré-calcul des clips actifs par étape pour un rendu en O(K)
+  // Pass 3: pre-calculation of active clips per step for O(K) rendering
   for (let i = 0; i < steps.length; i++) {
     const stepStart = steps[i].startMs;
     const stepNext = i < steps.length - 1 ? steps[i + 1].startMs : durationMs;

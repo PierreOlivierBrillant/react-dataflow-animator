@@ -1,133 +1,133 @@
 # Architecture
 
-Référence interne pour le développement et l'extension de la librairie.
-Voir aussi [SPEC.md](./SPEC.md) (spécification fonctionnelle).
+Internal reference for the development and extension of the library.
+See also [SPEC.md](./SPEC.md) (functional specification).
 
-## Décisions clés
+## Key decisions
 
-1. **Moteur déterministe maison (pas de GSAP).** Cœur = fonction pure
-   `evaluate(timeline, t)`. Avantages : seek / étapes / cycle de vie
-   maîtrisés, tests sans DOM, bundle léger, SSR-safe.
-2. **Séparation compilateur → IR → runtime.** `compile(spec)` produit une
-   `Timeline` (clips datés + étapes + durée), indépendante du DOM. Le rendu
-   résout la géométrie à partir des mesures réelles au moment du rendu.
-3. **Monorepo npm workspaces.** La librairie publiée (`packages/react-dataflow-animator`)
-   est isolée du site de documentation (`apps/docs`). Le site consomme la
-   lib comme une dépendance workspace.
-4. **CSS scopée** (`.rdfa-`) + variables CSS, compilée en `dist/style.css`.
-   Aucun framework CSS imposé au consommateur.
-5. **SSR-safe** : aucun accès DOM pendant le rendu (mesure et horloge dans
-   des effets).
-6. **Registres extensibles** (icônes nœuds, sous-icônes, highlighter).
+1. **Custom deterministic engine (no GSAP).** Core = pure function
+   `evaluate(timeline, t)`. Advantages: mastered seek / steps / lifecycle,
+   tests without DOM, light bundle, SSR-safe.
+2. **Compiler → IR → runtime separation.** `compile(spec)` produces a
+   `Timeline` (dated clips + steps + duration), independent of the DOM. Rendering
+   resolves geometry from actual measurements at render time.
+3. **Monorepo npm workspaces.** The published library (`packages/react-dataflow-animator`)
+   is isolated from the documentation site (`apps/docs`). The site consumes the
+   lib as a workspace dependency.
+4. **Scoped CSS** (`.rdfa-`) + CSS variables, compiled into `dist/style.css`.
+   No CSS framework imposed on the consumer.
+5. **SSR-safe**: no DOM access during rendering (measurement and clock in
+   effects).
+6. **Extensible registries** (node icons, sub-icons, highlighter).
 
-## Pipeline de rendu
+## Rendering pipeline
 
 ```text
-spec ──compile()──▶ Timeline (clips, steps, durationMs)   [pur, sans DOM]
+spec ──compile()──▶ Timeline (clips, steps, durationMs)   [pure, no DOM]
                           │
 useClock (rAF) ──▶ t ─────┤
                           ▼
-            Stage: evaluate(timeline, t) ──▶ clips actifs (+ progress)
+            Stage: evaluate(timeline, t) ──▶ active clips (+ progress)
                           │
-   layout (ratios CSS) + geometry (BoundingClientRect mesurés)
+   layout (CSS ratios) + geometry (measured BoundingClientRects)
                           ▼
-        nœuds / flèches / paquets / spinners / contenus / commentaires
+        nodes / arrows / packets / spinners / contents / comments
 ```
 
-## Structure du monorepo
+## Monorepo structure
 
 ```text
 packages/
-  react-dataflow-animator/          le package npm publié
+  react-dataflow-animator/          the published npm package
     src/
-      DataFlowPlayer.tsx            composant racine
-      index.ts                      exports publics
-      types.ts                      types TS de la spec et des props
-      schema.ts                     JSON Schema (alimente la doc API)
+      DataFlowPlayer.tsx            root component
+      index.ts                      public exports
+      types.ts                      TS types of the spec and props
+      schema.ts                     JSON Schema (feeds the API doc)
       engine/
         compiler.ts                 spec.actions → Timeline
-        timeline.ts                 IR + evaluate (pur) + navigation
-        layout.ts                   placement des nœuds (lanes / circular)
-        geometry.ts                 points de connexion + routage
+        timeline.ts                 IR + evaluate (pure) + navigation
+        layout.ts                   node placement (lanes / circular)
+        geometry.ts                 connection points + routing
       hooks/
-        useClock.ts                 horloge rAF (play/pause/seek/playTo)
-        useStageGeometry.ts         mesure DOM + ResizeObserver
+        useClock.ts                 rAF clock (play/pause/seek/playTo)
+        useStageGeometry.ts         DOM measurement + ResizeObserver
       highlight/
-        highlight.ts                wrapper Prism (remplaçable)
+        highlight.ts                Prism wrapper (replaceable)
       components/
-        Stage.tsx                   orchestration du rendu
-        Controls.tsx                barre de contrôles
-        nodes/                      StaticNode + registres d'icônes
+        Stage.tsx                   rendering orchestration
+        Controls.tsx                controls bar
+        nodes/                      StaticNode + icon registries
         dynamic/                    Packet, ArrowLine, ContentPanel
       styles/
-        dataflow.css                styles scopés .rdfa-
+        dataflow.css                scoped .rdfa- styles
 apps/
-  docs/                             site Docusaurus
-    docs/                           contenu MDX (intro, concepts, reference)
-    src/                            composants React du site
-      site-content/demos/           démos importables dans la lib
+  docs/                             Docusaurus site
+    docs/                           MDX content (intro, concepts, reference)
+    src/                            React components of the site
+      site-content/demos/           demos importable in the lib
 docs/
-  SPEC.md, ARCHITECTURE.md          références internes
+  SPEC.md, ARCHITECTURE.md          internal references
 ```
 
-## Ajouter une nouvelle composante
+## Adding a new component
 
-### Nouveau type d'action
+### New action type
 
-1. Ajouter le type dans `types.ts` (`ActionType`) et l'enum dans `schema.ts`.
-2. Ajouter une variante de clip dans `engine/timeline.ts` (union `Clip`)
-   avec son défaut de `keep_until_next` et sa durée par défaut dans
-   `engine/compiler.ts`, et un `case` dans `compileAction`.
-3. Rendre le clip dans `components/Stage.tsx` (filtre `active` sur le `kind`).
-4. Styles `.rdfa-…` dans `styles/dataflow.css`. Test dans
+1. Add the type in `types.ts` (`ActionType`) and the enum in `schema.ts`.
+2. Add a clip variant in `engine/timeline.ts` (`Clip` union)
+   with its `keep_until_next` default and its default duration in
+   `engine/compiler.ts`, and a `case` in `compileAction`.
+3. Render the clip in `components/Stage.tsx` (`active` filter on `kind`).
+4. `.rdfa-…` styles in `styles/dataflow.css`. Test in
    `engine/compiler.test.ts`.
 
-### Nouveau type de nœud ou nouvelle sous-icône
+### New node type or new sub-icon
 
-- `registerNodeIcon(type, svg)` / `registerSubIcon(name, svg)` à
-  l'exécution ;
-- ou enrichir `nodeIcons.tsx` / `subIcons.tsx` directement dans la lib.
+- `registerNodeIcon(type, svg)` / `registerSubIcon(name, svg)` at
+  runtime;
+- or enrich `nodeIcons.tsx` / `subIcons.tsx` directly in the lib.
 
-## Build et publication
+## Build and publication
 
-Tout part de la racine via npm workspaces :
+Everything starts from the root via npm workspaces:
 
 ```bash
-npm run build       # build complet (lib puis site)
-npm run build:lib   # uniquement le package npm
-npm run build:docs  # uniquement le site
+npm run build       # full build (lib then site)
+npm run build:lib   # only the npm package
+npm run build:docs  # only the site
 ```
 
-Le build du package :
+The package build:
 
-- `tsc -b` : typecheck ;
-- `vite build` : bundle ESM + `style.css` ;
-- `tsc -p tsconfig.dts.json` : déclarations `.d.ts`.
+- `tsc -b`: typecheck;
+- `vite build`: ESM bundle + `style.css`;
+- `tsc -p tsconfig.dts.json`: `.d.ts` declarations.
 
-Résultat dans `packages/react-dataflow-animator/dist/` : `index.js`,
-`index.d.ts`, `style.css`. Le champ `exports` du `package.json` les expose
-sous `react-dataflow-animator` et `react-dataflow-animator/styles.css`.
+Result in `packages/react-dataflow-animator/dist/`: `index.js`,
+`index.d.ts`, `style.css`. The `exports` field of `package.json` exposes them
+under `react-dataflow-animator` and `react-dataflow-animator/styles.css`.
 
-`react` et `react-dom` sont en `peerDependencies` (externalisés du bundle).
+`react` and `react-dom` are in `peerDependencies` (externalized from the bundle).
 
-## Tests et qualité
+## Tests and quality
 
-| Commande (racine)       | Effet                                           |
-| ----------------------- | ----------------------------------------------- |
-| `npm run lint`          | Lint des workspaces qui exposent un script lint |
-| `npm run format:check`  | Vérifie le formatage Prettier                   |
-| `npm run format:write`  | Applique Prettier                               |
-| `npm test`              | Tests vitest de la lib                          |
-| `npm run test:coverage` | Tests + rapport de couverture                   |
-| `npm run deadcode`      | knip — détection de code mort                   |
-| `npm run build`         | Build complet (lib + docs)                      |
+| Command (root)          | Effect                                    |
+| ----------------------- | ----------------------------------------- |
+| `npm run lint`          | Lint workspaces that expose a lint script |
+| `npm run format:check`  | Checks Prettier formatting                |
+| `npm run format:write`  | Applies Prettier                          |
+| `npm test`              | vitest tests of the lib                   |
+| `npm run test:coverage` | Tests + coverage report                   |
+| `npm run deadcode`      | knip — dead code detection                |
+| `npm run build`         | Full build (lib + docs)                   |
 
-Côté package, deux configurations vitest cohabitent : `vitest.config.ts`
-(unitaires, sous `src/**/*.test.{ts,tsx}`) et `vitest.integration.config.ts`
-(tests d'intégration sur les démos).
+On the package side, two vitest configurations coexist: `vitest.config.ts`
+(unit, under `src/**/*.test.{ts,tsx}`) and `vitest.integration.config.ts`
+(integration tests on demos).
 
-## Déploiement
+## Deployment
 
-`.github/workflows/ci-cd.yml` lint + teste sur chaque push / PR, puis
-build et déploie le site Docusaurus sur GitHub Pages sur la branche `main`.
-La publication npm de la lib reste manuelle.
+`.github/workflows/ci-cd.yml` lints + tests on every push / PR, then
+builds and deploys the Docusaurus site on GitHub Pages on the `main` branch.
+The npm publication of the lib remains manual.

@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clamp } from '../engine/timeline';
 
-// Onglet mis en arrière-plan → rAF gelé → dt peut valoir plusieurs minutes
-// au retour. Sans plafond, t sauterait à la fin (ou à une position arbitraire
-// en mode loop).
+// Tab sent to background → rAF frozen → dt can be several minutes
+// on return. Without ceiling, t would jump to the end (or to an arbitrary position
+// in loop mode).
 const MAX_DT = 100; // ms
 
 /**
- * Horloge de lecture pilotée par requestAnimationFrame.
+ * Playback clock driven by requestAnimationFrame.
  *
- * Le temps `t` (ms) est la SEULE source de vérité de l'animation : tout le reste
- * (`evaluate`) en découle. `seek` pose `t`, la lecture ne fait que l'avancer.
- * SSR-safe : aucun accès à `requestAnimationFrame` hors d'un effet client.
+ * Time `t` (ms) is the ONLY source of truth of the animation: everything else
+ * (`evaluate`) flows from it. `seek` sets `t`, playback only advances it.
+ * SSR-safe: no access to `requestAnimationFrame` outside a client effect.
  */
 export interface UseClockOptions {
   durationMs: number;
@@ -28,9 +28,9 @@ export interface Clock {
   pause: () => void;
   toggle: () => void;
   seek: (ms: number) => void;
-  /** Joue puis s'arrête automatiquement à `targetMs` (navigation par étape). */
+  /** Plays then stops automatically at `targetMs` (step navigation). */
   playTo: (targetMs: number) => void;
-  /** Repart du début et relance la lecture. */
+  /** Restarts from the beginning and resumes playback. */
   restart: () => void;
 }
 
@@ -47,7 +47,7 @@ export function useClock(options: UseClockOptions): Clock {
     setTState(value);
   }, []);
 
-  // Re-clampe le curseur si la durée change (recompilation de la spec).
+  // Re-clamps the cursor if the duration changes (spec recompilation).
   useEffect(() => {
     if (tRef.current > durationMs) setT(durationMs);
   }, [durationMs, setT]);
@@ -62,7 +62,7 @@ export function useClock(options: UseClockOptions): Clock {
 
   const play = useCallback(() => {
     targetRef.current = null;
-    if (tRef.current >= durationMs) setT(0); // rejoue depuis le début
+    if (tRef.current >= durationMs) setT(0); // replays from the beginning
     setPlaying(true);
   }, [durationMs, setT]);
 

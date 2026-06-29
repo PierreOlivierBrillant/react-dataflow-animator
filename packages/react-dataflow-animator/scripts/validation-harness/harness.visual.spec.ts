@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-// Démos couvrant les zones à risque : set_content (spa, messageQueue), move
-// dense (clientServer), composition parallèle (microservices), cas de layout
-// serré (collision). Étendre la liste = un golden de plus, rien d'autre.
+// Demos covering risk areas: set_content (spa, messageQueue), dense
+// move (clientServer), parallel composition (microservices), tight layout
+// case (collision). Extending the list = one more golden, nothing else.
 const DEMOS = [
   'spa',
   'clientServer',
@@ -12,12 +12,12 @@ const DEMOS = [
 ];
 
 for (const demo of DEMOS) {
-  test(`planche-contact — ${demo}`, async ({ page }) => {
+  test(`contact sheet — ${demo}`, async ({ page }) => {
     await page.goto(`/?demo=${demo}&theme=light`);
 
-    // La planche-contact est montée…
+    // The contact sheet is mounted...
     await page.waitForSelector('.filmstrip .frame');
-    // …et le moteur a publié ses séries (preuve que compile() a tourné).
+    // ...and the engine has published its series (proof that compile() ran).
     await expect
       .poll(() =>
         page.evaluate(
@@ -27,14 +27,14 @@ for (const demo of DEMOS) {
       )
       .toBe(true);
 
-    // Mesure DOM stable : le ResizeObserver + le refit de police d'un set_content
-    // se font en deux passes après le commit ; on attend les polices puis une
-    // courte stabilisation avant de figer l'image.
+    // Stable DOM measurement: the ResizeObserver + the font refit of a set_content
+    // are done in two passes after commit; we wait for the fonts then a
+    // short stabilization before freezing the image.
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(400);
 
-    // La sonde live joue en boucle (rAF) → image non déterministe : on l'exclut
-    // du golden (c'est un diagnostic, pas une cible de régression).
+    // The live probe loops (rAF) → non-deterministic image: we exclude it
+    // from the golden (it's a diagnostic, not a regression target).
     await page.evaluate(() =>
       document.querySelector('.probe-section')?.remove()
     );

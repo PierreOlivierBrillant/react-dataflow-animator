@@ -3,9 +3,9 @@ import { useAlternatePageUtils } from '@docusaurus/theme-common/internal';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import { setStoredLocale, useTranslation, type Locale } from '../i18n';
 
-// Bascule de locale en i18n natif : chaque langue est une URL distincte, donc
-// des liens (navigation complète) plutôt qu'un toggle d'état. Le clic mémorise
-// le choix pour neutraliser la redirection navigateur (cf. Root.tsx).
+// Native i18n locale switcher: each language is a distinct URL, so we use
+// links (full navigation) rather than a state toggle. Clicking memorizes
+// the choice to neutralize browser redirection (see Root.tsx).
 export function LanguageSwitcher({ className = '' }: { className?: string }) {
   const t = useTranslation();
   const { i18n } = useDocusaurusContext();

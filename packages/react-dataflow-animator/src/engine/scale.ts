@@ -16,9 +16,9 @@ const DENSITY: Record<Density, { scale: number; maxw: number }> = {
 export interface ScaleResult {
   scale: number;
   maxW: number;
-  /** Largeur max d'un panneau set_content (px) — bornée par les rebords du lecteur. */
+  /** Max width of a set_content panel (px) — bounded by viewer edges. */
   contentMaxW: number;
-  /** Hauteur max d'un panneau set_content (px) — bornée par les rebords du lecteur. */
+  /** Max height of a set_content panel (px) — bounded by viewer edges. */
   contentMaxH: number;
 }
 
@@ -58,11 +58,11 @@ export function computeScale(
 
   const finalScale = clamp(targetScale, 0.3, 1.6);
 
-  // Taille max d'un panneau set_content. Le panneau s'ajuste à son CONTENU.
-  // - Largeur : plafond conservateur (~38 % du lecteur) pour laisser davantage
-  //   de marge aux voisins, notamment sur les miniatures.
-  // - Hauteur : 88 % de la hauteur pour conserver une marge visible autour du
-  //   panneau ; bornée aux rebords. Le CodeBlock réduit la police si besoin.
+  // Max size of a set_content panel. The panel adjusts to its CONTENT.
+  // - Width: conservative ceiling (~38% of viewer) to leave more
+  //   margin for neighbors, especially on thumbnails.
+  // - Height: 88% of the height to keep a visible margin around the
+  //   panel; bounded by edges. CodeBlock reduces font size if needed.
   const contentMaxW = Math.round(clamp(width * 0.38, 120, 420));
   const contentMaxH = Math.round(clamp(height * 0.88, 100, 560));
 

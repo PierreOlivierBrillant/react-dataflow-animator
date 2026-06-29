@@ -1,14 +1,14 @@
 import type { NodeType } from '../../types';
 
 /**
- * Familles de nœuds par apparence — prédicats partagés par le rendu (`NodeView`,
- * `StaticNode`) et la galerie de la doc. Module sans composant : éviter de mêler
- * helpers et composants dans un même fichier (règle `react-refresh`).
+ * Node families by appearance — predicates shared by rendering (`NodeView`,
+ * `StaticNode`) and the doc gallery. Component-less module: avoids mixing
+ * helpers and components in the same file (`react-refresh` rule).
  *
- * Source de vérité unique : ajouter un nouveau nœud « façon `simple_node` » à
- * {@link PANEL_NODE_TYPES} suffit à le faire rendre comme panneau partout et à
- * lui donner la classe `rdfa-node--panel`. De même, ajouter une forme à
- * {@link SHAPE_TYPES} la fait rendre par `ShapeNode` (classe `rdfa-node--shape`).
+ * Single source of truth: adding a new `simple_node`-like node to
+ * {@link PANEL_NODE_TYPES} is enough to render it as a panel everywhere and
+ * give it the `rdfa-node--panel` class. Similarly, adding a shape to
+ * {@link SHAPE_TYPES} renders it with `ShapeNode` (`rdfa-node--shape` class).
  */
 const PANEL_NODE_TYPES = new Set<NodeType>(['simple_node', 'complex_node']);
 
@@ -16,7 +16,7 @@ export function isPanelNode(type: NodeType): boolean {
   return PANEL_NODE_TYPES.has(type);
 }
 
-/** Nœuds rendus comme une forme géométrique (qui peut contenir un court texte). */
+/** Nodes rendered as a geometric shape (which can contain a short text). */
 export const SHAPE_TYPES = [
   'square',
   'diamond',

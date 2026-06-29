@@ -46,17 +46,17 @@ const makeConn = (
   angleDeg: (Math.atan2(end.y - start.y, end.x - start.x) * 180) / Math.PI,
 });
 
-// ─── Nœuds fixes utilisés par les tests existants ───────────────────────────
+// ─── Fixed nodes used by existing tests ───────────────────────────
 
 const A: NodeGeom = { id: 'a', x: 0, y: 0, width: 40, height: 40 };
 const B: NodeGeom = { id: 'b', x: 200, y: 0, width: 40, height: 40 };
 
-// ─── Tests existants (non modifiés) ─────────────────────────────────────────
+// ─── Existing tests (unmodified) ─────────────────────────────────────────
 
 describe('connection', () => {
-  it('accroche les extrémités SUR le bord du nœud (la flèche le touche)', () => {
+  it('anchors extremities ON the node border (arrow touches it)', () => {
     const c = connection(A, B);
-    expect(c.start.x).toBe(20); // 0 + halfW(20), aucune marge ajoutée
+    expect(c.start.x).toBe(20); // 0 + halfW(20), no margin added
   });
 
   it('creates basic start and end points', () => {
@@ -79,28 +79,28 @@ describe('connection', () => {
     expect(ba).toBeDefined();
   });
 
-  // ── Cas 4 : nœud source avec label ────────────────────────────────────────
-  it('[cas 4] nœud source avec label : start.y passe sous le bas du label', () => {
+  // ── Case 4: source node with label ────────────────────────────────────────
+  it('[case 4] source node with label: start.y goes under the label bottom', () => {
     const from = mkNode('from4', 0, 0, 40, 40, 20, 80);
     const to = mkNode('to4', 0, 300);
     const c = connection(from, to);
-    // start sous le visuel…
+    // start under the visual…
     expect(c.start.y).toBeGreaterThan(from.y + from.height / 2);
-    // …pile au bas du label : 0 + halfH(20) + LABEL_GAP(6) + labelH(20) = 46.
+    // …right at the label bottom: 0 + halfH(20) + LABEL_GAP(6) + labelH(20) = 46.
     expect(c.start.y).toBeCloseTo(46, 5);
   });
 
-  // ── Cas 5 : segment quasi-vertical, même lane (start.x == obs.x) ────────────
-  it('[cas 5] segment vertical + obstacle traversé, même lane : bypass à droite', () => {
-    // from et to partagent x=0 → segment quasi-vertical.
-    // obs a un label centré sur x=0 (lw=80 → lb.x=-40, lb.x+lw=40).
-    // start.x(0) == obs.x(0) → condition start.x < obs.x est fausse → bypass à DROITE
-    // pour éviter de croiser les flèches allant vers la gauche depuis le même nœud.
+  // ── Case 5: quasi-vertical segment, same lane (start.x == obs.x) ────────────
+  it('[case 5] vertical segment + crossed obstacle, same lane: right bypass', () => {
+    // from and to share x=0 → quasi-vertical segment.
+    // obs has a label centered on x=0 (lw=80 → lb.x=-40, lb.x+lw=40).
+    // start.x(0) == obs.x(0) → condition start.x < obs.x is false → RIGHT bypass
+    // to avoid crossing arrows going left from the same node.
     const from = mkNode('f5', 0, 0);
     const to = mkNode('t5', 0, 300);
     const obs = mkNode('obs5', 0, 150, 40, 40, 20, 80);
-    // Le détour anti-collision est indépendant de la forme : on l'observe sur
-    // un tracé droit où il constitue l'unique point intermédiaire.
+    // The anti-collision detour is shape-independent: we observe it on
+    // a straight path where it is the only intermediate point.
     const c = connection(from, to, [obs], 0, 0, 'straight');
     expect(c.waypoints).toBeDefined();
     expect(c.waypoints).toHaveLength(1);
@@ -110,29 +110,29 @@ describe('connection', () => {
     expect(c.waypoints![0].y).toBeCloseTo(labelTop, 5);
   });
 
-  // ── Cas 6 : obstacle non traversé ─────────────────────────────────────────
-  it('[cas 6] obstacle non traversé : waypoints est undefined', () => {
+  // ── Case 6: uncrossed obstacle ─────────────────────────────────────────
+  it('[case 6] uncrossed obstacle: waypoints is undefined', () => {
     const from = mkNode('f6', 0, 0);
     const to = mkNode('t6', 0, 300);
-    const obs = mkNode('obs6', 200, 150, 40, 40, 20, 80); // loin du chemin x=0
+    const obs = mkNode('obs6', 200, 150, 40, 40, 20, 80); // far from x=0 path
     const c = connection(from, to, [obs]);
     expect(c.waypoints).toBeUndefined();
   });
 
-  // ── Cas 7 : obstacle.id == from.id → ignoré ───────────────────────────────
-  it('[cas 7] obstacle dont id == from.id : ignoré, pas de waypoints', () => {
+  // ── Case 7: obstacle.id == from.id → ignored ───────────────────────────────
+  it('[case 7] obstacle with id == from.id: ignored, no waypoints', () => {
     const from = mkNode('f7', 0, 0);
     const to = mkNode('t7', 0, 300);
-    // Même id que from ; le label croiserait le chemin si l'obstacle était pris en compte.
+    // Same id as from; the label would cross the path if obstacle was considered.
     const sameAsFrom = mkNode('f7', 0, 150, 40, 40, 20, 80);
     const c = connection(from, to, [sameAsFrom]);
     expect(c.waypoints).toBeUndefined();
   });
 
-  // ── Cas 5b : segment quasi-vertical, start à droite de l'obstacle ───────────
-  it('[cas 5b] segment vertical, start à droite de obs : bypass à droite', () => {
-    // from=(100,0), to=(100,300) ; obs centré à x=80 (lw=80 → lb.x=40, lb.x+lw=120).
-    // x=100 ∈ [40,120] → intersection. start.x=100 >= obs.x=80 → bypass droite.
+  // ── Case 5b: quasi-vertical segment, start to the right of obstacle ───────────
+  it('[case 5b] vertical segment, start right of obs: right bypass', () => {
+    // from=(100,0), to=(100,300); obs centered at x=80 (lw=80 → lb.x=40, lb.x+lw=120).
+    // x=100 ∈ [40,120] → intersection. start.x=100 >= obs.x=80 → right bypass.
     const from = mkNode('f5b', 100, 0);
     const to = mkNode('t5b', 100, 300);
     const obs = mkNode('obs5b', 80, 150, 40, 40, 20, 80);
@@ -143,11 +143,11 @@ describe('connection', () => {
     expect(c.waypoints![0].x).toBeGreaterThan(labelRight);
   });
 
-  // ── Cas 5c : segment quasi-horizontal, obstacle traversé → waypoint au-dessus
-  it('[cas 5c] segment horizontal + obstacle traversé : waypoint au-dessus du label', () => {
-    // from=(0,100) → to=(300,100) ; obs=(150,50) avec labelH=80.
-    // label : y=[76,156], x=[110,190]. Le segment à y≈100 le traverse.
-    // isHorizontal=true → waypoint au-dessus (wp.y < lb.y).
+  // ── Case 5c: quasi-horizontal segment, crossed obstacle → waypoint above
+  it('[case 5c] horizontal segment + crossed obstacle: waypoint above label', () => {
+    // from=(0,100) → to=(300,100); obs=(150,50) with labelH=80.
+    // label: y=[76,156], x=[110,190]. The segment at y≈100 crosses it.
+    // isHorizontal=true → waypoint above (wp.y < lb.y).
     const from = mkNode('f5c', 0, 100);
     const to = mkNode('t5c', 300, 100);
     const obs = mkNode('obs5c', 150, 50, 40, 40, 80, 80);
@@ -156,71 +156,71 @@ describe('connection', () => {
     expect(c.waypoints).toHaveLength(1);
     const labelTop = obs.y + obs.height / 2 + LABEL_GAP; // 76
     expect(c.waypoints![0].y).toBeLessThan(labelTop);
-    // x au niveau de l'entrée dans le label (≈ 110)
+    // x at label entry point (≈ 110)
     expect(c.waypoints![0].x).toBeCloseTo(110, 0);
   });
 
-  // ── Cas 8 : startPortOffset horizontal ────────────────────────────────────
-  it('[cas 8] startPortOffset=10 en horizontal : start.y est décalé', () => {
-    // from=(0,0) → to=(200,0) : chemin horizontal pur, start.y=0 sans offset
+  // ── Case 8: horizontal startPortOffset ────────────────────────────────────
+  it('[case 8] startPortOffset=10 in horizontal: start.y is shifted', () => {
+    // from=(0,0) → to=(200,0): pure horizontal path, start.y=0 without offset
     const from = mkNode('fh', 0, 0);
     const to = mkNode('th', 200, 0);
     const noOffset = connection(from, to);
     const withOffset = connection(from, to, undefined, 10);
     expect(noOffset.start.y).toBeCloseTo(0, 5);
-    // Accroche cardinale Est : start.y = centre (0) + portOffset (10).
+    // East cardinal anchor: start.y = center (0) + portOffset (10).
     expect(withOffset.start.y).toBeCloseTo(10, 5);
   });
 });
 
-// ─── Accroche cardinale (NSEW) ───────────────────────────────────────────────
+// ─── Cardinal anchor (NSEW) ───────────────────────────────────────────────
 
 describe('accroche cardinale', () => {
-  // ── Sélection de face par l'axe dominant ──────────────────────────────────
-  it('axe horizontal dominant : source Est, destination Ouest', () => {
-    // dx=300, dy=80 → |dx| ≥ |dy| → horizontal. Faces opposées E/O à hauteur des
-    // centres (pas de label), pas au point d'intersection oblique.
+  // ── Face selection by dominant axis ──────────────────────────────────
+  it('dominant horizontal axis: source East, destination West', () => {
+    // dx=300, dy=80 → |dx| ≥ |dy| → horizontal. Opposite E/W faces at center height
+    // (no label), not at oblique intersection point.
     const from = mkNode('fh', 0, 0);
     const to = mkNode('th', 300, 80);
     const c = connection(from, to);
-    expect(c.start.x).toBeCloseTo(20, 5); // face Est, sur le bord : 0 + 20
-    expect(c.start.y).toBeCloseTo(0, 5); // face Est → y du centre source
-    expect(c.end.x).toBeCloseTo(280, 5); // face Ouest : 300 - 20
-    expect(c.end.y).toBeCloseTo(80, 5); // face Ouest → y du centre destination
+    expect(c.start.x).toBeCloseTo(20, 5); // East face, on border: 0 + 20
+    expect(c.start.y).toBeCloseTo(0, 5); // East face → y of source center
+    expect(c.end.x).toBeCloseTo(280, 5); // West face: 300 - 20
+    expect(c.end.y).toBeCloseTo(80, 5); // West face → y of destination center
   });
 
-  it('axe vertical dominant : source Nord, destination Sud', () => {
-    // dy=-300, dx=80 → vertical, dy<0 → source Nord, destination Sud.
+  it('dominant vertical axis: source North, destination South', () => {
+    // dy=-300, dx=80 → vertical, dy<0 → source North, destination South.
     const from = mkNode('fv', 0, 0);
     const to = mkNode('tv', 80, -300);
     const c = connection(from, to);
-    expect(c.start.x).toBeCloseTo(0, 5); // face Nord → x du centre source
-    expect(c.start.y).toBeCloseTo(-20, 5); // sur le bord : 0 - 20
+    expect(c.start.x).toBeCloseTo(0, 5); // North face → x of source center
+    expect(c.start.y).toBeCloseTo(-20, 5); // on border: 0 - 20
     expect(c.end.x).toBeCloseTo(80, 5);
-    expect(c.end.y).toBeCloseTo(-300 + 20, 5); // face Sud sans label : -280
+    expect(c.end.y).toBeCloseTo(-300 + 20, 5); // South face without label: -280
   });
 
-  // ── Abaissement latéral quand le nœud a un label (centre de gravité) ──────
-  it('label sous le visuel : le point latéral descend au centre du bloc', () => {
-    // labelH=20 → descente = (LABEL_GAP + labelH)/2 = (6 + 20)/2 = 13.
+  // ── Lateral lowering when node has label (center of gravity) ──────
+  it('label under visual: lateral point lowers to block center', () => {
+    // labelH=20 → descent = (LABEL_GAP + labelH)/2 = (6 + 20)/2 = 13.
     const from = mkNode('fl', 0, 0, 40, 40, 20, 80);
     const to = mkNode('tl', 300, 0);
     const c = connection(from, to);
     expect(c.start.y).toBeCloseTo(13, 5);
-    expect(c.end.y).toBeCloseTo(0, 5); // destination sans label : reste centrée
+    expect(c.end.y).toBeCloseTo(0, 5); // destination without label: remains centered
   });
 
-  // ── borderOutset : l'accroche se pose sur le contour coloré (pastille) ─────
-  it('borderOutset pousse le point Est/Ouest jusqu’au contour coloré', () => {
+  // ── borderOutset: anchor lands on colored contour (badge) ─────
+  it('borderOutset pushes East/West point to colored contour', () => {
     const from = mkNode('fo', 0, 0, 40, 40, 0, undefined, 5);
     const to = mkNode('to', 300, 0);
     const c = connection(from, to);
-    expect(c.start.x).toBeCloseTo(25, 5); // 0 + 20 + 5 (outset), sur la pastille
+    expect(c.start.x).toBeCloseTo(25, 5); // 0 + 20 + 5 (outset), on badge
   });
 
-  // ── l'accroche touche le bord à toute échelle (indépendante de scale) ──────
-  it('l’accroche touche le bord quelle que soit l’échelle (scale)', () => {
-    // scale ne décale PAS l'accroche : la flèche touche le bord = 0 + halfW(20).
+  // ── anchor touches border at any scale (scale-independent) ──────
+  it('anchor touches border at any scale', () => {
+    // scale does NOT shift anchor: arrow touches border = 0 + halfW(20).
     const big = connection(
       mkNode('fs', 0, 0, 40, 40, 0, undefined, undefined, 2.5),
       mkNode('ts', 300, 0, 40, 40, 0, undefined, undefined, 2.5)
@@ -233,22 +233,22 @@ describe('accroche cardinale', () => {
     expect(small.start.x).toBeCloseTo(20, 5);
   });
 
-  // ── portOffset sur une face verticale décale x ────────────────────────────
-  it('portOffset sur une face Nord/Sud décale la coordonnée x', () => {
+  // ── portOffset on vertical face shifts x ────────────────────────────
+  it('portOffset on North/South face shifts x coordinate', () => {
     const from = mkNode('fpv', 0, 0);
-    const to = mkNode('tpv', 0, 300); // vertical → source Sud
+    const to = mkNode('tpv', 0, 300); // vertical → source South
     const c = connection(from, to, undefined, 10);
-    expect(c.start.x).toBeCloseTo(10, 5); // face Sud → x = centre (0) + portOffset
-    expect(c.start.y).toBeCloseTo(20, 5); // sur le bord : 0 + 20, sans label
+    expect(c.start.x).toBeCloseTo(10, 5); // South face → x = center (0) + portOffset
+    expect(c.start.y).toBeCloseTo(20, 5); // on border: 0 + 20, no label
   });
 
-  // ── axis imposé : la face suit le flux, pas l'axe pixel dominant ──────────
-  it('axis horizontal forcé : faces E/O même si surtout séparés verticalement', () => {
+  // ── imposed axis: face follows flow, not dominant pixel axis ──────────
+  it('forced horizontal axis: E/W faces even if mostly vertically separated', () => {
     const from = mkNode('fa', 0, 0);
     const to = mkNode('ta', 200, 300); // |dy| > |dx| en pixels
-    // Sans axis : pixel dominant → face Sud.
+    // Without axis: dominant pixel → South face.
     expect(connection(from, to).start.y).toBeGreaterThan(from.y);
-    // Avec axis horizontal : faces Est/Ouest, sur le bord.
+    // With horizontal axis: East/West faces, on border.
     const forced = connection(
       from,
       to,
@@ -258,32 +258,32 @@ describe('accroche cardinale', () => {
       'bezier',
       'horizontal'
     );
-    expect(forced.start.x).toBeCloseTo(20, 5); // Est, sur le bord : 0 + 20
+    expect(forced.start.x).toBeCloseTo(20, 5); // East, on border: 0 + 20
     expect(forced.start.y).toBeCloseTo(0, 5);
-    expect(forced.end.x).toBeCloseTo(180, 5); // Ouest : 200 - 20
+    expect(forced.end.x).toBeCloseTo(180, 5); // West: 200 - 20
     expect(forced.end.y).toBeCloseTo(300, 5);
-    // Le tracé PART horizontalement : le 1er point reste ~à la hauteur du départ
-    // (la poignée de Bézier suit la normale à la face, pas la corde verticale).
+    // Path STARTS horizontally: 1st point stays ~at start height
+    // (Bezier handle follows face normal, not vertical chord).
     expect(forced.waypoints![0].y).toBeLessThan(10);
   });
 
-  it('axis vertical forcé : faces N/S même si surtout séparés horizontalement', () => {
+  it('forced vertical axis: N/S faces even if mostly horizontally separated', () => {
     const from = mkNode('fb', 0, 0);
     const to = mkNode('tb', 300, 200); // |dx| > |dy| en pixels
     const forced = connection(from, to, undefined, 0, 0, 'bezier', 'vertical');
-    expect(forced.start.y).toBeCloseTo(20, 5); // Sud, sur le bord : 0 + 20
+    expect(forced.start.y).toBeCloseTo(20, 5); // South, on border: 0 + 20
     expect(forced.start.x).toBeCloseTo(0, 5);
-    expect(forced.end.y).toBeCloseTo(180, 5); // Nord : 200 - 20
-    // Le tracé part verticalement : 1er point ~à l'abscisse du départ.
+    expect(forced.end.y).toBeCloseTo(180, 5); // North: 200 - 20
+    // Path starts vertically: 1st point ~at start x-coordinate.
     expect(forced.waypoints![0].x).toBeLessThan(10);
   });
 });
 
-// ─── labelBounds (testée via les effets observables sur connection) ──────────
+// ─── labelBounds (tested via observable effects on connection) ──────────
 
 describe('labelBounds', () => {
-  // ── Cas 1 : labelH=0 → même résultat que sans label ───────────────────────
-  it('[cas 1] sans labelH (labelH=0) : start identique au noeud sans label', () => {
+  // ── Case 1: labelH=0 → same result as without label ───────────────────────
+  it('[case 1] without labelH (labelH=0): start identical to node without label', () => {
     const withZero = mkNode('fz', 0, 0, 40, 40, 0);
     const withNone = mkNode('fz', 0, 0, 40, 40);
     const to = mkNode('tz', 0, 300);
@@ -293,87 +293,87 @@ describe('labelBounds', () => {
     expect(c1.start.y).toBeCloseTo(c2.start.y, 5);
   });
 
-  // ── Cas 2 : labelH=20, labelW=80 → rect centré sous le nœud ──────────────
-  it('[cas 2] labelH=20, labelW=80 → start.y = bas_nœud + LABEL_GAP + labelH + NODE_GAP', () => {
+  // ── Case 2: labelH=20, labelW=80 → rect centered under node ──────────────
+  it('[case 2] labelH=20, labelW=80 → start.y = node_bottom + LABEL_GAP + labelH + NODE_GAP', () => {
     const labelH = 20;
     const from = mkNode('f2', 0, 0, 40, 40, labelH, 80);
     const to = mkNode('t2', 0, 300);
     const c = connection(from, to);
-    // Accroche au bas du label, sur le bord (pas de marge) : 0+20+6+20 = 46.
+    // Anchor to label bottom, on border (no margin): 0+20+6+20 = 46.
     const expectedY = from.y + from.height / 2 + LABEL_GAP + labelH;
     expect(c.start.y).toBeCloseTo(expectedY, 5);
   });
 
-  // ── Cas 3 : sans labelW → lw = max(width×1.5, 60) ─────────────────────────
-  it('[cas 3] sans labelW → largeur effective = max(width×1.5, 60)', () => {
-    // Chemin vertical à x=6. Obstacle à x=50, w=60.
-    // lw par défaut = max(90,60)=90 → rect.x=5  → x=6 ∈ [5,95] : intersection.
-    // lw explicite = 60            → rect.x=20 → x=6 ∉ [20,80] : pas d'intersection.
+  // ── Case 3: without labelW → lw = max(width×1.5, 60) ─────────────────────────
+  it('[case 3] without labelW → effective width = max(width×1.5, 60)', () => {
+    // Vertical path at x=6. Obstacle at x=50, w=60.
+    // default lw = max(90,60)=90 → rect.x=5  → x=6 ∈ [5,95] : intersection.
+    // explicit lw = 60           → rect.x=20 → x=6 ∉ [20,80] : no intersection.
     const from = mkNode('f3', 6, 0);
     const to = mkNode('t3', 6, 300);
-    const obsDefault = mkNode('obs3d', 50, 150, 60, 40, 20); // pas de labelW → lw=90
+    const obsDefault = mkNode('obs3d', 50, 150, 60, 40, 20); // no labelW → lw=90
     const obsNarrow = mkNode('obs3n', 50, 150, 60, 40, 20, 60); // labelW=60 → lw=60
 
     const cDefault = connection(from, to, [obsDefault], 0, 0, 'straight');
     const cNarrow = connection(from, to, [obsNarrow], 0, 0, 'straight');
 
-    expect(cDefault.waypoints).toBeDefined(); // lw=90 provoque l'intersection
-    expect(cNarrow.waypoints).toBeUndefined(); // lw=60 ne la provoque pas
+    expect(cDefault.waypoints).toBeDefined(); // lw=90 causes intersection
+    expect(cNarrow.waypoints).toBeUndefined(); // lw=60 does not cause it
   });
 });
 
-// ─── labelAnchor (décalage du label médian hors d'un nœud intercalé) ────────
+// ─── labelAnchor (shifting median label away from interleaved node) ────────
 
 describe('labelAnchor', () => {
-  // ── Trait horizontal A→C enjambant B au centre → label remonté au-dessus ──
-  it('horizontal : milieu sur un nœud intercalé → ancre au-dessus du nœud', () => {
+  // ── Horizontal line A→C spanning over B at center → label moved above ──
+  it('horizontal: midpoint on an interleaved node → anchor above node', () => {
     const a = mkNode('a', 0, 0);
     const c = mkNode('c', 400, 0);
-    const b = mkNode('b', 200, 0); // pile au milieu du trajet
+    const b = mkNode('b', 200, 0); // right in the middle of path
     const conn = connection(a, c, [a, b, c]);
     expect(conn.labelAnchor).toBeDefined();
-    // x reste centré sur le milieu, y remonte au-dessus du visuel de B.
+    // x stays centered on midpoint, y moves above B visual.
     expect(conn.labelAnchor!.x).toBeCloseTo(200, 0);
     expect(conn.labelAnchor!.y).toBeCloseTo(0 - 20 - NODE_GAP, 5); // -34
-    expect(conn.labelAnchor!.y).toBeLessThan(b.y - b.height / 2); // dégagé du haut
+    expect(conn.labelAnchor!.y).toBeLessThan(b.y - b.height / 2); // cleared from top
   });
 
-  // ── Trait vertical A→C enjambant B au centre → label décalé latéralement ──
-  it('vertical : milieu sur un nœud intercalé → ancre décalée sur le côté', () => {
+  // ── Vertical line A→C spanning over B at center → label shifted laterally ──
+  it('vertical: midpoint on an interleaved node → anchor shifted to side', () => {
     const a = mkNode('a', 0, 0);
     const c = mkNode('c', 0, 400);
     const b = mkNode('b', 0, 200);
     const conn = connection(a, c, [a, b, c]);
     expect(conn.labelAnchor).toBeDefined();
-    expect(conn.labelAnchor!.y).toBeCloseTo(200, 0); // reste à hauteur du milieu
-    // centre du label hors du visuel de B (au moins demi-largeur + marge).
+    expect(conn.labelAnchor!.y).toBeCloseTo(200, 0); // stays at midpoint height
+    // label center outside B visual (at least half-width + margin).
     expect(Math.abs(conn.labelAnchor!.x - b.x)).toBeGreaterThanOrEqual(
       b.width / 2 + NODE_GAP
     );
   });
 
-  // ── Milieu dégagé → pas d'ancre (le rendu retombe sur le milieu) ──────────
-  it('milieu dégagé : labelAnchor est undefined', () => {
+  // ── Clear midpoint → no anchor (render falls back to midpoint) ──────────
+  it('clear midpoint: labelAnchor is undefined', () => {
     const a = mkNode('a', 0, 0);
     const c = mkNode('c', 400, 0);
-    const farBelow = mkNode('b', 200, 300); // loin sous le trajet
+    const farBelow = mkNode('b', 200, 300); // far below path
     expect(connection(a, c, [a, farBelow, c]).labelAnchor).toBeUndefined();
-    expect(connection(a, c).labelAnchor).toBeUndefined(); // sans obstacles
+    expect(connection(a, c).labelAnchor).toBeUndefined(); // no obstacles
   });
 
-  // ── Obstacle dont id == from.id : ignoré (comme pour le routage du trait) ──
-  it('obstacle dont id == from.id : ignoré, pas de décalage', () => {
+  // ── Obstacle with id == from.id: ignored (like for path routing) ──
+  it('obstacle with id == from.id: ignored, no shift', () => {
     const a = mkNode('a', 0, 0);
     const c = mkNode('c', 400, 0);
-    const ghost = mkNode('a', 200, 0); // même id que `from`, pile au milieu
+    const ghost = mkNode('a', 200, 0); // same id as `from`, right in the middle
     expect(connection(a, c, [ghost]).labelAnchor).toBeUndefined();
   });
 });
 
-// ─── pointOnSegment (test existant) ─────────────────────────────────────────
+// ─── pointOnSegment (existing test) ─────────────────────────────────────────
 
 describe('pointOnSegment', () => {
-  it('interpole linéairement', () => {
+  it('interpolates linearly', () => {
     const p = pointOnSegment({ x: 0, y: 0 }, { x: 100, y: 50 }, 0.5);
     expect(p).toEqual({ x: 50, y: 25 });
   });
@@ -382,42 +382,42 @@ describe('pointOnSegment', () => {
 // ─── pathTip ────────────────────────────────────────────────────────────────
 
 describe('pathTip', () => {
-  // ── Cas 9 : sans waypoints, t=0.5 → milieu exact ─────────────────────────
-  it('[cas 9] sans waypoints, t=0.5 → milieu exact entre start et end', () => {
+  // ── Case 9: without waypoints, t=0.5 → exact midpoint ─────────────────────────
+  it('[case 9] without waypoints, t=0.5 → exact midpoint between start and end', () => {
     const conn = makeConn({ x: 0, y: 0 }, { x: 100, y: 50 });
     const tip = pathTip(conn, 0.5);
     expect(tip.x).toBeCloseTo(50, 5);
     expect(tip.y).toBeCloseTo(25, 5);
   });
 
-  // ── Cas 10 : sans waypoints, t=0 → start ─────────────────────────────────
-  it('[cas 10] sans waypoints, t=0 → renvoie start', () => {
+  // ── Case 10: without waypoints, t=0 → start ─────────────────────────────────
+  it('[case 10] without waypoints, t=0 → returns start', () => {
     const conn = makeConn({ x: 10, y: 20 }, { x: 100, y: 200 });
     const tip = pathTip(conn, 0);
     expect(tip.x).toBeCloseTo(10, 5);
     expect(tip.y).toBeCloseTo(20, 5);
   });
 
-  // ── Cas 11 : sans waypoints, t=1 → end ───────────────────────────────────
-  it('[cas 11] sans waypoints, t=1 → renvoie end', () => {
+  // ── Case 11: without waypoints, t=1 → end ───────────────────────────────────
+  it('[case 11] without waypoints, t=1 → returns end', () => {
     const conn = makeConn({ x: 10, y: 20 }, { x: 100, y: 200 });
     const tip = pathTip(conn, 1);
     expect(tip.x).toBeCloseTo(100, 5);
     expect(tip.y).toBeCloseTo(200, 5);
   });
 
-  // ── Cas 12 : 1 waypoint, t=0.5 → hors de la droite start-end ─────────────
-  it('[cas 12] avec 1 waypoint, t=0.5 → point NOT sur la droite start-end', () => {
-    // start=(0,0) → wp=(50,50) → end=(100,0) : t=0.5 tombe exactement au wp
+  // ── Case 12: 1 waypoint, t=0.5 → off the start-end line ─────────────
+  it('[case 12] with 1 waypoint, t=0.5 → point NOT on start-end line', () => {
+    // start=(0,0) → wp=(50,50) → end=(100,0): t=0.5 falls exactly on wp
     const conn = makeConn({ x: 0, y: 0 }, { x: 100, y: 0 }, [{ x: 50, y: 50 }]);
     const tip = pathTip(conn, 0.5);
-    expect(tip.y).not.toBeCloseTo(0, 1); // pas sur la ligne y=0
+    expect(tip.y).not.toBeCloseTo(0, 1); // not on line y=0
     expect(tip.x).toBeCloseTo(50, 5);
     expect(tip.y).toBeCloseTo(50, 5);
   });
 
-  // ── Cas 13 : connexion dégénérée (start == end) ───────────────────────────
-  it('[cas 13] connexion dégénérée (start == end) : ne plante pas, renvoie end', () => {
+  // ── Case 13: degenerate connection (start == end) ───────────────────────────
+  it('[case 13] degenerate connection (start == end): does not crash, returns end', () => {
     const conn = makeConn({ x: 50, y: 50 }, { x: 50, y: 50 });
     expect(() => pathTip(conn, 0.5)).not.toThrow();
     const tip = pathTip(conn, 0.5);
@@ -429,8 +429,8 @@ describe('pathTip', () => {
 // ─── visiblePath ─────────────────────────────────────────────────────────────
 
 describe('visiblePath', () => {
-  // ── Cas 14 : sans waypoints, t=0.5 → [start, milieu] ────────────────────
-  it('[cas 14] sans waypoints, t=0.5 → [start, milieu]', () => {
+  // ── Case 14: without waypoints, t=0.5 → [start, midpoint] ────────────────────
+  it('[case 14] without waypoints, t=0.5 → [start, midpoint]', () => {
     const conn = makeConn({ x: 0, y: 0 }, { x: 100, y: 100 });
     const pts = visiblePath(conn, 0.5);
     expect(pts).toHaveLength(2);
@@ -439,8 +439,8 @@ describe('visiblePath', () => {
     expect(pts[1].y).toBeCloseTo(50, 5);
   });
 
-  // ── Cas 15 : 1 waypoint, t=0.3 (avant le wp) → [start, point_avant_wp] ──
-  it('[cas 15] avec 1 waypoint, t=0.3 (avant wp) → 2 points', () => {
+  // ── Case 15: 1 waypoint, t=0.3 (before wp) → [start, point_before_wp] ──
+  it('[case 15] with 1 waypoint, t=0.3 (before wp) → 2 points', () => {
     // start=(0,0) → wp=(100,100) → end=(200,0) ; total=200√2
     // t=0.3 → dist=60√2 < seg0=100√2 → segT=0.6 → point=(60,60)
     const conn = makeConn({ x: 0, y: 0 }, { x: 200, y: 0 }, [
@@ -453,8 +453,8 @@ describe('visiblePath', () => {
     expect(pts[1].y).toBeCloseTo(60, 5);
   });
 
-  // ── Cas 16 : 1 waypoint, t=0.9 (après le wp) → [start, wp, point_apres] ─
-  it('[cas 16] avec 1 waypoint, t=0.9 (après wp) → 3 points', () => {
+  // ── Case 16: 1 waypoint, t=0.9 (after wp) → [start, wp, point_after] ─
+  it('[case 16] with 1 waypoint, t=0.9 (after wp) → 3 points', () => {
     // t=0.9 → dist=180√2 > seg0=100√2 → dans seg1, segT=0.8 → point=(180,20)
     const conn = makeConn({ x: 0, y: 0 }, { x: 200, y: 0 }, [
       { x: 100, y: 100 },

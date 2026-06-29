@@ -3,28 +3,28 @@ import type { GeometryMap } from './geometry';
 
 export const PLACEMENT_PAD = 6;
 
-/** Espacement (px) entre le bas du visuel et le label — reflète le gap CSS `.rdfa-node`. */
+/** Spacing (px) between the bottom of the visual and the label — reflects the `.rdfa-node` CSS gap. */
 const LABEL_GAP = 6;
 
-/** Demi-taille (px) estimée d'un nœud-voisin (pictogramme) pour le calcul de place. */
+/** Estimated half-size (px) of a neighbor node (pictogram) for layout calculation. */
 const NEIGHBOR_HALF = 28;
 
-/** Marge (px) entre un panneau et la boîte d'un voisin, dans le calcul de place. */
+/** Margin (px) between a panel and a neighbor's box, in layout calculation. */
 const CONTENT_NEIGHBOR_GAP = 22;
 
-/** Marge absolue minimale (px, espace de conception) entre le bord d'un panneau
- *  set_content et le bord de l'icône voisine — garantit qu'un paquet reste visible
- *  même sur les miniatures où CONTENT_NEIGHBOR_GAP × scale devient trop faible. */
+/** Absolute minimum margin (px, design space) between a set_content panel's edge
+ *  and a neighboring icon's edge — guarantees that a packet remains visible
+ *  even on thumbnails where CONTENT_NEIGHBOR_GAP × scale becomes too small. */
 const MIN_PACKET_VISIBLE_GAP = 40;
 
-/** Taille mini (px) d'un panneau : en deçà on ne rétrécit plus (cas extrême). */
+/** Minimum panel size (px): below this we stop shrinking (edge case). */
 const MIN_CONTENT_BOX = 48;
 
 /**
- * Positionne chaque nœud à sa place de LAYOUT, simplement bornée pour qu'il ne
- * sorte pas du canevas (label inclus). Les nœuds ne sont JAMAIS écartés les uns
- * des autres : un set_content qui manque de place RÉTRÉCIT (cf. computeContentLimits)
- * au lieu de pousser ses voisins.
+ * Positions each node at its LAYOUT place, simply clamped so it doesn't
+ * go outside the canvas (label included). Nodes are NEVER pushed apart
+ * from each other: a set_content lacking space SHRINKS (see computeContentLimits)
+ * instead of pushing its neighbors.
  */
 export function computePlacements(
   layout: Record<string, { cx: number; cy: number }>,
@@ -43,8 +43,8 @@ export function computePlacements(
     }
     const hwr = (g.width / 2 + pad) / width;
     const halfH = g.height / 2;
-    // Le label vit SOUS le visuel : sa hauteur élargit la borne basse, sinon un
-    // nœud près du bord inférieur verrait son texte clippé par le Stage.
+    // The label lives UNDER the visual: its height expands the bottom bound, otherwise a
+    // node near the bottom edge would have its text clipped by the Stage.
     const labelExtra = g.labelH ? LABEL_GAP + g.labelH : 0;
     const topR = (halfH + pad) / height;
     const botR = (halfH + labelExtra + pad) / height;
@@ -62,18 +62,18 @@ export interface ContentLimit {
 }
 
 /**
- * Calcule, pour CHAQUE nœud, la taille de panneau (`set_content`) maximale qui
- * tient à sa place SANS chevaucher ses voisins. Comme les nœuds ne bougent pas,
- * c'est le SEUL moyen d'éviter qu'un panneau en recouvre un autre : un panneau
- * trop grand doit RÉTRÉCIR (police/contenu) pour respecter cette borne.
+ * Computes, for EACH node, the maximum panel (`set_content`) size that
+ * fits in its place WITHOUT overlapping its neighbors. Since nodes don't move,
+ * this is the ONLY way to prevent a panel from covering another: a panel
+ * that is too large must SHRINK (font/content) to respect this limit.
  *
- * PRÉDICTIF : on considère TOUS les nœuds de la spec (positions connues d'avance),
- * même ceux encore masqués — ainsi le panneau est déjà assez petit AVANT que ses
- * voisins n'apparaissent, donc il ne peut jamais les recouvrir.
+ * PREDICTIVE: we consider ALL nodes in the spec (positions known in advance),
+ * even those currently hidden — thus the panel is already small enough BEFORE its
+ * neighbors appear, so it can never cover them.
  *
- * Le voisin le plus proche sur l'axe horizontal borne la largeur, le plus proche
- * sur l'axe vertical borne la hauteur. Bornes aussi par les rebords du lecteur et
- * par les plafonds globaux `maxW`/`maxH`.
+ * The closest neighbor on the horizontal axis limits the width, the closest
+ * on the vertical axis limits the height. Also bounded by the player's edges and
+ * by global ceilings `maxW`/`maxH`.
  */
 export function computeContentLimits(
   layout: Record<string, { cx: number; cy: number }>,
@@ -100,10 +100,10 @@ export function computeContentLimits(
       if (oid === id) continue;
       const dx = Math.abs(nx - layout[oid].cx * width);
       const dy = Math.abs(ny - layout[oid].cy * height);
-      // Le voisin contraint l'axe sur lequel il est le plus aligné.
-      // Le gap proportionnel à l'échelle garantit la proportionnalité sur les grands
-      // lecteurs ; le plancher absolu assure qu'un paquet reste toujours visible
-      // sur les miniatures où scale est faible et rendrait le gap quasi nul.
+      // The neighbor constrains the axis it is most aligned with.
+      // The gap proportional to scale guarantees proportionality on large
+      // players; the absolute floor ensures a packet always remains visible
+      // on thumbnails where scale is small and would make the gap almost zero.
       const gap =
         half + Math.max(CONTENT_NEIGHBOR_GAP * scale, MIN_PACKET_VISIBLE_GAP);
       if (dx >= dy) halfW = Math.min(halfW, dx - gap);

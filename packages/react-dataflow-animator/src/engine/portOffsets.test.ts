@@ -13,7 +13,7 @@ const BASE_SPEC: DataFlowSpec = {
 };
 
 describe('collectArrowConnections — moves', () => {
-  it('collecte les moves bidirectionnels comme deux entrées distinctes', () => {
+  it('collects bidirectional moves as two distinct entries', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       packets: [{ id: 'p', kind: 'http_packet' }],
@@ -28,7 +28,7 @@ describe('collectArrowConnections — moves', () => {
     expect(result.find((c) => c.from === 'B' && c.to === 'A')).toBeDefined();
   });
 
-  it('deux moves opposés reçoivent des offsets opposés', () => {
+  it('two opposing moves receive opposing offsets', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       packets: [{ id: 'p', kind: 'http_packet' }],
@@ -47,13 +47,13 @@ describe('collectArrowConnections — moves', () => {
     const ba = connections.find((c) => c.from === 'B' && c.to === 'A')!;
     expect(offsets[ab.key].start).not.toBeCloseTo(0);
     expect(offsets[ba.key].start).not.toBeCloseTo(0);
-    // Opposés symétriques autour de 0
+    // Symmetrical opposites around 0
     expect(offsets[ab.key].start + offsets[ba.key].start).toBeCloseTo(0);
   });
 
-  it('une arrow action A→B avec une connexion statique A→B ne crée pas de 2e entrée', () => {
-    // Cas central du bug e4aa27b : static A→B + arrow A→B gonflaient la paire
-    // à 2 entrées → les deux recevaient un offset ±15 au lieu de 0.
+  it('an arrow action A→B with a static connection A→B does not create a 2nd entry', () => {
+    // Central case of bug e4aa27b: static A→B + arrow A→B inflated the pair
+    // to 2 entries → both received an offset ±15 instead of 0.
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       connections: [{ from: 'A', to: 'B' }],
@@ -69,7 +69,7 @@ describe('collectArrowConnections — moves', () => {
     expect(offsets[connections[0].key]).toEqual({ start: 0, end: 0 });
   });
 
-  it("deux arrows A→B sans connexion statique ne créent qu'une seule entrée", () => {
+  it('two arrows A→B without a static connection create only one entry', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       timeline: [
@@ -86,9 +86,9 @@ describe('collectArrowConnections — moves', () => {
     expect(offsets[abEntries[0].key]).toEqual({ start: 0, end: 0 });
   });
 
-  it('un move en sens inverse ne décale pas la connexion statique existante', () => {
-    // Régression e4aa27b : move B→A créait une 2e entrée dans la paire A-B,
-    // ce qui décalait la connexion statique A→B de ±PORT_SPACING/2.
+  it('a move in reverse direction does not shift the existing static connection', () => {
+    // Regression e4aa27b: move B→A created a 2nd entry in the A-B pair,
+    // which shifted the static connection A→B by ±PORT_SPACING/2.
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       connections: [{ from: 'A', to: 'B' }],
@@ -96,7 +96,7 @@ describe('collectArrowConnections — moves', () => {
       timeline: [{ type: 'move', object: 'p', from: 'B', to: 'A' }],
     };
     const connections = collectArrowConnections(spec);
-    // La paire A-B ne doit contenir qu'une seule entrée (la connexion statique).
+    // The A-B pair must contain only one entry (the static connection).
     const abPair = connections.filter(
       (c) =>
         (c.from === 'A' && c.to === 'B') || (c.from === 'B' && c.to === 'A')
@@ -110,11 +110,11 @@ describe('collectArrowConnections — moves', () => {
       B: { cx: 0.8, cy: 0.5 },
     };
     const offsets = computePortOffsets(connections, layout);
-    // Une seule entrée → offset doit être 0 (connexion centrée).
+    // Only one entry → offset must be 0 (centered connection).
     expect(offsets[abPair[0].key]).toEqual({ start: 0, end: 0 });
   });
 
-  it("un move et une arrow sur le même trajet ne créent qu'une seule entrée", () => {
+  it('a move and an arrow on the same path create only one entry', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       packets: [{ id: 'p', kind: 'http_packet' }],
@@ -124,13 +124,13 @@ describe('collectArrowConnections — moves', () => {
       ],
     };
     const result = collectArrowConnections(spec);
-    // L'arrow couvre A→B ; le move ne doit pas ajouter d'entrée supplémentaire
+    // The arrow covers A→B; the move should not add an extra entry
     const abEntries = result.filter((c) => c.from === 'A' && c.to === 'B');
     expect(abEntries).toHaveLength(1);
     expect(abEntries[0].key).toBe('arr1');
   });
 
-  it('un move et une arrow sur le même trajet partagent le même offset', () => {
+  it('a move and an arrow on the same path share the same offset', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       packets: [{ id: 'p', kind: 'http_packet' }],
@@ -145,14 +145,14 @@ describe('collectArrowConnections — moves', () => {
       B: { cx: 0.8, cy: 0.5 },
     };
     const offsets = computePortOffsets(connections, layout);
-    // Une seule connexion A→B → offset 0
+    // Only one connection A→B → offset 0
     expect(offsets['arr1']).toEqual({ start: 0, end: 0 });
-    // Le move utilise 'arr1' via le fallback from/to de Stage.tsx
-    // (pas d'entrée séparée dans portOffsets pour le move)
+    // The move uses 'arr1' via the fallback from/to of Stage.tsx
+    // (no separate entry in portOffsets for the move)
     expect(offsets).not.toHaveProperty('A|B|move_1');
   });
 
-  it('collecte les moves dans les blocs parallel', () => {
+  it('collects moves in parallel blocks', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       packets: [{ id: 'p', kind: 'http_packet' }],
@@ -174,12 +174,12 @@ describe('collectArrowConnections — moves', () => {
 });
 
 describe('collectArrowConnections', () => {
-  it('déduplique les connexions par clé explicite', () => {
+  it('deduplicates connections by explicit key', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       connections: [
         { id: 'same-key', from: 'A', to: 'B' },
-        { id: 'same-key', from: 'A', to: 'C' }, // doublon de clé → ignoré
+        { id: 'same-key', from: 'A', to: 'C' }, // key duplicate → ignored
       ],
     };
     const result = collectArrowConnections(spec);
@@ -187,7 +187,7 @@ describe('collectArrowConnections', () => {
     expect(result[0]).toEqual({ key: 'same-key', from: 'A', to: 'B' });
   });
 
-  it('parcourt récursivement les actions parallel', () => {
+  it('recursively traverses parallel actions', () => {
     const spec: DataFlowSpec = {
       ...BASE_SPEC,
       timeline: [
@@ -207,7 +207,7 @@ describe('collectArrowConnections', () => {
 });
 
 describe('computePortOffsets', () => {
-  it('1 seule connexion → offsets { start: 0, end: 0 }', () => {
+  it('1 single connection → offsets { start: 0, end: 0 }', () => {
     const connections = [{ key: 'k1', from: 'A', to: 'B' }];
     const layout = {
       A: { cx: 0.2, cy: 0.5 },
@@ -217,7 +217,7 @@ describe('computePortOffsets', () => {
     expect(result['k1']).toEqual({ start: 0, end: 0 });
   });
 
-  it('2 connexions A→B sur la même paire → offsets opposés et symétriques', () => {
+  it('2 connections A→B on the same pair → opposing and symmetrical offsets', () => {
     const connections = [
       { key: 'k1', from: 'A', to: 'B' },
       { key: 'k2', from: 'A', to: 'B' },
@@ -230,35 +230,35 @@ describe('computePortOffsets', () => {
     const half = PORT_SPACING / 2;
     expect(result['k1'].start).toBeCloseTo(-half);
     expect(result['k2'].start).toBeCloseTo(+half);
-    // Les offsets de départ et d'arrivée sont symétriques (même axe)
+    // Start and end offsets are symmetrical (same axis)
     expect(result['k1'].start).toBeCloseTo(result['k1'].end);
     expect(result['k2'].start).toBeCloseTo(result['k2'].end);
-    // Les deux sont symétriques autour de 0
+    // Both are symmetrical around 0
     expect(result['k1'].start + result['k2'].start).toBeCloseTo(0);
   });
 
-  it('2 paires A→B et A→C du même côté RIGHT → fanOut différent pour chaque paire', () => {
-    // A à gauche, B et C à droite (côté RIGHT de A) mais à des hauteurs différentes
+  it('2 pairs A→B and A→C on the same RIGHT side → different fanOut for each pair', () => {
+    // A on the left, B and C on the right (RIGHT side of A) but at different heights
     const connections = [
       { key: 'ab', from: 'A', to: 'B' },
       { key: 'ac', from: 'A', to: 'C' },
     ];
     const layout = {
       A: { cx: 0.2, cy: 0.5 },
-      B: { cx: 0.8, cy: 0.3 }, // plus haut
-      C: { cx: 0.8, cy: 0.7 }, // plus bas
+      B: { cx: 0.8, cy: 0.3 }, // higher
+      C: { cx: 0.8, cy: 0.7 }, // lower
     };
     const result = computePortOffsets(connections, layout);
-    // Les deux paires partagent la face A|RIGHT → fan-out distinct
+    // Both pairs share the A|RIGHT face → distinct fan-out
     expect(result['ab'].start).not.toBeCloseTo(result['ac'].start);
   });
 
-  it('circular : l’aspect départage l’axe dominant (pixels vs ratios)', () => {
-    // Sans axe de flux (circular), l'orientation reste l'axe dominant en pixels.
-    // A→B : dx=0.3, dy=0.4 → vertical en ratios mais |0.3×3|=0.9>0.4 en pixels.
-    // A→C : dx=0.3, dy=-0.2 → horizontal dans les deux cas (face A|RIGHT).
-    // aspect=3 : A→B rejoint A→C sur A|RIGHT → fan-out → ac.start ≠ 0.
-    // aspect=1 : A→B passe sur A|BOTTOM → ac seul sur A|RIGHT → ac.start = 0.
+  it('circular: aspect ratio determines dominant axis (pixels vs ratios)', () => {
+    // Without flow axis (circular), the orientation remains the dominant axis in pixels.
+    // A→B: dx=0.3, dy=0.4 → vertical in ratios but |0.3×3|=0.9>0.4 in pixels.
+    // A→C: dx=0.3, dy=-0.2 → horizontal in both cases (A|RIGHT face).
+    // aspect=3: A→B joins A→C on A|RIGHT → fan-out → ac.start ≠ 0.
+    // aspect=1: A→B moves to A|BOTTOM → ac alone on A|RIGHT → ac.start = 0.
     const connections = [
       { key: 'ab1', from: 'A', to: 'B' },
       { key: 'ab2', from: 'A', to: 'B' },
@@ -281,19 +281,19 @@ describe('computePortOffsets', () => {
     expect(withoutAspect['ac'].start).toBeCloseTo(0);
   });
 
-  it('flux left-to-right : l’orientation suit le flux, pas l’aspect', () => {
-    // A en lane 1, B et C en lane 2 (cx=0.8) de part et d'autre : connexions
-    // INTER-lane → horizontales (faces A|RIGHT) quel que soit l'aspect. Les deux
-    // paires partagent donc la face → fan-out distinct, à tout aspect (≠ ancien
-    // comportement où un Stage portrait basculait A→B en vertical).
+  it('left-to-right flow: orientation follows flow, not aspect', () => {
+    // A in lane 1, B and C in lane 2 (cx=0.8) on either side: INTER-lane
+    // connections → horizontal (A|RIGHT faces) regardless of aspect. Both
+    // pairs share the face → distinct fan-out, at any aspect (≠ old
+    // behavior where a portrait Stage switched A→B to vertical).
     const connections = [
       { key: 'ab', from: 'A', to: 'B' },
       { key: 'ac', from: 'A', to: 'C' },
     ];
     const layout = {
       A: { cx: 0.2, cy: 0.5 },
-      B: { cx: 0.8, cy: 0.95 }, // très bas → dy ≫ dx en ratios
-      C: { cx: 0.8, cy: 0.05 }, // très haut
+      B: { cx: 0.8, cy: 0.95 }, // very low → dy ≫ dx in ratios
+      C: { cx: 0.8, cy: 0.05 }, // very high
     };
     for (const aspect of [0.3, 1, 3]) {
       const r = computePortOffsets(
@@ -306,9 +306,9 @@ describe('computePortOffsets', () => {
     }
   });
 
-  it('flux left-to-right : deux nœuds d’une même lane (même cx) → axe vertical', () => {
-    // A et B partagent cx=0.5 (empilés) → connexion INTRA-lane → verticale :
-    // faces A|BOTTOM / B|TOP. Une 2e paire A→B vérifie l'écartement sur cet axe.
+  it('left-to-right flow: two nodes in same lane (same cx) → vertical axis', () => {
+    // A and B share cx=0.5 (stacked) → INTRA-lane connection → vertical:
+    // faces A|BOTTOM / B|TOP. A 2nd pair A→B verifies spreading on this axis.
     const connections = [
       { key: 'ab1', from: 'A', to: 'B' },
       { key: 'ab2', from: 'A', to: 'B' },
@@ -318,12 +318,12 @@ describe('computePortOffsets', () => {
       B: { cx: 0.5, cy: 0.8 },
     };
     const r = computePortOffsets(connections, layout, 1.6, 'left-to-right');
-    // Offsets intra-paire opposés et symétriques (peu importe l'axe).
+    // Opposing and symmetrical intra-pair offsets (regardless of axis).
     expect(r['ab1'].start).toBeCloseTo(-r['ab2'].start);
     expect(Math.abs(r['ab1'].start)).toBeCloseTo(PORT_SPACING / 2);
   });
 
-  it('connexion vers un id absent du layout → ne plante pas (utilise 0.5/0.5)', () => {
+  it('connection to missing id in layout → does not crash (uses 0.5/0.5)', () => {
     const connections = [{ key: 'k1', from: 'A', to: 'MISSING' }];
     const layout = { A: { cx: 0.2, cy: 0.5 } };
     expect(() => computePortOffsets(connections, layout)).not.toThrow();

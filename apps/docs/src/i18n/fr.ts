@@ -1,12 +1,12 @@
 /**
- * Dictionnaire français = SOURCE DE VÉRITÉ.
+ * French dictionary = SOURCE OF TRUTH.
  *
- * Le type `Messages` en est dérivé (`typeof fr`), ce qui force la version
- * anglaise (`en.ts`) à fournir exactement les mêmes clés / la même structure.
+ * The `Messages` type is derived from it (`typeof fr`), which forces the
+ * English version (`en.ts`) to provide exactly the same keys / the same structure.
  *
- * Les chaînes contenant du `code` entre backticks sont rendues telles quelles
- * (texte littéral) côté accueil ; sur l'intro elles sont découpées pour un
- * vrai rendu `<code>`.
+ * Strings containing `code` between backticks are rendered as is
+ * (literal text) on the home page; on the intro they are split for a
+ * real `<code>` rendering.
  */
 export const fr = {
   nav: {
@@ -90,9 +90,9 @@ export const fr = {
     taglineLine1: "Animations d'architecture",
     taglineLine2: 'pilotées par JSON.',
     repoAria: 'Dépôt GitHub du projet',
-    // Les libellés/colonnes du footer viennent de la config Docusaurus (FR).
-    // On les retraduit à l'affichage via cette table, en gardant la config
-    // comme source de la structure (hrefs/ordre).
+    // Footer labels/columns come from the Docusaurus config (FR).
+    // We translate them again on display via this table, keeping the config
+    // as the source for structure (hrefs/order).
     labels: {
       SITE: 'SITE',
       PROJET: 'PROJET',

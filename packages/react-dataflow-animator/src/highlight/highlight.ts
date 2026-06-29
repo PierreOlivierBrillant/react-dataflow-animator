@@ -1,6 +1,6 @@
-// IMPORTANT : importer le core EN PREMIER (il publie l'instance Prism globale),
-// puis les grammaires comme effets de bord, en respectant leurs dépendances
-// (clike avant javascript, markup avant jsx, etc.).
+// IMPORTANT: import the core FIRST (it exposes the global Prism instance),
+// then the grammars as side effects, respecting their dependencies
+// (clike before javascript, markup before jsx, etc.).
 import Prism from 'prismjs/components/prism-core.js';
 import 'prismjs/components/prism-markup.js';
 import 'prismjs/components/prism-css.js';
@@ -18,7 +18,7 @@ import 'prismjs/components/prism-http.js';
 
 import type { Highlighter } from '../types';
 
-/** Alias usuels -> identifiants Prism. */
+/** Common aliases -> Prism identifiers. */
 const ALIASES: Record<string, string> = {
   js: 'javascript',
   ts: 'typescript',
@@ -40,11 +40,11 @@ export function escapeHtml(value: string): string {
 }
 
 /**
- * Coloration syntaxique par défaut (Prism). Renvoie du HTML avec des `<span
- * class="token …">`. Les couleurs sont définies de façon SCOPÉE dans
- * `styles/dataflow.css` (aucun thème Prism global n'est importé).
+ * Default syntax highlighting (Prism). Returns HTML with `<span
+ * class="token …">`. Colors are SCOPED in
+ * `styles/dataflow.css` (no global Prism theme is imported).
  *
- * Tolérant : si le langage est inconnu, renvoie le code échappé tel quel.
+ * Tolerant: if the language is unknown, returns the escaped code as is.
  */
 export const highlightCode: Highlighter = (code, language) => {
   const lang = ALIASES[language?.toLowerCase()] ?? language;

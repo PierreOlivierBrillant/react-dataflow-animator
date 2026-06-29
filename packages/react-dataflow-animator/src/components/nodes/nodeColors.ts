@@ -2,22 +2,22 @@ import type { CSSProperties } from 'react';
 import type { Node } from '../../types';
 
 /**
- * Variables CSS de teinte d'un nœud, calculées depuis `background_color` /
- * `border_color`. Posées sur la racine `.rdfa-node` ; le CSS des formes, panneaux
- * et pictogrammes les lit avec un fallback sur les couleurs du thème.
+ * Node tint CSS variables, computed from `background_color` /
+ * `border_color`. Applied to the `.rdfa-node` root; the CSS for shapes, panels
+ * and pictograms reads them with a fallback to theme colors.
  *
- * - `--rdfa-fill` : couleur de fond (remplissage des formes, fond des panneaux,
- *   pastille des pictogrammes).
- * - `--rdfa-stroke` : couleur de bordure/trait.
- * - `--rdfa-ink` : couleur du texte interne (lue par le CSS hors zones de code).
+ * - `--rdfa-fill`: background color (shape fill, panel background,
+ *   pictogram badge).
+ * - `--rdfa-stroke`: border/stroke color.
+ * - `--rdfa-ink`: internal text color (read by CSS outside code blocks).
  *
- * Deux dérivations automatiques, toutes deux en **CSS pur** (SSR-safe, aucun accès
- * DOM, valables pour un nom prédéfini comme pour un hex) :
- * - Bordure : si seul `background_color` est fourni, une bordure coordonnée (le
- *   fond assombri) via `color-mix`.
- * - Texte : si `text_color` est absent mais qu'un fond est défini, une couleur à
- *   très fort contraste (noir ou blanc) selon la luminance du fond, via la syntaxe
- *   de couleur relative `oklch(from …)`.
+ * Two automatic derivations, both in **pure CSS** (SSR-safe, no DOM access,
+ * valid for both predefined names and hex values):
+ * - Border: if only `background_color` is provided, a coordinated border (the
+ *   darkened background) via `color-mix`.
+ * - Text: if `text_color` is absent but a background is defined, a very high
+ *   contrast color (black or white) based on the background luminance, via the
+ *   relative color syntax `oklch(from …)`.
  */
 export function nodeTint(node: Node): CSSProperties {
   const { background_color: bg, border_color: border, text_color: text } = node;
@@ -30,15 +30,15 @@ export function nodeTint(node: Node): CSSProperties {
   return style as CSSProperties;
 }
 
-/** Bordure coordonnée par défaut : le fond assombri de ~32 % (s'agence bien). */
+/** Default coordinated border: the background darkened by ~32% (looks good). */
 function complementaryBorder(background: string): string {
   return `color-mix(in srgb, ${background}, #000 32%)`;
 }
 
 /**
- * Texte auto à très fort contraste sur `--rdfa-fill` : noir si le fond est clair,
- * blanc s'il est sombre. On compare la luminance perceptuelle (`l` en oklch) à un
- * seuil ; `clamp(0, (seuil − l) × 1000, 1)` bascule L vers 0 (noir) ou 1 (blanc).
+ * Auto very high contrast text on `--rdfa-fill`: black if the background is light,
+ * white if it is dark. We compare the perceptual luminance (`l` in oklch) to a
+ * threshold; `clamp(0, (threshold - l) * 1000, 1)` switches L to 0 (black) or 1 (white).
  */
 function contrastingInk(): string {
   return 'oklch(from var(--rdfa-fill) clamp(0, (0.62 - l) * 1000, 1) 0 0)';

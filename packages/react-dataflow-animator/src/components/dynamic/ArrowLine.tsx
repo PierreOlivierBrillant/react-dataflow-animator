@@ -12,9 +12,9 @@ import type { ConnectionAxis } from '../../engine/layout';
 import type { LineStyle, PathShape } from '../../types';
 
 /**
- * Flèche SVG entre deux nœuds. `progress` ∈ [0,1] anime le dessin progressif.
- * `obstacles` est la liste de tous les nœuds — utilisée pour router la flèche
- * autour des labels. À utiliser à l'intérieur d'un `<svg className="rdfa-arrow-svg">`.
+ * SVG arrow between two nodes. `progress` ∈ [0,1] animates the progressive drawing.
+ * `obstacles` is the list of all nodes — used to route the arrow
+ * around labels. To be used inside an `<svg className="rdfa-arrow-svg">`.
  */
 export interface ArrowLineProps {
   from: NodeGeom;
@@ -22,18 +22,18 @@ export interface ArrowLineProps {
   startPortOffset?: number;
   endPortOffset?: number;
   style?: LineStyle;
-  /** Forme du tracé. Défaut: 'bezier'. */
+  /** Path shape. Default: 'bezier'. */
   path?: PathShape;
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   text?: string;
-  /** 1 pour une flèche statique (décor), interpolé pour une flèche dynamique. */
+  /** 1 for a static arrow (decoration), interpolated for a dynamic arrow. */
   progress: number;
-  /** Surlignée par une action highlight. */
+  /** Highlighted by a highlight action. */
   highlighted?: boolean;
-  /** Tous les nœuds du stage — pour éviter les labels lors du routage. */
+  /** All stage nodes — to avoid labels during routing. */
   obstacles?: NodeGeom[];
-  /** Axe d'accroche dérivé du flux du layout (cf. `connectionAxis`). Détermine la
-   *  face (E/O vs N/S) et l'orientation de départ/arrivée du tracé. */
+  /** Anchor axis derived from layout flow (see `connectionAxis`). Determines the
+   *  face (E/W vs N/S) and the start/end orientation of the path. */
   axis?: ConnectionAxis;
 }
 
@@ -58,8 +58,8 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     const renderForward = headStyle === 'forward' || headStyle === 'both';
     const renderBackward = headStyle === 'backward' || headStyle === 'both';
 
-    // L'animation est gérée par stroke-dasharray/stroke-dashoffset sur un
-    // Intersection et décalages géométriques (obstacles pris en compte)
+    // Animation is managed by stroke-dasharray/stroke-dashoffset on a
+    // Intersection and geometric offsets (obstacles taken into account)
     const conn = connection(
       from,
       to,
@@ -70,7 +70,7 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
       axis
     );
 
-    // Position et angle de la pointe au paramètre `progress`.
+    // Position and angle of the tip at parameter `progress`.
     const tip = pathTip(conn, progress);
     const ang = (tip.angleDeg * Math.PI) / 180;
     const headFwd =
@@ -78,7 +78,7 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
       `${tip.x - HEAD * Math.cos(ang - Math.PI / 6)},${tip.y - HEAD * Math.sin(ang - Math.PI / 6)} ` +
       `${tip.x - HEAD * Math.cos(ang + Math.PI / 6)},${tip.y - HEAD * Math.sin(ang + Math.PI / 6)}`;
 
-    // Position de départ pour une flèche inversée
+    // Start position for an inverted arrow
     const startTip = pathTip(conn, 0);
     const angStart = (startTip.angleDeg * Math.PI) / 180 + Math.PI;
     const headBwd =
@@ -86,9 +86,9 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
       `${startTip.x - HEAD * Math.cos(angStart - Math.PI / 6)},${startTip.y - HEAD * Math.sin(angStart - Math.PI / 6)} ` +
       `${startTip.x - HEAD * Math.cos(angStart + Math.PI / 6)},${startTip.y - HEAD * Math.sin(angStart + Math.PI / 6)}`;
 
-    // Chemin visible (polyline) de start jusqu'à la pointe.
-    // Les extrémités sont raccourcies jusqu'à la base du triangle de la flèche
-    // pour que l'épaisseur du trait ne dépasse pas sous la pointe.
+    // Visible path (polyline) from start to tip.
+    // The ends are shortened to the base of the arrow triangle
+    // so that the stroke thickness does not protrude under the tip.
     const pts = visiblePath(conn, progress);
     const ptsAdjusted = [...pts];
     if (renderForward && progress > 0.02 && ptsAdjusted.length >= 2) {
@@ -106,8 +106,8 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     }
     const ptStr = ptsAdjusted.map((p) => `${p.x},${p.y}`).join(' ');
 
-    // Position du label de texte : ancre décalée si le milieu du chemin tombe
-    // sur un nœud intercalé, sinon milieu du chemin.
+    // Text label position: anchor offset if the middle of the path falls
+    // on an interleaved node, otherwise middle of the path.
     const mid = conn.labelAnchor ?? pathTip(conn, 0.5);
 
     const lineCls = `rdfa-arrow-line${highlighted ? ' rdfa-arrow-line--highlight' : ''}`;

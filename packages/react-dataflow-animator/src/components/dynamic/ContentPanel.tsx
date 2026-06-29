@@ -2,27 +2,27 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Highlighter, ObjectContent } from '../../types';
 
 /**
- * Panneau injecté par `set_content` (ou contenu initial d'un nœud) :
- *  - mode `code` : terminal sombre, coloration Prism, SANS barre d'URL, et le code
- *    ne revient JAMAIS à la ligne (la police est réduite pour tenir dans le panneau) ;
- *  - mode `text` : fenêtre de navigateur (barre d'URL paramétrable via `content.url`) ;
- *  - mode `image` : image dans une fenêtre.
+ * Panel injected by `set_content` (or initial content of a node):
+ *  - `code` mode: dark terminal, Prism syntax highlighting, NO URL bar, and the code
+ *    NEVER wraps (the font is scaled down to fit the panel);
+ *  - `text` mode: browser window (URL bar configurable via `content.url`);
+ *  - `image` mode: image in a window.
  */
 export interface ContentPanelProps {
   content: ObjectContent;
   highlight: Highlighter;
-  /** Facteur de police COMMUN à tous les panneaux de code (synchronisation). */
+  /** COMMON font scale factor for all code panels (synchronization). */
   codeFontScale?: number;
-  /** Remonte au Stage le ratio de réduction que CE code nécessiterait seul. */
+  /** Bubbles up to the Stage the shrink ratio that THIS code would need on its own. */
   onCodeFit?: (ratio: number) => void;
 }
 
 /**
- * Bloc de code en `white-space: pre` (pas de retour à la ligne). Il MESURE le
- * ratio de réduction qui le ferait tenir (largeur ET hauteur) et le remonte au
- * Stage via `onFit`, mais APPLIQUE le facteur GLOBAL `fontScale` (= le minimum
- * sur tous les panneaux de code) : ainsi tous les codes ont EXACTEMENT la même
- * taille de police, et aucun ne déborde ni n'est clippé.
+ * Code block with `white-space: pre` (no line wrapping). It MEASURES the
+ * shrink ratio that would make it fit (width AND height) and bubbles it up to the
+ * Stage via `onFit`, but APPLIES the GLOBAL `fontScale` factor (= the minimum
+ * across all code panels): this way all code blocks have EXACTLY the same
+ * font size, and none overflow or are clipped.
  */
 function CodeBlock({
   html,
@@ -34,8 +34,8 @@ function CodeBlock({
   onFit?: (ratio: number) => void;
 }) {
   const ref = useRef<HTMLPreElement>(null);
-  // onFit n'est pas stable (capture le nodeId) ; on le lit via une ref pour ne
-  // pas relancer l'effet de mesure à chaque rendu.
+  // onFit is not stable (captures the nodeId); we read it via a ref to avoid
+  // re-running the measure effect on each render.
   const onFitRef = useRef(onFit);
   useEffect(() => {
     onFitRef.current = onFit;
@@ -47,8 +47,8 @@ function CodeBlock({
     if (!el || typeof ResizeObserver === 'undefined') return;
     const measure = () => {
       const SAFETY = 2;
-      // Le <pre> porte son propre padding (qui ne dépend PAS de la police) : on le
-      // retranche pour ne raisonner que sur la zone de TEXTE.
+      // The <pre> has its own padding (which does NOT depend on the font): we
+      // subtract it to only reason about the TEXT area.
       const preCs = getComputedStyle(el);
       const padX =
         (parseFloat(preCs.paddingLeft) || 0) +
@@ -62,7 +62,7 @@ function CodeBlock({
       const naturalW = el.scrollWidth - padX;
       const naturalH = el.scrollHeight - padY;
       const availW = el.clientWidth - padX;
-      // Hauteur dispo = celle du corps (borné par max-height), padding du <pre> déduit.
+      // Available height = body height (bounded by max-height), minus <pre> padding.
       const body = el.parentElement;
       const availH = (body ? body.clientHeight : el.clientHeight) - padY;
       el.style.fontSize = applied;
@@ -78,9 +78,9 @@ function CodeBlock({
     return () => ro.disconnect();
   }, [html]);
 
-  // Police finale = base (CSS, proportionnelle au lecteur) × facteur GLOBAL.
-  // Pas de plancher significatif : la taille reste exactement proportionnelle au
-  // lecteur (sur une miniature, le code est petit, comme tout le reste).
+  // Final font = base (CSS, proportional to the reader) × GLOBAL factor.
+  // No significant floor: the size remains exactly proportional to the
+  // reader (on a thumbnail, the code is small, like everything else).
   const fontPx =
     baseFont != null && fontScale < 1
       ? Math.max(1, baseFont * fontScale)
@@ -160,7 +160,7 @@ export function ContentPanel({
     );
   }
 
-  // text / UI : fenêtre de navigateur factice.
+  // text / UI: dummy browser window.
   return (
     <div className="rdfa-content">
       <div className="rdfa-window-bar">

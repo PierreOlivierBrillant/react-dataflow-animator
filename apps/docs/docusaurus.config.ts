@@ -16,10 +16,10 @@ const config = {
       onBrokenMarkdownLinks: 'warn',
     },
   },
-  // i18n natif : l'anglais est la langue source (servie à la racine `/`), le
-  // français est une locale traduite (`/fr/`). Chaque locale produit du HTML
-  // statique distinct → DocSearch peut indexer les deux. La détection navigateur
-  // (1ʳᵉ visite) est gérée par une redirection client dans `src/theme/Root.tsx`.
+  // Native i18n: English is the source language (served at the root `/`),
+  // French is a translated locale (`/fr/`). Each locale produces distinct
+  // static HTML → DocSearch can index both. Browser detection (1st visit)
+  // is handled by a client redirect in `src/theme/Root.tsx`.
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'fr'],
@@ -53,8 +53,8 @@ const config = {
         },
       };
     },
-    // Permet à webpack de détecter les changements dans le dist de la lib quand
-    // on tourne en dev (docusaurus ne surveille pas les node_modules par défaut).
+    // Allows webpack to detect changes in the lib dist when running in dev
+    // (docusaurus doesn't watch node_modules by default).
     function watchLibPlugin() {
       return {
         name: 'watch-lib-dist',
@@ -126,9 +126,9 @@ const config = {
       apiKey: '6ab54371d9c7838ec9038b1e45831c11',
       indexName: 'React Dataflow Animator documentation website',
       searchPagePath: 'search',
-      // Filtre les résultats par locale courante (facette `language`). Suppose que
-      // le crawler DocSearch indexe les deux locales (cf. balise docsearch:language
-      // émise par Docusaurus pour /en et /fr).
+      // Filters results by current locale (`language` facet). Assumes that
+      // the DocSearch crawler indexes both locales (see docsearch:language
+      // tag emitted by Docusaurus for /en and /fr).
       contextualSearch: true,
     },
   },

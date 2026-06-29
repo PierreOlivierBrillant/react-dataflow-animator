@@ -55,15 +55,15 @@ describe('DataFlowPlayer (montage réel)', () => {
   it('rend les nœuds, les contrôles et le contenu coloré sans planter', () => {
     const { container } = render(<DataFlowPlayer spec={spec} />);
 
-    // Nœuds + labels.
+    // Nodes + labels.
     expect(screen.getByText('IDE')).toBeTruthy();
     expect(screen.getByText('Serveur')).toBeTruthy();
 
-    // Contrôles (is_navigable).
+    // Controls (is_navigable).
     expect(screen.getByLabelText('Lecture')).toBeTruthy();
     expect(screen.getByLabelText('Étape suivante')).toBeTruthy();
 
-    // set_content actif à t=0 -> terminal de code avec coloration Prism.
+    // set_content active at t=0 -> code terminal with Prism highlighting.
     expect(container.querySelector('.rdfa-terminal')).toBeTruthy();
     expect(container.querySelector('.rdfa-code .token')).toBeTruthy();
   });
@@ -84,7 +84,7 @@ describe('DataFlowPlayer (montage réel)', () => {
     render(<DataFlowPlayer spec={spec} exportable />);
     fireEvent.click(screen.getByLabelText('Spécification JSON'));
     const dialog = screen.getByRole('dialog');
-    // JSON présent et colorisé (tokens Prism) dans la fenêtre.
+    // JSON present and highlighted (Prism tokens) in the dialog.
     const code = dialog.querySelector('.rdfa-dialog-code');
     expect(code?.textContent).toContain('"nodes"');
     expect(code?.querySelector('.token')).toBeTruthy();

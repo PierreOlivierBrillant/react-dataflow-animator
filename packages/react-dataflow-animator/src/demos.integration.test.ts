@@ -49,10 +49,10 @@ function collectRefs(actions: Action[]): string[] {
 
 const KNOWN_BROKEN = new Set<string>();
 
-// Les specs de démos sont désormais des builders localisés
-// `(locale) => DataFlowSpec` (certaines peuvent rester des objets). On compile
-// CHAQUE locale : la structure (étapes, références) doit être valide quelle que
-// soit la langue — seul le texte change.
+// Demo specs are now localized builders
+// `(locale) => DataFlowSpec` (some may remain objects). We compile
+// EACH locale: the structure (steps, references) must be valid regardless
+// of the language — only the text changes.
 type SpecOrBuilder = DataFlowSpec | ((locale: 'en' | 'fr') => DataFlowSpec);
 const resolveSpec = (s: SpecOrBuilder, locale: 'en' | 'fr'): DataFlowSpec =>
   typeof s === 'function' ? s(locale) : s;
@@ -93,7 +93,7 @@ describe.each(demos)('demo %s', (name, spec) => {
   const result = compile(spec);
   const broken = KNOWN_BROKEN.has(name);
 
-  // it.fails : le test est attendu en échec (bug connu) ; passe quand l'assertion échoue.
+  // it.fails: the test is expected to fail (known bug); passes when the assertion fails.
   (broken ? it.fails : it)('ne produit aucun warning', () => {
     expect(result.warnings).toEqual([]);
   });

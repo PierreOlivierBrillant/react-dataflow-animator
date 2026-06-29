@@ -7,7 +7,7 @@ export interface ControlsProps {
   timeline: Timeline;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
-  /** Emplacement optionnel pour le bouton de la spec JSON (rendu avant le plein écran). */
+  /** Optional slot for the JSON spec button (rendered before full screen). */
   exportSlot?: ReactNode;
 }
 

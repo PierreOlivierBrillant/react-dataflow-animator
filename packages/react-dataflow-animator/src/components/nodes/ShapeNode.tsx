@@ -3,20 +3,20 @@ import type { Node } from '../../types';
 import type { ShapeType } from './nodeKinds';
 
 /**
- * Nœuds géométriques : une forme dessinée en SVG qui peut contenir un court
- * texte centré (`body`). La forme remplit la boîte (qui s'adapte au texte) ;
- * une marge de sécurité par forme + `overflow:hidden` (CSS) garantissent que le
- * texte ne déborde pas du tracé visible. Le `subicon` reste géré par StaticNode.
+ * Geometric nodes: an SVG-drawn shape that can contain a short
+ * centered text (`body`). The shape fills the box (which adapts to the text);
+ * a safe margin per shape + `overflow:hidden` (CSS) ensure that the
+ * text does not overflow the visible path. The `subicon` is still managed by StaticNode.
  *
- * Le SVG est tracé en `preserveAspectRatio="none"` (il épouse la boîte) avec un
- * `vector-effect: non-scaling-stroke` (côté CSS) pour conserver une épaisseur de
- * trait constante même quand la boîte est étirée par un texte long.
+ * The SVG is drawn with `preserveAspectRatio="none"` (it fits the box) with a
+ * `vector-effect: non-scaling-stroke` (CSS side) to keep a constant stroke
+ * thickness even when the box is stretched by long text.
  */
 
 /**
- * Tracé de chaque forme dans un viewBox 0..100. `rect` est partagé par le carré
- * et les deux rectangles (l'orientation est portée par la boîte, pas le tracé).
- * Les 5 sommets de l'étoile et le cercle sont fixes ; tout est étiré sur la boîte.
+ * Path for each shape in a 0..100 viewBox. `rect` is shared by the square
+ * and both rectangles (orientation is handled by the box, not the path).
+ * The 5 vertices of the star and the circle are fixed; everything is stretched over the box.
  */
 function shapeGeometry(type: ShapeType): ReactNode {
   switch (type) {

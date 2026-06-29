@@ -1,16 +1,16 @@
 import { clamp, easeInOutCubic } from '../engine/timeline';
 
-/** Durée (ms) du fondu d'apparition/disparition par défaut (paquets, contenus). */
+/** Default fade in/out duration (ms) (packets, contents). */
 export const FADE_MS = 250;
 
 /**
- * Opacité d'un clip avec fondu : entrée pendant le hold d'apparition (ou sur
- * FADE_MS s'il n'y en a pas), sortie sur FADE_MS avant la disparition.
- * Pas de fondu de sortie si `keepEnd` est vrai (le clip doit rester visible
- * jusqu'à la toute fin de la chronologie).
+ * Opacity of a clip with fade: fade in during the appear hold (or over
+ * FADE_MS if there is none), fade out over FADE_MS before disappearing.
+ * No fade out if `keepEnd` is true (the clip must remain visible
+ * until the very end of the timeline).
  *
- * `fadeInMs` et `fadeOutMs` remplacent les durées par défaut si fournis.
- * 0 = apparition/disparition instantanée (pas de fondu).
+ * `fadeInMs` and `fadeOutMs` replace default durations if provided.
+ * 0 = instant appearance/disappearance (no fade).
  */
 export function clipOpacity(
   clip: {
@@ -42,14 +42,14 @@ export function clipOpacity(
 }
 
 /**
- * Crossfade d'un `set_content` : le fondu linéaire de `clipOpacity` adouci par
- * `easeInOutCubic`. Cette valeur pilote À LA FOIS l'opacité du contenu ET le
- * lerp de géométrie (le nœud passe de l'icône au panneau) ; les easer ensemble
- * supprime l'effet mécanique du morph linéaire — départ et arrivée ralentis.
- * Les fondus de paquets/flèches gardent `clipOpacity` brut.
+ * Crossfade of a `set_content`: linear fade of `clipOpacity` eased by
+ * `easeInOutCubic`. This value drives BOTH the content opacity AND the
+ * geometry lerp (the node transitions from icon to panel); easing them together
+ * removes the mechanical effect of the linear morph — eased start and end.
+ * Packet/arrow fades keep raw `clipOpacity`.
  *
- * Source unique partagée avec le harnais de validation (cf.
- * scripts/validation-harness) : la courbe qu'il trace EST celle rendue ici.
+ * Single source of truth shared with the validation harness (see
+ * scripts/validation-harness): the curve it plots IS the one rendered here.
  */
 export function contentCrossfade(
   clip: Parameters<typeof clipOpacity>[0],

@@ -5,8 +5,8 @@ import { DataFlowPlayer } from 'react-dataflow-animator';
 import { demos, getSpec, pickLocale } from '../site-content';
 import { useLocale, useTranslation } from '../i18n';
 
-// Quelques exemples mis en avant sur l'accueil ; la galerie complète
-// (recherche + filtres) vit sur la page /examples.
+// A few examples highlighted on the home page; the full gallery
+// (search + filters) lives on the /examples page.
 const featured = demos.slice(0, 6);
 
 export function DemoShowcase() {
@@ -127,7 +127,7 @@ export function DemoShowcase() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Vers la galerie complète */}
+        {/* To the full gallery */}
         <div className="text-center mt-12">
           <Link
             to="/examples"

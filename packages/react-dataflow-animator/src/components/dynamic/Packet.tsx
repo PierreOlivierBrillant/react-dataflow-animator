@@ -4,20 +4,20 @@ import {
 } from '../../utils/animatable';
 import type { Packet as PacketSpec, Highlighter } from '../../types';
 
-/** Paquet en mouvement (move). Positionné en absolu au point courant du trajet. */
+/** Moving packet. Positioned absolutely at the current point of the path. */
 export interface PacketProps {
   object: PacketSpec;
   x: number;
   y: number;
-  /** Opacité (fondu d'apparition/disparition). Défaut: 1. */
+  /** Opacity (fade in/out). Default: 1. */
   opacity?: number;
-  /** Échelle (léger « pop » à l'apparition/disparition). Défaut: 1. */
+  /** Scale (slight "pop" on appearance/disappearance). Default: 1. */
   scale?: number;
   highlight?: Highlighter;
 }
 
 // ---------------------------------------------------------------------------
-// SOUS-COMPOSANTS DE PAQUETS
+// PACKET SUB-COMPONENTS
 // ---------------------------------------------------------------------------
 
 const HttpPacket = defineAnimatable<{
@@ -128,13 +128,13 @@ const SqlResponsePacket = defineAnimatable<{
 });
 
 // ---------------------------------------------------------------------------
-// REGISTRE DES PAQUETS
+// PACKET REGISTRY
 // ---------------------------------------------------------------------------
 
 /**
- * Registre de tous les types de paquets supportés.
- * Grâce au type AnimatableComponent, TypeScript s'assure que tout nouveau
- * composant ajouté ici est correctement optimisé avec React.memo().
+ * Registry of all supported packet types.
+ * Thanks to the AnimatableComponent type, TypeScript ensures that any new
+ * component added here is correctly optimized with React.memo().
  */
 const packetRegistry: Record<
   string,
@@ -146,7 +146,7 @@ const packetRegistry: Record<
 };
 
 // ---------------------------------------------------------------------------
-// COMPOSANT PRINCIPAL
+// MAIN COMPONENT
 // ---------------------------------------------------------------------------
 
 export const Packet: AnimatableComponent<PacketProps> = defineAnimatable(

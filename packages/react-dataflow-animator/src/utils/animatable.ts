@@ -1,16 +1,16 @@
 import { memo, type FC, type MemoExoticComponent } from 'react';
 
 /**
- * Un composant fonctionnel React enveloppé dans React.memo().
- * Ce type est utilisé pour garantir que les composants qui sont animés
- * ou rendus de manière récurrente (60 fps) ne se re-rendent pas inutilement.
+ * A React functional component wrapped in React.memo().
+ * This type is used to ensure that components that are animated
+ * or rendered recurrently (60 fps) do not re-render unnecessarily.
  */
 export type AnimatableComponent<P> = MemoExoticComponent<FC<P>>;
 
 /**
- * Enveloppe un composant dans React.memo() et garantit que son type de retour
- * correspond exactement à AnimatableComponent<P>.
- * Utilisez cette fonction pour exporter vos composants de nœuds ou de paquets.
+ * Wraps a component in React.memo() and ensures that its return type
+ * corresponds exactly to AnimatableComponent<P>.
+ * Use this function to export your node or packet components.
  */
 export function defineAnimatable<P>(Component: FC<P>): AnimatableComponent<P> {
   return memo(Component);

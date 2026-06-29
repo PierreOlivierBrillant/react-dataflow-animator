@@ -1,263 +1,160 @@
 # CLAUDE.md
 
-Instructions pour Claude (et tout autre agent) travaillant sur ce dépôt.
+Instructions for Claude (and any other agent) working on this repository.
 
-## Le projet en bref
+## Project overview
 
-`react-dataflow-animator` est un composant React qui compile une
-spécification JSON en animation déterministe et navigable de flux de données.
-Le moteur est une fonction pure `evaluate(timeline, t)` : pas de DOM, pas
-d'horloge réelle, scrubbing arrière gratuit.
+`react-dataflow-animator` is a React component that compiles a JSON specification into a deterministic, scrubbable animation of data flows.
+The engine is a pure function `evaluate(timeline, t)`: no DOM, no real clock, backwards scrubbing comes for free.
 
-Le dépôt est un **monorepo npm workspaces** :
+The repository is an **npm workspaces monorepo**:
 
 ```text
-packages/react-dataflow-animator/   le package npm publié
-apps/docs/                          site Docusaurus (démos, playground, doc API)
-docs/                               SPEC.md, ARCHITECTURE.md (références internes)
+packages/react-dataflow-animator/   the published npm package
+apps/docs/                          Docusaurus site (demos, playground, API docs)
+docs/                               SPEC.md, ARCHITECTURE.md (internal references)
 ```
 
-## Documentation à consulter avant d'agir
+## Documentation to consult before acting
 
-Lis ces fichiers avant toute modification non triviale :
+Read these files before any non-trivial modification:
 
-- [`README.md`](./README.md) — vue utilisateur de la lib.
-- [`docs/SPEC.md`](./docs/SPEC.md) — spécification fonctionnelle (source de
-  vérité sur les comportements attendus).
-- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — découpage des modules,
-  pipeline de rendu, points d'extension.
-- [`docs/AI-VALIDATION.md`](./docs/AI-VALIDATION.md) — comment faire valider le
-  rendu (clarté/fluidité) par une IA via le harnais déterministe et la
-  régression visuelle Playwright.
-- [`apps/docs/docs/`](./apps/docs/docs/) — documentation utilisateur MDX
-  (concepts, références).
-- [`packages/react-dataflow-animator/src/types.ts`](./packages/react-dataflow-animator/src/types.ts)
-  et [`schema.ts`](./packages/react-dataflow-animator/src/schema.ts) — forme
-  exacte de la spec.
+- [`README.md`](./README.md) — user-facing view of the library.
+- [`docs/SPEC.md`](./docs/SPEC.md) — functional specification (source of truth for expected behaviors).
+- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — module boundaries, rendering pipeline, extension points.
+- [`docs/AI-VALIDATION.md`](./docs/AI-VALIDATION.md) — how to get rendering (clarity/smoothness) validated by an AI via the deterministic harness and Playwright visual regression.
+- [`apps/docs/docs/`](./apps/docs/docs/) — MDX user documentation (concepts, references).
+- [`packages/react-dataflow-animator/src/types.ts`](./packages/react-dataflow-animator/src/types.ts) and [`schema.ts`](./packages/react-dataflow-animator/src/schema.ts) — exact shape of the spec.
 
-## Règles dures avant chaque commit
+## Hard rules before every commit
 
-**Tu DOIS exécuter cette séquence depuis la racine et obtenir un succès
-complet avant de proposer un commit.** Tu ne peux pas marquer une tâche
-comme terminée si l'un de ces checks échoue.
+**You MUST execute this sequence from the root and get a full success before proposing a commit.** You cannot mark a task as completed if any of these checks fail.
 
 ```bash
 npm run format:check     # Prettier
-npm run lint             # ESLint sur tous les workspaces
-npm run deadcode         # knip : code mort / exports inutilisés
-npm run test:coverage    # vitest + seuils de couverture
-npm run build            # build lib + site (typecheck inclus)
+npm run lint             # ESLint on all workspaces
+npm run deadcode         # knip: dead code / unused exports
+npm run test:coverage    # vitest + coverage thresholds
+npm run build            # build lib + site (typecheck included)
 npm run test:integration -w react-dataflow-animator
 npm run check:schema
 ```
 
-### Que faire en cas d'échec
+### What to do in case of failure
 
-- **`format:check`** échoue → `npm run format:write` puis stage le diff
-  introduit ; ne le mélange pas à des changements logiques.
-- **`lint`** échoue → corrige les warnings au lieu de les ignorer. N'ajoute
-  pas `eslint-disable` sans une vraie justification (commentaire qui
-  explique le pourquoi).
-- **`deadcode`** échoue → soit supprime le code mort, soit ajoute-le à
-  `ignoreExports` de `knip.json` si c'est un export public volontaire,
-  avec un commentaire.
-- **`test:coverage`** échoue sur les seuils → ajoute des tests, ne baisse
-  pas les seuils sans accord explicite de l'utilisateur.
-- **`build`** échoue → corrige avant de proposer le commit. Un build cassé
-  n'est jamais fusionnable.
+- **`format:check`** fails → run `npm run format:write` then stage the introduced diff; do not mix it with logical changes.
+- **`lint`** fails → fix the warnings instead of ignoring them. Do not add `eslint-disable` without a real justification (a comment explaining why).
+- **`deadcode`** fails → either remove the dead code, or add it to `ignoreExports` in `knip.json` if it's an intentional public export, with a comment.
+- **`test:coverage`** fails on thresholds → add tests, do not lower thresholds without explicit user agreement.
+- **`build`** fails → fix before proposing the commit. A broken build is never mergeable.
 
-## Conventions de code
+## Code conventions
 
-- **Anglais pour le code et la doc technique.** TOUT commentaire de code
-  (`//`, `/* */`, JSDoc) et TOUTE documentation interne — `README.md`,
-  `docs/*.md`, ce fichier `CLAUDE.md`, messages de commit — s'écrit en
-  anglais. N'introduis jamais de nouveau commentaire ou de nouvelle doc en
-  français. **Exception (ne pas confondre) :** le contenu _visible par
-  l'utilisateur_ du site `apps/docs` reste bilingue EN/FR via l'i18n natif
-  (cf. la section « Internationalisation » plus bas) — la moitié française
-  (`src/i18n/fr.ts`, `i18n/fr/**`, le `fr:` des specs de démos) n'est PAS
-  du code à « passer en anglais », c'est la traduction intentionnelle.
-- **TypeScript strict.** Pas de `any`. Si tu as besoin d'un `as unknown as
-X`, écris en commentaire pourquoi.
-- **Pas de breaking change** sur l'API publique (`packages/react-dataflow-animator/src/index.ts`)
-  sans changer la version majeure et le documenter.
-- **Tests d'abord** pour les zones non couvertes que tu vas refactorer.
-- **Commentaires** : décris le _pourquoi_, pas le _quoi_. Le code suffit
-  à dire ce qu'il fait. Un commentaire qui explique un piège évité
-  (ex. Babel loose mode dans Docusaurus) est précieux ; un commentaire
-  qui paraphrase la ligne suivante ne l'est pas.
-- **SSR-safe** : aucun accès `window` / `document` / `requestAnimationFrame`
-  hors d'un `useEffect` ou `useLayoutEffect`. Vérifie avant de proposer.
-- **Spec et types liés** : le schéma JSON est GÉNÉRÉ depuis `types.ts`
-  (`npm run generate:schema`, vérifié par `check:schema`). Si tu modifies
-  `types.ts`, régénère le schéma — ne l'édite jamais à la main. NB : le patch
-  de `scripts/schema-patches.mjs` rend le schéma plus strict que les types TS
-  pour `language` (voulu).
-- **Documente toute évolution de la spec.** Dès que tu ajoutes, modifies ou
-  retires un champ, un type d'action, une valeur d'énum ou une valeur par
-  défaut dans `types.ts`, tu DOIS répercuter le changement dans la doc, dans
-  le même commit :
-  - `docs/SPEC.md` (source de vérité fonctionnelle) ;
-  - la doc utilisateur MDX concernée sous `apps/docs/docs/` (concept ou
-    référence), avec **au moins un exemple concret** dans le style existant
-    (cf. les onglets d'orientation et les exemples co-localisés `_dossier/*.ts`) ;
-  - les liens d'`intro.mdx` et la `sidebars.ts` si tu crées une page.
+- **English for code and technical docs.** ALL code comments (`//`, `/* */`, JSDoc) and ALL internal documentation — `README.md`, `docs/*.md`, this `CLAUDE.md` file, commit messages — must be written in English. Never introduce new comments or new docs in French. **Exception (do not confuse):** the _user-facing_ content of the `apps/docs` site remains bilingual EN/FR via native i18n (see the "Internationalization" section below) — the French half (`src/i18n/fr.ts`, `i18n/fr/**`, the `fr:` of demo specs) is NOT code to "switch to English", it is the intentional translation.
+- **Strict TypeScript.** No `any`. If you need an `as unknown as X`, write a comment explaining why.
+- **No breaking changes** on the public API (`packages/react-dataflow-animator/src/index.ts`) without changing the major version and documenting it.
+- **Tests first** for uncovered areas you are going to refactor.
+- **Comments**: describe the _why_, not the _what_. The code is enough to say what it does. A comment explaining an avoided pitfall (e.g. Babel loose mode in Docusaurus) is precious; a comment that paraphrases the next line is not.
+- **SSR-safe**: no `window` / `document` / `requestAnimationFrame` access outside of a `useEffect` or `useLayoutEffect`. Check before proposing.
+- **Spec and related types**: the JSON schema is GENERATED from `types.ts` (`npm run generate:schema`, verified by `check:schema`). If you modify `types.ts`, regenerate the schema — never edit it by hand. NB: the `scripts/schema-patches.mjs` patch makes the schema stricter than the TS types for `language` (intended).
+- **Document any spec evolution.** As soon as you add, modify, or remove a field, an action type, an enum value, or a default value in `types.ts`, you MUST reflect the change in the docs, in the same commit:
+  - `docs/SPEC.md` (functional source of truth);
+  - the relevant MDX user doc under `apps/docs/docs/` (concept or reference), with **at least one concrete example** in the existing style (see the orientation tabs and co-located examples `_folder/*.ts`);
+  - the links in `intro.mdx` and the `sidebars.ts` if you create a page.
 
-  Une PR qui change la spec sans toucher la doc est incomplète. La page
-  « Référence API » est générée depuis le schéma, mais ne dispense PAS d'une
-  explication en prose + exemple : le schéma seul ne documente pas l'intention.
+  A PR that changes the spec without touching the docs is incomplete. The "API Reference" page is generated from the schema, but does NOT replace a prose explanation + example: the schema alone does not document the intent.
 
-## Corriger la cause, pas seulement le symptôme (patch vs. redesign)
+## Fix the root cause, not just the symptom (patch vs. redesign)
 
-Avant de coder le correctif le plus court, demande-toi si le problème
-local est en réalité le symptôme d'une structure qui ne tient plus. Sur un
-produit construit par incréments, empiler des patchs ponctuels fait
-s'accumuler des cas particuliers qui finissent par coûter plus cher que la
-dette qu'ils prétendaient éviter. **Évalue systématiquement si une solution
-plus globale — un petit redesign de la zone concernée — réglerait la cause
-plutôt que de masquer le symptôme**, et fais-en la base de ta proposition.
+Before coding the shortest fix, ask yourself if the local problem is actually a symptom of a structure that no longer holds up. On a product built incrementally, stacking punctual patches accumulates edge cases that end up costing more than the debt they claimed to avoid. **Systematically evaluate if a more global solution — a small redesign of the affected area — would fix the root cause rather than masking the symptom**, and make that the basis of your proposal.
 
-Signaux qu'un redesign cadré vaut mieux qu'un énième patch :
+Signals that a scoped redesign is better than yet another patch:
 
-- tu ajoutes un **3ᵉ cas particulier** (`if`/override/exception) à un endroit
-  qui en a déjà ;
-- deux éléments doivent rester **synchronisés à la main** (mêmes coordonnées,
-  mêmes valeurs dupliquées) au lieu de dériver d'une source unique — cf. la
-  refonte du badge `subicon` + spinner en un conteneur commun ;
-- un correctif n'a d'effet qu'en **compensant** un autre module au lieu de le
-  corriger là où la décision se prend ;
-- tu te bats contre la structure existante (sélecteurs de plus en plus
-  spécifiques, marges de compensation, `!important`…).
+- you are adding a **3rd edge case** (`if`/override/exception) to a place that already has some;
+- two elements must remain **manually synchronized** (same coordinates, same duplicated values) instead of deriving from a single source — see the redesign of the `subicon` badge + spinner into a common container;
+- a fix only has an effect by **compensating** for another module instead of fixing it where the decision is made;
+- you are fighting against the existing structure (increasingly specific selectors, compensation margins, `!important`...).
 
-Garde-fous — la règle n'est PAS « redessine souvent » :
+Guardrails — the rule is NOT "redesign often":
 
-- **Reste dans le périmètre.** Le redesign couvre la zone que la tâche touche,
-  pas un refactor opportuniste du voisinage.
-- **Pas de breaking change furtif.** Respecte la règle sur l'API publique ; un
-  redesign qui la modifie suit la procédure (version majeure + doc).
-- **Propose avant d'exécuter les gros.** Un changement contenu (comme le badge),
-  tu peux le mener puis le présenter. Dès qu'il déborde sur plusieurs modules,
-  l'API publique ou la spec, **expose l'option et son coût à l'utilisateur**
-  avant de t'engager — ne refonds pas en douce une large surface.
+- **Stay within the scope.** The redesign covers the area the task touches, not an opportunistic refactor of the neighborhood.
+- **No stealth breaking changes.** Respect the rule on the public API; a redesign that modifies it follows the procedure (major version + doc).
+- **Propose before executing large ones.** A contained change (like the badge), you can carry out then present. As soon as it spills over multiple modules, the public API, or the spec, **expose the option and its cost to the user** before committing — do not stealthily overhaul a large surface area.
 
-## Internationalisation (i18n) — CHAQUE string doit être traduite
+## Internationalization (i18n) — EVERY string must be translated
 
-Le site `apps/docs` est bilingue **anglais (source, `/`) / français (`/fr/`)** via
-l'i18n **natif** Docusaurus (cf. mémoire/`docusaurus.config.ts`). **Règle dure :
-tout texte visible par l'utilisateur DOIT exister dans les deux langues** — y
-compris le texte _à l'intérieur des specs d'exemples_ (libellés de nœuds,
-commentaires de timeline, en-têtes/corps de paquets, `set_content`…). Une chaîne
-identique FR/EN n'est tolérée que pour un vrai invariant de langue (nom propre,
-identifiant technique : `parallel`, `GET`, `SQL`, `npm`…).
+The `apps/docs` site is bilingual **English (source, `/`) / French (`/fr/`)** via **native** Docusaurus i18n (see memory/`docusaurus.config.ts`). **Hard rule: all user-visible text MUST exist in both languages** — including the text _inside the example specs_ (node labels, timeline comments, packet headers/bodies, `set_content`...). An identical FR/EN string is only tolerated for a true language invariant (proper noun, technical identifier: `parallel`, `GET`, `SQL`, `npm`...).
 
-Selon l'endroit, le mécanisme diffère :
+Depending on the location, the mechanism differs:
 
-1. **UI (composants / pages React)** → dictionnaire `src/i18n/fr.ts` (SOURCE de
-   vérité, `type Messages = typeof fr`) + `src/i18n/en.ts` (mêmes clés, sinon
-   erreur TS). Dans le composant : `const t = useTranslation();` puis
-   `t.section.cle`. Jamais de français en dur dans le JSX.
-2. **Specs de démos** (`src/site-content/demos/*.ts`) → exporte un builder
-   `(locale: Locale) => DataFlowSpec` avec une table `const strings = { en, fr }`
-   et reconstruis la spec via `s = strings[locale]`. **Référence :
-   `demos/clientServer.ts`.** Tant qu'une démo n'est pas traduite elle peut rester
-   un objet `DataFlowSpec` (FR dans les deux langues) ; le resolver
-   `getSpec(demo, locale)` accepte les deux formes.
-3. **Métadonnées de démos** (`demos.ts`) → `Localized<T> = { fr: T; en?: T }`
-   (repli FR via `pickLocale`). `category` = CLÉ stable ; les libellés affichés
-   sont traduits dans `gallery.categories`.
-4. **Docs MDX** → l'anglais est la SOURCE dans `docs/*.mdx` ; le français vit dans
-   `i18n/fr/docusaurus-plugin-content-docs/current/*.mdx`. Exception : `intro.mdx`
-   rend `<IntroDoc>` qui s'auto-localise (pas de copie i18n/fr).
-5. **Référence API** (`docsContent.tsx`, `apiExamples.ts`) → mêmes règles : prose
-   et `note:`/`text:` des exemples passent par le dictionnaire / une table
-   localisée, pas de français en dur.
+1. **UI (React components / pages)** → `src/i18n/fr.ts` dictionary (SOURCE of truth, `type Messages = typeof fr`) + `src/i18n/en.ts` (same keys, otherwise TS error). In the component: `const t = useTranslation();` then `t.section.key`. Never hardcode French in the JSX.
+2. **Demo specs** (`src/site-content/demos/*.ts`) → exports a `(locale: Locale) => DataFlowSpec` builder with a `const strings = { en, fr }` table and rebuilds the spec via `s = strings[locale]`. **Reference: `demos/clientServer.ts`.** As long as a demo is not translated, it can remain a `DataFlowSpec` object (FR in both languages); the `getSpec(demo, locale)` resolver accepts both forms.
+3. **Demo metadata** (`demos.ts`) → `Localized<T> = { fr: T; en?: T }` (FR fallback via `pickLocale`). `category` = stable KEY; displayed labels are translated in `gallery.categories`.
+4. **MDX docs** → English is the SOURCE in `docs/*.mdx`; French lives in `i18n/fr/docusaurus-plugin-content-docs/current/*.mdx`. Exception: `intro.mdx` renders `<IntroDoc>` which self-localizes (no i18n/fr copy).
+5. **API Reference** (`docsContent.tsx`, `apiExamples.ts`) → same rules: prose and `note:`/`text:` of examples go through the dictionary / a localized table, no hardcoded French.
 
-La locale courante pour le contenu (specs, champs localisés) s'obtient avec
-`useLocale()` (`src/i18n`).
+The current locale for content (specs, localized fields) is obtained with `useLocale()` (`src/i18n`).
 
-**Vérification (obligatoire quand tu touches l'i18n) :**
+**Verification (mandatory when you touch i18n):**
 
-- `cd apps/docs && npx tsc --noEmit` — le build Docusaurus NE type-check PAS ;
-  c'est ce `tsc` qui attrape un `en.ts` désaligné de `fr.ts` et les erreurs de
-  type. À lancer avant de considérer une tâche i18n terminée.
-- `npm run build:docs && (cd apps/docs && npx docusaurus serve)` — teste les deux
-  locales comme en prod (`docusaurus start` n'en sert qu'une).
-- Chasse au français résiduel : `grep -rnE "[éèàçœêîôûù]" apps/docs/src/components
-apps/docs/src/pages` (hors `fr.ts`, commentaires) ne doit rien rendre de
-  visible par l'utilisateur.
+- `cd apps/docs && npx tsc --noEmit` — the Docusaurus build does NOT type-check; it's this `tsc` that catches an `en.ts` misaligned with `fr.ts` and type errors. Run this before considering an i18n task complete.
+- `npm run build:docs && (cd apps/docs && npx docusaurus serve)` — test both locales as in prod (`docusaurus start` only serves one).
+- Hunt for residual French: `grep -rnE "[éèàçœêîôûù]" apps/docs/src/components apps/docs/src/pages` (excluding `fr.ts`, comments) should return nothing user-visible.
 
-## Points de vigilance (issus de revues de code)
+## Vigilance points (from code reviews)
 
-Pièges déjà rencontrés dans ce dépôt — vérifie-les quand tu touches la zone
-concernée (le détail des cas est dans `todo.md` tant qu'il existe) :
+Pitfalls already encountered in this repo — check them when you touch the affected area (case details are in `todo.md` as long as it exists):
 
-- **Pas de champ d'IR mort** : toute donnée calculée par le compilateur doit
-  être consommée par le rendu, sinon supprimée. N'exporte pas d'API non
-  branchée.
-- **Mesure DOM** : la `signature` de `useStageGeometry` doit refléter TOUT
-  champ de spec qui influence la _position_ des nœuds — un ResizeObserver ne
-  voit que les redimensionnements, pas les déplacements.
-- **Unités cohérentes en géométrie** : les décisions horizontal/vertical et les
-  offsets se prennent en pixels mesurés, pas en ratios 0..1 (ou alors en
-  corrigeant par l'aspect du Stage). Deux modules qui décident différemment se
-  contredisent sur les stages non carrés.
-- **Boucles rAF** : plafonne le delta de temps (onglet inactif → `dt` énorme au
-  retour).
-- **Chemins doubles** : si une fonction a un chemin optimisé et un fallback
-  (ex. `evaluate`), un test doit prouver leur équivalence — le chemin de prod
-  n'est pas forcément celui que les tests exercent.
-- **Publication npm** : avant tout `npm publish`, vérifie le tarball avec
-  `npm pack --dry-run` (LICENSE présent, `files`/`exports` corrects).
+- **No dead IR fields**: any data computed by the compiler must be consumed by the renderer, otherwise deleted. Do not export an unhooked API.
+- **DOM measurement**: the `useStageGeometry` `signature` must reflect ANY spec field that influences the _position_ of nodes — a ResizeObserver only sees resizes, not displacements.
+- **Consistent units in geometry**: horizontal/vertical decisions and offsets are taken in measured pixels, not in 0..1 ratios (or else by correcting by the Stage aspect). Two modules that decide differently contradict each other on non-square stages.
+- **rAF loops**: cap the time delta (inactive tab → huge `dt` upon return).
+- **Dual paths**: if a function has an optimized path and a fallback (e.g. `evaluate`), a test must prove their equivalence — the prod path is not necessarily the one tests exercise.
+- **npm publication**: before any `npm publish`, verify the tarball with `npm pack --dry-run` (LICENSE present, `files`/`exports` correct).
 
-## Scripts disponibles (référence rapide)
+## Available scripts (quick reference)
 
-Racine du monorepo :
+Monorepo root:
 
-| Script                  | Effet                                               |
+| Script                  | Effect                                              |
 | ----------------------- | --------------------------------------------------- |
-| `npm run dev`           | Build la lib puis lance le site Docusaurus en watch |
-| `npm run build`         | Build complet (lib + site)                          |
-| `npm run build:lib`     | Build du package uniquement                         |
-| `npm run build:docs`    | Build du site uniquement                            |
-| `npm run lint`          | ESLint sur tous les workspaces qui l'exposent       |
-| `npm run format:check`  | Vérifie le formatage Prettier                       |
-| `npm run format:write`  | Applique Prettier                                   |
-| `npm test`              | Tests vitest de la lib                              |
-| `npm run test:coverage` | Tests + seuils de couverture                        |
-| `npm run deadcode`      | knip — détection de code mort                       |
+| `npm run dev`           | Builds the lib then starts Docusaurus site in watch |
+| `npm run build`         | Full build (lib + site)                             |
+| `npm run build:lib`     | Lib package build only                              |
+| `npm run build:docs`    | Site build only                                     |
+| `npm run lint`          | ESLint on all workspaces that expose it             |
+| `npm run format:check`  | Checks Prettier formatting                          |
+| `npm run format:write`  | Applies Prettier                                    |
+| `npm test`              | vitest lib tests                                    |
+| `npm run test:coverage` | Tests + coverage thresholds                         |
+| `npm run deadcode`      | knip — dead code detection                          |
 
-Package (`packages/react-dataflow-animator/`) :
+Package (`packages/react-dataflow-animator/`):
 
-| Script                     | Effet                                        |
-| -------------------------- | -------------------------------------------- |
-| `npm run build`            | Typecheck + vite build + déclarations .d.ts  |
-| `npm run dev`              | vite build en mode watch                     |
-| `npm run lint`             | ESLint sur src/                              |
-| `npm test`                 | Tests vitest unitaires                       |
-| `npm run test:coverage`    | Tests + couverture                           |
-| `npm run test:integration` | Tests d'intégration sur les démos            |
-| `npm run harness`          | Harnais de validation visuelle (Vite, :5199) |
-| `npm run curves`           | Passe structurelle headless (`--demo <id>`)  |
-| `npm run test:visual`      | Régression visuelle Playwright (goldens)     |
+| Script                     | Effect                                      |
+| -------------------------- | ------------------------------------------- |
+| `npm run build`            | Typecheck + vite build + .d.ts declarations |
+| `npm run dev`              | vite build in watch mode                    |
+| `npm run lint`             | ESLint on src/                              |
+| `npm test`                 | Unit vitest tests                           |
+| `npm run test:coverage`    | Tests + coverage                            |
+| `npm run test:integration` | Integration tests on demos                  |
+| `npm run harness`          | Visual validation harness (Vite, :5199)     |
+| `npm run curves`           | Headless structural pass (`--demo <id>`)    |
+| `npm run test:visual`      | Playwright visual regression (goldens)      |
 
-## Workflows à éviter
+## Workflows to avoid
 
-- Ne fais **jamais** `git add .` ni `git add -A` — ajoute les fichiers
-  nommément.
-- Ne fais **jamais** `git commit` de ta propre initiative — propose le
-  message et attends une confirmation explicite de l'utilisateur.
-- Ne fais **jamais** `git commit --amend` sans en discuter (Claude par
-  défaut crée un nouveau commit).
-- Ne mets **jamais** `--no-verify` pour passer un hook.
-- N'invente pas une URL de doc, un nom de package npm, ou une version. Si
-  tu hésites, demande ou vérifie avec `npm view`.
-- Ne supprime pas un export public de `src/index.ts` sans confirmation
-  explicite.
+- **Never** run `git add .` or `git add -A` — add files by name.
+- **Never** run `git commit` on your own initiative — propose the message and wait for an explicit user confirmation.
+- **Never** run `git commit --amend` without discussing it (Claude by default creates a new commit).
+- **Never** use `--no-verify` to bypass a hook.
+- Do not invent a doc URL, an npm package name, or a version. If you are unsure, ask or verify with `npm view`.
+- Do not remove a public export from `src/index.ts` without explicit confirmation.
 
-## Pour démarrer une session de travail
+## To start a work session
 
-1. Lis le fichier `README.md` et `docs/SPEC.md` si tu n'as pas le projet
-   en tête.
-2. Lance les checks ci-dessus pour confirmer l'état vert de la base.
-3. Travaille sur ta tâche.
-4. Relance la même séquence de checks avant de proposer le commit.
+1. Read `README.md` and `docs/SPEC.md` if you don't have the project in mind.
+2. Run the checks above to confirm the green state of the base.
+3. Work on your task.
+4. Rerun the same sequence of checks before proposing the commit.

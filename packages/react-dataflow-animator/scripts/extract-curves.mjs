@@ -1,16 +1,16 @@
 /**
- * Passe STRUCTURELLE de fluidité, headless et sans navigateur.
+ * STRUCTURAL fluidity pass, headless and without browser.
  *
- * Le moteur étant pur (`evaluate(timeline, t)`), on n'a pas besoin de rendre des
- * pixels pour détecter les défauts de fluidité qui se décident à la compilation :
- * une transition `set_content` instantanée, un fondu trop court, deux contenus
- * qui se chevauchent sur le même nœud. C'est le signal rapide (CI, pré-commit) ;
- * la forme RÉELLE du crossfade (linéaire vs eased) et le re-layout se voient dans
- * le harnais Vite, qui rend le vrai DOM. Voir docs/AI-VALIDATION.md.
+ * Since the engine is pure (`evaluate(timeline, t)`), we don't need to render
+ * pixels to detect fluidity defects that are decided at compile time:
+ * an instantaneous `set_content` transition, a fade that is too short, two contents
+ * overlapping on the same node. This is the fast signal (CI, pre-commit);
+ * the REAL shape of the crossfade (linear vs eased) and the re-layout are seen in
+ * the Vite harness, which renders the real DOM. See docs/AI-VALIDATION.md.
  *
- * On n'utilise QUE l'API publique (`compile`, `evaluate` depuis le dist construit)
- * pour ne rien réimplémenter du moteur. `clipOpacity`/easing ne sont pas publics :
- * leur courbe vit dans le harnais, pas ici.
+ * We ONLY use the public API (`compile`, `evaluate` from the built dist)
+ * to not reimplement anything from the engine. `clipOpacity`/easing are not public:
+ * their curve lives in the harness, not here.
  *
  *   node scripts/extract-curves.mjs --demo spa
  *   node scripts/extract-curves.mjs --demo spa --json > out/spa.json
@@ -30,8 +30,8 @@ try {
   ({ compile } = await import(distUrl.href));
 } catch {
   console.error(
-    `Impossible de charger le dist (${distUrl.pathname}).\n` +
-      `Construis d'abord la lib :  npm run build:lib`
+    `Unable to load the dist (${distUrl.pathname}).\n` +
+      `Build the lib first: npm run build:lib`
   );
   process.exit(1);
 }
@@ -45,7 +45,7 @@ try {
   const mod = await import(demoUrl.href);
   spec = mod[values.demo] ?? mod.default ?? Object.values(mod)[0];
 } catch (err) {
-  console.error(`Démo introuvable : ${values.demo} (${demoUrl.pathname})`);
+  console.error(`Demo not found: ${values.demo} (${demoUrl.pathname})`);
   console.error(String(err?.message ?? err));
   process.exit(1);
 }
@@ -54,12 +54,12 @@ const { timeline } = compile(spec);
 
 const setContent = timeline.clips.filter((c) => c.kind === 'set_content');
 
-// On ne signale QUE ce qui est dérivable sans connaître `clipOpacity` :
-//  - les chevauchements de deux contenus sur le même nœud (scintillement) ;
-//  - les fondus EXPLICITES coupés (0ms) ou très courts, choisis par l'auteur.
-// La durée de fondu par DÉFAUT (FADE_MS interne) n'est pas visible ici : si la
-// spec ne fixe pas fadeInMs/fadeOutMs, c'est au harnais Vite de montrer la
-// courbe réelle. On n'invente donc aucun chiffre de fondu côté headless.
+// We ONLY flag what can be derived without knowing `clipOpacity`:
+//  - overlaps of two contents on the same node (flickering);
+//  - EXPLICIT fades cut short (0ms) or very short, chosen by the author.
+// The DEFAULT fade duration (internal FADE_MS) is not visible here: if the
+// spec doesn't fix fadeInMs/fadeOutMs, it's up to the Vite harness to show the
+// real curve. So we invent no fade numbers on the headless side.
 const findings = [];
 const seenByNode = new Map();
 
@@ -80,8 +80,8 @@ for (const clip of setContent) {
     objectId: clip.objectId,
     window: [Math.round(clip.startMs), Math.round(clip.visibleUntilMs)],
     holdMs: Math.round(clip.visibleUntilMs - clip.startMs),
-    fadeInMs: clip.fadeInMs ?? 'défaut',
-    fadeOutMs: clip.fadeOutMs ?? 'défaut',
+    fadeInMs: clip.fadeInMs ?? 'default',
+    fadeOutMs: clip.fadeOutMs ?? 'default',
     flags,
   });
 }
@@ -98,19 +98,19 @@ if (values.json) {
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');
 } else {
   console.log(
-    `\n${report.demo} — ${report.durationMs}ms, ${report.stops} arrêts, ` +
+    `\n${report.demo} — ${report.durationMs}ms, ${report.stops} stops, ` +
       `${report.setContentCount} set_content\n`
   );
-  if (findings.length === 0) console.log('  (aucun set_content)');
+  if (findings.length === 0) console.log('  (no set_content)');
   for (const f of findings) {
     const tag = f.flags.length ? `  ⚠ ${f.flags.join(', ')}` : '  ✓';
     console.log(
-      `${tag}  ${f.objectId}  fenêtre ${f.window[0]}–${f.window[1]}ms · ` +
+      `${tag}  ${f.objectId}  window ${f.window[0]}–${f.window[1]}ms · ` +
         `hold ${f.holdMs}ms · fade-in ${f.fadeInMs} · fade-out ${f.fadeOutMs}`
     );
   }
   const flagged = findings.filter((f) => f.flags.length).length;
   console.log(
-    `\n${flagged ? `${flagged} clip(s) avec un fondu explicite à risque.` : 'Rien à signaler côté structure — la fluidité du crossfade se juge dans le harnais.'}\n`
+    `\n${flagged ? `${flagged} clip(s) with risky explicit fade.` : 'Nothing to report structurally — crossfade fluidity is judged in the harness.'}\n`
   );
 }

@@ -7,23 +7,23 @@ import { ShapeNode } from './ShapeNode';
 import { isPanelNode, isShapeType } from './nodeKinds';
 
 export interface NodeViewProps {
-  /** Le nœud à représenter. Seuls `type` — et, pour les panneaux,
-   *  `header`/`body`/`language` — sont lus. */
+  /** The node to represent. Only `type` — and, for panels,
+   *  `header`/`body`/`language` — are read. */
   node: Node;
-  /** Coloration syntaxique des panneaux (quand `language` est fourni).
-   *  Défaut : échappement HTML simple, suffisant pour un rendu sans coloration. */
+  /** Syntax highlighting of panels (when `language` is provided).
+   *  Default: simple HTML escaping, sufficient for rendering without highlighting. */
   highlight?: Highlighter;
 }
 
 /**
- * Cœur visuel d'un nœud — pictogramme ou panneau de texte — sans positionnement,
- * sous-icône, spinner ni Stage englobant. Se dimensionne sur `--rdfa-scale`
- * (fallback `1`), donc rendable hors d'un `<DataFlowPlayer>`.
+ * Visual core of a node — pictogram or text panel — without positioning,
+ * sub-icon, spinner or enclosing Stage. Sizes itself on `--rdfa-scale`
+ * (fallback `1`), so it's renderable outside a `<DataFlowPlayer>`.
  *
- * `StaticNode` le réutilise (un seul chemin de rendu, une seule décision
- * panneau/forme/pictogramme via {@link isPanelNode} / {@link isShapeType}) ; il
- * est exporté pour afficher un nœud isolé, par ex. la galerie des types de la
- * référence API.
+ * `StaticNode` reuses it (a single rendering path, a single decision
+ * panel/shape/pictogram via {@link isPanelNode} / {@link isShapeType}); it
+ * is exported to display an isolated node, e.g. the types gallery of the
+ * API reference.
  */
 export function NodeView({
   node,

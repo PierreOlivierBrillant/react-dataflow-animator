@@ -1,7 +1,7 @@
 import type { Locale } from './translations';
 
-// Préférence de langue explicite (clic sur le sélecteur). Tant qu'elle est
-// absente, la 1ʳᵉ visite suit la langue du navigateur (cf. Root.tsx).
+// Explicit language preference (click on the selector). While it is
+// absent, the 1st visit follows the browser language (see Root.tsx).
 const LOCALE_STORAGE_KEY = 'rdfa-locale';
 
 export function getStoredLocale(): Locale | null {
@@ -17,7 +17,7 @@ export function setStoredLocale(locale: Locale): void {
   try {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   } catch {
-    // Persistance best-effort : on ignore un localStorage inaccessible.
+    // Best-effort persistence: we ignore an inaccessible localStorage.
   }
 }
 

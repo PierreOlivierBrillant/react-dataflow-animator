@@ -14,28 +14,28 @@ import { getSubIcon } from './subIcons';
 export interface StaticNodeProps {
   object: Node;
   placement: NodePlacement;
-  /** Contenu effectif (set_content actif, ou contenu initial du nœud). */
+  /** Effective content (active set_content, or initial node content). */
   content?: ObjectContent | null;
-  /** Opacité du contenu (fondu d'apparition/disparition de set_content). */
+  /** Content opacity (fade in/out of set_content). */
   contentOpacity?: number;
-  /** Spinner de chargement actif. */
+  /** Active loading spinner. */
   loading?: boolean;
-  /** Nœud surligné par une action highlight. */
+  /** Node highlighted by a highlight action. */
   highlighted?: boolean;
   highlight: Highlighter;
-  /** Opacité globale du nœud (fondu show/hide de set_visible). */
+  /** Global node opacity (show/hide fade of set_visible). */
   opacity?: number;
-  /** Fraction révélée [0..1] du panneau pendant une transition set_content. La
-   *  révélation se fait de HAUT en bas via `clip-path` — qui ne change pas la
-   *  taille de layout, donc le ResizeObserver mesure toujours le panneau plein
-   *  (pas de boucle de rétroaction avec la géométrie). */
+  /** Revealed fraction [0..1] of the panel during a set_content transition. The
+   *  reveal happens from TOP to bottom via `clip-path` — which does not change the
+   *  layout size, so the ResizeObserver always measures the full panel
+   *  (no feedback loop with geometry). */
   reveal?: number;
-  /** Taille max (px) du panneau set_content pour qu'il ne recouvre pas ses voisins
-   *  (les nœuds ne bougeant pas, c'est le panneau qui rétrécit pour tenir). */
+  /** Max size (px) of the set_content panel so it doesn't overlap neighbors
+   *  (nodes don't move, the panel shrinks to fit). */
   contentLimit?: { maxW: number; maxH: number };
-  /** Facteur de police COMMUN à tous les panneaux de code (synchronisation). */
+  /** COMMON font factor for all code panels (synchronization). */
   codeFontScale?: number;
-  /** Remonte au Stage le ratio de réduction que ce code nécessiterait seul. */
+  /** Sends up to the Stage the reduction ratio this code would need alone. */
   onCodeFit?: (id: string, ratio: number) => void;
 }
 
@@ -68,10 +68,10 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     ) : (
       <>
         <NodeView node={object} highlight={highlight} />
-        {/* Badge unique en coin : le subicon (techno) et l'anneau de chargement
-            partagent le même conteneur positionné, donc restent toujours
-            concentriques. Le conteneur porte le fond plein qui sert
-            d'arrière-plan au spinner (« vers l'intérieur »). */}
+        {/* Unique corner badge: the subicon (tech) and the loading ring
+            share the same positioned container, so they always remain
+            concentric. The container holds the solid background that serves
+            as the backdrop for the spinner ("inwards"). */}
         {object.icon || loading ? (
           <span className="rdfa-node-badge">
             {object.icon ? (
@@ -87,12 +87,12 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       </>
     );
 
-    // Pendant une transition set_content, on révèle le panneau du HAUT vers le bas
-    // par clip-path (barre de fenêtre d'abord). Contrairement à `height`,
-    // clip-path ne touche PAS la boîte de layout : le ResizeObserver mesure
-    // toujours le panneau plein → la géométrie reste stable (pas de boucle qui
-    // figeait le morph à la taille de l'icône), et le panneau ne s'ouvre plus
-    // « du centre vers le haut et le bas ».
+    // During a set_content transition, we reveal the panel from TOP to bottom
+    // via clip-path (window bar first). Unlike `height`,
+    // clip-path does NOT touch the layout box: the ResizeObserver always
+    // measures the full panel → geometry remains stable (no loop freezing
+    // the morph to the icon size), and the panel no longer opens
+    // "from the center upwards and downwards".
     const visualStyle: CSSProperties | undefined = content
       ? {
           opacity: contentOpacity,
@@ -118,8 +118,8 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       </span>
     );
 
-    // `tinted` ne sert qu'à la pastille des pictogrammes ; formes/panneaux lisent
-    // directement --rdfa-fill. Inutile quand un set_content occupe le nœud.
+    // `tinted` is only used for pictogram badges; shapes/panels read
+    // --rdfa-fill directly. Useless when a set_content occupies the node.
     const cls =
       'rdfa-node' +
       (content ? ' rdfa-node--content' : '') +
@@ -137,8 +137,8 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
             left: `${placement.cx * 100}%`,
             top: `${placement.cy * 100}%`,
             opacity,
-            // Plafonds par nœud : le panneau set_content rétrécit pour ne pas
-            // recouvrir ses voisins (les nœuds ne se déplaçant pas).
+            // Per-node ceilings: the set_content panel shrinks so it doesn't
+            // overlap its neighbors (nodes do not move).
             ...(content && contentLimit
               ? {
                   '--rdfa-content-maxw': `${contentLimit.maxW}px`,

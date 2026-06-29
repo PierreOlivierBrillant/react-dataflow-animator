@@ -1,16 +1,16 @@
 import type { DataFlowSpec } from '../types';
 
-/** Sérialise la spec pour affichage / copie / téléchargement (indentation 2). */
+/** Serializes the spec for display / copying / downloading (indentation 2). */
 export function serializeSpec(spec: DataFlowSpec): string {
   return JSON.stringify(spec, null, 2);
 }
 
-/** Copie un texte dans le presse-papier. */
+/** Copies text to the clipboard. */
 export function copyText(text: string): Promise<void> {
   return navigator.clipboard.writeText(text);
 }
 
-/** Télécharge un texte JSON sous forme de fichier `.json` (ancre temporaire). */
+/** Downloads JSON text as a `.json` file (temporary anchor). */
 export function downloadJson(text: string, filename = 'dataflow.json'): void {
   const url = URL.createObjectURL(
     new Blob([text], { type: 'application/json' })

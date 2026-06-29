@@ -72,7 +72,7 @@ describe('StaticNode — nœuds textuels', () => {
     });
     const header = container.querySelector('.rdfa-node-panel-header');
     const body = container.querySelector('.rdfa-node-panel-body');
-    // Le highlighter renvoie du HTML (tokens Prism) dans des zones .rdfa-code.
+    // The highlighter returns HTML (Prism tokens) in .rdfa-code zones.
     expect(header?.classList.contains('rdfa-code')).toBe(true);
     expect(body?.classList.contains('rdfa-code')).toBe(true);
     expect(header?.querySelector('.token')).toBeTruthy();
@@ -80,8 +80,8 @@ describe('StaticNode — nœuds textuels', () => {
   });
 
   it('un set_content actif remplace le panneau textuel', () => {
-    // `content` est une prop calculée par le Stage (set_content ou content
-    // initial), pas `object.content` : il prend la priorité sur le panneau.
+    // `content` is a prop calculated by the Stage (set_content or initial
+    // content), not `object.content`: it takes priority over the panel.
     const { container } = render(
       <StaticNode
         object={{ id: 'snippet', type: 'simple_node', body: 'x' }}

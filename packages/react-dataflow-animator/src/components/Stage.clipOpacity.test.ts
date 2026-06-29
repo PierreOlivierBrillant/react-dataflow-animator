@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { clipOpacity, contentCrossfade, FADE_MS } from './clipOpacity';
 import { APPEAR_HOLD } from '../engine/compiler';
 
-// Clip minimal visible très longtemps (pas de contrainte de sortie).
+// Minimal clip visible for a very long time (no exit constraint).
 const farEnd = 99_999;
 
 describe("clipOpacity — fondu d'entrée avec hold (inDur > 0)", () => {
@@ -45,7 +45,7 @@ describe('clipOpacity — fondu de sortie sur FADE_MS', () => {
   const clip = { startMs: 0, animStartMs: 0, visibleUntilMs: 1000 };
 
   it('opacité 1 avant le début du fondu de sortie', () => {
-    // outStart = 1000 - FADE_MS ; on vérifie un instant légèrement avant
+    // outStart = 1000 - FADE_MS; checking an instant slightly before
     expect(clipOpacity(clip, 1000 - FADE_MS - 1)).toBe(1);
   });
 
@@ -105,7 +105,7 @@ describe('clipOpacity — fadeInMs personnalisé', () => {
   });
 
   it('fade_in_ms remplace aussi le hold de départ (move)', () => {
-    // Pour un move, inDur = APPEAR_HOLD = 300 ; fadeInMs = 100 prend le dessus.
+    // For a move, inDur = APPEAR_HOLD = 300; fadeInMs = 100 takes precedence.
     const clip = {
       startMs: 0,
       animStartMs: APPEAR_HOLD,
@@ -119,7 +119,7 @@ describe('clipOpacity — fadeInMs personnalisé', () => {
 });
 
 describe('contentCrossfade — fondu set_content adouci (easeInOutCubic)', () => {
-  // inDur = 0 → fondu d'entrée sur FADE_MS.
+  // inDur = 0 → fade in over FADE_MS.
   const clip = { startMs: 0, animStartMs: 0, visibleUntilMs: farEnd };
 
   it('partage les points fixes de clipOpacity (0, 0.5, 1)', () => {
@@ -129,7 +129,7 @@ describe('contentCrossfade — fondu set_content adouci (easeInOutCubic)', () =>
   });
 
   it('démarre plus lentement que le linéaire (départ ralenti)', () => {
-    // Au quart du fondu, le linéaire vaut 0.25 ; l'eased reste sous 0.25.
+    // At quarter fade, linear is 0.25; eased stays under 0.25.
     const linear = clipOpacity(clip, FADE_MS / 4);
     const eased = contentCrossfade(clip, FADE_MS / 4);
     expect(linear).toBeCloseTo(0.25);
@@ -137,7 +137,7 @@ describe('contentCrossfade — fondu set_content adouci (easeInOutCubic)', () =>
   });
 
   it('finit plus lentement que le linéaire (arrivée ralentie)', () => {
-    // Aux trois quarts, l'eased dépasse le linéaire (il accélère au milieu).
+    // At three quarters, eased overtakes linear (it accelerates in the middle).
     const linear = clipOpacity(clip, (FADE_MS * 3) / 4);
     const eased = contentCrossfade(clip, (FADE_MS * 3) / 4);
     expect(eased).toBeGreaterThan(linear);
