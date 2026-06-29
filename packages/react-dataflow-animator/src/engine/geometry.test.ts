@@ -21,7 +21,8 @@ const mkNode = (
   h = 40,
   labelH = 0,
   labelW?: number,
-  borderOutset?: number
+  borderOutset?: number,
+  scale?: number
 ): NodeGeom => ({
   id,
   x,
@@ -31,6 +32,7 @@ const mkNode = (
   ...(labelH > 0 ? { labelH } : {}),
   ...(labelW !== undefined ? { labelW } : {}),
   ...(borderOutset !== undefined ? { borderOutset } : {}),
+  ...(scale !== undefined ? { scale } : {}),
 });
 
 const makeConn = (
@@ -52,9 +54,9 @@ const B: NodeGeom = { id: 'b', x: 200, y: 0, width: 40, height: 40 };
 // ─── Tests existants (non modifiés) ─────────────────────────────────────────
 
 describe('connection', () => {
-  it('rogne les extrémités au bord des nœuds + marge', () => {
+  it('accroche les extrémités SUR le bord du nœud (la flèche le touche)', () => {
     const c = connection(A, B);
-    expect(c.start.x).toBe(34);
+    expect(c.start.x).toBe(20); // 0 + halfW(20), aucune marge ajoutée
   });
 
   it('creates basic start and end points', () => {
@@ -78,14 +80,14 @@ describe('connection', () => {
   });
 
   // ── Cas 4 : nœud source avec label ────────────────────────────────────────
-  it('[cas 4] nœud source avec label : start.y dépasse le bas visuel du nœud', () => {
+  it('[cas 4] nœud source avec label : start.y passe sous le bas du label', () => {
     const from = mkNode('from4', 0, 0, 40, 40, 20, 80);
     const to = mkNode('to4', 0, 300);
     const c = connection(from, to);
-    // label descend jusqu'à y = 0+20+LABEL_GAP+20 = 46 ; start doit être en-dessous
+    // start sous le visuel…
     expect(c.start.y).toBeGreaterThan(from.y + from.height / 2);
-    // fromBottom(46) + NODE_GAP(14) = 60
-    expect(c.start.y).toBeCloseTo(60, 5);
+    // …pile au bas du label : 0 + halfH(20) + LABEL_GAP(6) + labelH(20) = 46.
+    expect(c.start.y).toBeCloseTo(46, 5);
   });
 
   // ── Cas 5 : segment quasi-vertical, même lane (start.x == obs.x) ────────────
@@ -181,9 +183,9 @@ describe('accroche cardinale', () => {
     const from = mkNode('fh', 0, 0);
     const to = mkNode('th', 300, 80);
     const c = connection(from, to);
-    expect(c.start.x).toBeCloseTo(34, 5); // 0 + 20 + 14
+    expect(c.start.x).toBeCloseTo(20, 5); // face Est, sur le bord : 0 + 20
     expect(c.start.y).toBeCloseTo(0, 5); // face Est → y du centre source
-    expect(c.end.x).toBeCloseTo(266, 5); // 300 - 20 - 14
+    expect(c.end.x).toBeCloseTo(280, 5); // face Ouest : 300 - 20
     expect(c.end.y).toBeCloseTo(80, 5); // face Ouest → y du centre destination
   });
 
@@ -193,9 +195,9 @@ describe('accroche cardinale', () => {
     const to = mkNode('tv', 80, -300);
     const c = connection(from, to);
     expect(c.start.x).toBeCloseTo(0, 5); // face Nord → x du centre source
-    expect(c.start.y).toBeCloseTo(-34, 5); // 0 - 20 - 14
+    expect(c.start.y).toBeCloseTo(-20, 5); // sur le bord : 0 - 20
     expect(c.end.x).toBeCloseTo(80, 5);
-    expect(c.end.y).toBeCloseTo(-300 + 20 + 14, 5); // face Sud sans label
+    expect(c.end.y).toBeCloseTo(-300 + 20, 5); // face Sud sans label : -280
   });
 
   // ── Abaissement latéral quand le nœud a un label (centre de gravité) ──────
@@ -208,12 +210,27 @@ describe('accroche cardinale', () => {
     expect(c.end.y).toBeCloseTo(0, 5); // destination sans label : reste centrée
   });
 
-  // ── borderOutset : la pastille pousse l'accroche vers l'extérieur ─────────
-  it('borderOutset pousse le point Est/Ouest de o px supplémentaires', () => {
+  // ── borderOutset : l'accroche se pose sur le contour coloré (pastille) ─────
+  it('borderOutset pousse le point Est/Ouest jusqu’au contour coloré', () => {
     const from = mkNode('fo', 0, 0, 40, 40, 0, undefined, 5);
     const to = mkNode('to', 300, 0);
     const c = connection(from, to);
-    expect(c.start.x).toBeCloseTo(39, 5); // 0 + 20 + 5 (outset) + 14
+    expect(c.start.x).toBeCloseTo(25, 5); // 0 + 20 + 5 (outset), sur la pastille
+  });
+
+  // ── l'accroche touche le bord à toute échelle (indépendante de scale) ──────
+  it('l’accroche touche le bord quelle que soit l’échelle (scale)', () => {
+    // scale ne décale PAS l'accroche : la flèche touche le bord = 0 + halfW(20).
+    const big = connection(
+      mkNode('fs', 0, 0, 40, 40, 0, undefined, undefined, 2.5),
+      mkNode('ts', 300, 0, 40, 40, 0, undefined, undefined, 2.5)
+    );
+    expect(big.start.x).toBeCloseTo(20, 5);
+    const small = connection(
+      mkNode('f', 0, 0, 40, 40, 0, undefined, undefined, 0.4),
+      mkNode('t', 300, 0, 40, 40, 0, undefined, undefined, 0.4)
+    );
+    expect(small.start.x).toBeCloseTo(20, 5);
   });
 
   // ── portOffset sur une face verticale décale x ────────────────────────────
@@ -222,16 +239,16 @@ describe('accroche cardinale', () => {
     const to = mkNode('tpv', 0, 300); // vertical → source Sud
     const c = connection(from, to, undefined, 10);
     expect(c.start.x).toBeCloseTo(10, 5); // face Sud → x = centre (0) + portOffset
-    expect(c.start.y).toBeCloseTo(34, 5); // 0 + 20 + 14, sans label
+    expect(c.start.y).toBeCloseTo(20, 5); // sur le bord : 0 + 20, sans label
   });
 
   // ── axis imposé : la face suit le flux, pas l'axe pixel dominant ──────────
   it('axis horizontal forcé : faces E/O même si surtout séparés verticalement', () => {
     const from = mkNode('fa', 0, 0);
-    const to = mkNode('ta', 40, 300); // |dy| ≫ |dx| en pixels
+    const to = mkNode('ta', 200, 300); // |dy| > |dx| en pixels
     // Sans axis : pixel dominant → face Sud.
     expect(connection(from, to).start.y).toBeGreaterThan(from.y);
-    // Avec axis horizontal : faces Est/Ouest.
+    // Avec axis horizontal : faces Est/Ouest, sur le bord.
     const forced = connection(
       from,
       to,
@@ -241,9 +258,9 @@ describe('accroche cardinale', () => {
       'bezier',
       'horizontal'
     );
-    expect(forced.start.x).toBeCloseTo(34, 5); // Est : 0 + 20 + 14
+    expect(forced.start.x).toBeCloseTo(20, 5); // Est, sur le bord : 0 + 20
     expect(forced.start.y).toBeCloseTo(0, 5);
-    expect(forced.end.x).toBeCloseTo(6, 5); // Ouest : 40 - 20 - 14
+    expect(forced.end.x).toBeCloseTo(180, 5); // Ouest : 200 - 20
     expect(forced.end.y).toBeCloseTo(300, 5);
     // Le tracé PART horizontalement : le 1er point reste ~à la hauteur du départ
     // (la poignée de Bézier suit la normale à la face, pas la corde verticale).
@@ -252,11 +269,11 @@ describe('accroche cardinale', () => {
 
   it('axis vertical forcé : faces N/S même si surtout séparés horizontalement', () => {
     const from = mkNode('fb', 0, 0);
-    const to = mkNode('tb', 300, 40); // |dx| ≫ |dy| en pixels
+    const to = mkNode('tb', 300, 200); // |dx| > |dy| en pixels
     const forced = connection(from, to, undefined, 0, 0, 'bezier', 'vertical');
-    expect(forced.start.y).toBeCloseTo(34, 5); // Sud : 0 + 20 + 14
+    expect(forced.start.y).toBeCloseTo(20, 5); // Sud, sur le bord : 0 + 20
     expect(forced.start.x).toBeCloseTo(0, 5);
-    expect(forced.end.y).toBeCloseTo(6, 5); // Nord : 40 - 20 - 14
+    expect(forced.end.y).toBeCloseTo(180, 5); // Nord : 200 - 20
     // Le tracé part verticalement : 1er point ~à l'abscisse du départ.
     expect(forced.waypoints![0].x).toBeLessThan(10);
   });
@@ -282,7 +299,8 @@ describe('labelBounds', () => {
     const from = mkNode('f2', 0, 0, 40, 40, labelH, 80);
     const to = mkNode('t2', 0, 300);
     const c = connection(from, to);
-    const expectedY = from.y + from.height / 2 + LABEL_GAP + labelH + NODE_GAP; // 0+20+6+20+14=60
+    // Accroche au bas du label, sur le bord (pas de marge) : 0+20+6+20 = 46.
+    const expectedY = from.y + from.height / 2 + LABEL_GAP + labelH;
     expect(c.start.y).toBeCloseTo(expectedY, 5);
   });
 

@@ -329,6 +329,8 @@ export function Stage({
       ...(lH > 0 ? { labelH: lH } : {}),
       ...(lW > 0 ? { labelW: lW } : {}),
       ...(bo > 0 ? { borderOutset: bo } : {}),
+      // Même échelle de Stage que l'icône (gap flèche↔nœud à l'échelle).
+      ...(currGeom.scale != null ? { scale: currGeom.scale } : {}),
     };
   }
   const allEffectiveNodes = hasSetContentTransition

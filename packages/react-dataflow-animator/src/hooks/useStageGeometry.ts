@@ -52,7 +52,8 @@ function sameGeometry(a: GeometryMap, b: GeometryMap): boolean {
       x.height !== y.height ||
       x.labelH !== y.labelH ||
       x.labelW !== y.labelW ||
-      x.borderOutset !== y.borderOutset
+      x.borderOutset !== y.borderOutset ||
+      x.scale !== y.scale
     )
       return false;
   }
@@ -90,6 +91,12 @@ export function useStageGeometry(signature: string): StageGeometry {
       );
     }
 
+    // Échelle du Stage (--rdfa-scale), inhérente à tous les nœuds : lue une seule
+    // fois sur le Stage. Sert à mettre à l'échelle le gap flèche↔nœud et le débord
+    // de pastille (tous deux exprimés à l'échelle 1 dans la géométrie).
+    const scale =
+      parseFloat(getComputedStyle(stage).getPropertyValue('--rdfa-scale')) || 1;
+
     const map: GeometryMap = {};
     stage.querySelectorAll<HTMLElement>('[data-node-id]').forEach((el) => {
       const id = el.getAttribute('data-node-id');
@@ -104,6 +111,7 @@ export function useStageGeometry(signature: string): StageGeometry {
         y: r.top - sr.top + r.height / 2,
         width: r.width,
         height: r.height,
+        scale,
       };
       // Mesure le label textuel (sous le visuel) pour le routage des flèches.
       const labelEl = el.querySelector<HTMLElement>('.rdfa-node-label');
@@ -114,14 +122,11 @@ export function useStageGeometry(signature: string): StageGeometry {
       }
       // Pictogramme teinté : la pastille (`background_color`) déborde du glyphe
       // mesuré. Les flèches s'accrochent sur ce contour coloré → on expose le
-      // débord, à l'échelle courante (--rdfa-scale), comme `borderOutset`.
+      // débord, à l'échelle courante, comme `borderOutset`.
       if (
         el.classList.contains('rdfa-node--tinted') &&
         el.querySelector('.rdfa-node-icon')
       ) {
-        const scale =
-          parseFloat(getComputedStyle(el).getPropertyValue('--rdfa-scale')) ||
-          1;
         node.borderOutset = PASTILLE_INSET * scale;
       }
       map[id] = node;

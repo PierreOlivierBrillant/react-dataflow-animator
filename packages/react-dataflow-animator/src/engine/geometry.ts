@@ -32,11 +32,18 @@ export interface NodeGeom {
    * nœud. 0/absent pour formes et panneaux (leur bord coloré = la boîte mesurée).
    */
   borderOutset?: number;
+  /**
+   * Échelle du Stage (`--rdfa-scale`) à la mesure. Met les marges de routage
+   * (détour anti-label, ancre de label) à l'échelle des nœuds. Défaut : 1.
+   */
+  scale?: number;
 }
 
 export type GeometryMap = Record<string, NodeGeom>;
 
-/** Marge (px) laissée entre un nœud et le bout des flèches / paquets. */
+/** Marge de routage (px, à l'échelle 1) : détour autour d'un label tiers et
+ *  décalage de l'ancre de label médian. PAS l'accroche (la flèche touche le bord).
+ *  Mise à l'échelle par `NodeGeom.scale` dans {@link connection}. */
 const NODE_GAP = 14;
 
 /** Espacement (px) entre le bas du visuel et le haut du label (CSS gap). */
@@ -118,15 +125,16 @@ function segmentIntersectsRect(
 type Face = 'east' | 'west' | 'north' | 'south';
 
 /**
- * Point d'accroche cardinal d'une flèche sur une face du nœud : posé sur le
- * contour coloré (bord visuel + `borderOutset`, la pastille des pictogrammes
- * teintés) puis écarté de `NODE_GAP`.
+ * Point d'accroche cardinal d'une flèche : posé EXACTEMENT sur le contour du nœud
+ * (bord visuel + `borderOutset`, c.-à-d. la bordure colorée pour un nœud teinté)
+ * — la flèche TOUCHE le bord, sans marge ajoutée (cf. demande utilisateur).
  *
  * - Faces latérales (est/ouest) : la coordonnée transverse `y` descend au centre
  *   de gravité du bloc *visuel + label* — un label sous le nœud le déséquilibre
  *   vers le bas, donc l'accroche latérale au centre du seul visuel paraîtrait trop
  *   haute — et reçoit `portOffset` (écartement intra-paire / fan-out).
- * - Face sud : passe SOUS le label, qui fait partie de l'empreinte basse du nœud.
+ * - Face sud : passe SOUS le label (qui fait partie de l'empreinte basse) ; elle ne
+ *   touche donc pas le bord coloré, le label s'interposant (seule exception voulue).
  * - Faces verticales (nord/sud) : `portOffset` décale la coordonnée `x`.
  */
 function cardinalAttach(node: NodeGeom, face: Face, portOffset: number): Point {
@@ -135,24 +143,18 @@ function cardinalAttach(node: NodeGeom, face: Face, portOffset: number): Point {
   const outset = node.borderOutset ?? 0;
   const labelH = node.labelH ?? 0;
   // Centre de gravité vertical du bloc : descend de la moitié de l'extension
-  // ajoutée par le label sous le visuel (gap + hauteur du label).
+  // ajoutée par le label sous le visuel (gap CSS + hauteur du label).
   const lateralY = node.y + (labelH > 0 ? (LABEL_GAP + labelH) / 2 : 0);
   switch (face) {
     case 'east':
-      return {
-        x: node.x + halfW + outset + NODE_GAP,
-        y: lateralY + portOffset,
-      };
+      return { x: node.x + halfW + outset, y: lateralY + portOffset };
     case 'west':
-      return {
-        x: node.x - halfW - outset - NODE_GAP,
-        y: lateralY + portOffset,
-      };
+      return { x: node.x - halfW - outset, y: lateralY + portOffset };
     case 'north':
-      return { x: node.x + portOffset, y: node.y - halfH - outset - NODE_GAP };
+      return { x: node.x + portOffset, y: node.y - halfH - outset };
     case 'south': {
       const bottom = labelH > 0 ? halfH + LABEL_GAP + labelH : halfH + outset;
-      return { x: node.x + portOffset, y: node.y + bottom + NODE_GAP };
+      return { x: node.x + portOffset, y: node.y + bottom };
     }
   }
 }
@@ -160,11 +162,12 @@ function cardinalAttach(node: NodeGeom, face: Face, portOffset: number): Point {
 /**
  * Points de connexion entre deux nœuds.
  *
- * - Accroche les extrémités à l'un des 4 points cardinaux (N/S/E/O) du nœud, sur
- *   son contour coloré (cf. {@link cardinalAttach}). L'axe est fourni par `axis`
- *   (dérivé du flux du layout, cf. `connectionAxis`) — la MÊME décision que
- *   `computePortOffsets`, pour qu'accroche et fan-out ne se contredisent jamais.
- *   À défaut d'`axis` (tests/usage isolé), on retombe sur l'axe pixel dominant.
+ * - Accroche les extrémités à l'un des 4 points cardinaux (N/S/E/O) du nœud,
+ *   EXACTEMENT sur son contour coloré (cf. {@link cardinalAttach}) : la flèche
+ *   touche le bord. L'axe est fourni par `axis` (dérivé du flux du layout, cf.
+ *   `connectionAxis`) — la MÊME décision que `computePortOffsets`, pour qu'accroche
+ *   et fan-out ne se contredisent jamais. À défaut d'`axis` (tests/usage isolé), on
+ *   retombe sur l'axe pixel dominant.
  * - Le tracé part/arrive perpendiculairement à la face : `axis` est aussi passé à
  *   `shapeWaypoints` pour orienter les poignées de courbe (sinon une courbe entre
  *   deux faces E/O mais à fort dénivelé repartirait verticalement).
@@ -185,6 +188,10 @@ export function connection(
   const isHorizontal = axis
     ? axis === 'horizontal'
     : Math.abs(dx) >= Math.abs(dy);
+
+  // Marge de routage (détour anti-label, ancre de label médian), à l'échelle du
+  // Stage. NB : l'accroche elle-même ne l'utilise PAS — la flèche touche le bord.
+  const gap = NODE_GAP * (from.scale ?? 1);
 
   // Faces cardinales opposées : la source pointe vers la destination, la
   // destination reçoit la face inverse.
@@ -222,7 +229,7 @@ export function connection(
         firstT = isect.tEntry;
         if (isHorizontal) {
           const xAt = start.x + (end.x - start.x) * isect.tEntry;
-          bestWps = [{ x: xAt, y: lb.y - NODE_GAP }];
+          bestWps = [{ x: xAt, y: lb.y - gap }];
         } else {
           // Segment quasi-vertical : contourner latéralement plutôt que de
           // rebrousser vers le haut, ce qui produit un détour non naturel.
@@ -232,7 +239,7 @@ export function connection(
           // pour éviter les croisements avec les flèches partant vers la gauche.
           bestWps = [
             {
-              x: start.x < obs.x ? lb.x - NODE_GAP : lb.x + lb.w + NODE_GAP,
+              x: start.x < obs.x ? lb.x - gap : lb.x + lb.w + gap,
               y: yAt,
             },
           ];
@@ -271,18 +278,18 @@ export function connection(
       const halfW = obs.width / 2;
       const halfH = obs.height / 2;
       if (
-        Math.abs(mid.x - obs.x) <= halfW + NODE_GAP &&
-        Math.abs(mid.y - obs.y) <= halfH + NODE_GAP
+        Math.abs(mid.x - obs.x) <= halfW + gap &&
+        Math.abs(mid.y - obs.y) <= halfH + gap
       ) {
         labelAnchor = isHorizontal
           ? // Trait horizontal : on remonte le label au-dessus du nœud. La marge
             // verticale ne dépend pas de la largeur (inconnue) du texte.
-            { x: mid.x, y: obs.y - halfH - NODE_GAP }
+            { x: mid.x, y: obs.y - halfH - gap }
           : // Trait vertical : on dégage latéralement. Le label restant ancré au
             // centre (textAnchor=middle) et sa largeur étant inconnue ici, on
             // garantit au moins que son centre quitte le nœud.
             {
-              x: obs.x + (mid.x <= obs.x ? -1 : 1) * (halfW + NODE_GAP),
+              x: obs.x + (mid.x <= obs.x ? -1 : 1) * (halfW + gap),
               y: mid.y,
             };
         break;
