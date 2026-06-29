@@ -8,6 +8,7 @@ import {
   orientationExample,
   circularExample,
   circularHubExample,
+  mergeEdgesExample,
 } from './_layout/orientations';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -132,6 +133,65 @@ différentes :
 ```
 
 Ignoré en mode `circular`.
+
+## Convergence des liens (`merge_edges`)
+
+Quand plusieurs liens s'attachent à la **même face** d'un nœud, ils se
+rejoignent par défaut en un **point d'ancrage unique** : un flux plusieurs-vers-un
+(un flood, un répartiteur de charge, un hub) converge visuellement au lieu de
+s'écarter. Mettez `merge_edges: false` sur un nœud pour **écarter** ses liens —
+chacun reçoit alors son propre point d'attache le long de la face, ordonné pour
+réduire les croisements. Pratique quand un nœud a plusieurs voisins distincts du
+même côté et que vous voulez distinguer les liens.
+
+<Tabs
+  defaultValue="merged"
+  values={[
+    { label: 'merge_edges: true (défaut)', value: 'merged' },
+    { label: 'merge_edges: false', value: 'fanned' },
+  ]}
+>
+  <TabItem value="merged">
+    <DataFlowPlayer
+      spec={mergeEdgesExample(true)}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+  <TabItem value="fanned">
+    <DataFlowPlayer
+      spec={mergeEdgesExample(false)}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+</Tabs>
+
+```ts
+{
+  direction: 'left-to-right',
+  nodes: [
+    { id: 'c1', type: 'laptop', text: 'Client', lane: 1 },
+    { id: 'c2', type: 'laptop', text: 'Client', lane: 1 },
+    { id: 'c3', type: 'laptop', text: 'Client', lane: 1 },
+    // merge_edges: false → les quatre liens s'écartent sur la face du serveur.
+    { id: 'srv', type: 'server', text: 'Serveur', lane: 2, merge_edges: false },
+  ],
+  connections: [
+    { from: 'c1', to: 'srv', style: 'animated' },
+    { from: 'c2', to: 'srv', style: 'animated' },
+    { from: 'c3', to: 'srv', style: 'animated' },
+  ],
+}
+```
+
+La décision est **par face de nœud** : dans `c → srv`, les liens convergent sur
+`srv` seulement si `srv` fusionne, et quittent `c` écartés seulement si `c`
+s'écarte. Plusieurs liens entre les **deux mêmes** nœuds gardent leurs voies
+parallèles dans tous les cas, pour que les flux requête/réponse bidirectionnels
+restent lisibles.
 
 ## Mode circulaire
 

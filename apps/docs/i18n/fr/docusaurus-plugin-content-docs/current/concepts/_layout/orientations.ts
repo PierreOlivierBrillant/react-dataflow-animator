@@ -17,6 +17,37 @@ export const orientationExample: (direction: Direction) => DataFlowSpec = (
   timeline: [],
 });
 
+/**
+ * Convergence des liens (`merge_edges`) : plusieurs clients vers un serveur.
+ * `merge` bascule le drapeau `merge_edges` du serveur : la même spec se rend
+ * convergée (défaut) ou écartée.
+ */
+export const mergeEdgesExample: (merge: boolean) => DataFlowSpec = (merge) => ({
+  direction: 'left-to-right',
+  nodes: [
+    { id: 'c1', type: 'laptop', text: 'Client', lane: 1 },
+    { id: 'c2', type: 'laptop', text: 'Client', lane: 1 },
+    { id: 'c3', type: 'laptop', text: 'Client', lane: 1 },
+    { id: 'c4', type: 'laptop', text: 'Client', lane: 1 },
+    {
+      id: 'srv',
+      type: 'server',
+      text: 'Serveur',
+      icon: 'nginx',
+      lane: 2,
+      merge_edges: merge,
+    },
+  ],
+  packets: [],
+  connections: [
+    { from: 'c1', to: 'srv', style: 'animated' },
+    { from: 'c2', to: 'srv', style: 'animated' },
+    { from: 'c3', to: 'srv', style: 'animated' },
+    { from: 'c4', to: 'srv', style: 'animated' },
+  ],
+  timeline: [],
+});
+
 export const circularExample: DataFlowSpec = {
   direction: 'circular',
   nodes: [

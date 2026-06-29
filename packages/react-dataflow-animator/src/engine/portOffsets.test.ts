@@ -237,8 +237,8 @@ describe('computePortOffsets', () => {
     expect(result['k1'].start + result['k2'].start).toBeCloseTo(0);
   });
 
-  it('2 pairs A→B and A→C on the same RIGHT side → different fanOut for each pair', () => {
-    // A on the left, B and C on the right (RIGHT side of A) but at different heights
+  it('2 pairs A→B and A→C sharing a face converge by default (single anchor)', () => {
+    // A on the left, B and C on the right (RIGHT side of A) but at different heights.
     const connections = [
       { key: 'ab', from: 'A', to: 'B' },
       { key: 'ac', from: 'A', to: 'C' },
@@ -248,9 +248,48 @@ describe('computePortOffsets', () => {
       B: { cx: 0.8, cy: 0.3 }, // higher
       C: { cx: 0.8, cy: 0.7 }, // lower
     };
+    // Default: A|RIGHT face merges → both starts collapse to the center (0).
+    const merged = computePortOffsets(connections, layout);
+    expect(merged['ab'].start).toBeCloseTo(0);
+    expect(merged['ac'].start).toBeCloseTo(0);
+  });
+
+  it('a node opting out (merge_edges:false) fans its face out', () => {
+    const connections = [
+      { key: 'ab', from: 'A', to: 'B' },
+      { key: 'ac', from: 'A', to: 'C' },
+    ];
+    const layout = {
+      A: { cx: 0.2, cy: 0.5 },
+      B: { cx: 0.8, cy: 0.3 },
+      C: { cx: 0.8, cy: 0.7 },
+    };
+    // A opts out → its RIGHT face spreads the two pairs apart again.
+    const r = computePortOffsets(
+      connections,
+      layout,
+      1,
+      'left-to-right',
+      new Set(['A'])
+    );
+    expect(r['ab'].start).not.toBeCloseTo(r['ac'].start);
+    // B and C still merge (not in the opt-out set) → their ends stay centered.
+    expect(r['ab'].end).toBeCloseTo(0);
+    expect(r['ac'].end).toBeCloseTo(0);
+  });
+
+  it('intra-pair spreading is independent of merge (still applies by default)', () => {
+    // Two edges between the SAME pair must keep distinct tracks even when the
+    // (default) face convergence is active — bidirectional flows stay legible.
+    const connections = [
+      { key: 'k1', from: 'A', to: 'B' },
+      { key: 'k2', from: 'A', to: 'B' },
+    ];
+    const layout = { A: { cx: 0.2, cy: 0.5 }, B: { cx: 0.8, cy: 0.5 } };
     const result = computePortOffsets(connections, layout);
-    // Both pairs share the A|RIGHT face → distinct fan-out
-    expect(result['ab'].start).not.toBeCloseTo(result['ac'].start);
+    const half = PORT_SPACING / 2;
+    expect(result['k1'].start).toBeCloseTo(-half);
+    expect(result['k2'].start).toBeCloseTo(+half);
   });
 
   it('circular: aspect ratio determines dominant axis (pixels vs ratios)', () => {
@@ -269,14 +308,22 @@ describe('computePortOffsets', () => {
       B: { cx: 0.5, cy: 0.9 },
       C: { cx: 0.5, cy: 0.3 },
     };
-    const withAspect = computePortOffsets(connections, layout, 3, 'circular');
+    // A opts out so the face axis decision stays observable through fan-out.
+    const withAspect = computePortOffsets(
+      connections,
+      layout,
+      3,
+      'circular',
+      new Set(['A'])
+    );
     expect(withAspect['ac'].start).toBeCloseTo(-PORT_SPACING / 2);
 
     const withoutAspect = computePortOffsets(
       connections,
       layout,
       1,
-      'circular'
+      'circular',
+      new Set(['A'])
     );
     expect(withoutAspect['ac'].start).toBeCloseTo(0);
   });
@@ -300,7 +347,8 @@ describe('computePortOffsets', () => {
         connections,
         layout,
         aspect,
-        'left-to-right'
+        'left-to-right',
+        new Set(['A']) // opt out so fan-out (and thus the axis) is observable
       );
       expect(r['ab'].start).not.toBeCloseTo(r['ac'].start);
     }

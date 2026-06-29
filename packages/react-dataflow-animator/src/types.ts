@@ -166,6 +166,22 @@ export interface Node {
    */
   align_with?: string;
   /**
+   * Edge convergence on the node's faces. When `true` (the default), all
+   * connections / arrows / moves attaching to the same face of this node meet
+   * at a **single anchor point**: a many-to-one flow (a flood, a load
+   * balancer, a hub) visually converges instead of spreading out.
+   *
+   * Set to `false` to **fan out** the edges instead — each pair gets its own
+   * attachment point along the face, ordered to reduce crossings. Useful when a
+   * node has several distinct neighbours on the same side and you want to tell
+   * the links apart.
+   *
+   * Independent from the spreading of multiple edges between the *same* two
+   * nodes (bidirectional request/response tracks stay distinct regardless).
+   * Default: true.
+   */
+  merge_edges?: boolean;
+  /**
    * URL making the node clickable (opens in a new tab).
    * @example "https://status.example.com"
    */

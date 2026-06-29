@@ -60,8 +60,9 @@ an HTTP packet) and eight **geometric shapes** (`square`, `diamond`,
 `circle`, `triangle`, `parallelogram`, `width_rectangle`, `height_rectangle`, `star`).
 Each node can receive: a `text` (label), a `subicon` (known tech, registered icon
 **or free text**), an `url` (making the node clickable), an
-initial `content`, **colors** `background_color` / `border_color`, and a
-`rotation` (orientation in degrees).
+initial `content`, **colors** `background_color` / `border_color`, a
+`rotation` (orientation in degrees), and `merge_edges` (edge convergence on its
+faces — default `true`, see [§4](#4-routing-and-collision-prevention)).
 
 **Rotation** (`rotation`, degrees, clockwise, default 0): orients the node's
 **visual** (pictogram, shape or panel) without rotating its label (which stays
@@ -121,6 +122,15 @@ node (`NODE_GAP`). See [`packages/react-dataflow-animator/src/engine/geometry.ts
   size); the sign depends on the alphabetical order of ids → two parallel
   lanes. The perpendicular is calculated in a canonical frame of reference to never
   overlap A→B and B→A.
+- **Edge convergence vs fan-out (`merge_edges`)**: when several links attach to
+  the **same face** of a node, they meet at a single anchor point by default
+  (`merge_edges: true`) — a many-to-one flow converges instead of spreading
+  out. A node with `merge_edges: false` **fans out** its links instead: each
+  pair gets its own attachment point along the face, ordered by the other end's
+  transverse position to reduce crossings (`PORT_SPACING`). The decision is
+  per-node-face (a link converges at the end whose node merges) and is
+  independent of the intra-pair spreading above, which always applies. See
+  [`packages/react-dataflow-animator/src/engine/portOffsets.ts`](../packages/react-dataflow-animator/src/engine/portOffsets.ts).
 
 ## 5. Animation engine and actions
 

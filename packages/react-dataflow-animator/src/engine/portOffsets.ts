@@ -91,20 +91,30 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
   return all;
 }
 
+/** Default: no node opts out of merging — every face converges. */
+const NO_FANOUT_NODES: ReadonlySet<string> = new Set();
+
 /**
  * Calculates, for each connection, the lateral offset (px) of the start
  * and end port accounting for two phenomena:
  *
  * - **intra-pair**: multiple edges between the same two nodes are
- *   spaced out perpendicularly to their axis.
+ *   spaced out perpendicularly to their axis. Always applied so bidirectional
+ *   request/response tracks stay distinct.
  * - **fan-out**: multiple pairs sharing the same face of a node are
  *   sorted by the other end's position to avoid crossings.
+ *
+ * Fan-out is **off by default**: edges sharing a face converge to a single
+ * anchor point. A node restores its fan-out by opting out via `fanOutNodes`
+ * (the `merge_edges: false` flag in the spec). The decision is per-node-face:
+ * a connection X→Y fans out at X only if X opted out, and at Y only if Y did.
  */
 export function computePortOffsets(
   connections: ConnectionRef[],
   layout: Record<string, { cx: number; cy: number }>,
   aspect = 1,
-  direction: Direction = 'left-to-right'
+  direction: Direction = 'left-to-right',
+  fanOutNodes: ReadonlySet<string> = NO_FANOUT_NODES
 ): Record<string, { start: number; end: number }> {
   // Group by node pair (independent of direction)
   const pairConnections: Record<string, ConnectionRef[]> = {};
@@ -189,8 +199,14 @@ export function computePortOffsets(
           ? `${to}|TOP`
           : `${to}|BOTTOM`;
 
-      const fanOutStart = faceOffsets[faceFrom]?.[pairId] ?? 0;
-      const fanOutEnd = faceOffsets[faceTo]?.[pairId] ?? 0;
+      // Fan-out only when the node at that end opts out of merging; otherwise
+      // the port collapses to the face center (offset 0 → convergence).
+      const fanOutStart = fanOutNodes.has(from)
+        ? (faceOffsets[faceFrom]?.[pairId] ?? 0)
+        : 0;
+      const fanOutEnd = fanOutNodes.has(to)
+        ? (faceOffsets[faceTo]?.[pairId] ?? 0)
+        : 0;
 
       offsets[key] = {
         start: intraPairOffset + fanOutStart,

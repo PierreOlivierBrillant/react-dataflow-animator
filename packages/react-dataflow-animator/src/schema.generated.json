@@ -104,6 +104,10 @@
           "type": "string",
           "description": "Aligns this node on the transverse axis of another node (by ID): useful for aligning two nodes from different lanes. Ignored in circular layout."
         },
+        "merge_edges": {
+          "type": "boolean",
+          "description": "Edge convergence on the node's faces. When `true` (the default), all connections / arrows / moves attaching to the same face of this node meet at a **single anchor point**: a many-to-one flow (a flood, a load balancer, a hub) visually converges instead of spreading out.\n\nSet to `false` to **fan out** the edges instead — each pair gets its own attachment point along the face, ordered to reduce crossings. Useful when a node has several distinct neighbours on the same side and you want to tell the links apart.\n\nIndependent from the spreading of multiple edges between the *same* two nodes (bidirectional request/response tracks stay distinct regardless). Default: true."
+        },
         "url": {
           "type": "string",
           "description": "URL making the node clickable (opens in a new tab).",

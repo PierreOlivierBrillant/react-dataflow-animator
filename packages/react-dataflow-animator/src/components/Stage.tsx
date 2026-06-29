@@ -202,9 +202,25 @@ export function Stage({
 
   const direction = spec.direction ?? 'left-to-right';
   const lineConnections = useMemo(() => collectArrowConnections(spec), [spec]);
+  // Nodes opting out of edge convergence (`merge_edges: false`): their faces
+  // fan out instead of collapsing all attachments to a single anchor point.
+  const fanOutNodes = useMemo(
+    () =>
+      new Set(
+        spec.nodes.filter((n) => n.merge_edges === false).map((n) => n.id)
+      ),
+    [spec]
+  );
   const portOffsets = useMemo(
-    () => computePortOffsets(lineConnections, layout, aspect, direction),
-    [lineConnections, layout, aspect, direction]
+    () =>
+      computePortOffsets(
+        lineConnections,
+        layout,
+        aspect,
+        direction,
+        fanOutNodes
+      ),
+    [lineConnections, layout, aspect, direction, fanOutNodes]
   );
 
   // Connection attachment axis, derived from layout FLOW (see connectionAxis):
