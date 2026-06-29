@@ -68,6 +68,15 @@ npm run check:schema
 
 ## Conventions de code
 
+- **Anglais pour le code et la doc technique.** TOUT commentaire de code
+  (`//`, `/* */`, JSDoc) et TOUTE documentation interne — `README.md`,
+  `docs/*.md`, ce fichier `CLAUDE.md`, messages de commit — s'écrit en
+  anglais. N'introduis jamais de nouveau commentaire ou de nouvelle doc en
+  français. **Exception (ne pas confondre) :** le contenu _visible par
+  l'utilisateur_ du site `apps/docs` reste bilingue EN/FR via l'i18n natif
+  (cf. la section « Internationalisation » plus bas) — la moitié française
+  (`src/i18n/fr.ts`, `i18n/fr/**`, le `fr:` des specs de démos) n'est PAS
+  du code à « passer en anglais », c'est la traduction intentionnelle.
 - **TypeScript strict.** Pas de `any`. Si tu as besoin d'un `as unknown as
 X`, écris en commentaire pourquoi.
 - **Pas de breaking change** sur l'API publique (`packages/react-dataflow-animator/src/index.ts`)
