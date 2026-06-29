@@ -157,11 +157,22 @@ The timeline compiles an array of ordered actions. See
 9. **set_visible**: shows or hides a static node (`object`) with a fade.
    The visibility state persists until the end of the chronology (or a
    contrary `set_visible`); complements the initial `visible` field of the nodes.
-10. **rotate**: animates the visual rotation of a node (`object`) toward an
-    absolute angle `to` (degrees). The start angle is the node's current
-    rotation (its static `rotation`, or a previous `rotate`), so successive
-    rotations chain in declaration order. Like `set_visible`, the final angle
-    persists until the end of the chronology.
+10. **rotate**: animates the visual rotation of a node (`object`). Two mutually
+    exclusive modes:
+    - **target angle** `to` (degrees): a single _eased_ rotation. The start
+      angle is the node's current rotation (its static `rotation`, or a previous
+      `rotate`), so successive rotations chain in declaration order;
+    - **continuous spin** `spin` (degrees per second, signed — positive turns
+      clockwise, negative counter-clockwise): the node turns at a constant speed
+      (_linear_, no easing). How long it spins reuses the usual timing fields —
+      `duration` (spin that long, default 600 ms), `keep_until` (until another
+      action starts), or `keep_until_end` (until the end of the chronology).
+
+    `spin` takes precedence if both are given. Like `set_visible`, the angle
+    reached when the rotation ends persists until the end of the chronology.
+    Chaining after a spin is exact only in the `duration` mode (the stop angle of
+    an open-ended `keep_until`/`keep_until_end` spin is not known at compile
+    time, so a later `rotate` on that node resumes from the pre-spin angle).
 
 ## 6. Temporal lifecycle
 

@@ -951,8 +951,17 @@ function build(locale: Locale): ApiExamples {
         {
           name: 'to',
           note: tr(
-            '`to`: absolute target angle in degrees.',
-            '`to` : angle cible absolu en degrés.'
+            '`to`: absolute target angle in degrees (eased). Exclusive with `spin`.',
+            '`to` : angle cible absolu en degrés (avec inertie). Exclusif avec `spin`.'
+          ),
+        },
+        {
+          name: 'spin',
+          // Override the `to` core with a continuous spin (to/spin are exclusive).
+          props: { to: undefined, spin: 360, duration: 2500 },
+          note: tr(
+            '`spin`: continuous speed in deg/s (signed); spins for `duration`, or until `keep_until` / `keep_until_end`.',
+            '`spin` : vitesse continue en deg/s (signée) ; tourne pendant `duration`, ou jusqu’à `keep_until` / `keep_until_end`.'
           ),
         },
       ],
