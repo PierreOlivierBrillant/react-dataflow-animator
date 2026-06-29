@@ -16,7 +16,7 @@ export function CustomFooter({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
           <div className="col-span-2 md:col-span-1">
             <LogoText logoSize={28} />
-            <p className="text-xs leading-relaxed text-white/30 font-sans m-0 mt-3">
+            <p className="text-xs leading-relaxed text-white/50 font-sans m-0 mt-3">
               {t.footer.taglineLine1}
               <br />
               {t.footer.taglineLine2}
@@ -52,7 +52,7 @@ function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
   return (
     <div>
       {title && (
-        <p className="text-xs font-semibold mb-3 uppercase tracking-wider text-white/50 font-sans m-0">
+        <p className="text-xs font-semibold mb-3 uppercase tracking-wider text-white/60 font-sans m-0">
           {tr(title)}
         </p>
       )}
@@ -61,7 +61,7 @@ function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
           <li key={item.label} className="m-0">
             <Link
               to={item.href || item.to || '#'}
-              className="text-xs font-sans text-white/35 no-underline transition-colors hover:text-white/80 hover:no-underline"
+              className="text-xs font-sans text-white/55 no-underline transition-colors hover:text-white/90 hover:no-underline"
             >
               {tr(item.label)}
             </Link>
@@ -81,14 +81,14 @@ function FooterCopyright({
 }) {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-8 border-t border-white/5">
-      <p className="text-xs m-0 text-white/20 font-sans">{copyright || ''}</p>
+      <p className="text-xs m-0 text-white/45 font-sans">{copyright || ''}</p>
       <div className="flex items-center gap-4">
         <a
           href="https://github.com/PierreOlivierBrillant/react-dataflow-animator"
           target="_blank"
           rel="noopener noreferrer"
           aria-label={repoAria}
-          className="text-white/20 hover:text-white/50 transition-colors no-underline"
+          className="text-white/45 hover:text-white/80 transition-colors no-underline"
         >
           <Github size={15} />
         </a>
