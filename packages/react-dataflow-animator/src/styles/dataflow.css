@@ -611,6 +611,20 @@
   white-space: pre-wrap;
 }
 
+/* Paquet de type panneau (simple_node / complex_node) : le NodePanel interne
+   porte déjà la boîte (padding, bordure, fond, ombre). On neutralise donc celle
+   du wrapper pour éviter une boîte-dans-la-boîte, et on mappe --rdfa-scale (lu
+   par le NodePanel) sur l'échelle de CONTENU pour rapetisser comme les autres
+   paquets sur les miniatures. */
+.rdfa-packet--panel {
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  max-width: none;
+  --rdfa-scale: var(--rdfa-content-scale, 1);
+}
+
 .rdfa-packet-header {
   font-weight: 600;
 }

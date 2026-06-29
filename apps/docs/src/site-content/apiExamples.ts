@@ -351,6 +351,24 @@ function build(locale: Locale): ApiExamples {
       ],
       timeline: [{ type: 'move', object: 'p', from: 'a', to: 'b' }],
     },
+    'Packet.body': {
+      // A `complex_node` packet: the text node, but it travels. Same fields as
+      // the node (`header`/`body`/`language`), rendered by the same panel.
+      nodes: [
+        { id: 'a', type: 'server', text: 'API', lane: 1 },
+        { id: 'b', type: 'laptop', text: 'Client', lane: 2 },
+      ],
+      packets: [
+        {
+          id: 'p',
+          kind: 'complex_node',
+          header: 'event: ping',
+          body: '{ "ok": true }',
+          language: 'json',
+        },
+      ],
+      timeline: [{ type: 'move', object: 'p', from: 'a', to: 'b' }],
+    },
 
     // ── ObjectContent ─────────────────────────────────────────────────────────
     'ObjectContent.type': {
@@ -548,6 +566,10 @@ function build(locale: Locale): ApiExamples {
     'Packet.packet_content': tr(
       'Header + body of an `http_packet`.',
       'En-tête + corps d’un `http_packet`.'
+    ),
+    'Packet.body': tr(
+      '`simple_node` / `complex_node` packet: the text node, but it travels.',
+      'Paquet `simple_node` / `complex_node` : le nœud texte, mais il voyage.'
     ),
 
     'ObjectContent.type': tr(

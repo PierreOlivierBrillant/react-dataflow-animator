@@ -3,6 +3,9 @@ import {
   type AnimatableComponent,
 } from '../../utils/animatable';
 import type { Packet as PacketSpec, Highlighter } from '../../types';
+import { NodePanel } from '../nodes/NodePanel';
+import { isPanelNode } from '../nodes/nodeKinds';
+import { escapeHtml } from '../../highlight/highlight';
 
 /** Moving packet. Positioned absolutely at the current point of the path. */
 export interface PacketProps {
@@ -127,6 +130,30 @@ const SqlResponsePacket = defineAnimatable<{
   );
 });
 
+/**
+ * `simple_node` / `complex_node` packet: a text panel that travels. Reuses the
+ * static node's `NodePanel` so the look and the content fields (`body`,
+ * `header`, `language`) match exactly — no duplicated rendering. `object.kind`
+ * doubles as the panel `type` (both literals belong to `NodeType` too).
+ */
+const PanelPacket = defineAnimatable<{
+  object: PacketSpec;
+  highlight?: Highlighter;
+}>(({ object, highlight }) => {
+  const type = object.kind === 'complex_node' ? 'complex_node' : 'simple_node';
+  return (
+    <NodePanel
+      object={{
+        type,
+        header: object.header,
+        body: object.body,
+        language: object.language,
+      }}
+      highlight={highlight ?? escapeHtml}
+    />
+  );
+});
+
 // ---------------------------------------------------------------------------
 // PACKET REGISTRY
 // ---------------------------------------------------------------------------
@@ -143,6 +170,8 @@ const packetRegistry: Record<
   http_packet: HttpPacket,
   sql_request: SqlRequestPacket,
   sql_response: SqlResponsePacket,
+  simple_node: PanelPacket,
+  complex_node: PanelPacket,
 };
 
 // ---------------------------------------------------------------------------
@@ -159,10 +188,13 @@ export const Packet: AnimatableComponent<PacketProps> = defineAnimatable(
     highlight,
   }: PacketProps) {
     const SpecificPacket = packetRegistry[object.kind];
+    // A panel-kind packet draws its own box (NodePanel); the wrapper just
+    // positions it, so we strip the wrapper's box via this modifier.
+    const panelClass = isPanelNode(object.kind) ? ' rdfa-packet--panel' : '';
 
     return (
       <div
-        className={`rdfa-packet rdfa-packet-${object.kind}`}
+        className={`rdfa-packet rdfa-packet-${object.kind}${panelClass}`}
         style={{
           left: x,
           top: y,

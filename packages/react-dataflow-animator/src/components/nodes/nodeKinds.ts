@@ -10,10 +10,20 @@ import type { NodeType } from '../../types';
  * give it the `rdfa-node--panel` class. Similarly, adding a shape to
  * {@link SHAPE_TYPES} renders it with `ShapeNode` (`rdfa-node--shape` class).
  */
-const PANEL_NODE_TYPES = new Set<NodeType>(['simple_node', 'complex_node']);
+const PANEL_NODE_TYPES = [
+  'simple_node',
+  'complex_node',
+] as const satisfies readonly NodeType[];
 
-export function isPanelNode(type: NodeType): boolean {
-  return PANEL_NODE_TYPES.has(type);
+const PANEL_TYPE_SET: ReadonlySet<string> = new Set(PANEL_NODE_TYPES);
+
+/**
+ * Accepts a `string` (not only {@link NodeType}) because the panel literals are
+ * shared with `PacketKind`: a `simple_node` / `complex_node` packet reuses this
+ * same predicate to render through `NodePanel`.
+ */
+export function isPanelNode(type: string): boolean {
+  return PANEL_TYPE_SET.has(type);
 }
 
 /** Nodes rendered as a geometric shape (which can contain a short text). */

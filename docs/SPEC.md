@@ -88,6 +88,13 @@ line). The `language` field applies **syntax highlighting** to _all_ text areas
 of the node (header + body). The `subicon` remains available; an active `set_content`
 takes priority over the textual panel (just as it hides the pictogram).
 
+These two types are **also valid packet kinds**: a packet declared with
+`kind: 'simple_node'` or `kind: 'complex_node'` carries the same `body` / `header`
+/ `language` fields and is rendered by the very same `NodePanel`, so a text box can
+**travel** via a `move` action instead of being declared as an `http_packet`. The
+moving wrapper drops its own box (`rdfa-packet--panel`) to avoid a box-in-a-box; the
+panel is otherwise identical to the static node.
+
 **Geometric shapes** (`square`, `diamond`, `circle`, `triangle`, `parallelogram`,
 `width_rectangle`, `height_rectangle`, `star`): an SVG shape drawn that can
 contain a **short centered text** via `body` (`text` remains the label under the shape).

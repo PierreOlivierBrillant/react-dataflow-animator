@@ -16,7 +16,7 @@
 export function applySchemaPatches(schema) {
   schema.title = 'DataFlowSpec';
 
-  for (const defName of ['Node', 'ObjectContent', 'PacketBody']) {
+  for (const defName of ['Node', 'ObjectContent', 'PacketBody', 'Packet']) {
     const def = schema.definitions?.[defName];
     if (def?.properties?.language?.anyOf) {
       const ref = def.properties.language.anyOf.find((b) => b['$ref']);

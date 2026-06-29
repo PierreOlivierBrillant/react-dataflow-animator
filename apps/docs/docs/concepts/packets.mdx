@@ -20,11 +20,13 @@ then back, then transferred...): it is the exact same visual entity traveling.
 
 The `kind` determines the appearance and available content fields:
 
-| `kind`         | Represents               | Content field      |
-| -------------- | ------------------------ | ------------------ |
-| `http_packet`  | An HTTP request/response | `packet_content`   |
-| `sql_request`  | A SQL query              | `request_content`  |
-| `sql_response` | A SQL result             | `response_content` |
+| `kind`         | Represents                | Content field                  |
+| -------------- | ------------------------- | ------------------------------ |
+| `http_packet`  | An HTTP request/response  | `packet_content`               |
+| `sql_request`  | A SQL query               | `request_content`              |
+| `sql_response` | A SQL result              | `response_content`             |
+| `simple_node`  | A traveling text box      | `body` / `language`            |
+| `complex_node` | A traveling header + body | `header` / `body` / `language` |
 
 ## `http_packet` — `packet_content`
 
@@ -98,6 +100,45 @@ or **a table**:
 `rows` is a simple counter displayed in the header; `body` carries the actual
 rendered content (text or table). A `sql_response` without a `body` only
 displays its header.
+
+:::
+
+## `simple_node` / `complex_node` — a node that travels
+
+The [text panel node types](./nodes.mdx) double as packet kinds: declare a packet
+with `kind: 'simple_node'` or `kind: 'complex_node'` and it carries the **same
+content fields as the node** — `body`, plus `header` for `complex_node`, optionally
+syntax-highlighted via `language`. No nested `*_content` object: it is the node,
+but it moves.
+
+```ts
+{
+  id: 'msg',
+  kind: 'simple_node',
+  body: 'enqueue(job)',
+  language: 'js',
+}
+```
+
+`complex_node` adds the header line, just like the static node — handy when you
+already use that node type in the scene and want the matching payload to fly:
+
+```ts
+{
+  id: 'login',
+  kind: 'complex_node',
+  header: 'POST /login',
+  body: '{ "user": "alice" }',
+  language: 'json',
+}
+```
+
+:::tip `complex_node` vs `http_packet`
+
+Both render a header above a body. Reach for `complex_node` when you want the packet
+to **look exactly like** a `complex_node` node already on stage (same box, same
+`body`/`header`/`language` API); keep `http_packet` for its dedicated
+`packet_content` shape (typed `body`, image bodies).
 
 :::
 

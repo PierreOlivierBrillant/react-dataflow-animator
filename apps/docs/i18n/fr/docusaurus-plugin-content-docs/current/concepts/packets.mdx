@@ -20,11 +20,13 @@ puis retour, puis transfert…) : c'est la même entité visuelle qui voyage.
 
 Le `kind` détermine l'apparence et les champs de contenu disponibles :
 
-| `kind`         | Représente               | Champ de contenu   |
-| -------------- | ------------------------ | ------------------ |
-| `http_packet`  | Une requête/réponse HTTP | `packet_content`   |
-| `sql_request`  | Une requête SQL          | `request_content`  |
-| `sql_response` | Un résultat SQL          | `response_content` |
+| `kind`         | Représente                | Champ de contenu               |
+| -------------- | ------------------------- | ------------------------------ |
+| `http_packet`  | Une requête/réponse HTTP  | `packet_content`               |
+| `sql_request`  | Une requête SQL           | `request_content`              |
+| `sql_response` | Un résultat SQL           | `response_content`             |
+| `simple_node`  | Une boîte de texte mobile | `body` / `language`            |
+| `complex_node` | Un en-tête + corps mobile | `header` / `body` / `language` |
 
 ## `http_packet` — `packet_content`
 
@@ -98,6 +100,46 @@ ou **un tableau** :
 `rows` est un simple compteur affiché dans l'en-tête ; `body` porte le contenu
 réellement rendu (texte ou tableau). Un `sql_response` sans `body` n'affiche
 que son en-tête.
+
+:::
+
+## `simple_node` / `complex_node` — un nœud qui voyage
+
+Les [types de nœuds en panneau texte](./nodes.mdx) servent aussi de `kind` de
+paquet : déclarez un paquet avec `kind: 'simple_node'` ou `kind: 'complex_node'`
+et il porte les **mêmes champs de contenu que le nœud** — `body`, plus `header`
+pour `complex_node`, coloré au besoin via `language`. Aucun objet `*_content`
+imbriqué : c'est le nœud, mais il se déplace.
+
+```ts
+{
+  id: 'msg',
+  kind: 'simple_node',
+  body: 'enfiler(tâche)',
+  language: 'js',
+}
+```
+
+`complex_node` ajoute la ligne d'en-tête, exactement comme le nœud statique —
+pratique quand vous utilisez déjà ce type de nœud dans la scène et voulez voir
+voler la charge utile correspondante :
+
+```ts
+{
+  id: 'login',
+  kind: 'complex_node',
+  header: 'POST /login',
+  body: '{ "utilisateur": "alice" }',
+  language: 'json',
+}
+```
+
+:::tip `complex_node` vs `http_packet`
+
+Les deux rendent un en-tête au-dessus d'un corps. Choisissez `complex_node` quand
+vous voulez que le paquet **ressemble exactement** à un nœud `complex_node` déjà
+présent (même boîte, même API `body`/`header`/`language`) ; gardez `http_packet`
+pour sa forme dédiée `packet_content` (`body` typé, corps image).
 
 :::
 

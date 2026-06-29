@@ -2,6 +2,14 @@ import type { ReactNode } from 'react';
 import type { Highlighter, Node } from '../../types';
 
 /**
+ * Minimal shape a panel renders from: the node `type` (to detect
+ * `complex_node`) plus the text fields. A full {@link Node} satisfies it, and so
+ * does a `simple_node` / `complex_node` packet — which lets a packet reuse this
+ * exact rendering path instead of duplicating it.
+ */
+export type PanelContent = Pick<Node, 'type' | 'header' | 'body' | 'language'>;
+
+/**
  * Text panel for `simple_node` / `complex_node` nodes: replaces the
  * pictogram with a text box. `complex_node` adds a header separated from the
  * body by a line (resembling an HTTP packet); `simple_node` only displays the
@@ -11,7 +19,7 @@ export function NodePanel({
   object,
   highlight,
 }: {
-  object: Node;
+  object: PanelContent;
   highlight: Highlighter;
 }): ReactNode {
   const isComplex = object.type === 'complex_node';

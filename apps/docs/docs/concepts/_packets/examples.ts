@@ -1,8 +1,9 @@
 import { DataFlowSpec } from 'react-dataflow-animator';
 
 /**
- * Un aller-retour complet montrant les trois `kind` de paquets :
- * http_packet (avec corps), sql_request, sql_response (tableau).
+ * A full round-trip showing the packet `kind`s: http_packet (with body),
+ * sql_request, sql_response (table), then a complex_node — a text node that
+ * travels, pushed by the API to the browser.
  */
 export const packetsExample: DataFlowSpec = {
   direction: 'left-to-right',
@@ -58,6 +59,13 @@ export const packetsExample: DataFlowSpec = {
         },
       },
     },
+    {
+      id: 'evt',
+      kind: 'complex_node',
+      header: 'event: maj',
+      body: '{ "users": 2 }',
+      language: 'json',
+    },
   ],
   timeline: [
     { type: 'move', object: 'req', from: 'browser', to: 'api', duration: 700 },
@@ -79,5 +87,6 @@ export const packetsExample: DataFlowSpec = {
       wait_for: 'work',
     },
     { type: 'move', object: 'res', from: 'api', to: 'browser', duration: 700 },
+    { type: 'move', object: 'evt', from: 'api', to: 'browser', duration: 700 },
   ],
 };

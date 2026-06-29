@@ -49,7 +49,12 @@ export type NodeType =
   | 'width_rectangle'
   | 'star';
 
-export type PacketKind = 'http_packet' | 'sql_request' | 'sql_response';
+export type PacketKind =
+  | 'http_packet'
+  | 'sql_request'
+  | 'sql_response'
+  | 'simple_node'
+  | 'complex_node';
 
 /** Line style (SVG/CSS terminology). `full` is accepted as an alias for `solid`. */
 export type LineStyle = 'solid' | 'dotted' | 'dashed' | 'animated';
@@ -330,7 +335,10 @@ export interface Packet {
   /**
    * Packet category, which sets its appearance and expected content:
    * `http_packet` (header + body via `packet_content`), `sql_request` (textual
-   * request via `request_content`), `sql_response` (response via `response_content`).
+   * request via `request_content`), `sql_response` (response via `response_content`),
+   * or a **text panel** (`simple_node` / `complex_node`) that travels: same look
+   * and content fields as the homonymous {@link NodeType} (`body`, plus `header`
+   * for `complex_node`, optionally syntax-highlighted via `language`).
    */
   kind: PacketKind;
   /**
@@ -342,6 +350,25 @@ export interface Packet {
   response_content?: SqlResponse;
   /** Content of an `http_packet`: header (e.g., 'GET /api') and optional body. */
   packet_content?: PacketContent;
+  /**
+   * (`simple_node` / `complex_node`) Panel body text (line breaks respected,
+   * colored according to `language` if provided). Same role as {@link Node.body}.
+   * @example "Worker"
+   */
+  body?: string;
+  /**
+   * (`complex_node`) Header displayed above the `body`, separated by a line —
+   * the packet then looks like an HTTP packet. Ignored by `simple_node`.
+   * Same role as {@link Node.header}.
+   * @example "POST /login"
+   */
+  header?: string;
+  /**
+   * (`simple_node` / `complex_node`) Syntax highlighting language applied to ALL
+   * text areas of the panel (`header` and `body`). Recognized values: see
+   * {@link HighlightLanguage}. Same role as {@link Node.language}.
+   */
+  language?: HighlightLanguage | (string & {});
 }
 
 export type ActionType =
