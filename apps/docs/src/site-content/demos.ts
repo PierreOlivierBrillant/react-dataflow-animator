@@ -9,6 +9,8 @@ import { tls } from './demos/tls';
 import { oauth } from './demos/oauth';
 import { dos } from './demos/dos';
 import { ddos } from './demos/ddos';
+import { rateLimit } from './demos/rateLimit';
+import { scrubbing } from './demos/scrubbing';
 import { dns } from './demos/dns';
 import { cicd } from './demos/cicd';
 import { raft } from './demos/raft';
@@ -235,6 +237,68 @@ export const demos: Demo[] = [
       en: ['ddos', 'botnet', 'flood', 'c&c', 'denial of service', 'attack'],
     },
     spec: ddos,
+  },
+  {
+    id: 'rateLimit',
+    title: {
+      fr: 'Parade DoS : limitation de débit',
+      en: 'DoS countermeasure: rate limiting',
+    },
+    description: {
+      fr: 'Un reverse proxy plafonne les requêtes par IP : le flood mono-source est rejeté en 429 dès la bordure, le backend reste sain et l’utilisateur légitime continue d’être servi.',
+      en: 'A reverse proxy caps requests per IP: the single-source flood is rejected with 429 at the edge, the backend stays healthy and the legitimate user keeps being served.',
+    },
+    category: 'security',
+    tags: {
+      fr: [
+        'rate limiting',
+        'limitation de débit',
+        '429',
+        'reverse proxy',
+        'mitigation',
+        'dos',
+      ],
+      en: [
+        'rate limiting',
+        'throttling',
+        '429',
+        'reverse proxy',
+        'mitigation',
+        'dos',
+      ],
+    },
+    spec: rateLimit,
+  },
+  {
+    id: 'scrubbing',
+    title: {
+      fr: 'Parade DDoS : centre de nettoyage',
+      en: 'DDoS countermeasure: scrubbing center',
+    },
+    description: {
+      fr: 'Tout le trafic transite par une bordure de filtrage (type Cloudflare/Anycast) qui absorbe le volumétrique et jette les bots ; seule la requête légitime atteint l’origine, qui ne voit jamais l’attaque.',
+      en: 'All traffic flows through a filtering edge (Cloudflare/Anycast-style) that absorbs the volumetric flood and drops the bots; only the legitimate request reaches the origin, which never sees the attack.',
+    },
+    category: 'security',
+    tags: {
+      fr: [
+        'scrubbing',
+        'nettoyage',
+        'anycast',
+        'cloudflare',
+        'mitigation',
+        'ddos',
+      ],
+      en: [
+        'scrubbing',
+        'cleaning',
+        'anycast',
+        'cloudflare',
+        'mitigation',
+        'ddos',
+      ],
+    },
+    spec: scrubbing,
   },
   {
     id: 'dns',

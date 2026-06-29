@@ -10,6 +10,8 @@ import { tls } from '../../../apps/docs/src/site-content/demos/tls';
 import { oauth } from '../../../apps/docs/src/site-content/demos/oauth';
 import { dos } from '../../../apps/docs/src/site-content/demos/dos';
 import { ddos } from '../../../apps/docs/src/site-content/demos/ddos';
+import { rateLimit } from '../../../apps/docs/src/site-content/demos/rateLimit';
+import { scrubbing } from '../../../apps/docs/src/site-content/demos/scrubbing';
 import { dns } from '../../../apps/docs/src/site-content/demos/dns';
 import { cicd } from '../../../apps/docs/src/site-content/demos/cicd';
 import { raft } from '../../../apps/docs/src/site-content/demos/raft';
@@ -69,6 +71,8 @@ const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['oauth', oauth],
   ['dos', dos],
   ['ddos', ddos],
+  ['rateLimit', rateLimit],
+  ['scrubbing', scrubbing],
   ['dns', dns],
   ['cicd', cicd],
   ['raft', raft],
