@@ -2,12 +2,14 @@ import Link from '@docusaurus/Link';
 import { FooterColumnItem, MultiColumnFooter } from '@docusaurus/theme-common';
 import { FaGithub as Github } from 'react-icons/fa';
 import { LogoText } from './LogoText';
+import { useTranslation } from '../i18n';
 
 export function CustomFooter({
   footerData,
 }: {
   footerData: MultiColumnFooter;
 }) {
+  const t = useTranslation();
   return (
     <footer className="relative py-12 w-full z-10 bg-[#000]/20 border-t border-white/5">
       <div className="max-w-6xl mx-auto px-5">
@@ -15,9 +17,9 @@ export function CustomFooter({
           <div className="col-span-2 md:col-span-1">
             <LogoText logoSize={28} />
             <p className="text-xs leading-relaxed text-white/30 font-sans m-0 mt-3">
-              Animations d'architecture
+              {t.footer.taglineLine1}
               <br />
-              pilotées par JSON.
+              {t.footer.taglineLine2}
             </p>
           </div>
           {footerData.links.map((linkSection, index) => (
@@ -31,6 +33,7 @@ export function CustomFooter({
 }
 
 function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
+  const t = useTranslation();
   if (!('items' in section)) return null;
 
   const title =
@@ -38,11 +41,15 @@ function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
       ? section.title
       : '';
 
+  // La config Docusaurus fournit la structure (FR) ; on retraduit chaque
+  // libellé affiché via la table `footer.labels`, en repli sur l'original.
+  const tr = (label: string) => t.footer.labels[label] ?? label;
+
   return (
     <div>
       {title && (
         <p className="text-xs font-semibold mb-3 uppercase tracking-wider text-white/50 font-sans m-0">
-          {title}
+          {tr(title)}
         </p>
       )}
       <ul className="flex flex-col gap-2 p-0 m-0 list-none">
@@ -52,7 +59,7 @@ function FooterLinkColumn({ section }: { section: FooterColumnItem }) {
               to={item.href || item.to || '#'}
               className="text-xs font-sans text-white/35 no-underline transition-colors hover:text-white/80 hover:no-underline"
             >
-              {item.label}
+              {tr(item.label)}
             </Link>
           </li>
         ))}

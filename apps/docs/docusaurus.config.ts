@@ -16,9 +16,11 @@ const config = {
       onBrokenMarkdownLinks: 'warn',
     },
   },
+  // L'anglais est la langue par défaut (HTML statique + SSR). La bascule FR/EN
+  // est gérée côté client (src/i18n) : détection navigateur puis repli anglais.
   i18n: {
-    defaultLocale: 'fr',
-    locales: ['fr'],
+    defaultLocale: 'en',
+    locales: ['en'],
   },
   presets: [
     [

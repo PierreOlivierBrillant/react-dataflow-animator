@@ -1,53 +1,25 @@
-import React from 'react';
 import { motion } from 'motion/react';
 import { Zap, Layers, Code2, GitFork, Navigation, Palette } from 'lucide-react';
+import { useTranslation } from '../i18n';
 
-const FEATURES = [
-  {
-    icon: Zap,
-    title: 'Placement automatique',
-    description:
-      'Définissez uniquement les lanes — la librairie positionne chaque nœud automatiquement, en left-to-right, circular ou top-to-bottom.',
-    color: '#fbbf24',
-  },
-  {
-    icon: Navigation,
-    title: 'Lecteur intégré',
-    description:
-      "Lecture, pause, retour au début et navigation step-by-step. Vos utilisateurs contrôlent l'animation à leur propre rythme.",
-    color: '#60a5fa',
-  },
-  {
-    icon: Code2,
-    title: 'Spec JSON simple',
-    description:
-      "Décrivez nœuds, connexions et actions dans un seul objet JSON. TypeScript first, avec un schéma complet pour l'autocomplétion.",
-    color: '#a78bfa',
-  },
-  {
-    icon: GitFork,
-    title: 'Actions parallèles',
-    description:
-      'Lancez plusieurs animations simultanément avec le type `parallel`. Idéal pour illustrer des requêtes concurrentes ou microservices.',
-    color: '#34d399',
-  },
-  {
-    icon: Layers,
-    title: 'Contenu riche',
-    description:
-      "Les nœuds peuvent afficher du code avec coloration syntaxique, du texte formaté ou des images. Le contenu mute en cours d'animation.",
-    color: '#f472b6',
-  },
-  {
-    icon: Palette,
-    title: 'Sous-icônes technos',
-    description:
-      "Ajoutez un badge `subicon` pour afficher une technologie connue (React, PostgreSQL, Node…) ou n'importe quelle icône personnalisée.",
-    color: '#22d3ee',
-  },
+// L'icône et la couleur sont du présentationnel pur : elles restent ici et
+// sont associées par index au texte traduit (`messages.features.items`).
+const FEATURE_STYLES = [
+  { icon: Zap, color: '#fbbf24' },
+  { icon: Navigation, color: '#60a5fa' },
+  { icon: Code2, color: '#a78bfa' },
+  { icon: GitFork, color: '#34d399' },
+  { icon: Layers, color: '#f472b6' },
+  { icon: Palette, color: '#22d3ee' },
 ];
 
 export function FeaturesSection() {
+  const t = useTranslation();
+  const features = t.features.items.map((item, i) => ({
+    ...item,
+    ...FEATURE_STYLES[i],
+  }));
+
   return (
     <section className="py-24 relative overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-px bg-[linear-gradient(90deg,transparent,rgba(34,211,238,0.3),transparent)]" />
@@ -60,7 +32,7 @@ export function FeaturesSection() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
-            Fonctionnalités
+            {t.features.eyebrow}
           </motion.p>
           <motion.h2
             className="text-white text-3xl md:text-4xl font-bold mb-4 font-heading"
@@ -68,15 +40,15 @@ export function FeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            Tout ce qu'il vous faut,{' '}
+            {t.features.titlePre}
             <span className="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
-              rien de plus.
+              {t.features.titleHighlight}
             </span>
           </motion.h2>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {FEATURES.map((f, i) => (
+          {features.map((f, i) => (
             <motion.div
               key={f.title}
               className="group rounded-2xl p-6 transition-all duration-300 cursor-default bg-white/[0.025] border border-white/[0.06]"

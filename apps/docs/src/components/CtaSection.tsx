@@ -1,8 +1,10 @@
 import { motion } from 'motion/react';
 import { ArrowRight, GitBranch } from 'lucide-react';
 import Link from '@docusaurus/Link';
+import { useTranslation } from '../i18n';
 
 export function CtaSection() {
+  const t = useTranslation();
   return (
     <section className="py-28 relative overflow-hidden">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-px bg-[linear-gradient(90deg,transparent,rgba(124,58,237,0.4),transparent)]" />
@@ -15,7 +17,7 @@ export function CtaSection() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
         >
-          Prêt à commencer ?
+          {t.cta.eyebrow}
         </motion.p>
         <motion.h2
           className="text-white text-3xl md:text-4xl font-bold mb-5 font-heading"
@@ -23,9 +25,9 @@ export function CtaSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          Votre prochaine animation,{' '}
+          {t.cta.titlePre}
           <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-            à portée de JSON.
+            {t.cta.titleHighlight}
           </span>
         </motion.h2>
         <motion.p
@@ -35,8 +37,7 @@ export function CtaSection() {
           viewport={{ once: true }}
           transition={{ delay: 0.1 }}
         >
-          Installez la librairie, copiez un exemple, et vous avez votre première
-          animation en moins de 5 minutes.
+          {t.cta.subtitle}
         </motion.p>
         <motion.div
           className="flex items-center justify-center gap-4 flex-wrap"
@@ -49,7 +50,7 @@ export function CtaSection() {
             to="/playground"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white no-underline transition-all hover:brightness-110 bg-gradient-to-br from-violet-600 to-violet-800 font-sans shadow-[0_0_40px_rgba(124,58,237,0.4)]"
           >
-            Ouvrir le Playground
+            {t.cta.primary}
             <ArrowRight size={15} />
           </Link>
           <a
@@ -59,7 +60,7 @@ export function CtaSection() {
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm no-underline transition-all hover:bg-white/[0.07] border border-white/10 text-white/85 font-sans"
           >
             <GitBranch size={15} />
-            Voir sur GitHub
+            {t.cta.secondary}
           </a>
         </motion.div>
       </div>

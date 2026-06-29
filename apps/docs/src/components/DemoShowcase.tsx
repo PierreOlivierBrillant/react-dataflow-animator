@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import Link from '@docusaurus/Link';
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import { demos } from '../site-content';
+import { useTranslation } from '../i18n';
 
 // Quelques exemples mis en avant sur l'accueil ; la galerie complète
 // (recherche + filtres) vit sur la page /examples.
 const featured = demos.slice(0, 6);
 
 export function DemoShowcase() {
+  const t = useTranslation();
   const [activeId, setActiveId] = useState(featured[0].id);
   const active = demos.find((d) => d.id === activeId)!;
   const [codeVisible, setCodeVisible] = useState(false);
@@ -27,7 +29,7 @@ export function DemoShowcase() {
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
           >
-            Démonstrations
+            {t.showcase.eyebrow}
           </motion.p>
           <motion.h2
             className="text-white text-3xl md:text-4xl font-bold mb-4 font-heading"
@@ -35,10 +37,10 @@ export function DemoShowcase() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            Trois lignes de JSON.
+            {t.showcase.titlePre}
             <br />
             <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-              Des animations infinies.
+              {t.showcase.titleHighlight}
             </span>
           </motion.h2>
           <motion.p
@@ -48,8 +50,7 @@ export function DemoShowcase() {
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            Chaque scénario ci-dessous est généré depuis la spec JSON affichée.
-            Modifiez la spec, l'animation se met à jour instantanément.
+            {t.showcase.subtitle}
           </motion.p>
         </div>
 
@@ -96,7 +97,7 @@ export function DemoShowcase() {
                 onClick={() => setCodeVisible((v) => !v)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs transition-all cursor-pointer font-mono text-white/40 border border-white/[0.07] bg-white/[0.02]"
               >
-                {codeVisible ? '▲ Masquer' : '▼ Voir la spec JSON'}
+                {codeVisible ? t.showcase.hideSpec : t.showcase.showSpec}
               </button>
             </div>
 
@@ -129,7 +130,7 @@ export function DemoShowcase() {
             to="/examples"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-sans text-violet-200 bg-violet-600/15 border border-violet-600/40 hover:bg-violet-600/25 transition-colors no-underline"
           >
-            Explorer les {demos.length} exemples
+            {t.showcase.explore(demos.length)}
             <span aria-hidden="true">→</span>
           </Link>
         </div>

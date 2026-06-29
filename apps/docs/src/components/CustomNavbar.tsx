@@ -8,11 +8,14 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { FaGithub } from 'react-icons/fa';
 import { LogoText } from './LogoText';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useTranslation } from '../i18n';
 
 const GITHUB_URL =
   'https://github.com/PierreOlivierBrillant/react-dataflow-animator';
 
 export function CustomNavbar() {
+  const t = useTranslation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation().pathname;
@@ -65,17 +68,17 @@ export function CustomNavbar() {
             <nav className="hidden md:flex items-center gap-1">
               <NavLink
                 to="/docs/intro"
-                label="Documentation"
+                label={t.nav.documentation}
                 icon={<BookOpen size={13} />}
               />
               <NavLink
                 to="/examples"
-                label="Exemples"
+                label={t.nav.examples}
                 icon={<LayoutGrid size={13} />}
               />
               <NavLink
                 to="/playground"
-                label="Playground"
+                label={t.nav.playground}
                 exact={true}
                 icon={<Zap size={13} />}
               />
@@ -86,9 +89,10 @@ export function CustomNavbar() {
               <SearchBar />
             </div>
 
-            {/* Séparateur + GitHub (desktop) */}
-            <div className="hidden md:flex items-center gap-1">
+            {/* Séparateur + langue + GitHub (desktop) */}
+            <div className="hidden md:flex items-center gap-2">
               <div className="w-px h-4 bg-white/10 mx-1" />
+              <LanguageSwitcher />
               <a
                 href={GITHUB_URL}
                 target="_blank"
@@ -104,7 +108,7 @@ export function CustomNavbar() {
               className="md:hidden p-2 text-white/50 hover:text-white cursor-pointer bg-transparent border-none"
               onClick={() => setMobileOpen((v) => !v)}
               aria-expanded={mobileOpen}
-              aria-label="Toggle navigation"
+              aria-label={t.nav.toggleMenu}
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -124,12 +128,12 @@ export function CustomNavbar() {
               <div className="px-5 pb-5">
                 <div className="flex flex-col gap-1 pt-3">
                   {[
-                    { label: 'Documentation', to: '/docs/intro' },
-                    { label: 'Exemples', to: '/examples' },
-                    { label: 'Playground', to: '/playground' },
+                    { label: t.nav.documentation, to: '/docs/intro' },
+                    { label: t.nav.examples, to: '/examples' },
+                    { label: t.nav.playground, to: '/playground' },
                   ].map(({ label, to }) => (
                     <Link
-                      key={label}
+                      key={to}
                       to={to}
                       className="px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
                       onClick={() => setMobileOpen(false)}
@@ -144,8 +148,11 @@ export function CustomNavbar() {
                     className="flex items-center gap-2 px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
                     onClick={() => setMobileOpen(false)}
                   >
-                    <FaGithub size={15} /> Sources
+                    <FaGithub size={15} /> {t.nav.sources}
                   </a>
+                  <div className="px-3 pt-2">
+                    <LanguageSwitcher />
+                  </div>
                 </div>
               </div>
             </motion.div>

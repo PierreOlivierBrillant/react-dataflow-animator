@@ -4,10 +4,12 @@ import { Copy, Check, ArrowRight, BookOpen } from 'lucide-react';
 import { DataFlowPlayer } from 'react-dataflow-animator';
 import { demosById } from '../site-content';
 import Link from '@docusaurus/Link';
+import { useTranslation } from '../i18n';
 
 const INSTALL_CMD = 'npm install react-dataflow-animator';
 
 export function HeroSection() {
+  const t = useTranslation();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -58,11 +60,11 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
           >
-            Vos architectures,{' '}
+            {t.hero.titlePre}
             <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-              animées
-            </span>{' '}
-            en JSON.
+              {t.hero.titleHighlight}
+            </span>
+            {t.hero.titlePost}
           </motion.h1>
 
           <motion.p
@@ -71,9 +73,7 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            Un composant React qui transforme une spécification JSON en
-            animation déterministe et navigable. Idéal pour vos démonstrations
-            d'architecture, tutoriels et documentation interactive.
+            {t.hero.subtitle}
           </motion.p>
 
           <motion.div
@@ -86,7 +86,7 @@ export function HeroSection() {
               to="/playground"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white no-underline transition-all hover:brightness-110 active:scale-[0.98] bg-gradient-to-br from-violet-600 to-violet-800 font-sans shadow-[0_0_30px_rgba(124,58,237,0.3)]"
             >
-              Essayer dans le terrain de jeu
+              {t.hero.ctaPlayground}
               <ArrowRight size={15} />
             </Link>
             <Link
@@ -94,7 +94,7 @@ export function HeroSection() {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium no-underline transition-all hover:bg-white/[0.08] border border-white/10 text-white/70 font-sans"
             >
               <BookOpen size={14} />
-              Documentation
+              {t.hero.ctaDocs}
             </Link>
           </motion.div>
 
