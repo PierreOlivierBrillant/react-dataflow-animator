@@ -539,7 +539,7 @@ describe('compile — rotate', () => {
     expect(r2.toDeg).toBe(180);
   });
 
-  it('emits a warning if object is missing or `to` is not a number', () => {
+  it('emits a warning if object is missing or neither `to` nor `spin` is a number', () => {
     const { timeline, warnings } = compile(
       specOf([
         { type: 'rotate', to: 90 } as unknown as Action,
@@ -548,6 +548,101 @@ describe('compile — rotate', () => {
     );
     expect(timeline.clips).toHaveLength(0);
     expect(warnings.filter((w) => w.includes('rotate'))).toHaveLength(2);
+  });
+
+  describe('spin', () => {
+    it('spins for `duration` ms: linear flag, swept angle = speed × time', () => {
+      const { timeline } = compile(
+        specOf([
+          { type: 'rotate', id: 'S', object: 'a', spin: 360, duration: 1000 },
+        ])
+      );
+      const s = timeline.clips.find((c) => c.id === 'S')! as RotateClip;
+      expect(s.spin).toBe(true);
+      expect(s.keepEnd).toBe(true);
+      expect(s.fromDeg).toBe(0);
+      // 360 deg/s during 1000 ms = one full turn.
+      expect(s.toDeg).toBe(360);
+      expect(s.endMs).toBe(s.animStartMs + 1000);
+      // The node never disappears: it holds the final angle until the end.
+      expect(s.visibleUntilMs).toBe(timeline.durationMs);
+    });
+
+    it('negative speed spins counter-clockwise', () => {
+      const { timeline } = compile(
+        specOf([
+          { type: 'rotate', id: 'S', object: 'a', spin: -180, duration: 2000 },
+        ])
+      );
+      const s = timeline.clips.find((c) => c.id === 'S')! as RotateClip;
+      expect(s.toDeg).toBe(-360);
+    });
+
+    it('keep_until_end: spins until the end of the timeline', () => {
+      const { timeline } = compile(
+        specOf([
+          {
+            type: 'rotate',
+            id: 'S',
+            object: 'a',
+            spin: 90,
+            keep_until_end: true,
+          },
+          { type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 1000 },
+        ])
+      );
+      const s = timeline.clips.find((c) => c.id === 'S')! as RotateClip;
+      expect(s.endMs).toBe(timeline.durationMs);
+      expect(s.visibleUntilMs).toBe(timeline.durationMs);
+      // Angle swept over the whole timeline (fromDeg 0, animStart 0).
+      expect(s.toDeg).toBeCloseTo((90 * timeline.durationMs) / 1000);
+    });
+
+    it('keep_until: spins until the referenced action starts', () => {
+      const { timeline } = compile(
+        specOf([
+          {
+            type: 'rotate',
+            id: 'S',
+            object: 'a',
+            spin: 720,
+            keep_until: 'LATER',
+          },
+          { type: 'arrow', id: 'EARLY', from: 'a', to: 'b', duration: 500 },
+          {
+            type: 'comment',
+            id: 'LATER',
+            object: 'a',
+            text: 'x',
+            duration: 300,
+          },
+        ])
+      );
+      const s = timeline.clips.find((c) => c.id === 'S')! as RotateClip;
+      const laterStart = timeline.steps[2].startMs;
+      expect(s.endMs).toBe(laterStart);
+      expect(s.toDeg).toBeCloseTo((720 * laterStart) / 1000);
+      expect(s.visibleUntilMs).toBe(timeline.durationMs);
+    });
+
+    it('spin wins over to when both are set (with a warning)', () => {
+      const { timeline, warnings } = compile(
+        specOf([
+          {
+            type: 'rotate',
+            id: 'S',
+            object: 'a',
+            to: 90,
+            spin: 360,
+            duration: 1000,
+          },
+        ])
+      );
+      const s = timeline.clips.find((c) => c.id === 'S')! as RotateClip;
+      expect(s.spin).toBe(true);
+      expect(s.toDeg).toBe(360);
+      expect(warnings.some((w) => w.includes('mutually exclusive'))).toBe(true);
+    });
   });
 });
 

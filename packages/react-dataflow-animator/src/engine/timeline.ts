@@ -99,8 +99,14 @@ export interface RotateClip extends ClipBase {
   objectId: string;
   /** Angle (deg) before this clip — interpolation start. */
   fromDeg: number;
-  /** Absolute target angle (deg). */
+  /** Absolute target angle (deg). For a spin, the angle reached when it stops. */
   toDeg: number;
+  /**
+   * Continuous spin: the angle interpolates LINEARLY (constant speed, no easing)
+   * over [animStartMs, endMs]. Absent/false = a single eased rotation toward
+   * `toDeg`.
+   */
+  spin?: boolean;
 }
 
 export type Clip =

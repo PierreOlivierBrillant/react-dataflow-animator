@@ -91,6 +91,12 @@ interface PendingClip {
   keepNext: boolean;
   keepEnd: boolean;
   stepIndex: number;
+  /**
+   * Continuous-spin speed (deg/s) for a `rotate` spin. When set, pass 2 resolves
+   * the clip's spin-stop instant (`endMs`) and final `toDeg` from the timing
+   * fields (`duration` / `keep_until` / `keep_until_end`).
+   */
+  spinDegPerSec?: number;
 }
 
 interface Ctx {
@@ -320,23 +326,65 @@ function compileAction(
       break;
     }
     case 'rotate': {
-      if (!action.object || typeof action.to !== 'number') {
-        ctx.warnings.push(`rotate "${id}": object/to (number) required.`);
+      const hasTo = typeof action.to === 'number';
+      const hasSpin = typeof action.spin === 'number';
+      if (!action.object || (!hasTo && !hasSpin)) {
+        ctx.warnings.push(
+          `rotate "${id}": object and to/spin (number) required.`
+        );
         break;
       }
+      if (hasTo && hasSpin) {
+        ctx.warnings.push(
+          `rotate "${id}": to and spin are mutually exclusive; spin wins.`
+        );
+      }
       const fromDeg = ctx.rotationById.get(action.object) ?? 0;
+      // keepEnd forced to true on every rotate clip: the final angle persists
+      // until the end of the timeline so Stage can read the node's rotation at
+      // any later instant.
+      if (hasSpin) {
+        const degPerSec = action.spin as number;
+        // Provisional sweep for the `duration` mode (animStart..endMs). For
+        // keep_until / keep_until_end the real stop instant — and thus toDeg —
+        // is only known in pass 2, once all durations are resolved.
+        const sweep = (degPerSec * (endMs - animStartMs)) / 1000;
+        const clip: RotateClip = {
+          ...base,
+          kind: 'rotate',
+          objectId: action.object,
+          fromDeg,
+          toDeg: fromDeg + sweep,
+          spin: true,
+          keepEnd: true,
+        };
+        // Chaining is exact only when the spin stops at a known instant (the
+        // `duration` mode). An open-ended spin (keep_until / keep_until_end)
+        // leaves the running angle at its start; a later rotate resumes there.
+        if (!action.keep_until && !action.keep_until_end) {
+          ctx.rotationById.set(action.object, fromDeg + sweep);
+        }
+        ctx.pending.push({
+          clip,
+          keepUntil: action.keep_until,
+          keepNext: false,
+          keepEnd: action.keep_until_end ?? false,
+          stepIndex,
+          spinDegPerSec: degPerSec,
+        });
+        if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
+        break;
+      }
       const clip: RotateClip = {
         ...base,
         kind: 'rotate',
         objectId: action.object,
         fromDeg,
-        toDeg: action.to,
-        // keepEnd forced to true: the final angle persists until the end of the
-        // timeline so Stage can read the node's rotation at any later instant.
+        toDeg: action.to as number,
         keepEnd: true,
       };
       // Update the running angle for chaining (next rotate on this node starts here).
-      ctx.rotationById.set(action.object, action.to);
+      ctx.rotationById.set(action.object, action.to as number);
       ctx.pending.push({
         clip,
         keepUntil: undefined,
@@ -415,7 +463,33 @@ export function compile(spec: DataFlowSpec): CompileResult {
   };
 
   // Pass 2: lifecycle resolution (visibleUntilMs).
-  for (const { clip, keepUntil, keepNext, keepEnd, stepIndex } of ctx.pending) {
+  for (const {
+    clip,
+    keepUntil,
+    keepNext,
+    keepEnd,
+    stepIndex,
+    spinDegPerSec,
+  } of ctx.pending) {
+    if (spinDegPerSec !== undefined && clip.kind === 'rotate') {
+      // Spin: resolve the instant the rotation STOPS (its animation end), then
+      // the final angle. The node never disappears, so it stays visible until
+      // the end of the timeline, holding that final angle.
+      let stopMs = clip.endMs; // `duration` mode: already animStartMs + duration
+      if (keepUntil) {
+        const ref = ctx.timingById.get(keepUntil);
+        if (ref) stopMs = ref.startMs;
+        else ctx.warnings.push(`keep_until: action "${keepUntil}" not found.`);
+      } else if (keepEnd) {
+        stopMs = durationMs;
+      }
+      if (stopMs < clip.animStartMs) stopMs = clip.animStartMs;
+      clip.endMs = stopMs;
+      clip.toDeg =
+        clip.fromDeg + (spinDegPerSec * (stopMs - clip.animStartMs)) / 1000;
+      clip.visibleUntilMs = durationMs;
+      continue;
+    }
     if (keepUntil) {
       const ref = ctx.timingById.get(keepUntil);
       if (ref) clip.visibleUntilMs = ref.startMs;

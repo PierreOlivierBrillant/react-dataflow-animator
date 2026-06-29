@@ -392,11 +392,10 @@ export function Stage({
   for (const a of active) {
     if (a.clip.kind === 'rotate') {
       const clip = a.clip as RotateClip;
-      nodeRotation[clip.objectId] = lerp(
-        clip.fromDeg,
-        clip.toDeg,
-        easeInOutCubic(a.progress)
-      );
+      // A continuous spin turns at constant speed (linear); a target rotation
+      // eases in/out.
+      const f = clip.spin ? a.progress : easeInOutCubic(a.progress);
+      nodeRotation[clip.objectId] = lerp(clip.fromDeg, clip.toDeg, f);
     }
   }
 

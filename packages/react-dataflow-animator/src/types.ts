@@ -475,20 +475,37 @@ interface SetVisibleAction extends ActionBase {
 }
 
 /**
- * Animates the visual rotation of a node toward an absolute angle.
- * The starting angle is the node's current rotation (its static `rotation`,
- * or the target of a previous `rotate`). Only the visual rotates; the label
- * stays upright. The final angle persists until the end of the timeline.
+ * Animates the visual rotation of a node. Two mutually exclusive modes:
+ *
+ * - **Target angle** (`to`): a single eased rotation toward an absolute angle.
+ *   The starting angle is the node's current rotation (its static `rotation`, or
+ *   the target of a previous `rotate`), so successive rotations chain.
+ * - **Continuous spin** (`spin`): the node turns at a constant speed (linear, no
+ *   easing) for as long as the action lasts. How long is driven by the usual
+ *   timing fields — `duration` (spin that long), `keep_until` (spin until another
+ *   action starts), or `keep_until_end` (spin until the end of the timeline).
+ *
+ * Only the visual rotates; the label stays upright. The angle reached when the
+ * rotation ends persists until the end of the timeline.
  */
 interface RotateAction extends ActionBase {
   type: 'rotate';
   /** ID of the node to rotate. */
   object: string;
   /**
-   * Target angle in degrees (absolute, clockwise).
+   * Target angle in degrees (absolute, clockwise). Mutually exclusive with
+   * `spin` (which takes precedence if both are set).
    * @example 90
    */
-  to: number;
+  to?: number;
+  /**
+   * Continuous spin speed in degrees per second: positive turns clockwise,
+   * negative counter-clockwise. Mutually exclusive with `to`. The spin lasts for
+   * `duration` ms (default 600), or until `keep_until` / `keep_until_end` when
+   * set; the angle reached then persists.
+   * @example 360
+   */
+  spin?: number;
 }
 
 /**
