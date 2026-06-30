@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useStageGeometry } from './useStageGeometry';
 
 afterEach(() => {
@@ -118,6 +118,40 @@ describe('useStageGeometry', () => {
     expect(Number(stage.dataset.width)).toBe(800);
     expect(Number(stage.dataset.height)).toBe(600);
     expect(Number(stage.dataset.aspect)).toBeCloseTo(800 / 600);
+  });
+
+  it('mesure un nœud révélé à l’exécution (set_visible) sans changement de signature', async () => {
+    // A node added at runtime (revealed by set_visible) must be measured even
+    // though the signature is unchanged, otherwise its edges have no geometry
+    // and never draw (regression: bstInsert's new node was never connected).
+    function RevealFixture({ showC }: { showC: boolean }) {
+      const { geometry, stageRef } = useStageGeometry('const-sig');
+      return (
+        <div
+          ref={stageRef}
+          data-testid="stage"
+          data-has-c={geometry['c'] ? '1' : '0'}
+        >
+          <div data-node-id="a">
+            <div className="rdfa-node-visual" />
+          </div>
+          {showC && (
+            <div data-node-id="c">
+              <div className="rdfa-node-visual" />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const { rerender } = render(<RevealFixture showC={false} />);
+    expect(screen.getByTestId('stage').dataset.hasC).toBe('0');
+
+    // Reveal node c (same signature) → the MutationObserver re-measures it.
+    rerender(<RevealFixture showC={true} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('stage').dataset.hasC).toBe('1')
+    );
   });
 
   it('relance la mesure quand la signature change', () => {

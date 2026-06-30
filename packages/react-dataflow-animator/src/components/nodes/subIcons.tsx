@@ -142,12 +142,12 @@ function renderText(text: string): ReactNode {
   const label = text.length > 4 ? text.slice(0, 4) : text;
   const fontSize =
     label.length >= 4
-      ? 6
+      ? 7.5
       : label.length === 3
-        ? 7.5
+        ? 9.5
         : label.length === 2
-          ? 9
-          : 12;
+          ? 12
+          : 16;
   return (
     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
       <circle cx="12" cy="12" r="12" fill="#475569" />

@@ -433,14 +433,30 @@ export function Stage({
   for (const node of spec.nodes) {
     if (node.visible === false) nodeVisibility[node.id] = 0;
   }
+  // End instant of the set_visible that revealed each node, used in tree mode to
+  // draw its incoming edge AFTER the node has appeared (place the node, then
+  // connect it — see treeEdgeProgress), instead of popping the edge in with it.
+  const nodeRevealEnd: Record<string, number> = {};
   for (const a of active) {
     if (a.clip.kind === 'set_visible') {
       const clip = a.clip as SetVisibleClip;
       nodeVisibility[clip.objectId] = clip.visible
         ? a.progress
         : 1 - a.progress;
+      if (clip.visible) nodeRevealEnd[clip.objectId] = clip.endMs;
+      else delete nodeRevealEnd[clip.objectId];
     }
   }
+  // Draw-in fraction [0..1] of a tree edge: 1 (fully drawn) for nodes present
+  // from the start; for a node just revealed by set_visible, the edge stays at 0
+  // while the node fades in, then grows from the parent toward the child over
+  // EDGE_DRAW_MS once the reveal is done. Pure in t → scrubbable.
+  const EDGE_DRAW_MS = 450;
+  const treeEdgeProgress = (childId: string): number => {
+    const re = nodeRevealEnd[childId];
+    if (re == null) return 1;
+    return easeInOutCubic(Math.max(0, Math.min(1, (t - re) / EDGE_DRAW_MS)));
+  };
 
   // Rotation angle (deg) by node: initialized from `node.rotation`, then
   // updated by active rotate clips. Like set_visible, rotate clips have
@@ -598,6 +614,8 @@ export function Stage({
             const f = effectiveGeometry[from];
             const tg = effectiveGeometry[to];
             if (!f || !tg) return null;
+            const progress = treeEdgeProgress(to);
+            if (progress <= 0) return null;
             return (
               <ArrowLine
                 key={`tree|${from}|${to}`}
@@ -607,7 +625,7 @@ export function Stage({
                 endPortOffset={0}
                 style="solid"
                 arrow_head="none"
-                progress={1}
+                progress={progress}
                 obstacles={allEffectiveNodes}
                 axis="vertical"
               />

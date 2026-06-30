@@ -1,33 +1,15 @@
 import type { DataFlowSpec } from 'react-dataflow-animator';
 import type { Locale } from '../../i18n';
 
-// Binary search tree — INSERTION. The new key starts as an ORPHAN (a traveling
-// `subicon` packet, detached from the tree) and walks DOWN step by step: at each
-// node we compare and descend, until we reach an empty child slot — where the
-// node is then created. The destination node (`7`) is declared in the tree but
-// `visible: false`, so its slot is reserved (no edge drawn) until `set_visible`
-// reveals it. Key numbers are language-invariant; comments carry the narration.
+// Binary search tree — INSERTION, slowed down for beginners. The new key starts
+// as an ORPHAN (a traveling token, detached from the tree) and walks DOWN one
+// node at a time: at each node we compare and go left or right, until we reach
+// an EMPTY child — where the new node is then created. The destination node (7)
+// is declared in the tree but `visible: false`, so its slot is reserved (and no
+// edge is drawn) until `set_visible` reveals it. Numbers are language-invariant.
 const NODE = 'steelblue';
 const NEW = 'seagreen';
 const INK = 'white';
-
-const strings = {
-  en: {
-    intro: 'Insert 7 — the new key is an orphan; we route it down to its slot',
-    cmp8: '7 < 8 → walk into the LEFT subtree',
-    cmp4: '7 > 4 → walk into the RIGHT subtree',
-    cmp6: '7 > 6 → and the RIGHT child is empty: this is the spot',
-    done: '7 is created as the right child of 6 ✓',
-  },
-  fr: {
-    intro:
-      'Insérer 7 — la nouvelle clé est orpheline ; on la guide jusqu’à son slot',
-    cmp8: '7 < 8 → on descend dans le sous-arbre GAUCHE',
-    cmp4: '7 > 4 → on descend dans le sous-arbre DROIT',
-    cmp6: '7 > 6 → et l’enfant DROIT est vide : c’est la place',
-    done: '7 est créé comme enfant droit de 6 ✓',
-  },
-};
 
 const node = (id: string) => ({
   id,
@@ -36,6 +18,33 @@ const node = (id: string) => ({
   background_color: NODE,
   text_color: INK,
 });
+
+const strings = {
+  en: {
+    intro:
+      'Inserting into a binary search tree: smaller keys go left, larger keys go right. We want to add the key 7.',
+    orphan:
+      '7 starts as an orphan, outside the tree, at the root. We compare it with each node to find its place.',
+    cmp8: 'Compare with 8: 7 < 8 → the new key belongs in the LEFT subtree.',
+    cmp4: 'Compare with 4: 7 > 4 → go to the RIGHT.',
+    cmp6: 'Compare with 6: 7 > 6 → go right. But 6 has no right child — the search stops here.',
+    placed: 'That empty spot is where 7 belongs: we place it there…',
+    linked: '…then connect it as the right child of 6.',
+    done: 'Done — 7 is now part of the tree, and it stays a valid binary search tree.',
+  },
+  fr: {
+    intro:
+      'Insertion dans un arbre binaire de recherche : les clés plus petites vont à gauche, les plus grandes à droite. On veut ajouter la clé 7.',
+    orphan:
+      '7 commence orpheline, hors de l’arbre, à la racine. On la compare à chaque nœud pour trouver sa place.',
+    cmp8: 'On compare avec 8 : 7 < 8 → la nouvelle clé va dans le sous-arbre GAUCHE.',
+    cmp4: 'On compare avec 4 : 7 > 4 → on va à DROITE.',
+    cmp6: 'On compare avec 6 : 7 > 6 → à droite. Mais 6 n’a pas d’enfant droit — la recherche s’arrête ici.',
+    placed: 'Cette place vide est celle de 7 : on l’y dépose…',
+    linked: '…puis on le relie comme enfant droit de 6.',
+    done: 'Terminé — 7 fait maintenant partie de l’arbre, qui reste un arbre binaire de recherche valide.',
+  },
+};
 
 export const bstInsert = (locale: Locale): DataFlowSpec => {
   const s = strings[locale];
@@ -52,8 +61,6 @@ export const bstInsert = (locale: Locale): DataFlowSpec => {
     },
     nodes: [
       ...['8', '4', '12', '2', '6', '10', '14'].map(node),
-      // The node to insert: its slot is reserved (in the tree) but hidden until
-      // the orphan key reaches it. Tinted green to read as "new".
       {
         id: '7',
         type: 'circle',
@@ -65,30 +72,33 @@ export const bstInsert = (locale: Locale): DataFlowSpec => {
     ],
     packets: [{ id: 'k', kind: 'subicon', icon: '7' }],
     timeline: [
-      { type: 'comment', object: '8', text: s.intro, duration: 1800 },
+      { type: 'comment', text: s.intro, duration: 3400 },
+      { type: 'comment', object: '8', text: s.orphan, duration: 3200 },
       {
         type: 'parallel',
         actions: [
-          { type: 'move', object: 'k', from: '8', to: '4', duration: 750 },
+          { type: 'move', object: 'k', from: '8', to: '4', duration: 900 },
           { type: 'comment', object: '8', text: s.cmp8, keep_until_next: true },
         ],
       },
       {
         type: 'parallel',
         actions: [
-          { type: 'move', object: 'k', from: '4', to: '6', duration: 750 },
+          { type: 'move', object: 'k', from: '4', to: '6', duration: 900 },
           { type: 'comment', object: '4', text: s.cmp4, keep_until_next: true },
         ],
       },
-      { type: 'comment', object: '6', text: s.cmp6, duration: 1800 },
+      { type: 'comment', object: '6', text: s.cmp6, duration: 3000 },
       {
         type: 'parallel',
         actions: [
           { type: 'set_visible', object: '7', visible: true, duration: 500 },
-          { type: 'comment', object: '7', text: s.done, keep_until_end: true },
+          { type: 'comment', object: '6', text: s.placed, duration: 1500 },
         ],
       },
-      { type: 'wait', delay_ms: 1000 },
+      { type: 'comment', object: '7', text: s.linked, duration: 2400 },
+      { type: 'comment', object: '7', text: s.done, keep_until_end: true },
+      { type: 'wait', delay_ms: 1400 },
     ],
   };
 };

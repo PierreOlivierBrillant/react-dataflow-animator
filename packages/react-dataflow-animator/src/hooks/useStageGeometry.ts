@@ -155,13 +155,55 @@ export function useStageGeometry(signature: string): StageGeometry {
 
   useEffect(() => {
     const stage = stageRef.current;
-    if (!stage || typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(() => measure());
-    ro.observe(stage);
-    stage
-      .querySelectorAll<HTMLElement>('[data-node-id]')
-      .forEach((el) => ro.observe(el));
-    return () => ro.disconnect();
+    if (!stage) return;
+    const ro =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => measure())
+        : undefined;
+    const observeNodes = () => {
+      if (!ro) return;
+      ro.observe(stage);
+      stage
+        .querySelectorAll<HTMLElement>('[data-node-id]')
+        .forEach((el) => ro.observe(el));
+    };
+    observeNodes();
+
+    // A node revealed at RUNTIME (a `set_visible`) is added to the DOM without
+    // resizing the stage or any existing node, so the ResizeObserver alone never
+    // measures it — its connections/tree edges would then have no geometry and
+    // never draw. A MutationObserver re-measures (and re-observes) the moment a
+    // node element is added or removed. Independent of ResizeObserver support.
+    // We react only to `[data-node-id]` changes, not to packets/comments that
+    // mount every frame, to avoid needless measuring.
+    let mo: MutationObserver | undefined;
+    if (typeof MutationObserver !== 'undefined') {
+      const touchesNode = (list: NodeList): boolean => {
+        for (const n of list) {
+          if (
+            n instanceof HTMLElement &&
+            (n.matches('[data-node-id]') || n.querySelector('[data-node-id]'))
+          )
+            return true;
+        }
+        return false;
+      };
+      mo = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (touchesNode(m.addedNodes) || touchesNode(m.removedNodes)) {
+            observeNodes();
+            measure();
+            return;
+          }
+        }
+      });
+      mo.observe(stage, { childList: true, subtree: true });
+    }
+
+    return () => {
+      ro?.disconnect();
+      mo?.disconnect();
+    };
   }, [measure, signature]);
 
   return {
