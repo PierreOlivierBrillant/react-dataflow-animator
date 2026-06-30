@@ -126,9 +126,6 @@ const config = {
       apiKey: '6ab54371d9c7838ec9038b1e45831c11',
       indexName: 'React Dataflow Animator documentation website',
       searchPagePath: 'search',
-      // Filters results by current locale (`language` facet). Assumes that
-      // the DocSearch crawler indexes both locales (see docsearch:language
-      // tag emitted by Docusaurus for /en and /fr).
       contextualSearch: true,
     },
   },
