@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '@theme/Layout';
 import {
   DataFlowPlayer,
@@ -195,12 +195,36 @@ export default function PlaygroundPage() {
   const monoSize =
     density === 'compact' ? 11 : density === 'spacious' ? 14 : 13;
 
+  // Structured, localized index of every example, embedded in the static HTML
+  // so the Algolia crawler can emit one search record per example (deep-linked
+  // to ?demo=<id>) instead of a single opaque "Playground" record. The crawler
+  // `recordExtractor` that consumes `#rdfa-search-index` is documented in
+  // docs/SEARCH.md. `<` is escaped so the JSON cannot terminate the <script>.
+  const searchIndexJson = useMemo(
+    () =>
+      JSON.stringify(
+        demos.map((demo) => ({
+          id: demo.id,
+          title: pickLocale(demo.title, locale),
+          description: pickLocale(demo.description, locale),
+          tags: demo.tags ? pickLocale(demo.tags, locale) : [],
+        }))
+      ).replace(/</g, '\\u003c'),
+    [locale]
+  );
+
   return (
     <Layout
       title={t.playground.pageTitle}
       description={t.playground.pageDescription}
     >
       <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:light] dark:[color-scheme:dark]">
+        {/* Search index for the Algolia crawler (see docs/SEARCH.md). Not rendered. */}
+        <script
+          type="application/json"
+          id="rdfa-search-index"
+          dangerouslySetInnerHTML={{ __html: searchIndexJson }}
+        />
         {/* Page header — px-5 gutter aligned with the navbar and the rest of the site */}
         <div className="flex-none px-5 py-4 border-b border-slate-900/[0.08] dark:border-white/[.06] flex items-center gap-4">
           <div>

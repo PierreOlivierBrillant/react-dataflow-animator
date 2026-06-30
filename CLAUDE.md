@@ -23,6 +23,7 @@ Read these files before any non-trivial modification:
 - [`docs/SPEC.md`](./docs/SPEC.md) — functional specification (source of truth for expected behaviors).
 - [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — module boundaries, rendering pipeline, extension points.
 - [`docs/AI-VALIDATION.md`](./docs/AI-VALIDATION.md) — how to get rendering (clarity/smoothness) validated by an AI via the deterministic harness and Playwright visual regression.
+- [`docs/SEARCH.md`](./docs/SEARCH.md) — Algolia DocSearch indexing model (how playground examples are indexed; crawler `recordExtractor` reference).
 - [`apps/docs/docs/`](./apps/docs/docs/) — MDX user documentation (concepts, references).
 - [`packages/react-dataflow-animator/src/types.ts`](./packages/react-dataflow-animator/src/types.ts) and [`schema.ts`](./packages/react-dataflow-animator/src/schema.ts) — exact shape of the spec.
 
