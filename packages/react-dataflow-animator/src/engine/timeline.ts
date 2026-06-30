@@ -1,4 +1,5 @@
 import type { LineStyle, ObjectContent, PathShape } from '../types';
+import type { LayoutMap } from './layout';
 
 /**
  * Deterministic intermediate representation (IR) of the timeline.
@@ -18,7 +19,8 @@ export type ClipKind =
   | 'highlight'
   | 'set_visible'
   | 'set_color'
-  | 'rotate';
+  | 'rotate'
+  | 'reflow';
 
 interface ClipBase {
   /** Unique clip identifier (= action id if provided, otherwise generated). */
@@ -122,6 +124,16 @@ export interface RotateClip extends ClipBase {
   spin?: boolean;
 }
 
+export interface ReflowClip extends ClipBase {
+  kind: 'reflow';
+  /** Node placements (ratios) BEFORE this rotation — interpolation start. */
+  fromLayout: LayoutMap;
+  /** Node placements (ratios) AFTER this rotation — interpolation end. */
+  toLayout: LayoutMap;
+  /** Parent→child edges of the tree AFTER this rotation (drawn while active). */
+  edges: Array<[string, string]>;
+}
+
 export type Clip =
   | MoveClip
   | ArrowClip
@@ -131,7 +143,8 @@ export type Clip =
   | HighlightClip
   | SetVisibleClip
   | SetColorClip
-  | RotateClip;
+  | RotateClip
+  | ReflowClip;
 
 export interface Step {
   index: number;

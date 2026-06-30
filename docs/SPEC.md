@@ -44,6 +44,14 @@ the container (pure CSS placement). See [`packages/react-dataflow-animator/src/e
   are distributed and centered on the transverse axis. Spacing proportional to the container.
 - **Circular** (`circular`): the `is_main` node is placed at the center; the others are
   equidistant on a circle (trigonometry), ratio corrected to remain round.
+- **Tree** (`tree`): a binary tree described by the `tree` root block (`root` +
+  per-node `left`/`right` children). Each node is placed by its **in-order rank**
+  (horizontal) and **depth** (vertical); the parent→child **edges are drawn
+  automatically** from the block (no `connections`). The topology is the single
+  source of truth for positions and edges, and can be restructured at runtime by
+  the [`rotate_subtree` action](#5-animation-engine-and-actions) — a rotation
+  preserves the in-order order, so only depths change and the nodes glide. `lane`
+  and `align_with` are ignored.
 - **`align_with`**: aligns a node on the transverse axis of another (vertical if the
   direction is horizontal) → align two nodes from different lanes.
 - **Zones** (`zones` root array): background rectangles encompassing a
@@ -197,6 +205,16 @@ The timeline compiles an array of ordered actions. See
     Chaining after a spin is exact only in the `duration` mode (the stop angle of
     an open-ended `keep_until`/`keep_until_end` spin is not known at compile
     time, so a later `rotate` on that node resumes from the pre-spin angle).
+
+12. **rotate_subtree**: restructures the binary `tree` (only in `direction: 'tree'`)
+    with a left/right **tree rotation** around the pivot `object`, then animates
+    the nodes gliding to their new depths while the edges re-route. The engine
+    mutates the topology and recomputes BOTH positions and edges from that single
+    model, so they can never disagree. A `left` rotation lifts the pivot's right
+    child, `right` its left child (missing child → non-blocking warning).
+    Successive `rotate_subtree` chain (each from the previous topology) — AVL
+    double rotations `LR`/`RL` are just two in a row. A rotation preserves the
+    in-order traversal, so horizontal slots are stable and only depths change.
 
 ## 6. Temporal lifecycle
 

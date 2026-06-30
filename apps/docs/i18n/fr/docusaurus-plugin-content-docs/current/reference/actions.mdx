@@ -14,6 +14,7 @@ import {
   setVisibleExample,
   setColorExample,
   rotateExample,
+  rotateSubtreeExample,
   highlightExample,
 } from './_actions/examples';
 
@@ -272,6 +273,32 @@ horaire, négatif = sens anti-horaire) : le nœud tourne à vitesse constante
 Si `to` et `spin` sont fournis ensemble, `spin` l'emporte.
 
 <DataFlowPlayer spec={rotateExample} theme="auto" height={300} />
+
+## `rotate_subtree`
+
+Restructure un arbre binaire par une **rotation d'arbre** autour d'un pivot, puis
+anime les nœuds qui glissent à leur nouvelle place pendant que les arêtes
+parent/enfant se re-câblent. Valide uniquement en
+[`direction: 'tree'`](../concepts/layout.mdx#mode-arbre), qui fournit le bloc
+`tree` que cette action mute.
+
+```ts
+{ type: 'rotate_subtree', object: '10', rotation: 'left' } // ou 'right'
+```
+
+Une rotation **gauche** fait monter l'enfant droit du pivot ; une rotation
+**droite** fait monter son enfant gauche (l'enfant requis doit exister, sinon un
+avertissement est émis et rien ne bouge). Une rotation préserve le parcours
+in-order de l'arbre : les positions horizontales ne changent pas — le mouvement
+est le changement de profondeur du pivot et du sous-arbre déplacé.
+
+Des `rotate_subtree` successifs **s'enchaînent** (chacun part de la topologie
+laissée par le précédent) : c'est ainsi qu'on exprime les **rotations doubles**
+AVL — un cas `LR` est une rotation gauche sur l'enfant suivie d'une rotation
+droite sur le grand-parent. Ci-dessous, une seule rotation gauche rééquilibre une
+chaîne penchée à droite :
+
+<DataFlowPlayer spec={rotateSubtreeExample} theme="auto" height={320} />
 
 ## `highlight`
 

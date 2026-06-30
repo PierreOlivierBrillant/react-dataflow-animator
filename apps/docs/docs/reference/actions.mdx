@@ -14,6 +14,7 @@ import {
   setVisibleExample,
   setColorExample,
   rotateExample,
+  rotateSubtreeExample,
   highlightExample,
 } from './_actions/examples';
 
@@ -266,6 +267,30 @@ clockwise, negative counter-clockwise): the node turns at a constant speed
 If both `to` and `spin` are given, `spin` wins.
 
 <DataFlowPlayer spec={rotateExample} theme="auto" height={300} />
+
+## `rotate_subtree`
+
+Restructures a binary tree with a **tree rotation** around a pivot, then animates
+the nodes gliding to their new places while the parent/child edges re-route.
+Only valid in [`direction: 'tree'`](../concepts/layout.mdx#tree-mode), which
+supplies the `tree` block this action mutates.
+
+```ts
+{ type: 'rotate_subtree', object: '10', rotation: 'left' } // or 'right'
+```
+
+A **left** rotation lifts the pivot's right child; a **right** rotation lifts its
+left child (the required child must exist, else a warning is emitted and nothing
+moves). A rotation preserves the tree's in-order traversal, so horizontal
+positions stay put — the motion is the pivot and the moved subtree changing
+depth.
+
+Successive `rotate_subtree` actions **chain** (each starts from the topology the
+previous one left), which is how AVL **double rotations** are expressed — an
+`LR` case is a left rotation on the child followed by a right rotation on the
+grandparent. Below, a single left rotation rebalances a right-leaning chain:
+
+<DataFlowPlayer spec={rotateSubtreeExample} theme="auto" height={320} />
 
 ## `highlight`
 

@@ -20,13 +20,14 @@ import {
   type CommentClip,
   type HighlightClip,
   type MoveClip,
+  type ReflowClip,
   type RotateClip,
   type SetColorClip,
   type SetContentClip,
   type SetVisibleClip,
   type Timeline,
 } from '../engine/timeline';
-import { computeLayout, connectionAxis } from '../engine/layout';
+import { computeLayout, connectionAxis, treeEdges } from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
 import { computePlacements, computeContentLimits } from '../engine/placements';
 import {
@@ -203,6 +204,45 @@ export function Stage({
   const active = evaluate(timeline, t);
 
   const direction = spec.direction ?? 'left-to-right';
+
+  // ─── Tree mode: time-dependent layout & edges ──────────────────────────────
+  // In `direction: 'tree'` node positions are NOT fixed: each active reflow clip
+  // (a rotate_subtree) interpolates placements from the pre- to the
+  // post-rotation layout and carries the post-rotation parent/child edges. The
+  // most recent active reflow wins (clips are start-ordered, and each one's
+  // fromLayout is the previous one's toLayout, so it captures the cumulative
+  // state); before any rotation we fall back to the base layout and the initial
+  // tree edges. Pure in `t` → scrubbable both ways.
+  const isTree = direction === 'tree';
+  const { liveLayout, treeEdgesNow } = useMemo((): {
+    liveLayout: typeof layout;
+    treeEdgesNow: Array<[string, string]>;
+  } => {
+    if (!isTree) return { liveLayout: layout, treeEdgesNow: [] };
+    let lastReflow: ReflowClip | undefined;
+    let lastProgress = 1;
+    for (const a of active) {
+      if (a.clip.kind === 'reflow') {
+        lastReflow = a.clip as ReflowClip;
+        lastProgress = a.progress;
+      }
+    }
+    if (!lastReflow) {
+      return {
+        liveLayout: layout,
+        treeEdgesNow: spec.tree ? treeEdges(spec.tree) : [],
+      };
+    }
+    const f = easeInOutCubic(lastProgress);
+    const next: typeof layout = {};
+    for (const id of Object.keys(layout)) {
+      const from = lastReflow.fromLayout[id] ?? layout[id];
+      const to = lastReflow.toLayout[id] ?? layout[id];
+      next[id] = { cx: lerp(from.cx, to.cx, f), cy: lerp(from.cy, to.cy, f) };
+    }
+    return { liveLayout: next, treeEdgesNow: lastReflow.edges };
+  }, [isTree, layout, active, spec.tree]);
+
   const lineConnections = useMemo(() => collectArrowConnections(spec), [spec]);
   // Nodes opting out of edge convergence (`merge_edges: false`): their faces
   // fan out instead of collapsing all attachments to a single anchor point.
@@ -320,7 +360,7 @@ export function Stage({
   // (measured ContentPanel). Factor = contentCrossfade (eased) → morph follows
   // exactly the visual fade, eased start and end.
   let effectiveGeometry: GeometryMap = geometry;
-  let hasSetContentTransition = false;
+  let geometryOverridden = false;
   for (const a of active) {
     if (a.clip.kind !== 'set_content') continue;
     const clip = a.clip as SetContentClip;
@@ -330,9 +370,9 @@ export function Stage({
     if (!iconGeom || !currGeom) continue;
     const p = contentByNode[nodeId]?.opacity ?? 0;
     if (p >= 1) continue;
-    if (!hasSetContentTransition) {
+    if (!geometryOverridden) {
       effectiveGeometry = { ...geometry };
-      hasSetContentTransition = true;
+      geometryOverridden = true;
     }
     const lH = lerp(iconGeom.labelH ?? 0, currGeom.labelH ?? 0, p);
     const lW = lerp(iconGeom.labelW ?? 0, currGeom.labelW ?? 0, p);
@@ -352,7 +392,27 @@ export function Stage({
       ...(currGeom.scale != null ? { scale: currGeom.scale } : {}),
     };
   }
-  const allEffectiveNodes = hasSetContentTransition
+  // Tree nodes glide with the live layout: synthesize their geometry x/y from the
+  // interpolated placement (keeping the measured size), so the auto-drawn
+  // parent/child edges follow the moving nodes — the same trick as set_content,
+  // applied to position instead of size. No DOM re-measure needed (sizes are
+  // stable during a rotation).
+  if (isTree && width && height) {
+    if (!geometryOverridden) {
+      effectiveGeometry = { ...geometry };
+      geometryOverridden = true;
+    }
+    for (const id of Object.keys(liveLayout)) {
+      const g = geometry[id];
+      if (!g) continue;
+      effectiveGeometry[id] = {
+        ...g,
+        x: liveLayout[id].cx * width,
+        y: liveLayout[id].cy * height,
+      };
+    }
+  }
+  const allEffectiveNodes = geometryOverridden
     ? Object.values(effectiveGeometry)
     : allNodes;
 
@@ -458,13 +518,17 @@ export function Stage({
 
   const nodes = spec.nodes;
 
-  // Nodes never MOVE: we just bound them so they don't go outside the
-  // canvas. The shrinking of panels (contentLimits) avoids
-  // overlaps, not spreading them out.
-  const placements = useMemo(
+  // Outside tree mode, nodes never MOVE: we just bound them so they don't go
+  // outside the canvas (the shrinking of panels via contentLimits avoids
+  // overlaps, not spreading them out). In tree mode positions are
+  // time-dependent (rotations), so placements follow the live layout.
+  const basePlacements = useMemo(
     () => computePlacements(layout, geometry, width, height),
     [layout, geometry, width, height]
   );
+  const placements = isTree
+    ? computePlacements(liveLayout, geometry, width, height)
+    : basePlacements;
 
   // Max panel size per node so a set_content never overlaps
   // a neighbor (FIXED positions known in advance): beyond this, content shrinks.
@@ -526,6 +590,29 @@ export function Stage({
 
       {/* Back layer: arrows */}
       <svg className="rdfa-arrow-svg">
+        {/* Tree edges (parent→child), drawn from the live topology so they
+            re-route as nodes glide during a rotation. Plain links, no head;
+            anchored bottom-of-parent → top-of-child (vertical axis). */}
+        {isTree &&
+          treeEdgesNow.map(([from, to]) => {
+            const f = effectiveGeometry[from];
+            const tg = effectiveGeometry[to];
+            if (!f || !tg) return null;
+            return (
+              <ArrowLine
+                key={`tree|${from}|${to}`}
+                from={f}
+                to={tg}
+                startPortOffset={0}
+                endPortOffset={0}
+                style="solid"
+                arrow_head="none"
+                progress={1}
+                obstacles={allEffectiveNodes}
+                axis="vertical"
+              />
+            );
+          })}
         {/* Baseline connections */}
         {spec.connections?.map((link, i) => {
           const f = effectiveGeometry[link.from];

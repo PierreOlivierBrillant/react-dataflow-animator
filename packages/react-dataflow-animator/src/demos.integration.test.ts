@@ -27,6 +27,8 @@ import { webhook } from '../../../apps/docs/src/site-content/demos/webhook';
 import { circular } from '../../../apps/docs/src/site-content/demos/circular';
 import { collision } from '../../../apps/docs/src/site-content/demos/collision';
 import { redBlackTree } from '../../../apps/docs/src/site-content/demos/redBlackTree';
+import { redBlackRotation } from '../../../apps/docs/src/site-content/demos/redBlackRotation';
+import { avlTree } from '../../../apps/docs/src/site-content/demos/avlTree';
 
 function collectIds(actions: Action[]): Set<string> {
   const ids = new Set<string>();
@@ -89,6 +91,8 @@ const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['circular', circular],
   ['collision', collision],
   ['redBlackTree', redBlackTree],
+  ['redBlackRotation', redBlackRotation],
+  ['avlTree', avlTree],
 ];
 
 const LOCALES = ['en', 'fr'] as const;

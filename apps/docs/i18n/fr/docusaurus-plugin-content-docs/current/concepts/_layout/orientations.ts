@@ -69,6 +69,34 @@ export const circularExample: DataFlowSpec = {
   timeline: [],
 };
 
+/**
+ * Mode arbre : un arbre binaire placé par rang in-order (horizontal) et
+ * profondeur (vertical). Les arêtes parent→enfant sont dessinées automatiquement
+ * depuis le bloc `tree` — pas de `connections`. Les clés (`body`) sont
+ * invariantes par langue.
+ */
+export const treeExample: DataFlowSpec = {
+  direction: 'tree',
+  tree: {
+    root: '8',
+    children: {
+      '8': { left: '3', right: '13' },
+      '3': { left: '1', right: '6' },
+      '13': { right: '17' },
+    },
+  },
+  nodes: [
+    { id: '8', type: 'circle', body: '8' },
+    { id: '3', type: 'circle', body: '3' },
+    { id: '13', type: 'circle', body: '13' },
+    { id: '1', type: 'circle', body: '1' },
+    { id: '6', type: 'circle', body: '6' },
+    { id: '17', type: 'circle', body: '17' },
+  ],
+  packets: [],
+  timeline: [],
+};
+
 /** Exemple concret de la section « Mode circulaire » : un hub central. */
 export const circularHubExample: DataFlowSpec = {
   direction: 'circular',

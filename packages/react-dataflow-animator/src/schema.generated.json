@@ -7,7 +7,7 @@
       "properties": {
         "direction": {
           "$ref": "#/definitions/Direction",
-          "description": "Automatic node placement direction (no coordinates to provide). Default: 'left-to-right'."
+          "description": "Automatic node placement direction (no coordinates to provide). Default: 'left-to-right'. Use `'tree'` to lay out a binary  {@link  TreeSpec }  (in-order rank → horizontal, depth → vertical) and enable the  {@link  RotateSubtreeAction } ."
         },
         "nodes": {
           "type": "array",
@@ -15,6 +15,10 @@
             "$ref": "#/definitions/Node"
           },
           "description": "Fixed elements of the scene (servers, clients, databases…). They form the permanent decor and are placed automatically according to `direction` and their `lane`."
+        },
+        "tree": {
+          "$ref": "#/definitions/TreeSpec",
+          "description": "Binary-tree topology, **required when `direction` is `'tree'`** (ignored otherwise). Drives the layout and the auto-drawn parent/child edges, and is the structure mutated by `rotate_subtree`. See  {@link  TreeSpec } ."
         },
         "packets": {
           "type": "array",
@@ -59,7 +63,8 @@
         "right-to-left",
         "top-to-bottom",
         "bottom-to-top",
-        "circular"
+        "circular",
+        "tree"
       ],
       "description": "TypeScript types of the DataFlow specification. The JSON Schema (`schema.ts`, exposed by the API Doc page) is GENERATED from these types via `ts-json-schema-generator` (`generate:schema` script). Do not edit the schema manually — modify here then regenerate."
     },
@@ -299,6 +304,57 @@
         "http"
       ],
       "description": "Languages supported by the syntax highlighting engine (Prism)."
+    },
+    "TreeSpec": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "ID of the root node."
+        },
+        "children": {
+          "$ref": "#/definitions/Record%3Cstring%2CTreeChildren%3E",
+          "description": "Left/right child of each (internal) node, by node ID. A node absent from this map — or with an empty entry — is a leaf.",
+          "examples": [
+            {
+              "g": {
+                "left": "p",
+                "right": "u"
+              },
+              "p": {
+                "left": "n"
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "root",
+        "children"
+      ],
+      "additionalProperties": false,
+      "description": "Binary-tree topology (used when `direction` is `'tree'`). Single source of truth for the structure: parent/child **edges are derived from it** (and drawn automatically — no `connections` to maintain), and the layout places each node by its **in-order rank** (horizontal) and **depth** (vertical). The  {@link  RotateSubtreeAction }  mutates this topology at runtime and the engine re-lays-out and re-routes the edges from this same model."
+    },
+    "Record<string,TreeChildren>": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/TreeChildren"
+      }
+    },
+    "TreeChildren": {
+      "type": "object",
+      "properties": {
+        "left": {
+          "type": "string",
+          "description": "ID of the left child (smaller key), if any."
+        },
+        "right": {
+          "type": "string",
+          "description": "ID of the right child (greater key), if any."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Left/right children of a node in a binary tree."
     },
     "Packet": {
       "type": "object",
@@ -614,6 +670,9 @@
         },
         {
           "$ref": "#/definitions/RotateAction"
+        },
+        {
+          "$ref": "#/definitions/RotateSubtreeAction"
         },
         {
           "$ref": "#/definitions/WaitAction"
@@ -1337,6 +1396,78 @@
       ],
       "additionalProperties": false,
       "description": "Animates the visual rotation of a node. Two mutually exclusive modes:\n\n- **Target angle** (`to`): a single eased rotation toward an absolute angle.   The starting angle is the node's current rotation (its static `rotation`, or   the target of a previous `rotate`), so successive rotations chain.\n- **Continuous spin** (`spin`): the node turns at a constant speed (linear, no   easing) for as long as the action lasts. How long is driven by the usual   timing fields — `duration` (spin that long), `keep_until` (spin until another   action starts), or `keep_until_end` (spin until the end of the timeline).\n\nOnly the visual rotates; the label stays upright. The angle reached when the rotation ends persists until the end of the timeline."
+    },
+    "RotateSubtreeAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Action ID to refer to it (wait_for / keep_until)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Animation duration in ms (default: 500, 1200 for loading).",
+          "minimum": 1,
+          "multipleOf": 1
+        },
+        "wait_for": {
+          "type": "string",
+          "description": "ID of another action: this action starts at the end of that one."
+        },
+        "keep_until": {
+          "type": "string",
+          "description": "ID of a future action: this action remains visible until its start."
+        },
+        "keep_until_next": {
+          "type": "boolean",
+          "description": "Remains visible until the start of the next root step. Default: false for `move`/`loading`, true for `arrow`/`comment`/`set_content`."
+        },
+        "keep_until_end": {
+          "type": "boolean",
+          "description": "If true, remains visible until the end of the timeline."
+        },
+        "delay_ms": {
+          "type": "number",
+          "description": "Start offset in ms, added after resolving `wait_for` and the step clamp. Mainly useful in a `parallel` block to stagger actions against each other (staggered sequence animations). Also applies to an entire `parallel` action to delay the whole group.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_in_ms": {
+          "type": "number",
+          "description": "Fade-in duration in ms. Default: initial hold period for `move` (300 ms), 250 ms for other actions. 0 = instant appearance.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "fade_out_ms": {
+          "type": "number",
+          "description": "Fade-out duration in ms. Default: 250. 0 = instant disappearance. No effect if `keep_until_end` is true.",
+          "minimum": 0,
+          "multipleOf": 1
+        },
+        "type": {
+          "type": "string",
+          "const": "rotate_subtree"
+        },
+        "object": {
+          "type": "string",
+          "description": "ID of the pivot node. A **left** rotation requires it to have a right child; a **right** rotation requires a left child."
+        },
+        "rotation": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "description": "Rotation direction."
+        }
+      },
+      "required": [
+        "type",
+        "object",
+        "rotation"
+      ],
+      "additionalProperties": false,
+      "description": "Restructures a binary  {@link  TreeSpec }  with a left or right **tree rotation** around a pivot node, then animates the nodes gliding to their new places while the parent/child edges re-route. Only valid when `direction` is `'tree'`.\n\nA rotation preserves the in-order traversal of the tree, so horizontal positions (assigned by in-order rank) stay put — the motion is essentially the pivot and the moved subtree changing depth. The engine recomputes the layout AND the edges from the single tree model, so positions and links can never disagree. Successive `rotate_subtree` actions chain (each starts from the topology left by the previous one), which is how AVL double rotations (LR / RL) are expressed: two `rotate_subtree` in a row."
     },
     "WaitAction": {
       "type": "object",

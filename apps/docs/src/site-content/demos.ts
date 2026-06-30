@@ -27,6 +27,8 @@ import { circular } from './demos/circular';
 import { collision } from './demos/collision';
 import { pushNotifications } from './demos/pushNotifications';
 import { redBlackTree } from './demos/redBlackTree';
+import { redBlackRotation } from './demos/redBlackRotation';
+import { avlTree } from './demos/avlTree';
 
 /** Clé de catégorie (stable, indépendante de la langue). Les libellés affichés
  * sont traduits via le dictionnaire (`gallery.categories`). */
@@ -531,6 +533,68 @@ export const demos: Demo[] = [
       ],
     },
     spec: redBlackTree,
+  },
+  {
+    id: 'redBlackRotation',
+    title: {
+      fr: 'Arbre rouge-noir — rotation',
+      en: 'Red-black tree — rotation',
+    },
+    description: {
+      fr: "Le cas rotation : on insère un nœud rouge sous un parent rouge dont l'oncle est noir. La recoloration ne suffit pas — il faut une rotation puis une recoloration. Combine les actions rotate_subtree et set_color.",
+      en: 'The rotation case: inserting a red node under a red parent whose uncle is black. Recoloring alone is not enough — it takes a rotation then a recoloring. Combines the rotate_subtree and set_color actions.',
+    },
+    category: 'engine',
+    tags: {
+      fr: [
+        'arbre',
+        'rouge-noir',
+        'rotation',
+        'rotate_subtree',
+        'set_color',
+        'équilibrage',
+      ],
+      en: [
+        'tree',
+        'red-black',
+        'rotation',
+        'rotate_subtree',
+        'set_color',
+        'balancing',
+      ],
+    },
+    spec: redBlackRotation,
+  },
+  {
+    id: 'avlTree',
+    title: {
+      fr: 'Arbre AVL — rotation',
+      en: 'AVL tree — rotation',
+    },
+    description: {
+      fr: "Insertion de 10, 20, 30 : l'arbre dégénère en chaîne à droite (facteur d'équilibre −2). Une seule rotation gauche le rééquilibre. Illustre direction:'tree' et l'action rotate_subtree (les nœuds glissent à leur nouvelle profondeur).",
+      en: "Inserting 10, 20, 30 degenerates into a right-leaning chain (balance factor −2). A single left rotation rebalances it. Showcases direction:'tree' and the rotate_subtree action (nodes glide to their new depth).",
+    },
+    category: 'engine',
+    tags: {
+      fr: [
+        'arbre',
+        'avl',
+        'rotation',
+        'rotate_subtree',
+        'équilibrage',
+        'structure de données',
+      ],
+      en: [
+        'tree',
+        'avl',
+        'rotation',
+        'rotate_subtree',
+        'balancing',
+        'data structure',
+      ],
+    },
+    spec: avlTree,
   },
   {
     id: 'collision',

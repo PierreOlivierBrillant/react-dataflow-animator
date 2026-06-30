@@ -262,6 +262,45 @@ export const rotateExample: DataFlowSpec = {
   ],
 };
 
+/** `rotate_subtree` : une rotation gauche rééquilibre une chaîne penchée à droite. */
+export const rotateSubtreeExample: DataFlowSpec = {
+  direction: 'tree',
+  tree: { root: 'a', children: { a: { right: 'b' }, b: { right: 'c' } } },
+  nodes: [
+    {
+      id: 'a',
+      type: 'circle',
+      body: '10',
+      background_color: 'steelblue',
+      text_color: 'white',
+    },
+    {
+      id: 'b',
+      type: 'circle',
+      body: '20',
+      background_color: 'steelblue',
+      text_color: 'white',
+    },
+    {
+      id: 'c',
+      type: 'circle',
+      body: '30',
+      background_color: 'steelblue',
+      text_color: 'white',
+    },
+  ],
+  packets: [],
+  timeline: [
+    {
+      type: 'comment',
+      object: 'a',
+      text: 'Déséquilibré — une rotation gauche autour de 10 fait monter 20',
+      duration: 1500,
+    },
+    { type: 'rotate_subtree', object: 'a', rotation: 'left' },
+  ],
+};
+
 /** `highlight` : un halo pulsé sur un nœud statique, puis sur une connexion permanente. */
 export const highlightExample: DataFlowSpec = {
   direction: 'left-to-right',

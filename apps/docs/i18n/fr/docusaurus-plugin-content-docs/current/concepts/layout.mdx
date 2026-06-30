@@ -9,6 +9,7 @@ import {
   circularExample,
   circularHubExample,
   mergeEdgesExample,
+  treeExample,
 } from './_layout/orientations';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -20,7 +21,9 @@ ce qui rend l'animation responsive sans calcul manuel.
 
 ## `direction`
 
-Cinq valeurs possibles pour `direction` (au niveau racine de la spec) :
+Six valeurs possibles pour `direction` (au niveau racine de la spec). Cinq
+placent des nœuds libres ; la sixième, [`tree`](#mode-arbre), dispose un arbre
+binaire :
 
 <Tabs
   defaultValue="left-to-right"
@@ -224,6 +227,45 @@ ignorés — c'est le seul nœud `main` qui structure la disposition.
   height={500}
   spec={circularHubExample}
 />
+
+## Mode arbre
+
+En `tree`, la spec porte un bloc `tree` décrivant un **arbre binaire** : un
+`root` et, pour chaque nœud, son enfant `left` / `right`. Le moteur place chaque
+nœud par son **rang in-order** (horizontal) et sa **profondeur** (vertical), et
+**dessine automatiquement les arêtes parent→enfant** — vous ne fournissez aucune
+`connections`. `lane` et `align_with` sont ignorés ; le bloc `tree` est la source
+unique de vérité pour les positions comme pour les arêtes.
+
+```ts
+{
+  direction: 'tree',
+  tree: {
+    root: '8',
+    children: {
+      '8': { left: '3', right: '13' },
+      '3': { left: '1', right: '6' },
+      '13': { right: '17' },
+    },
+  },
+  nodes: [
+    { id: '8', type: 'circle', body: '8' },
+    { id: '3', type: 'circle', body: '3' },
+    { id: '13', type: 'circle', body: '13' },
+    { id: '1', type: 'circle', body: '1' },
+    { id: '6', type: 'circle', body: '6' },
+    { id: '17', type: 'circle', body: '17' },
+  ],
+}
+```
+
+<DataFlowPlayer theme="auto" controls={false} height={460} spec={treeExample} />
+
+Comme la structure tient en un seul endroit, elle peut être **restructurée à
+l'exécution** : l'action [`rotate_subtree`](../reference/actions.mdx#rotate_subtree)
+effectue une rotation d'arbre autour d'un pivot, et le moteur recalcule la
+disposition et re-câble les arêtes depuis le même modèle — les nœuds glissent à
+leur nouvelle profondeur. C'est ce qui anime les démos AVL et rouge-noir.
 
 ## Mise à l'échelle responsive
 

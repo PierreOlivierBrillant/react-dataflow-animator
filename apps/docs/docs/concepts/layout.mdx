@@ -9,6 +9,7 @@ import {
   circularExample,
   circularHubExample,
   mergeEdgesExample,
+  treeExample,
 } from './_layout/orientations';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -20,7 +21,8 @@ animation responsive without manual calculations.
 
 ## `direction`
 
-Five possible values for `direction` (at the root level of the spec):
+Six possible values for `direction` (at the root level of the spec). Five place
+free-form nodes; the sixth, [`tree`](#tree-mode), lays out a binary tree:
 
 <Tabs
   defaultValue="left-to-right"
@@ -223,6 +225,45 @@ ignored — only the `main` node structures the layout.
   height={500}
   spec={circularHubExample}
 />
+
+## Tree mode
+
+In `tree`, the spec carries a `tree` block describing a **binary tree**: a
+`root` id and, per node, its `left` / `right` child. The engine lays out each
+node by its **in-order rank** (horizontal) and its **depth** (vertical), and
+**draws the parent→child edges automatically** — you provide no `connections`.
+`lane` and `align_with` are ignored; the `tree` block is the single source of
+truth for both positions and edges.
+
+```ts
+{
+  direction: 'tree',
+  tree: {
+    root: '8',
+    children: {
+      '8': { left: '3', right: '13' },
+      '3': { left: '1', right: '6' },
+      '13': { right: '17' },
+    },
+  },
+  nodes: [
+    { id: '8', type: 'circle', body: '8' },
+    { id: '3', type: 'circle', body: '3' },
+    { id: '13', type: 'circle', body: '13' },
+    { id: '1', type: 'circle', body: '1' },
+    { id: '6', type: 'circle', body: '6' },
+    { id: '17', type: 'circle', body: '17' },
+  ],
+}
+```
+
+<DataFlowPlayer theme="auto" controls={false} height={460} spec={treeExample} />
+
+Because the structure lives in one place, it can be **restructured at runtime**:
+the [`rotate_subtree`](../reference/actions.mdx#rotate_subtree) action performs a
+tree rotation around a pivot, and the engine re-lays-out and re-routes the edges
+from the same model — the nodes glide to their new depths. This is what powers
+the AVL and red-black tree demos.
 
 ## Responsive scaling
 

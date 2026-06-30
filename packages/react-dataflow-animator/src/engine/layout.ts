@@ -1,4 +1,4 @@
-import type { DataFlowSpec, Direction, Node } from '../types';
+import type { DataFlowSpec, Direction, Node, TreeSpec } from '../types';
 
 /**
  * Spatial layout engine: calculates the position of each static node
@@ -184,12 +184,72 @@ function resolveCollisions(
   }
 }
 
+/**
+ * Binary-tree layout: each node is placed by its **in-order rank** on the
+ * horizontal axis and by its **depth** on the vertical axis (root at the top).
+ *
+ * Pure and aspect-independent, so the compiler can compute one layout per
+ * topology state (before/after each rotation) without any DOM. A tree rotation
+ * preserves the in-order traversal, hence the horizontal slots are stable across
+ * a rotation — only depths change — which makes the animated re-layout read as a
+ * clean vertical glide of the pivot and the moved subtree.
+ *
+ * Robust to a malformed tree (cycle / dangling child): a `visited` guard stops
+ * infinite recursion; nodes unreachable from the root fall back to the center.
+ */
+export function treeLayout(nodeIds: string[], tree: TreeSpec): LayoutMap {
+  const rank = new Map<string, number>();
+  const depth = new Map<string, number>();
+  const visited = new Set<string>();
+  let counter = 0;
+  let maxDepth = 0;
+  const walk = (id: string | undefined, d: number): void => {
+    if (!id || visited.has(id)) return;
+    visited.add(id);
+    const ch = tree.children[id];
+    walk(ch?.left, d + 1);
+    rank.set(id, counter++);
+    depth.set(id, d);
+    if (d > maxDepth) maxDepth = d;
+    walk(ch?.right, d + 1);
+  };
+  walk(tree.root, 0);
+
+  const n = counter;
+  const levels = maxDepth + 1;
+  const map: LayoutMap = {};
+  for (const id of nodeIds) {
+    const r = rank.get(id);
+    map[id] =
+      r === undefined
+        ? { cx: 0.5, cy: 0.5 }
+        : { cx: spread(r, n), cy: spread(depth.get(id)!, levels) };
+  }
+  return map;
+}
+
+/** Parent→child pairs (left then right) of the current tree topology. */
+export function treeEdges(tree: TreeSpec): Array<[string, string]> {
+  const edges: Array<[string, string]> = [];
+  for (const [parent, ch] of Object.entries(tree.children)) {
+    if (ch?.left) edges.push([parent, ch.left]);
+    if (ch?.right) edges.push([parent, ch.right]);
+  }
+  return edges;
+}
+
 export function computeLayout(
   spec: DataFlowSpec,
   options: LayoutOptions = {}
 ): LayoutMap {
   const direction = spec.direction ?? 'left-to-right';
   const nodes = spec.nodes;
+  if (direction === 'tree' && spec.tree) {
+    return treeLayout(
+      nodes.map((n) => n.id),
+      spec.tree
+    );
+  }
   if (direction === 'circular') {
     return circularLayout(nodes, options.aspect ?? 1.6);
   }
@@ -237,6 +297,10 @@ export function connectionAxis(
     case 'top-to-bottom':
     case 'bottom-to-top':
       return Math.abs(dCy) > SAME_LANE_EPS ? 'vertical' : 'horizontal';
+    case 'tree':
+      // Parent sits above its child: edges always leave the bottom face and
+      // enter the top face, regardless of the horizontal gap between them.
+      return 'vertical';
     case 'circular':
     default:
       return Math.abs(dCx * aspect) >= Math.abs(dCy)

@@ -69,6 +69,33 @@ export const circularExample: DataFlowSpec = {
   timeline: [],
 };
 
+/**
+ * Tree mode: a binary tree laid out by in-order rank (horizontal) and depth
+ * (vertical). The parent→child edges are drawn automatically from the `tree`
+ * block — no `connections`. Keys (in `body`) are language-invariant.
+ */
+export const treeExample: DataFlowSpec = {
+  direction: 'tree',
+  tree: {
+    root: '8',
+    children: {
+      '8': { left: '3', right: '13' },
+      '3': { left: '1', right: '6' },
+      '13': { right: '17' },
+    },
+  },
+  nodes: [
+    { id: '8', type: 'circle', body: '8' },
+    { id: '3', type: 'circle', body: '3' },
+    { id: '13', type: 'circle', body: '13' },
+    { id: '1', type: 'circle', body: '1' },
+    { id: '6', type: 'circle', body: '6' },
+    { id: '17', type: 'circle', body: '17' },
+  ],
+  packets: [],
+  timeline: [],
+};
+
 /** Exemple concret de la section « Mode circulaire » : un hub central. */
 export const circularHubExample: DataFlowSpec = {
   direction: 'circular',

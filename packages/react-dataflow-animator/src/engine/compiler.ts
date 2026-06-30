@@ -4,6 +4,7 @@ import type {
   DataFlowSpec,
   LineStyle,
   PathShape,
+  TreeSpec,
 } from '../types';
 import type {
   ArrowClip,
@@ -12,6 +13,7 @@ import type {
   HighlightClip,
   LoadingClip,
   MoveClip,
+  ReflowClip,
   RotateClip,
   SetColorClip,
   SetContentClip,
@@ -19,6 +21,7 @@ import type {
   Step,
   Timeline,
 } from './timeline';
+import { treeEdges, treeLayout, type LayoutMap } from './layout';
 
 /**
  * Compiler: `spec.timeline` -> `Timeline` (deterministic IR).
@@ -53,6 +56,7 @@ const DEFAULT_DURATION: Record<ActionType, number> = {
   set_visible: 300,
   set_color: 400,
   rotate: 600,
+  rotate_subtree: 700,
   wait: 1000,
 };
 
@@ -67,6 +71,7 @@ const DEFAULT_KEEP_NEXT: Partial<Record<ActionType, boolean>> = {
   set_visible: false,
   set_color: false,
   rotate: false,
+  rotate_subtree: false,
 };
 
 /** Normalizes line style (accepts historical alias `full`). */
@@ -86,6 +91,69 @@ function normalizePath(path: string | undefined): PathShape {
   )
     return path;
   return 'bezier';
+}
+
+/** Deep copy of a tree topology, so rotations mutate a local working state. */
+function cloneTree(tree: TreeSpec): TreeSpec {
+  const children: TreeSpec['children'] = {};
+  for (const [id, ch] of Object.entries(tree.children)) {
+    children[id] = { left: ch.left, right: ch.right };
+  }
+  return { root: tree.root, children };
+}
+
+function setChild(
+  tree: TreeSpec,
+  node: string,
+  side: 'left' | 'right',
+  child: string | undefined
+): void {
+  const ch = (tree.children[node] ??= {});
+  if (child === undefined) delete ch[side];
+  else ch[side] = child;
+}
+
+/**
+ * Applies a standard binary-tree rotation in place. A LEFT rotation around
+ * `pivot` lifts its right child; a RIGHT rotation lifts its left child. The
+ * pivot's parent link is rewired so the lifted child takes the pivot's place
+ * (or becomes the new root). Returns false if the required child is missing.
+ */
+function rotateSubtree(
+  tree: TreeSpec,
+  pivot: string,
+  dir: 'left' | 'right'
+): boolean {
+  const isLeft = dir === 'left';
+  const px = tree.children[pivot];
+  const lifted = isLeft ? px?.right : px?.left;
+  if (!lifted) return false;
+
+  // Locate the pivot's parent BEFORE mutating (afterwards the pivot hangs
+  // under `lifted`, which would make the scan find the wrong parent).
+  let parentId: string | undefined;
+  let parentSide: 'left' | 'right' = 'left';
+  for (const [pid, ch] of Object.entries(tree.children)) {
+    if (ch.left === pivot) {
+      parentId = pid;
+      parentSide = 'left';
+      break;
+    }
+    if (ch.right === pivot) {
+      parentId = pid;
+      parentSide = 'right';
+      break;
+    }
+  }
+
+  const liftedCh = tree.children[lifted];
+  // The lifted child's inner subtree moves under the pivot.
+  const inner = isLeft ? liftedCh?.left : liftedCh?.right;
+  setChild(tree, pivot, isLeft ? 'right' : 'left', inner);
+  setChild(tree, lifted, isLeft ? 'left' : 'right', pivot);
+  if (parentId === undefined) tree.root = lifted;
+  else setChild(tree, parentId, parentSide, lifted);
+  return true;
 }
 
 interface PendingClip {
@@ -113,6 +181,12 @@ interface Ctx {
    * to its target — so chained rotations accumulate in declaration order.
    */
   rotationById: Map<string, number>;
+  /**
+   * Tree mode working state (only when `direction: 'tree'`). `state` is the
+   * current topology, `layout` its current placements; each `rotate_subtree`
+   * mutates `state`, recomputes `layout`, and emits the before→after reflow.
+   */
+  tree?: { state: TreeSpec; nodeIds: string[]; layout: LayoutMap };
 }
 
 function makeId(ctx: Ctx, action: Action): string {
@@ -432,6 +506,53 @@ function compileAction(
       if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
       break;
     }
+    case 'rotate_subtree': {
+      if (!ctx.tree) {
+        ctx.warnings.push(
+          `rotate_subtree "${id}": requires direction:'tree' with a tree block.`
+        );
+        break;
+      }
+      if (
+        !action.object ||
+        (action.rotation !== 'left' && action.rotation !== 'right')
+      ) {
+        ctx.warnings.push(
+          `rotate_subtree "${id}": object and rotation ('left'|'right') required.`
+        );
+        break;
+      }
+      const fromLayout = ctx.tree.layout;
+      const ok = rotateSubtree(ctx.tree.state, action.object, action.rotation);
+      if (!ok) {
+        const missing = action.rotation === 'left' ? 'right' : 'left';
+        ctx.warnings.push(
+          `rotate_subtree "${id}": node "${action.object}" has no ${missing} child to rotate ${action.rotation}.`
+        );
+        break;
+      }
+      const toLayout = treeLayout(ctx.tree.nodeIds, ctx.tree.state);
+      ctx.tree.layout = toLayout;
+      const clip: ReflowClip = {
+        ...base,
+        kind: 'reflow',
+        fromLayout,
+        toLayout,
+        edges: treeEdges(ctx.tree.state),
+        // keepEnd forced true: the reached layout/edges persist until the end so
+        // Stage can resolve the tree's placement at any later instant.
+        keepEnd: true,
+      };
+      ctx.pending.push({
+        clip,
+        keepUntil: undefined,
+        keepNext: false,
+        keepEnd: true,
+        stepIndex,
+      });
+      if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
+      break;
+    }
     default: {
       throw new Error(
         `Unrecognized action type: "${(action as Record<string, unknown>).type}"`
@@ -443,6 +564,14 @@ function compileAction(
 }
 
 export function compile(spec: DataFlowSpec): CompileResult {
+  const treeCtx =
+    spec.direction === 'tree' && spec.tree
+      ? (() => {
+          const state = cloneTree(spec.tree);
+          const nodeIds = spec.nodes.map((n) => n.id);
+          return { state, nodeIds, layout: treeLayout(nodeIds, state) };
+        })()
+      : undefined;
   const ctx: Ctx = {
     pending: [],
     timingById: new Map(),
@@ -453,6 +582,7 @@ export function compile(spec: DataFlowSpec): CompileResult {
         .filter((n) => typeof n.rotation === 'number')
         .map((n) => [n.id, n.rotation as number])
     ),
+    tree: treeCtx,
   };
 
   const steps: Step[] = [];

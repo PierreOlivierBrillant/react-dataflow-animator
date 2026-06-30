@@ -456,4 +456,72 @@ describe('Stage — rendu à t fixe', () => {
     ) as HTMLElement;
     expect(node.style.getPropertyValue('--rdfa-fill')).toBe('crimson');
   });
+
+  it('mode arbre : dessine les arêtes parent→enfant et déplace les nœuds après une rotation', () => {
+    // Geometry for the four tree nodes so edges (which need a size) render.
+    mockGeometry = {
+      g: { id: 'g', x: 400, y: 100, width: 40, height: 40 },
+      p: { id: 'p', x: 200, y: 300, width: 40, height: 40 },
+      u: { id: 'u', x: 600, y: 300, width: 40, height: 40 },
+      n: { id: 'n', x: 100, y: 500, width: 40, height: 40 },
+    };
+    const spec: DataFlowSpec = {
+      direction: 'tree',
+      tree: {
+        root: 'g',
+        children: { g: { left: 'p', right: 'u' }, p: { left: 'n' } },
+      },
+      nodes: [
+        { id: 'g', type: 'circle', body: '13' },
+        { id: 'p', type: 'circle', body: '8' },
+        { id: 'u', type: 'circle', body: '17' },
+        { id: 'n', type: 'circle', body: '1' },
+      ],
+      packets: [],
+      timeline: [
+        {
+          type: 'rotate_subtree',
+          object: 'g',
+          rotation: 'left',
+          duration: 600,
+        },
+      ],
+    };
+    const { timeline } = compile(spec);
+
+    // Before the rotation (t=0): all four nodes render and the three tree edges
+    // are drawn (no spec.connections → every arrow line is a tree edge).
+    const initial = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    const ids = Array.from(
+      initial.container.querySelectorAll('[data-node-id]')
+    ).map((n) => n.getAttribute('data-node-id'));
+    expect(ids).toEqual(expect.arrayContaining(['g', 'p', 'u', 'n']));
+    expect(initial.container.querySelectorAll('.rdfa-arrow-line').length).toBe(
+      3
+    );
+    const topAt = (c: Element, id: string) =>
+      parseFloat(
+        (c.querySelector(`[data-node-id="${id}"]`) as HTMLElement).style.top
+      );
+    const uTop0 = topAt(initial.container, 'g'); // g is the root (top) initially
+    const uTopRoot0 = topAt(initial.container, 'u');
+    expect(uTop0).toBeLessThan(uTopRoot0); // g above u before the rotation
+    cleanup();
+
+    // After the left rotation around g (t = durationMs): u becomes the root and
+    // rises above g — the nodes have glided to their new depths.
+    const final = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={timeline.durationMs}
+        highlight={highlightCode}
+      />
+    );
+    expect(topAt(final.container, 'u')).toBeLessThan(
+      topAt(final.container, 'g')
+    );
+  });
 });

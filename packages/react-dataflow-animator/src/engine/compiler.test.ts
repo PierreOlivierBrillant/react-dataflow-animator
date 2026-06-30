@@ -708,6 +708,86 @@ describe('compile — set_color', () => {
   });
 });
 
+describe('compile — rotate_subtree', () => {
+  type ReflowClip = import('./timeline').ReflowClip;
+  //        g
+  //       / \
+  //      p   u
+  //     /
+  //    n
+  const treeNodes: DataFlowSpec['nodes'] = [
+    { id: 'g', type: 'circle' },
+    { id: 'p', type: 'circle' },
+    { id: 'u', type: 'circle' },
+    { id: 'n', type: 'circle' },
+  ];
+  const treeSpec = (timeline: DataFlowSpec['timeline']): DataFlowSpec => ({
+    direction: 'tree',
+    tree: {
+      root: 'g',
+      children: { g: { left: 'p', right: 'u' }, p: { left: 'n' } },
+    },
+    nodes: treeNodes,
+    packets: [],
+    timeline,
+  });
+
+  it('emits a reflow clip (keepEnd) with differing from/to layouts and edges', () => {
+    const { timeline, warnings } = compile(
+      treeSpec([
+        { type: 'rotate_subtree', id: 'R', object: 'g', rotation: 'left' },
+      ])
+    );
+    expect(warnings).toEqual([]);
+    const r = timeline.clips.find((c) => c.id === 'R')! as ReflowClip;
+    expect(r.kind).toBe('reflow');
+    expect(r.keepEnd).toBe(true);
+    expect(r.visibleUntilMs).toBe(timeline.durationMs);
+    // Left rotation around g lifts u to the root: u rises, g sinks.
+    expect(r.toLayout.u.cy).toBeLessThan(r.fromLayout.u.cy);
+    expect(r.toLayout.g.cy).toBeGreaterThan(r.fromLayout.g.cy);
+    // In-order order is preserved → horizontal slots unchanged.
+    expect(r.toLayout.g.cx).toBeCloseTo(r.fromLayout.g.cx);
+    // New topology edges include u→g (u is now g's parent).
+    expect(r.edges).toEqual(expect.arrayContaining([['u', 'g']]));
+  });
+
+  it('warns when not in tree mode', () => {
+    const { timeline, warnings } = compile({
+      nodes: treeNodes,
+      packets: [],
+      timeline: [{ type: 'rotate_subtree', object: 'g', rotation: 'left' }],
+    });
+    expect(timeline.clips).toHaveLength(0);
+    expect(warnings.some((w) => w.includes('rotate_subtree'))).toBe(true);
+  });
+
+  it('warns when the pivot lacks the required child', () => {
+    // n is a leaf: no right child to rotate left.
+    const { timeline, warnings } = compile(
+      treeSpec([{ type: 'rotate_subtree', object: 'n', rotation: 'left' }])
+    );
+    expect(timeline.clips).toHaveLength(0);
+    expect(warnings.some((w) => w.includes('no right child'))).toBe(true);
+  });
+
+  it('chains: a second rotation starts from the topology left by the first', () => {
+    // R1 (rotate g right) makes p the root with right child g; R2 (rotate p
+    // left) is then valid — the kind of two-step chain AVL double rotations use.
+    const { timeline, warnings } = compile(
+      treeSpec([
+        { type: 'rotate_subtree', id: 'R1', object: 'g', rotation: 'right' },
+        { type: 'rotate_subtree', id: 'R2', object: 'p', rotation: 'left' },
+      ])
+    );
+    expect(warnings).toEqual([]);
+    const r1 = timeline.clips.find((c) => c.id === 'R1')! as ReflowClip;
+    const r2 = timeline.clips.find((c) => c.id === 'R2')! as ReflowClip;
+    // R2 picks up exactly where R1 left off.
+    expect(r2.fromLayout).toEqual(r1.toLayout);
+  });
+});
+
 describe('compile — wait', () => {
   it('does not emit any clip but creates a step that shifts the following ones', () => {
     const { timeline } = compile(

@@ -12,6 +12,8 @@ export type {
   Node,
   Connection,
   Zone,
+  TreeSpec,
+  TreeChildren,
   Packet,
   Action,
   ActionType,
@@ -75,6 +77,7 @@ export type {
   HighlightClip,
   SetVisibleClip,
   SetColorClip,
+  ReflowClip,
 } from './engine/timeline';
 export { computeLayout } from './engine/layout';
 export type { LayoutMap, NodePlacement } from './engine/layout';

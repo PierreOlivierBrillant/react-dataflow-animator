@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { DataFlowSpec } from '../types';
-import { computeLayout, connectionAxis } from './layout';
+import type { DataFlowSpec, TreeSpec } from '../types';
+import { computeLayout, connectionAxis, treeEdges, treeLayout } from './layout';
 
 describe('computeLayout — linear', () => {
   it('left-to-right: increasing lane = increasing x', () => {
@@ -217,5 +217,71 @@ describe('connectionAxis', () => {
     const b = { cx: 0.5, cy: 0.9 }; // Δcx=0.3, Δcy=0.4
     expect(connectionAxis(a, b, 'circular', 1)).toBe('vertical');
     expect(connectionAxis(a, b, 'circular', 3)).toBe('horizontal'); // 0.3×3 > 0.4
+  });
+
+  it('tree: parent→child edge always anchors vertically', () => {
+    // Even a far-left child one level down stays a North/South attachment.
+    expect(
+      connectionAxis({ cx: 0.5, cy: 0.2 }, { cx: 0.1, cy: 0.5 }, 'tree')
+    ).toBe('vertical');
+  });
+});
+
+describe('treeLayout', () => {
+  //        g(13)
+  //       /     \
+  //     p(8)    u(17)
+  //     /
+  //   n(1)
+  const ids = ['g', 'p', 'u', 'n'];
+  const tree: TreeSpec = {
+    root: 'g',
+    children: { g: { left: 'p', right: 'u' }, p: { left: 'n' } },
+  };
+
+  it('in-order rank drives the horizontal order (BST → sorted keys)', () => {
+    const m = treeLayout(ids, tree);
+    // In-order traversal is 1, 8, 13, 17 → n < p < g < u on the x axis.
+    expect(m.n.cx).toBeLessThan(m.p.cx);
+    expect(m.p.cx).toBeLessThan(m.g.cx);
+    expect(m.g.cx).toBeLessThan(m.u.cx);
+  });
+
+  it('depth drives the vertical position (root on top)', () => {
+    const m = treeLayout(ids, tree);
+    expect(m.g.cy).toBeLessThan(m.p.cy); // root above its children
+    expect(m.p.cy).toBeCloseTo(m.u.cy); // same depth → same row
+    expect(m.p.cy).toBeLessThan(m.n.cy); // grandchild below
+  });
+
+  it('a rotation preserves the in-order x order (only depths change)', () => {
+    const before = treeLayout(ids, tree);
+    // Left rotation around g: u becomes root, g its left child.
+    const rotated: TreeSpec = {
+      root: 'u',
+      children: { u: { left: 'g' }, g: { left: 'p' }, p: { left: 'n' } },
+    };
+    const after = treeLayout(ids, rotated);
+    // Horizontal slots unchanged: same in-order sequence n < p < g < u.
+    for (const id of ids) expect(after[id].cx).toBeCloseTo(before[id].cx);
+    // ...but u rose to the top and g sank one level.
+    expect(after.u.cy).toBeLessThan(before.u.cy);
+    expect(after.g.cy).toBeGreaterThan(before.g.cy);
+  });
+
+  it('treeEdges lists parent→child pairs (left then right)', () => {
+    expect(treeEdges(tree)).toEqual(
+      expect.arrayContaining([
+        ['g', 'p'],
+        ['g', 'u'],
+        ['p', 'n'],
+      ])
+    );
+    expect(treeEdges(tree)).toHaveLength(3);
+  });
+
+  it('a node unreachable from the root falls back to the center', () => {
+    const m = treeLayout(['g', 'orphan'], { root: 'g', children: {} });
+    expect(m.orphan).toEqual({ cx: 0.5, cy: 0.5 });
   });
 });

@@ -12,7 +12,8 @@ export type Direction =
   | 'right-to-left'
   | 'top-to-bottom'
   | 'bottom-to-top'
-  | 'circular';
+  | 'circular'
+  | 'tree';
 
 /**
  * Node types (appearance). Decor arrows live in `connections`.
@@ -261,6 +262,33 @@ export interface Zone {
   label?: string;
 }
 
+/** Left/right children of a node in a binary tree. */
+export interface TreeChildren {
+  /** ID of the left child (smaller key), if any. */
+  left?: string;
+  /** ID of the right child (greater key), if any. */
+  right?: string;
+}
+
+/**
+ * Binary-tree topology (used when `direction` is `'tree'`). Single source of
+ * truth for the structure: parent/child **edges are derived from it** (and drawn
+ * automatically — no `connections` to maintain), and the layout places each node
+ * by its **in-order rank** (horizontal) and **depth** (vertical). The
+ * {@link RotateSubtreeAction} mutates this topology at runtime and the engine
+ * re-lays-out and re-routes the edges from this same model.
+ */
+export interface TreeSpec {
+  /** ID of the root node. */
+  root: string;
+  /**
+   * Left/right child of each (internal) node, by node ID. A node absent from
+   * this map — or with an empty entry — is a leaf.
+   * @example { "g": { "left": "p", "right": "u" }, "p": { "left": "n" } }
+   */
+  children: Record<string, TreeChildren>;
+}
+
 /** Permanent link/arrow (decor), displayed upon initialization. */
 export interface Connection {
   /** Optional identifier. */
@@ -392,6 +420,7 @@ export type ActionType =
   | 'set_visible'
   | 'set_color'
   | 'rotate'
+  | 'rotate_subtree'
   | 'wait';
 
 /** Common fields to all actions (sequencing and lifecycle). */
@@ -590,6 +619,30 @@ interface RotateAction extends ActionBase {
 }
 
 /**
+ * Restructures a binary {@link TreeSpec} with a left or right **tree rotation**
+ * around a pivot node, then animates the nodes gliding to their new places while
+ * the parent/child edges re-route. Only valid when `direction` is `'tree'`.
+ *
+ * A rotation preserves the in-order traversal of the tree, so horizontal
+ * positions (assigned by in-order rank) stay put — the motion is essentially the
+ * pivot and the moved subtree changing depth. The engine recomputes the layout
+ * AND the edges from the single tree model, so positions and links can never
+ * disagree. Successive `rotate_subtree` actions chain (each starts from the
+ * topology left by the previous one), which is how AVL double rotations
+ * (LR / RL) are expressed: two `rotate_subtree` in a row.
+ */
+interface RotateSubtreeAction extends ActionBase {
+  type: 'rotate_subtree';
+  /**
+   * ID of the pivot node. A **left** rotation requires it to have a right child;
+   * a **right** rotation requires a left child.
+   */
+  object: string;
+  /** Rotation direction. */
+  rotation: 'left' | 'right';
+}
+
+/**
  * Dead time: nothing happens for `duration` ms (default: 1000). Does not produce
  * any clip; simply inserts a pause between two steps (elements
  * maintained via `keep_until_next` remain displayed during the wait).
@@ -610,12 +663,15 @@ export type Action =
   | SetVisibleAction
   | SetColorAction
   | RotateAction
+  | RotateSubtreeAction
   | WaitAction;
 
 export interface DataFlowSpec {
   /**
    * Automatic node placement direction (no coordinates to provide).
-   * Default: 'left-to-right'.
+   * Default: 'left-to-right'. Use `'tree'` to lay out a binary {@link TreeSpec}
+   * (in-order rank → horizontal, depth → vertical) and enable the
+   * {@link RotateSubtreeAction}.
    */
   direction?: Direction;
   /**
@@ -623,6 +679,12 @@ export interface DataFlowSpec {
    * decor and are placed automatically according to `direction` and their `lane`.
    */
   nodes: Node[];
+  /**
+   * Binary-tree topology, **required when `direction` is `'tree'`** (ignored
+   * otherwise). Drives the layout and the auto-drawn parent/child edges, and is
+   * the structure mutated by `rotate_subtree`. See {@link TreeSpec}.
+   */
+  tree?: TreeSpec;
   /**
    * Mobile elements (requests, responses, messages). Declared here, then moved
    * from one node to another by a `move` action in the `timeline`.
