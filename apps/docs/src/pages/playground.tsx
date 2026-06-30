@@ -200,14 +200,14 @@ export default function PlaygroundPage() {
       title={t.playground.pageTitle}
       description={t.playground.pageDescription}
     >
-      <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:dark]">
+      <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:light] dark:[color-scheme:dark]">
         {/* Page header — px-5 gutter aligned with the navbar and the rest of the site */}
-        <div className="flex-none px-5 py-4 border-b border-white/[.06] flex items-center gap-4">
+        <div className="flex-none px-5 py-4 border-b border-slate-900/[0.08] dark:border-white/[.06] flex items-center gap-4">
           <div>
-            <h1 className="text-white mb-0 font-heading text-xl font-bold leading-tight tracking-tight">
+            <h1 className="text-slate-900 dark:text-white mb-0 font-heading text-xl font-bold leading-tight tracking-tight">
               {t.playground.title}
             </h1>
-            <p className="text-xs mt-0.5 mb-0 text-white/35 font-sans">
+            <p className="text-xs mt-0.5 mb-0 text-slate-500 dark:text-white/35 font-sans">
               {t.playground.subtitle}
             </p>
           </div>
@@ -226,13 +226,13 @@ export default function PlaygroundPage() {
             }}
           >
             {/* Toolbar */}
-            <div className="flex-none flex items-center gap-2 px-3 py-2 border-b border-white/[.05] bg-white/[.015] flex-wrap">
+            <div className="flex-none flex items-center gap-2 px-3 py-2 border-b border-slate-900/[0.08] dark:border-white/[.05] bg-slate-900/[0.015] dark:bg-white/[.015] flex-wrap">
               {/* Template select */}
               <div className="relative">
                 <select
                   value={demoId}
                   onChange={(e) => handleTemplateChange(e.target.value)}
-                  className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-white/[.06] border border-white/[.09] text-white/75 font-sans"
+                  className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-slate-900/[0.04] dark:bg-white/[.06] border border-slate-900/[0.1] dark:border-white/[.09] text-slate-700 dark:text-white/75 font-sans"
                 >
                   {demos.map((demo) => (
                     <option key={demo.id} value={demo.id}>
@@ -242,14 +242,14 @@ export default function PlaygroundPage() {
                 </select>
                 <ChevronDown
                   size={11}
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/30"
+                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
                 />
               </div>
 
               {/* Format */}
               <button
                 onClick={handleFormat}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer bg-white/[.04] border border-white/[.08] text-white/50 font-sans"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer bg-slate-900/[0.04] dark:bg-white/[.04] border border-slate-900/[0.08] dark:border-white/[.08] text-slate-600 dark:text-white/50 font-sans"
               >
                 <WrapText size={11} />
                 {t.playground.format}
@@ -266,7 +266,7 @@ export default function PlaygroundPage() {
                       >
                     )
                   }
-                  className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-white/[.04] border border-white/[.08] text-white/45 font-sans"
+                  className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-slate-900/[0.04] dark:bg-white/[.04] border border-slate-900/[0.08] dark:border-white/[.08] text-slate-600 dark:text-white/45 font-sans"
                 >
                   <option value="compact">{t.playground.densityCompact}</option>
                   <option value="comfortable">
@@ -278,14 +278,14 @@ export default function PlaygroundPage() {
                 </select>
                 <ChevronDown
                   size={11}
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/30"
+                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
                 />
               </div>
 
               {/* Copy */}
               <button
                 onClick={handleCopy}
-                className={`ml-auto p-1.5 rounded-lg transition-colors cursor-pointer bg-transparent border-none outline-none ${copied ? 'text-[#34d399]' : 'text-white/30'}`}
+                className={`ml-auto p-1.5 rounded-lg transition-colors cursor-pointer bg-transparent border-none outline-none ${copied ? 'text-emerald-500 dark:text-[#34d399]' : 'text-slate-400 dark:text-white/30'}`}
                 title={t.playground.copy}
               >
                 {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -342,7 +342,7 @@ export default function PlaygroundPage() {
                   overviewRulerBorder: false,
                 }}
                 loading={
-                  <div className="flex items-center justify-center w-full h-full text-white/30 text-sm font-sans">
+                  <div className="flex items-center justify-center w-full h-full text-slate-500 dark:text-white/30 text-sm font-sans">
                     {t.playground.loadingEditor}
                   </div>
                 }
@@ -354,7 +354,7 @@ export default function PlaygroundPage() {
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
-                className="flex-none flex items-start gap-2 px-3 py-2.5 text-xs bg-red-500/[.08] border-t border-red-500/20 text-red-300 font-mono text-[10px]"
+                className="flex-none flex items-start gap-2 px-3 py-2.5 text-xs bg-red-500/[.08] border-t border-red-500/20 text-red-600 dark:text-red-300 font-mono text-[10px]"
               >
                 <AlertCircle size={12} className="mt-0.5 shrink-0" />
                 <span className="break-all">{parseError}</span>
@@ -364,7 +364,7 @@ export default function PlaygroundPage() {
 
           {/* Resizer Handle (Desktop only) */}
           <div
-            className={`hidden md:block w-[1.5px] hover:w-1.5 hover:-ml-[2px] hover:-mr-[2px] cursor-col-resize hover:bg-violet-500 transition-colors z-10 shrink-0 ${isResizing ? 'bg-violet-500 w-1.5 -ml-[2px] -mr-[2px]' : 'bg-white/[.06]'}`}
+            className={`hidden md:block w-[1.5px] hover:w-1.5 hover:-ml-[2px] hover:-mr-[2px] cursor-col-resize hover:bg-violet-500 transition-colors z-10 shrink-0 ${isResizing ? 'bg-violet-500 w-1.5 -ml-[2px] -mr-[2px]' : 'bg-slate-900/[0.1] dark:bg-white/[.06]'}`}
             onMouseDown={(e) => {
               e.preventDefault();
               setIsResizing(true);
@@ -380,7 +380,7 @@ export default function PlaygroundPage() {
               {spec ? (
                 <DataFlowPlayer
                   spec={spec}
-                  theme="dark"
+                  theme="auto"
                   controls={true}
                   exportable={true}
                   density={density}
@@ -389,7 +389,7 @@ export default function PlaygroundPage() {
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center text-sm text-white/20 font-sans">
+                  <div className="text-center text-sm text-slate-400 dark:text-white/20 font-sans">
                     {t.playground.emptyState}
                   </div>
                 </div>

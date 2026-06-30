@@ -16,6 +16,7 @@ export const fr = {
     sources: 'Sources',
     toggleMenu: 'Ouvrir/fermer la navigation',
     languageLabel: 'Langue',
+    toggleTheme: 'Basculer le thème clair/sombre',
   },
   home: {
     pageTitle: 'Accueil',

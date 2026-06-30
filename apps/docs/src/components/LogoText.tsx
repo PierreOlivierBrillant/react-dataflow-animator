@@ -8,7 +8,7 @@ export function LogoText({ logoSize = 28 }: { logoSize?: number }) {
         role="img"
         aria-label="React DataFlow Animator"
       />
-      <span className="text-sm font-semibold text-white font-heading">
+      <span className="text-sm font-semibold text-slate-900 dark:text-white font-heading">
         React DataFlow Animator
       </span>
     </div>

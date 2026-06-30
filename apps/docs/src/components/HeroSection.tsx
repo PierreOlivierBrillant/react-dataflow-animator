@@ -49,14 +49,14 @@ export function HeroSection() {
           }}
         />
         {/* Grid overlay */}
-        <div className="absolute inset-0 bg-[length:64px_64px] bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)]" />
+        <div className="absolute inset-0 bg-[length:64px_64px] bg-[linear-gradient(rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.04)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)]" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-5 py-20 grid lg:grid-cols-[1fr_1.05fr] gap-12 xl:gap-20 items-center w-full">
         {/* Left: text */}
         <div>
           <motion.h1
-            className="text-white mb-5 text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight leading-tight font-heading font-extrabold"
+            className="text-slate-900 dark:text-white mb-5 text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight leading-tight font-heading font-extrabold"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
@@ -69,7 +69,7 @@ export function HeroSection() {
           </motion.h1>
 
           <motion.p
-            className="mb-8 leading-relaxed max-w-lg text-[1.075rem] text-slate-100/50 font-sans"
+            className="mb-8 leading-relaxed max-w-lg text-[1.075rem] text-slate-600 dark:text-slate-100/50 font-sans"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -92,7 +92,7 @@ export function HeroSection() {
             </Link>
             <Link
               to="/docs/intro"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium no-underline transition-all hover:bg-white/[0.08] border border-white/10 text-white/70 font-sans"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium no-underline transition-all hover:bg-slate-900/[0.06] dark:hover:bg-white/[0.08] border border-slate-900/15 dark:border-white/10 text-slate-700 dark:text-white/70 font-sans"
             >
               <BookOpen size={14} />
               {t.hero.ctaDocs}
@@ -102,17 +102,17 @@ export function HeroSection() {
           {/* Install command */}
           <motion.button
             onClick={handleCopy}
-            className="flex items-center gap-3 rounded-xl text-sm cursor-pointer w-full max-w-sm transition-all hover:border-white/20 active:scale-[0.99] bg-white/[0.03] border border-white/[0.08] px-4 py-2.5 font-mono"
+            className="flex items-center gap-3 rounded-xl text-sm cursor-pointer w-full max-w-sm transition-all hover:border-slate-900/20 dark:hover:border-white/20 active:scale-[0.99] bg-slate-900/[0.03] dark:bg-white/[0.03] border border-slate-900/[0.1] dark:border-white/[0.08] px-4 py-2.5 font-mono"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.36 }}
           >
-            <span className="text-white/25">$</span>
-            <code className="text-violet-400 flex-1 text-left bg-transparent border-none p-0">
+            <span className="text-slate-400 dark:text-white/25">$</span>
+            <code className="text-violet-700 dark:text-violet-400 flex-1 text-left bg-transparent border-none p-0">
               {INSTALL_CMD}
             </code>
             <span
-              className={`transition-colors duration-200 ${copied ? 'text-emerald-400/90' : 'text-white/25'}`}
+              className={`transition-colors duration-200 ${copied ? 'text-emerald-500 dark:text-emerald-400/90' : 'text-slate-400 dark:text-white/25'}`}
             >
               {copied ? <Check size={13} /> : <Copy size={13} />}
             </span>
@@ -128,9 +128,9 @@ export function HeroSection() {
         >
           {/* Glow behind demo */}
           <div className="absolute inset-0 rounded-2xl pointer-events-none bg-[radial-gradient(ellipse_at_50%_50%,rgba(124,58,237,0.18)_0%,transparent_70%)] blur-2xl scale-110" />
-          <div className="relative rounded-2xl overflow-hidden bg-[#0c0a1e] border border-white/[0.07] shadow-[0_25px_50px_rgba(0,0,0,0.5)]">
+          <div className="relative rounded-2xl overflow-hidden bg-surface border border-slate-900/[0.08] dark:border-white/[0.07] shadow-[0_25px_50px_rgba(0,0,0,0.12)] dark:shadow-[0_25px_50px_rgba(0,0,0,0.5)]">
             <DataFlowPlayer
-              theme="dark"
+              theme="auto"
               spec={getSpec(demosById.clientServer, locale)}
               autoPlay
               loop

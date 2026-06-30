@@ -15,7 +15,13 @@
   --color-surface-alt: var(--ifm-background-surface-alt);
 }
 
+/* Docusaurus toggles the theme via `data-theme` on <html>, not the OS
+   media query. Rebind Tailwind's `dark:` variant to that attribute so
+   `dark:`-prefixed utilities track the in-app color-mode switch. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
 :root {
+  /* Brand primary — shared by both themes. */
   --ifm-color-primary: #a855f7;
   --ifm-color-primary-dark: #9333ea;
   --ifm-color-primary-darker: #7e22ce;
@@ -27,21 +33,27 @@
   --ifm-color-secondary: #94a3b8;
   --ifm-color-secondary-dark: #64748b;
 
-  --ifm-color-content-secondary: #cbd5e1;
+  /* Light theme (default). The dark palette lives in [data-theme='dark']. */
+  --ifm-color-content-secondary: #475569;
 
-  --ifm-background-color: #06050f;
-  --ifm-background-surface-color: #0c0a1e;
-  --ifm-background-surface-alt: #0b0a10;
-  --ifm-font-color-base: #e2e8f0;
+  --ifm-background-color: #ffffff;
+  --ifm-background-surface-color: #f5f4fb;
+  --ifm-background-surface-alt: #ecebf5;
+  --ifm-font-color-base: #1c1a2e;
+
+  /* Theme-aware hairline borders and subtle hover fills. On light surfaces
+     these are dark-on-light; the dark palette flips them in [data-theme='dark']. */
+  --rdfa-hairline: rgba(0, 0, 0, 0.1);
+  --rdfa-surface-hover: rgba(0, 0, 0, 0.04);
 
   --ifm-font-family-base: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --ifm-heading-font-family:
     'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --ifm-code-font-family: 'JetBrains Mono', ui-monospace, monospace;
 
-  --ifm-navbar-background-color: rgba(6, 5, 15, 0.65);
-  --ifm-footer-background-color: #06050f;
-  --ifm-footer-title-color: #f1f5f9;
+  --ifm-navbar-background-color: rgba(255, 255, 255, 0.65);
+  --ifm-footer-background-color: #f5f4fb;
+  --ifm-footer-title-color: #1c1a2e;
   --ifm-footer-link-color: var(--ifm-font-color-base);
   --ifm-footer-link-hover-color: var(--ifm-font-color-base);
 
@@ -52,16 +64,25 @@
 }
 
 [data-theme='dark'] {
-  /* Enforce these variables again just in case Docusaurus default dark theme overrides them */
+  --ifm-color-content-secondary: #cbd5e1;
+
   --ifm-background-color: #06050f;
   --ifm-background-surface-color: #0c0a1e;
   --ifm-background-surface-alt: #0b0a10;
+  --ifm-font-color-base: #e2e8f0;
+
+  --rdfa-hairline: rgba(255, 255, 255, 0.08);
+  --rdfa-surface-hover: rgba(255, 255, 255, 0.05);
+
+  --ifm-navbar-background-color: rgba(6, 5, 15, 0.65);
+  --ifm-footer-background-color: #06050f;
+  --ifm-footer-title-color: #f1f5f9;
 }
 
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--nav-h) + 16px);
-  background-color: #06050f;
+  background-color: var(--ifm-background-color);
 }
 
 .app-title-container {
@@ -88,7 +109,7 @@ html {
 }
 
 .footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--rdfa-hairline);
 }
 
 .footer--dark {
@@ -105,8 +126,8 @@ a:hover {
 } */
 
 code.inline {
-  background: #1e1b2e;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--rdfa-hairline);
   border-radius: 5px;
   padding: 1px 6px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -114,8 +135,8 @@ code.inline {
 }
 
 pre.code {
-  background: #0c0a1e;
-  color: #e2e8f0;
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
   border-radius: 10px;
   padding: 16px;
   overflow: auto;
@@ -178,9 +199,9 @@ footer__link-item > svg {
 .pg-btn {
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: #0c0a1e;
-  color: #f1f5f9;
+  border: 1px solid var(--rdfa-hairline);
+  background: var(--ifm-background-surface-color);
+  color: var(--ifm-font-color-base);
   font-size: 14px;
   cursor: pointer;
 }
@@ -188,8 +209,8 @@ footer__link-item > svg {
   position: relative;
   min-height: 460px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: #0c0a1e;
+  border: 1px solid var(--rdfa-hairline);
+  background: var(--ifm-background-surface-color);
   overflow: hidden;
 }
 .pg-code-layer {
@@ -222,6 +243,13 @@ footer__link-item > svg {
   caret-color: #a78bfa;
   outline: none;
 }
+/* The violet-400 editor text is too faint on the light surface; deepen it. */
+[data-theme='light'] .pg-code-pre {
+  color: #6d28d9;
+}
+[data-theme='light'] .pg-code-ta {
+  caret-color: #6d28d9;
+}
 .pg-error {
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.4);
@@ -244,12 +272,12 @@ footer__link-item > svg {
   color: #94a3b8;
   font-weight: 600;
   padding: 7px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--rdfa-hairline);
   font-size: 12.5px;
 }
 .api-table td {
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--rdfa-hairline);
   vertical-align: top;
 }
 .api-table td.name {
@@ -302,8 +330,8 @@ footer__link-item > svg {
   margin: 2px 4px 0 0;
   padding: 1px 7px;
   border-radius: 999px;
-  background: #1e1b2e;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--rdfa-hairline);
   font-size: 12px;
   font-family: 'JetBrains Mono', monospace;
 }
@@ -447,7 +475,7 @@ footer__link-item > svg {
 /* Playground React Dataflow Animator Overrides */
 .rdfa-controls {
   background: transparent !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-top: 1px solid var(--rdfa-hairline) !important;
   padding: 12px 20px !important;
 }
 .rdfa-controls .rdfa-btn:nth-child(2) {
@@ -469,11 +497,17 @@ footer__link-item > svg {
 }
 .rdfa-btn:hover {
   color: rgba(255, 255, 255, 0.8) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
+  background: var(--rdfa-surface-hover) !important;
+}
+[data-theme='light'] .rdfa-btn {
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+[data-theme='light'] .rdfa-btn:hover {
+  color: rgba(0, 0, 0, 0.85) !important;
 }
 select option {
   background: var(--ifm-background-surface-color) !important;
-  color: #fff !important;
+  color: var(--ifm-font-color-base) !important;
 }
 
 /* =========================================================================
@@ -492,7 +526,7 @@ select option {
 
 /* --- Sidebar : conteneur ------------------------------------------------- */
 .theme-doc-sidebar-container {
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid var(--rdfa-hairline);
 }
 
 .theme-doc-sidebar-container .menu {
@@ -527,7 +561,7 @@ select option {
 }
 
 .menu__link:hover {
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--rdfa-surface-hover);
   color: var(--ifm-font-color-base);
 }
 
@@ -535,6 +569,9 @@ select option {
 .menu__link--active:not(.menu__link--sublist) {
   background: rgba(168, 85, 247, 0.12);
   color: #fff;
+}
+[data-theme='light'] .menu__link--active:not(.menu__link--sublist) {
+  color: var(--ifm-color-primary-darkest);
 }
 
 /* Catégories repliables : on garde le chevron Infima mais on adoucit la
@@ -593,7 +630,7 @@ select option {
 }
 
 .table-of-contents {
-  border-left-color: rgba(255, 255, 255, 0.08);
+  border-left-color: var(--rdfa-hairline);
 }
 
 .table-of-contents__link {
@@ -620,7 +657,7 @@ select option {
 
 /* --- Encadré d'introduction (.docs-lead, déjà utilisé par ApiReference) -- */
 .docs-lead {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--rdfa-hairline);
   border-radius: 12px;
   padding: 0.9rem 1.15rem;
   margin-bottom: 1.6rem;
@@ -636,7 +673,7 @@ select option {
 
 /* --- Liens de pagination (bas de page) : aspect « carte » ---------------- */
 .pagination-nav__link {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--rdfa-hairline);
   border-radius: 12px;
   padding: 1rem 1.25rem;
   background: var(--ifm-background-surface-color);

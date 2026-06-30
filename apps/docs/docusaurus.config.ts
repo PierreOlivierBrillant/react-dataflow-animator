@@ -74,7 +74,7 @@ const config = {
     ],
     colorMode: {
       defaultMode: 'dark',
-      disableSwitch: true,
+      disableSwitch: false,
       respectPrefersColorScheme: false,
     },
     image: 'img/logo.svg',

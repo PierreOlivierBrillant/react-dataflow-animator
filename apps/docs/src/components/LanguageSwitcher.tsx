@@ -15,9 +15,13 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
     <div
       role="group"
       aria-label={t.nav.languageLabel}
-      className={`flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-1.5 py-1 ${className}`}
+      className={`flex items-center gap-1 rounded-lg border border-slate-900/10 bg-slate-900/[0.03] px-1.5 py-1 dark:border-white/10 dark:bg-white/[0.03] ${className}`}
     >
-      <Globe size={13} className="text-white/30" aria-hidden="true" />
+      <Globe
+        size={13}
+        className="text-slate-400 dark:text-white/30"
+        aria-hidden="true"
+      />
       {i18n.locales.map((locale) => {
         const active = locale === i18n.currentLocale;
         return (
@@ -28,8 +32,8 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
             aria-current={active ? 'true' : undefined}
             className={`rounded-md px-1.5 py-0.5 text-xs font-semibold uppercase no-underline transition-colors hover:no-underline ${
               active
-                ? 'bg-violet-600/25 text-violet-200'
-                : 'text-white/45 hover:text-white'
+                ? 'bg-violet-600/25 text-violet-700 dark:text-violet-200'
+                : 'text-slate-500 hover:text-slate-900 dark:text-white/45 dark:hover:text-white'
             }`}
           >
             {locale}

@@ -27,7 +27,7 @@ export function FeaturesSection() {
       <div className="max-w-6xl mx-auto px-5">
         <div className="text-center mb-16">
           <motion.p
-            className="text-xs uppercase tracking-widest mb-3 text-cyan-400 font-mono"
+            className="text-xs uppercase tracking-widest mb-3 text-cyan-600 dark:text-cyan-400 font-mono"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -35,7 +35,7 @@ export function FeaturesSection() {
             {t.features.eyebrow}
           </motion.p>
           <motion.h2
-            className="text-white text-3xl md:text-4xl font-bold mb-4 font-heading"
+            className="text-slate-900 dark:text-white text-3xl md:text-4xl font-bold mb-4 font-heading"
             initial={{ opacity: 0, y: 14 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -51,13 +51,12 @@ export function FeaturesSection() {
           {features.map((f, i) => (
             <motion.div
               key={f.title}
-              className="group rounded-2xl p-6 transition-all duration-300 cursor-default bg-white/[0.025] border border-white/[0.06]"
+              className="group rounded-2xl p-6 transition-all duration-300 cursor-default bg-slate-900/[0.025] dark:bg-white/[0.025] border border-slate-900/[0.08] dark:border-white/[0.06] hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04]"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.06 }}
               whileHover={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
                 borderColor: `${f.color}30`,
               }}
             >
@@ -74,10 +73,10 @@ export function FeaturesSection() {
                   strokeWidth={1.6}
                 />
               </div>
-              <h3 className="text-white mb-2 font-heading font-semibold text-base leading-tight">
+              <h3 className="text-slate-900 dark:text-white mb-2 font-heading font-semibold text-base leading-tight">
                 {f.title}
               </h3>
-              <p className="text-sm leading-relaxed text-slate-100/40 font-sans">
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-100/40 font-sans">
                 {f.description}
               </p>
             </motion.div>

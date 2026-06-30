@@ -905,6 +905,11 @@
 
 .rdfa-content-body.rdfa-code pre {
   padding: max(2px, calc(0.45rem * var(--rdfa-content-scale, 1)));
+  /* The body already paints the (always-dark) terminal background. Hosts like
+     Docusaurus set --ifm-pre-background on bare <pre>, which would otherwise
+     cover it with a light fill in light mode — leaving the dark-tuned Prism
+     tokens unreadable. Stay transparent so the terminal shows through. */
+  background: transparent;
 }
 
 .rdfa-content-body pre {

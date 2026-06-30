@@ -64,7 +64,7 @@ function DemoThumbnail({ spec }: { spec: DataFlowSpec }) {
         <DataFlowPlayer
           key={visible ? 'play' : 'idle'}
           spec={spec}
-          theme="dark"
+          theme="auto"
           controls={false}
           autoPlay={visible}
           loop
@@ -91,10 +91,10 @@ function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className="group flex flex-col text-left appearance-none p-0 rounded-2xl overflow-hidden border border-white/[0.07] bg-white/[0.02] hover:border-violet-500/40 hover:bg-white/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60"
+      className="group flex flex-col text-left appearance-none p-0 rounded-2xl overflow-hidden border border-slate-900/[0.08] dark:border-white/[0.07] bg-slate-900/[0.02] dark:bg-white/[0.02] hover:border-violet-500/40 hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-violet-500/60"
     >
       {/* Preview */}
-      <div className="relative aspect-[16/9] overflow-hidden bg-[#0c0a1e] border-b border-white/[0.06]">
+      <div className="relative aspect-[16/9] overflow-hidden bg-surface border-b border-slate-900/[0.08] dark:border-white/[0.06]">
         <DemoThumbnail spec={getSpec(demo, locale)} />
         <span className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider bg-black/55 backdrop-blur-sm text-violet-300 border border-violet-500/30">
           {t.gallery.categories[demo.category]}
@@ -107,10 +107,10 @@ function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
 
       {/* Body */}
       <div className="flex flex-col flex-1 p-4">
-        <h3 className="text-white text-[15px] font-semibold mb-1.5 font-heading leading-snug">
+        <h3 className="text-slate-900 dark:text-white text-[15px] font-semibold mb-1.5 font-heading leading-snug">
           {pickLocale(demo.title, locale)}
         </h3>
-        <p className="text-[13px] leading-relaxed text-white/45 font-sans line-clamp-2 mb-3">
+        <p className="text-[13px] leading-relaxed text-slate-600 dark:text-white/45 font-sans line-clamp-2 mb-3">
           {pickLocale(demo.description, locale)}
         </p>
         {tags.length > 0 && (
@@ -118,7 +118,7 @@ function DemoCard({ demo, onOpen }: { demo: Demo; onOpen: () => void }) {
             {tags.slice(0, 4).map((tag) => (
               <span
                 key={tag}
-                className="px-1.5 py-0.5 rounded text-[10px] font-mono text-white/40 bg-white/[0.04] border border-white/[0.06]"
+                className="px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-500 dark:text-white/40 bg-slate-900/[0.04] dark:bg-white/[0.04] border border-slate-900/[0.08] dark:border-white/[0.06]"
               >
                 {tag}
               </span>
@@ -162,7 +162,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
       aria-label={title}
     >
       <motion.div
-        className="relative w-full max-w-4xl rounded-2xl overflow-hidden border border-white/10 bg-[#0c0a1e] shadow-2xl"
+        className="relative w-full max-w-4xl rounded-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 bg-surface shadow-2xl"
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -170,12 +170,12 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start gap-4 px-5 py-4 border-b border-white/[0.07]">
+        <div className="flex items-start gap-4 px-5 py-4 border-b border-slate-900/[0.08] dark:border-white/[0.07]">
           <div className="flex-1 min-w-0">
-            <span className="inline-block mb-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-violet-300 bg-violet-500/10 border border-violet-500/25">
+            <span className="inline-block mb-1 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider text-violet-700 dark:text-violet-300 bg-violet-500/10 border border-violet-500/25">
               {t.gallery.categories[demo.category]}
             </span>
-            <h2 className="text-white text-lg font-bold font-heading leading-tight mb-0">
+            <h2 className="text-slate-900 dark:text-white text-lg font-bold font-heading leading-tight mb-0">
               {title}
             </h2>
           </div>
@@ -183,7 +183,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
             type="button"
             onClick={onClose}
             aria-label={t.gallery.close}
-            className="shrink-0 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer bg-transparent border-none"
+            className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:text-white/40 dark:hover:text-white hover:bg-slate-900/[0.06] dark:hover:bg-white/[0.08] transition-colors cursor-pointer bg-transparent border-none"
           >
             <X size={18} />
           </button>
@@ -194,7 +194,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
           <DataFlowPlayer
             key={demo.id}
             spec={getSpec(demo, locale)}
-            theme="dark"
+            theme="auto"
             controls
             autoPlay
             loop
@@ -204,8 +204,8 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-white/[0.07]">
-          <p className="text-[13px] leading-relaxed text-white/55 font-sans mb-3">
+        <div className="px-5 py-4 border-t border-slate-900/[0.08] dark:border-white/[0.07]">
+          <p className="text-[13px] leading-relaxed text-slate-600 dark:text-white/55 font-sans mb-3">
             {pickLocale(demo.description, locale)}
           </p>
           <Link
@@ -263,7 +263,7 @@ export function DemoGallery() {
       <div className="relative mb-5">
         <Search
           size={16}
-          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30"
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
         />
         <input
           type="search"
@@ -271,14 +271,14 @@ export function DemoGallery() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t.gallery.searchPlaceholder}
           aria-label={t.gallery.searchAria}
-          className="w-full pl-10 pr-10 py-3 rounded-xl text-sm font-sans text-white bg-white/[0.03] border border-white/[0.09] outline-none placeholder:text-white/30 focus:border-violet-500/50 transition-colors"
+          className="w-full pl-10 pr-10 py-3 rounded-xl text-sm font-sans text-slate-900 dark:text-white bg-slate-900/[0.03] dark:bg-white/[0.03] border border-slate-900/[0.1] dark:border-white/[0.09] outline-none placeholder:text-slate-400 dark:placeholder:text-white/30 focus:border-violet-500/50 transition-colors"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
             aria-label={t.gallery.clearSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded text-white/30 hover:text-white/70 transition-colors cursor-pointer bg-transparent border-none"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded text-slate-400 hover:text-slate-700 dark:text-white/30 dark:hover:text-white/70 transition-colors cursor-pointer bg-transparent border-none"
           >
             <X size={15} />
           </button>
@@ -317,7 +317,7 @@ export function DemoGallery() {
         </div>
       ) : (
         <div className="text-center py-20">
-          <p className="text-white/50 font-sans mb-1">
+          <p className="text-slate-500 dark:text-white/50 font-sans mb-1">
             {t.gallery.noResults(query)}
           </p>
           <button
@@ -326,7 +326,7 @@ export function DemoGallery() {
               setQuery('');
               setCategory('all');
             }}
-            className="text-sm text-violet-400 hover:text-violet-300 cursor-pointer bg-transparent border-none font-sans"
+            className="text-sm text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 cursor-pointer bg-transparent border-none font-sans"
           >
             {t.gallery.resetFilters}
           </button>
@@ -359,13 +359,13 @@ function CategoryChip({
       onClick={onClick}
       className={`px-3 py-1.5 rounded-lg text-xs font-sans transition-colors cursor-pointer ${
         active
-          ? 'bg-violet-600/20 border border-violet-600/50 text-violet-200'
-          : 'bg-white/[0.03] border border-white/[0.07] text-white/50 hover:text-white/80'
+          ? 'bg-violet-600/20 border border-violet-600/50 text-violet-700 dark:text-violet-200'
+          : 'bg-slate-900/[0.03] dark:bg-white/[0.03] border border-slate-900/[0.08] dark:border-white/[0.07] text-slate-600 hover:text-slate-900 dark:text-white/50 dark:hover:text-white/80'
       }`}
     >
       {label}
       <span
-        className={`ml-1.5 ${active ? 'text-violet-300/70' : 'text-white/30'}`}
+        className={`ml-1.5 ${active ? 'text-violet-500/80 dark:text-violet-300/70' : 'text-slate-400 dark:text-white/30'}`}
       >
         {count}
       </span>

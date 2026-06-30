@@ -25,7 +25,7 @@ export function DemoShowcase() {
         {/* Section header */}
         <div className="text-center mb-12">
           <motion.p
-            className="text-xs uppercase tracking-widest mb-3 text-violet-400 font-mono"
+            className="text-xs uppercase tracking-widest mb-3 text-violet-600 dark:text-violet-400 font-mono"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -33,7 +33,7 @@ export function DemoShowcase() {
             {t.showcase.eyebrow}
           </motion.p>
           <motion.h2
-            className="text-white text-3xl md:text-4xl font-bold mb-4 font-heading"
+            className="text-slate-900 dark:text-white text-3xl md:text-4xl font-bold mb-4 font-heading"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -45,7 +45,7 @@ export function DemoShowcase() {
             </span>
           </motion.h2>
           <motion.p
-            className="max-w-lg mx-auto text-base leading-[1.7] text-slate-100/45 font-sans"
+            className="max-w-lg mx-auto text-base leading-[1.7] text-slate-600 dark:text-slate-100/45 font-sans"
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -61,7 +61,7 @@ export function DemoShowcase() {
             <button
               key={demo.id}
               onClick={() => setActiveId(demo.id)}
-              className={`w-full sm:w-auto px-4 py-2 rounded-lg text-sm transition-all cursor-pointer font-sans ${activeId === demo.id ? 'bg-violet-600/20 border border-violet-600/50 text-violet-300' : 'bg-white/[0.03] border border-white/[0.07] text-white/45'}`}
+              className={`w-full sm:w-auto px-4 py-2 rounded-lg text-sm transition-all cursor-pointer font-sans ${activeId === demo.id ? 'bg-violet-600/20 border border-violet-600/50 text-violet-700 dark:text-violet-300' : 'bg-slate-900/[0.03] dark:bg-white/[0.03] border border-slate-900/[0.08] dark:border-white/[0.07] text-slate-600 dark:text-white/45'}`}
             >
               {pickLocale(demo.title, locale)}
             </button>
@@ -77,13 +77,13 @@ export function DemoShowcase() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
           >
-            <p className="text-center mb-6 text-sm text-white/35 font-sans">
+            <p className="text-center mb-6 text-sm text-slate-500 dark:text-white/35 font-sans">
               {pickLocale(active.description, locale)}
             </p>
 
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-[#0c0a1e] border border-white/[0.07]">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-surface border border-slate-900/[0.08] dark:border-white/[0.07]">
               <DataFlowPlayer
-                theme="dark"
+                theme="auto"
                 spec={getSpec(active, locale)}
                 autoPlay
                 loop
@@ -96,7 +96,7 @@ export function DemoShowcase() {
             <div className="mt-5 flex justify-center">
               <button
                 onClick={() => setCodeVisible((v) => !v)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs transition-all cursor-pointer font-mono text-white/40 border border-white/[0.07] bg-white/[0.02]"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs transition-all cursor-pointer font-mono text-slate-500 dark:text-white/40 border border-slate-900/[0.08] dark:border-white/[0.07] bg-slate-900/[0.02] dark:bg-white/[0.02]"
               >
                 {codeVisible ? t.showcase.hideSpec : t.showcase.showSpec}
               </button>
@@ -111,11 +111,11 @@ export function DemoShowcase() {
                   transition={{ duration: 0.3 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-4 rounded-xl overflow-hidden border border-white/[0.07] bg-white/[0.02]">
-                    <div className="flex items-center px-4 py-2.5 border-b border-white/[0.06] text-xs text-white/25 font-mono">
+                  <div className="mt-4 rounded-xl overflow-hidden border border-slate-900/[0.08] dark:border-white/[0.07] bg-slate-900/[0.02] dark:bg-white/[0.02]">
+                    <div className="flex items-center px-4 py-2.5 border-b border-slate-900/[0.08] dark:border-white/[0.06] text-xs text-slate-500 dark:text-white/25 font-mono">
                       {active.id}.json
                     </div>
-                    <pre className="p-5 text-xs overflow-x-auto font-mono text-violet-400/90 leading-7 m-0 bg-transparent">
+                    <pre className="p-5 text-xs overflow-x-auto font-mono text-violet-700 dark:text-violet-400/90 leading-7 m-0 bg-transparent">
                       <code>
                         {JSON.stringify(getSpec(active, locale), null, 2)}
                       </code>
@@ -131,7 +131,7 @@ export function DemoShowcase() {
         <div className="text-center mt-12">
           <Link
             to="/examples"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-sans text-violet-200 bg-violet-600/15 border border-violet-600/40 hover:bg-violet-600/25 transition-colors no-underline"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-sans text-violet-700 dark:text-violet-200 bg-violet-600/15 border border-violet-600/40 hover:bg-violet-600/25 transition-colors no-underline"
           >
             {t.showcase.explore(demos.length)}
             <span aria-hidden="true">→</span>

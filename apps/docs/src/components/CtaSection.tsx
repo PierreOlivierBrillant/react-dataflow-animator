@@ -12,7 +12,7 @@ export function CtaSection() {
 
       <div className="relative max-w-3xl mx-auto px-5 text-center">
         <motion.p
-          className="text-xs uppercase tracking-widest mb-4 text-violet-400 font-mono"
+          className="text-xs uppercase tracking-widest mb-4 text-violet-600 dark:text-violet-400 font-mono"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -20,7 +20,7 @@ export function CtaSection() {
           {t.cta.eyebrow}
         </motion.p>
         <motion.h2
-          className="text-white text-3xl md:text-4xl font-bold mb-5 font-heading"
+          className="text-slate-900 dark:text-white text-3xl md:text-4xl font-bold mb-5 font-heading"
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -31,7 +31,7 @@ export function CtaSection() {
           </span>
         </motion.h2>
         <motion.p
-          className="mb-10 text-[1.05rem] leading-[1.7] text-slate-100/45 font-sans"
+          className="mb-10 text-[1.05rem] leading-[1.7] text-slate-600 dark:text-slate-100/45 font-sans"
           initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -57,7 +57,7 @@ export function CtaSection() {
             href="https://github.com/PierreOlivierBrillant/react-dataflow-animator"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm no-underline transition-all hover:bg-white/[0.07] border border-white/10 text-white/85 font-sans"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm no-underline transition-all hover:bg-slate-900/[0.06] dark:hover:bg-white/[0.07] border border-slate-900/15 dark:border-white/10 text-slate-700 dark:text-white/85 font-sans"
           >
             <GitBranch size={15} />
             {t.cta.secondary}

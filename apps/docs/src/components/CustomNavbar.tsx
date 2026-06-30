@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { FaGithub } from 'react-icons/fa';
 import { LogoText } from './LogoText';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { ThemeToggle } from './ThemeToggle';
 import { useTranslation } from '../i18n';
 
 const GITHUB_URL =
@@ -44,7 +45,7 @@ export function CustomNavbar() {
       <header
         className={`navbar navbar--fixed-top fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isSolid || mobileOpen
-            ? 'bg-bg/85 backdrop-blur-[20px] border-b border-white/[.06]'
+            ? 'bg-bg/85 backdrop-blur-[20px] border-b border-slate-900/[.08] dark:border-white/[.06]'
             : 'bg-transparent border-b border-transparent'
         }`}
       >
@@ -91,13 +92,14 @@ export function CustomNavbar() {
 
             {/* Separator + language + GitHub (desktop) */}
             <div className="hidden md:flex items-center gap-2">
-              <div className="w-px h-4 bg-white/10 mx-1" />
+              <div className="w-px h-4 bg-slate-900/10 dark:bg-white/10 mx-1" />
               <LanguageSwitcher />
+              <ThemeToggle />
               <a
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white/70 hover:text-white rounded-lg transition-all no-underline hover:no-underline"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-white/70 dark:hover:text-white rounded-lg transition-all no-underline hover:no-underline"
               >
                 <FaGithub size={25} />
               </a>
@@ -105,7 +107,7 @@ export function CustomNavbar() {
 
             {/* Mobile menu button */}
             <button
-              className="md:hidden p-2 text-white/50 hover:text-white cursor-pointer bg-transparent border-none"
+              className="md:hidden p-2 text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white cursor-pointer bg-transparent border-none"
               onClick={() => setMobileOpen((v) => !v)}
               aria-expanded={mobileOpen}
               aria-label={t.nav.toggleMenu}
@@ -123,7 +125,7 @@ export function CustomNavbar() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden absolute top-full left-0 right-0 w-full overflow-hidden border-b border-white/[0.06] bg-[#05040e] shadow-2xl"
+              className="md:hidden absolute top-full left-0 right-0 w-full overflow-hidden border-b border-slate-900/[0.08] dark:border-white/[0.06] bg-white dark:bg-[#05040e] shadow-2xl"
             >
               <div className="px-5 pb-5">
                 <div className="flex flex-col gap-1 pt-3">
@@ -135,7 +137,7 @@ export function CustomNavbar() {
                     <Link
                       key={to}
                       to={to}
-                      className="px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
+                      className="px-3 py-2.5 text-sm text-slate-600 hover:text-slate-900 dark:text-white/60 dark:hover:text-white rounded-lg hover:bg-slate-900/[0.05] dark:hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
                       onClick={() => setMobileOpen(false)}
                     >
                       {label}
@@ -145,13 +147,14 @@ export function CustomNavbar() {
                     href={GITHUB_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm text-slate-600 hover:text-slate-900 dark:text-white/60 dark:hover:text-white rounded-lg hover:bg-slate-900/[0.05] dark:hover:bg-white/[0.05] transition-colors no-underline hover:no-underline"
                     onClick={() => setMobileOpen(false)}
                   >
                     <FaGithub size={15} /> {t.nav.sources}
                   </a>
-                  <div className="px-3 pt-2">
+                  <div className="flex items-center gap-2 px-3 pt-2">
                     <LanguageSwitcher />
+                    <ThemeToggle />
                   </div>
                 </div>
               </div>
@@ -186,8 +189,8 @@ function NavLink({ to, label, icon, exact = false }: NavLinkProps) {
       to={to}
       className={`flex items-center gap-1.5 px-3 py-2 text-lg rounded-lg transition-colors no-underline hover:no-underline font-sans border ${
         isActive
-          ? 'text-violet-300 bg-violet-600/10 border-violet-500/25'
-          : 'text-white/50 hover:text-white border-transparent'
+          ? 'text-violet-700 bg-violet-600/10 border-violet-500/25 dark:text-violet-300'
+          : 'text-slate-600 hover:text-slate-900 border-transparent dark:text-white/50 dark:hover:text-white'
       }`}
     >
       {icon}

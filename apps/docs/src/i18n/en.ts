@@ -9,6 +9,7 @@ export const en: Messages = {
     sources: 'Source',
     toggleMenu: 'Toggle navigation',
     languageLabel: 'Language',
+    toggleTheme: 'Toggle light/dark theme',
   },
   home: {
     pageTitle: 'Home',
