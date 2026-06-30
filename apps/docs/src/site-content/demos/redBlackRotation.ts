@@ -1,35 +1,39 @@
 import type { DataFlowSpec } from 'react-dataflow-animator';
 import type { Locale } from '../../i18n';
 
-// Red-black tree — the ROTATION case (as opposed to the pure recoloring case
-// shown in the `redBlackTree` demo). Inserting a red node under a red parent
-// whose uncle is BLACK (here absent) cannot be fixed by recoloring alone: it
-// takes a rotation THEN a recoloring. This demo combines both runtime spec
-// features — `rotate_subtree` (tree restructuring) and `set_color` (recoloring).
-// Key numbers in `body` are language-invariant; comments carry the narration.
+// Red-black tree — the ROTATION case (vs. the pure recoloring of `redBlackTree`).
+// Inserting a red node (3) under a red parent (5) whose uncle is BLACK (here
+// absent) cannot be fixed by recoloring alone: it takes a rotation THEN a
+// recoloring. This left-left case right-rotates the grandparent (10), then
+// recolors. It combines both runtime spec features: `rotate_subtree` (tree
+// restructuring) and `set_color` (recoloring). Numbers are language-invariant.
 const RED = 'crimson';
 const BLACK = '#1f2937';
 const INK = 'white';
 
+const N = (id: string, color: string) => ({
+  id,
+  type: 'circle' as const,
+  body: id,
+  background_color: color,
+  text_color: INK,
+});
+
 const strings = {
   en: {
-    insert: 'We insert 5 (red) under the red 8 — a red-red violation again',
-    blackUncle:
-      'But here the uncle is BLACK (absent) → recoloring is not enough',
-    rotate:
-      'Right-rotate around 13 so the middle key 8 becomes the subtree root',
-    recolor: 'Then recolor: 8 to black, 13 to red',
-    done: 'Valid red-black tree: 8 is black with two red children ✓',
+    insert: 'We insert 3 (red) under the red 5 — a red-red violation',
+    blackUncle: 'Here the uncle is BLACK (absent) → rotation case, not recolor',
+    rotate: 'Right-rotate around 10 (left-left case) so 5 rises to the top',
+    recolor: 'Then recolor: 5 to black, 10 to red',
+    done: 'Valid red-black tree: 5 is black with two red children ✓',
   },
   fr: {
-    insert:
-      'On insère 5 (rouge) sous le 8 rouge — encore une violation rouge-rouge',
+    insert: 'On insère 3 (rouge) sous le 5 rouge — une violation rouge-rouge',
     blackUncle:
-      "Mais ici l'oncle est NOIR (absent) → la recoloration ne suffit pas",
-    rotate:
-      'Rotation droite autour de 13 : la clé médiane 8 devient la racine du sous-arbre',
-    recolor: 'Puis on recolore : 8 en noir, 13 en rouge',
-    done: 'Arbre rouge-noir valide : 8 est noir avec deux enfants rouges ✓',
+      "Ici l'oncle est NOIR (absent) → cas rotation, pas recoloration",
+    rotate: 'Rotation droite autour de 10 (cas gauche-gauche) : 5 remonte',
+    recolor: 'Puis on recolore : 5 en noir, 10 en rouge',
+    done: 'Arbre rouge-noir valide : 5 est noir avec deux enfants rouges ✓',
   },
 };
 
@@ -38,52 +42,40 @@ export const redBlackRotation = (locale: Locale): DataFlowSpec => {
   return {
     direction: 'tree',
     tree: {
-      root: 'g',
-      children: { g: { left: 'p' }, p: { left: 'z' } },
+      root: '20',
+      children: {
+        '20': { left: '10', right: '30' },
+        '10': { left: '5' },
+        '5': { left: '3' },
+      },
     },
     nodes: [
-      {
-        id: 'g',
-        type: 'circle',
-        body: '13',
-        background_color: BLACK,
-        text_color: INK,
-      },
-      {
-        id: 'p',
-        type: 'circle',
-        body: '8',
-        background_color: RED,
-        text_color: INK,
-      },
-      {
-        id: 'z',
-        type: 'circle',
-        body: '5',
-        background_color: RED,
-        text_color: INK,
-      },
+      N('20', BLACK),
+      N('10', BLACK),
+      N('30', BLACK),
+      N('5', RED),
+      N('3', RED),
     ],
     packets: [],
     timeline: [
-      { type: 'comment', object: 'z', text: s.insert, duration: 1800 },
-      { type: 'comment', object: 'g', text: s.blackUncle, duration: 1900 },
+      { type: 'comment', object: '3', text: s.insert, duration: 1800 },
+      { type: 'comment', object: '10', text: s.blackUncle, duration: 1900 },
       {
         type: 'parallel',
         actions: [
-          { type: 'rotate_subtree', object: 'g', rotation: 'right' },
+          { type: 'rotate_subtree', object: '10', rotation: 'right' },
           { type: 'comment', text: s.rotate, keep_until_next: true },
         ],
       },
       {
         type: 'parallel',
         actions: [
-          { type: 'set_color', object: 'p', background_color: BLACK },
-          { type: 'set_color', object: 'g', background_color: RED },
+          { type: 'set_color', object: '5', background_color: BLACK },
+          { type: 'set_color', object: '10', background_color: RED },
           { type: 'comment', text: s.recolor, keep_until_next: true },
         ],
       },
-      { type: 'comment', text: s.done, keep_until_end: true },
+      { type: 'comment', object: '5', text: s.done, keep_until_end: true },
       { type: 'wait', delay_ms: 1000 },
     ],
   };

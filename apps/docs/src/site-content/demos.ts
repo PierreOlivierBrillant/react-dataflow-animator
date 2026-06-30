@@ -29,6 +29,8 @@ import { pushNotifications } from './demos/pushNotifications';
 import { redBlackTree } from './demos/redBlackTree';
 import { redBlackRotation } from './demos/redBlackRotation';
 import { avlTree } from './demos/avlTree';
+import { bstSearch } from './demos/bstSearch';
+import { bstInsert } from './demos/bstInsert';
 
 /** Clé de catégorie (stable, indépendante de la langue). Les libellés affichés
  * sont traduits via le dictionnaire (`gallery.categories`). */
@@ -595,6 +597,61 @@ export const demos: Demo[] = [
       ],
     },
     spec: avlTree,
+  },
+  {
+    id: 'bstSearch',
+    title: {
+      fr: 'Arbre binaire — recherche',
+      en: 'Binary tree — search',
+    },
+    description: {
+      fr: "Recherche d'une clé dans un arbre binaire de recherche : un jeton descend depuis la racine, compare à chaque nœud et bifurque à gauche ou à droite jusqu'à trouver la valeur. Illustre la descente pas à pas en O(log n).",
+      en: 'Searching a key in a binary search tree: a token descends from the root, compares at each node and branches left or right until it finds the value. Shows the step-by-step O(log n) descent.',
+    },
+    category: 'engine',
+    tags: {
+      fr: [
+        'arbre',
+        'recherche',
+        'bst',
+        'parcours',
+        'comparaison',
+        'structure de données',
+      ],
+      en: [
+        'tree',
+        'search',
+        'bst',
+        'traversal',
+        'comparison',
+        'data structure',
+      ],
+    },
+    spec: bstSearch,
+  },
+  {
+    id: 'bstInsert',
+    title: {
+      fr: 'Arbre binaire — insertion',
+      en: 'Binary tree — insertion',
+    },
+    description: {
+      fr: "Insertion d'une clé dans un arbre binaire de recherche : la nouvelle clé arrive orpheline et descend pas à pas en comparant à chaque nœud, jusqu'au slot vide où le nœud est alors créé.",
+      en: 'Inserting a key into a binary search tree: the new key arrives as an orphan and walks down step by step, comparing at each node, until the empty slot where the node is then created.',
+    },
+    category: 'engine',
+    tags: {
+      fr: [
+        'arbre',
+        'insertion',
+        'bst',
+        'orphelin',
+        'descente',
+        'structure de données',
+      ],
+      en: ['tree', 'insertion', 'bst', 'orphan', 'descent', 'data structure'],
+    },
+    spec: bstInsert,
   },
   {
     id: 'collision',

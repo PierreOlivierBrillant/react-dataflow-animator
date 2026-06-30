@@ -1,105 +1,83 @@
 import type { DataFlowSpec } from 'react-dataflow-animator';
 import type { Locale } from '../../i18n';
 
-// Red-black tree insertion — the "recolor" case, which is exactly what the
-// `set_color` action is for. We insert a red leaf under a red parent whose
-// sibling (the uncle) is also red: the fix is a pure RECOLORING (no rotation),
-// so this demo stays within the engine's current capabilities while showing the
-// defining operation of a red-black tree. Tree shape is laid out with
-// `top-to-bottom` (lane = depth) and `align_with` to drop a child under its
-// parent. Key numbers in `body` are language-invariant; the narration comments
-// carry the bilingual explanation.
+// Red-black tree — the RECOLORING case, the defining operation that `set_color`
+// exists for. Inserting a red node (5) under a red parent (10) whose sibling —
+// the uncle (30) — is ALSO red is fixed by a pure recoloring (no rotation):
+// parent and uncle go black, the grandparent (20) goes red, and since it is the
+// root it stays black. Laid out with `direction: 'tree'`. Key numbers in `body`
+// are language-invariant; the comments carry the bilingual narration.
 const RED = 'crimson';
 const BLACK = '#1f2937';
 const INK = 'white';
 
+const N = (id: string, color: string) => ({
+  id,
+  type: 'circle' as const,
+  body: id,
+  background_color: color,
+  text_color: INK,
+});
+
 const strings = {
   en: {
-    insert: 'We insert key 1 as a red leaf, child of 8',
-    redRed: 'Red-red violation: 1 and its parent 8 are both red',
-    uncleRed: 'But the uncle 17 is red too → this is the recolor case',
-    recolorChildren: 'Recolor the parent 8 and the uncle 17 to black',
-    recolorGrand: 'Recolor the grandparent 13 to red — the issue moves up',
-    rootBlack: '13 is the root, and the root must always stay black ✓',
+    insert: 'We insert 5 (red) under the red 10 — a red-red violation',
+    uncleRed:
+      'The uncle 30 is red too → this is the RECOLOR case (no rotation)',
+    recolorChildren: 'Recolor the parent 10 and the uncle 30 to black',
+    recolorGrand: 'Push the red up to the grandparent 20…',
+    rootBlack: '…but 20 is the root, and the root must always stay black ✓',
   },
   fr: {
-    insert: 'On insère la clé 1 comme feuille rouge, enfant de 8',
-    redRed: 'Violation rouge-rouge : 1 et son parent 8 sont tous deux rouges',
-    uncleRed: "Mais l'oncle 17 est rouge aussi → c'est le cas de recoloration",
-    recolorChildren: "Recolorer le parent 8 et l'oncle 17 en noir",
-    recolorGrand: 'Recolorer le grand-parent 13 en rouge — le problème remonte',
-    rootBlack: '13 est la racine, et la racine doit toujours rester noire ✓',
+    insert: 'On insère 5 (rouge) sous le 10 rouge — une violation rouge-rouge',
+    uncleRed:
+      "L'oncle 30 est rouge aussi → c'est le cas RECOLORATION (sans rotation)",
+    recolorChildren: 'Recolorer le parent 10 et l’oncle 30 en noir',
+    recolorGrand: 'On remonte le rouge vers le grand-parent 20…',
+    rootBlack:
+      '…mais 20 est la racine, et la racine doit toujours rester noire ✓',
   },
 };
 
 export const redBlackTree = (locale: Locale): DataFlowSpec => {
   const s = strings[locale];
   return {
-    direction: 'top-to-bottom',
+    direction: 'tree',
+    tree: {
+      root: '20',
+      children: {
+        '20': { left: '10', right: '30' },
+        '10': { left: '5', right: '15' },
+        '30': { right: '40' },
+      },
+    },
     nodes: [
-      // Grandparent (root): black.
-      {
-        id: 'g',
-        type: 'circle',
-        body: '13',
-        background_color: BLACK,
-        text_color: INK,
-        lane: 1,
-      },
-      // Parent (red) and uncle (red), the two children of the root.
-      {
-        id: 'p',
-        type: 'circle',
-        body: '8',
-        background_color: RED,
-        text_color: INK,
-        lane: 2,
-      },
-      {
-        id: 'u',
-        type: 'circle',
-        body: '17',
-        background_color: RED,
-        text_color: INK,
-        lane: 2,
-      },
-      // Newly inserted red leaf, dropped directly under its parent 8.
-      {
-        id: 'n',
-        type: 'circle',
-        body: '1',
-        background_color: RED,
-        text_color: INK,
-        lane: 3,
-        align_with: 'p',
-      },
-    ],
-    // Tree edges (plain links, no arrow head).
-    connections: [
-      { from: 'g', to: 'p', arrow_head: 'none' },
-      { from: 'g', to: 'u', arrow_head: 'none' },
-      { from: 'p', to: 'n', arrow_head: 'none' },
+      N('20', BLACK),
+      N('10', RED),
+      N('30', RED),
+      N('5', RED),
+      N('15', BLACK),
+      N('40', BLACK),
     ],
     packets: [],
     timeline: [
-      { type: 'comment', object: 'n', text: s.insert, duration: 1700 },
-      { type: 'comment', object: 'n', text: s.redRed, duration: 1700 },
-      { type: 'comment', object: 'u', text: s.uncleRed, duration: 1700 },
+      { type: 'comment', object: '5', text: s.insert, duration: 1800 },
+      { type: 'comment', object: '30', text: s.uncleRed, duration: 1900 },
       {
         type: 'parallel',
         actions: [
-          { type: 'set_color', object: 'p', background_color: BLACK },
-          { type: 'set_color', object: 'u', background_color: BLACK },
+          { type: 'set_color', object: '10', background_color: BLACK },
+          { type: 'set_color', object: '30', background_color: BLACK },
           { type: 'comment', text: s.recolorChildren, keep_until_next: true },
         ],
       },
       {
         type: 'parallel',
         actions: [
-          { type: 'set_color', object: 'g', background_color: RED },
+          { type: 'set_color', object: '20', background_color: RED },
           {
             type: 'comment',
-            object: 'g',
+            object: '20',
             text: s.recolorGrand,
             keep_until_next: true,
           },
@@ -108,10 +86,10 @@ export const redBlackTree = (locale: Locale): DataFlowSpec => {
       {
         type: 'parallel',
         actions: [
-          { type: 'set_color', object: 'g', background_color: BLACK },
+          { type: 'set_color', object: '20', background_color: BLACK },
           {
             type: 'comment',
-            object: 'g',
+            object: '20',
             text: s.rootBlack,
             keep_until_end: true,
           },

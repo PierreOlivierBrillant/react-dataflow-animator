@@ -29,6 +29,8 @@ import { collision } from '../../../apps/docs/src/site-content/demos/collision';
 import { redBlackTree } from '../../../apps/docs/src/site-content/demos/redBlackTree';
 import { redBlackRotation } from '../../../apps/docs/src/site-content/demos/redBlackRotation';
 import { avlTree } from '../../../apps/docs/src/site-content/demos/avlTree';
+import { bstSearch } from '../../../apps/docs/src/site-content/demos/bstSearch';
+import { bstInsert } from '../../../apps/docs/src/site-content/demos/bstInsert';
 
 function collectIds(actions: Action[]): Set<string> {
   const ids = new Set<string>();
@@ -93,6 +95,8 @@ const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['redBlackTree', redBlackTree],
   ['redBlackRotation', redBlackRotation],
   ['avlTree', avlTree],
+  ['bstSearch', bstSearch],
+  ['bstInsert', bstInsert],
 ];
 
 const LOCALES = ['en', 'fr'] as const;

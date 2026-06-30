@@ -524,4 +524,54 @@ describe('Stage — rendu à t fixe', () => {
       topAt(final.container, 'g')
     );
   });
+
+  it('mode arbre : un packet descend entre les nœuds et un nœud caché est révélé (insertion)', () => {
+    // Backs the bstSearch / bstInsert demos: a traveling packet (the orphan key)
+    // moves between tree nodes, and the insertion slot (a visible:false node) is
+    // revealed by set_visible.
+    mockGeometry = {
+      r: { id: 'r', x: 400, y: 100, width: 40, height: 40 },
+      a: { id: 'a', x: 200, y: 300, width: 40, height: 40 },
+      h: { id: 'h', x: 100, y: 500, width: 40, height: 40 },
+    };
+    const spec: DataFlowSpec = {
+      direction: 'tree',
+      tree: { root: 'r', children: { r: { left: 'a' }, a: { left: 'h' } } },
+      nodes: [
+        { id: 'r', type: 'circle', body: '8' },
+        { id: 'a', type: 'circle', body: '4' },
+        { id: 'h', type: 'circle', body: '2', visible: false },
+      ],
+      packets: [{ id: 'k', kind: 'subicon', icon: '2' }],
+      timeline: [
+        { type: 'move', object: 'k', from: 'r', to: 'a', duration: 500 },
+        { type: 'set_visible', object: 'h', visible: true, duration: 300 },
+      ],
+    };
+    const { timeline } = compile(spec);
+
+    // Mid-move: the descending packet is on screen, the insertion slot still hidden.
+    const mid = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={400}
+        highlight={highlightCode}
+      />
+    );
+    expect(mid.container.querySelector('.rdfa-packet')).toBeTruthy();
+    expect(mid.container.querySelector('[data-node-id="h"]')).toBeNull();
+    cleanup();
+
+    // At the end: the hidden node has been revealed at its reserved slot.
+    const end = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={timeline.durationMs}
+        highlight={highlightCode}
+      />
+    );
+    expect(end.container.querySelector('[data-node-id="h"]')).toBeTruthy();
+  });
 });

@@ -32,18 +32,24 @@ import {
 import { Stage } from '../../src/components/Stage';
 import { highlightCode } from '../../src/highlight/highlight';
 import type { DataFlowSpec } from '../../src/types';
-import { demosById } from '../../../../apps/docs/src/site-content/demos';
+import {
+  demosById,
+  getSpec,
+} from '../../../../apps/docs/src/site-content/demos';
 import '../../src/styles/dataflow.css';
 import './harness.css';
 
 const params = new URLSearchParams(window.location.search);
 const demoId = params.get('demo') ?? 'spa';
 const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
+const locale = params.get('locale') === 'fr' ? 'fr' : 'en';
 
-// demosById maps id → { id, title, spec, … } (gallery metadata): the
-// raw spec is under `.spec`, not the object itself.
-const catalog = demosById as Record<string, { id: string; spec: DataFlowSpec }>;
-const spec = catalog[demoId]?.spec;
+// demosById maps id → Demo (gallery metadata). `Demo.spec` may be a localized
+// BUILDER `(locale) => DataFlowSpec`, so we resolve it through `getSpec` rather
+// than passing the raw function to `compile` (which expects a DataFlowSpec).
+const catalog = demosById;
+const demo = catalog[demoId];
+const spec: DataFlowSpec | undefined = demo ? getSpec(demo, locale) : undefined;
 
 // ─── Fluidity curve sampling ────────────────────────────────
 
