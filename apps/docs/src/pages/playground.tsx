@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '@theme/Layout';
+import { useColorMode } from '@docusaurus/theme-common';
 import {
   DataFlowPlayer,
   type DataFlowSpec,
@@ -75,9 +76,13 @@ function clearMonacoRefMarkers(
 
 /* ────────────── Component ────────────── */
 
-export default function PlaygroundPage() {
+// Rendered inside <Layout>, so the call to useColorMode() resolves against the
+// ColorModeProvider that Docusaurus mounts in the layout tree (it is not
+// available above <Layout> in PlaygroundPage).
+function PlaygroundContent() {
   const locale = useLocale();
   const t = useTranslation();
+  const { colorMode } = useColorMode();
   const [demoId, setDemoId] = useState<string>(demos[0].id);
   const [jsonText, setJsonText] = useState(() =>
     JSON.stringify(getSpec(demos[0], locale), null, 2)
@@ -214,233 +219,248 @@ export default function PlaygroundPage() {
   );
 
   return (
+    <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:light] dark:[color-scheme:dark]">
+      {/* Search index for the Algolia crawler (see docs/SEARCH.md). Not rendered. */}
+      <script
+        type="application/json"
+        id="rdfa-search-index"
+        dangerouslySetInnerHTML={{ __html: searchIndexJson }}
+      />
+      {/* Page header — px-5 gutter aligned with the navbar and the rest of the site */}
+      <div className="flex-none px-5 py-4 border-b border-slate-900/[0.08] dark:border-white/[.06] flex items-center gap-4">
+        <div>
+          <h1 className="text-slate-900 dark:text-white mb-0 font-heading text-xl font-bold leading-tight tracking-tight">
+            {t.playground.title}
+          </h1>
+          <p className="text-xs mt-0.5 mb-0 text-slate-500 dark:text-white/35 font-sans">
+            {t.playground.subtitle}
+          </p>
+        </div>
+      </div>
+
+      {/* Body: editor | preview */}
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden relative">
+        {/* ─── LEFT: JSON Editor ─── */}
+        <div
+          className="flex flex-col w-full md:min-w-[340px] flex-1 md:flex-none border-b md:border-b-0 overflow-hidden bg-surface-alt"
+          style={{
+            width:
+              mounted && window.innerWidth >= 768 ? `${leftWidth}%` : undefined,
+          }}
+        >
+          {/* Toolbar */}
+          <div className="flex-none flex items-center gap-2 px-3 py-2 border-b border-slate-900/[0.08] dark:border-white/[.05] bg-slate-900/[0.015] dark:bg-white/[.015] flex-wrap">
+            {/* Template select */}
+            <div className="relative">
+              <select
+                value={demoId}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+                className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-slate-900/[0.04] dark:bg-white/[.06] border border-slate-900/[0.1] dark:border-white/[.09] text-slate-700 dark:text-white/75 font-sans"
+              >
+                {demos.map((demo) => (
+                  <option key={demo.id} value={demo.id}>
+                    {pickLocale(demo.title, locale)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={11}
+                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
+              />
+            </div>
+
+            {/* Format */}
+            <button
+              onClick={handleFormat}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer bg-slate-900/[0.04] dark:bg-white/[.04] border border-slate-900/[0.08] dark:border-white/[.08] text-slate-600 dark:text-white/50 font-sans"
+            >
+              <WrapText size={11} />
+              {t.playground.format}
+            </button>
+
+            {/* Density */}
+            <div className="relative">
+              <select
+                value={density}
+                onChange={(e) =>
+                  setDensity(
+                    e.target.value as NonNullable<
+                      DataFlowPlayerProps['density']
+                    >
+                  )
+                }
+                className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-slate-900/[0.04] dark:bg-white/[.04] border border-slate-900/[0.08] dark:border-white/[.08] text-slate-600 dark:text-white/45 font-sans"
+              >
+                <option value="compact">{t.playground.densityCompact}</option>
+                <option value="comfortable">
+                  {t.playground.densityComfortable}
+                </option>
+                <option value="spacious">{t.playground.densitySpacious}</option>
+              </select>
+              <ChevronDown
+                size={11}
+                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
+              />
+            </div>
+
+            {/* Copy */}
+            <button
+              onClick={handleCopy}
+              className={`ml-auto p-1.5 rounded-lg transition-colors cursor-pointer bg-transparent border-none outline-none ${copied ? 'text-emerald-500 dark:text-[#34d399]' : 'text-slate-400 dark:text-white/30'}`}
+              title={t.playground.copy}
+            >
+              {copied ? <Check size={13} /> : <Copy size={13} />}
+            </button>
+          </div>
+
+          {/* Editor area */}
+          <div className="relative flex-1 overflow-hidden">
+            <Editor
+              height="100%"
+              language="json"
+              theme={colorMode === 'dark' ? 'rdfa-dark' : 'rdfa-light'}
+              value={jsonText}
+              onChange={(value) => setJsonText(value || '')}
+              onMount={(editor, monaco) => {
+                editorRef.current = editor;
+                monacoRef.current = monaco;
+              }}
+              beforeMount={(monaco) => {
+                // Backgrounds mirror --ifm-background-surface-alt per mode so
+                // the editor blends into its bg-surface-alt panel; the prop
+                // above swaps between the two as the Docusaurus theme changes.
+                monaco.editor.defineTheme('rdfa-dark', {
+                  base: 'vs-dark',
+                  inherit: true,
+                  rules: [],
+                  colors: {
+                    'editor.background': '#0B0A10',
+                    'editor.lineHighlightBackground': '#ffffff0a',
+                  },
+                });
+                monaco.editor.defineTheme('rdfa-light', {
+                  base: 'vs',
+                  inherit: true,
+                  rules: [],
+                  colors: {
+                    'editor.background': '#ECEBF5',
+                    'editor.lineHighlightBackground': '#0000000a',
+                  },
+                });
+                monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                  validate: true,
+                  schemas: [
+                    {
+                      uri: 'http://react-dataflow-animator/schema.json',
+                      fileMatch: ['*'],
+                      schema: dataFlowSchema,
+                    },
+                  ],
+                });
+              }}
+              options={{
+                minimap: { enabled: false },
+                fontSize: monoSize,
+                fontFamily: "'JetBrains Mono', monospace",
+                wordWrap: 'on',
+                scrollBeyondLastLine: false,
+                lineNumbers: 'on',
+                renderLineHighlight: 'none',
+                hideCursorInOverviewRuler: true,
+                scrollbar: {
+                  verticalScrollbarSize: 8,
+                  horizontalScrollbarSize: 8,
+                },
+                padding: { top: 16, bottom: 16 },
+                overviewRulerBorder: false,
+              }}
+              loading={
+                <div className="flex items-center justify-center w-full h-full text-slate-500 dark:text-white/30 text-sm font-sans">
+                  {t.playground.loadingEditor}
+                </div>
+              }
+            />
+          </div>
+
+          {/* Error bar */}
+          {parseError && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              className="flex-none flex items-start gap-2 px-3 py-2.5 text-xs bg-red-500/[.08] border-t border-red-500/20 text-red-600 dark:text-red-300 font-mono text-[10px]"
+            >
+              <AlertCircle size={12} className="mt-0.5 shrink-0" />
+              <span className="break-all">{parseError}</span>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Resizer Handle (Desktop only) */}
+        <div
+          className={`hidden md:block w-[1.5px] hover:w-1.5 hover:-ml-[2px] hover:-mr-[2px] cursor-col-resize hover:bg-violet-500 transition-colors z-10 shrink-0 ${isResizing ? 'bg-violet-500 w-1.5 -ml-[2px] -mr-[2px]' : 'bg-slate-900/[0.1] dark:bg-white/[.06]'}`}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setIsResizing(true);
+          }}
+        />
+
+        {/* ─── RIGHT: Preview ─── */}
+        <div
+          className="flex flex-col flex-1 overflow-hidden bg-surface-alt relative"
+          style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
+        >
+          <div className="flex-1 overflow-hidden relative bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,0.07)_0%,transparent_70%)]">
+            {spec ? (
+              <DataFlowPlayer
+                spec={spec}
+                theme="auto"
+                controls={true}
+                exportable={true}
+                density={density}
+                height="100%"
+                className="w-full h-full rounded-none border-x-0 border-t-0 bg-transparent border-none"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center text-sm text-slate-400 dark:text-white/20 font-sans">
+                  {t.playground.emptyState}
+                </div>
+              </div>
+            )}
+          </div>
+          {schemaErrors.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              className="flex-none overflow-hidden"
+            >
+              <ul className="rdfa-playground-errors">
+                {schemaErrors.map((err, i) => (
+                  <li key={i}>
+                    <span className="rdfa-playground-errors-path">
+                      {err.path}
+                    </span>
+                    {' — '}
+                    {err.message}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function PlaygroundPage() {
+  const t = useTranslation();
+  return (
     <Layout
       title={t.playground.pageTitle}
       description={t.playground.pageDescription}
     >
-      <main className="flex flex-col overflow-hidden bg-surface-alt h-[calc(100vh-var(--ifm-navbar-height,64px))] [color-scheme:light] dark:[color-scheme:dark]">
-        {/* Search index for the Algolia crawler (see docs/SEARCH.md). Not rendered. */}
-        <script
-          type="application/json"
-          id="rdfa-search-index"
-          dangerouslySetInnerHTML={{ __html: searchIndexJson }}
-        />
-        {/* Page header — px-5 gutter aligned with the navbar and the rest of the site */}
-        <div className="flex-none px-5 py-4 border-b border-slate-900/[0.08] dark:border-white/[.06] flex items-center gap-4">
-          <div>
-            <h1 className="text-slate-900 dark:text-white mb-0 font-heading text-xl font-bold leading-tight tracking-tight">
-              {t.playground.title}
-            </h1>
-            <p className="text-xs mt-0.5 mb-0 text-slate-500 dark:text-white/35 font-sans">
-              {t.playground.subtitle}
-            </p>
-          </div>
-        </div>
-
-        {/* Body: editor | preview */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden relative">
-          {/* ─── LEFT: JSON Editor ─── */}
-          <div
-            className="flex flex-col w-full md:min-w-[340px] flex-1 md:flex-none border-b md:border-b-0 overflow-hidden bg-surface-alt"
-            style={{
-              width:
-                mounted && window.innerWidth >= 768
-                  ? `${leftWidth}%`
-                  : undefined,
-            }}
-          >
-            {/* Toolbar */}
-            <div className="flex-none flex items-center gap-2 px-3 py-2 border-b border-slate-900/[0.08] dark:border-white/[.05] bg-slate-900/[0.015] dark:bg-white/[.015] flex-wrap">
-              {/* Template select */}
-              <div className="relative">
-                <select
-                  value={demoId}
-                  onChange={(e) => handleTemplateChange(e.target.value)}
-                  className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-slate-900/[0.04] dark:bg-white/[.06] border border-slate-900/[0.1] dark:border-white/[.09] text-slate-700 dark:text-white/75 font-sans"
-                >
-                  {demos.map((demo) => (
-                    <option key={demo.id} value={demo.id}>
-                      {pickLocale(demo.title, locale)}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={11}
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
-                />
-              </div>
-
-              {/* Format */}
-              <button
-                onClick={handleFormat}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer bg-slate-900/[0.04] dark:bg-white/[.04] border border-slate-900/[0.08] dark:border-white/[.08] text-slate-600 dark:text-white/50 font-sans"
-              >
-                <WrapText size={11} />
-                {t.playground.format}
-              </button>
-
-              {/* Density */}
-              <div className="relative">
-                <select
-                  value={density}
-                  onChange={(e) =>
-                    setDensity(
-                      e.target.value as NonNullable<
-                        DataFlowPlayerProps['density']
-                      >
-                    )
-                  }
-                  className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-slate-900/[0.04] dark:bg-white/[.04] border border-slate-900/[0.08] dark:border-white/[.08] text-slate-600 dark:text-white/45 font-sans"
-                >
-                  <option value="compact">{t.playground.densityCompact}</option>
-                  <option value="comfortable">
-                    {t.playground.densityComfortable}
-                  </option>
-                  <option value="spacious">
-                    {t.playground.densitySpacious}
-                  </option>
-                </select>
-                <ChevronDown
-                  size={11}
-                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
-                />
-              </div>
-
-              {/* Copy */}
-              <button
-                onClick={handleCopy}
-                className={`ml-auto p-1.5 rounded-lg transition-colors cursor-pointer bg-transparent border-none outline-none ${copied ? 'text-emerald-500 dark:text-[#34d399]' : 'text-slate-400 dark:text-white/30'}`}
-                title={t.playground.copy}
-              >
-                {copied ? <Check size={13} /> : <Copy size={13} />}
-              </button>
-            </div>
-
-            {/* Editor area */}
-            <div className="relative flex-1 overflow-hidden">
-              <Editor
-                height="100%"
-                language="json"
-                theme="rdfa-dark"
-                value={jsonText}
-                onChange={(value) => setJsonText(value || '')}
-                onMount={(editor, monaco) => {
-                  editorRef.current = editor;
-                  monacoRef.current = monaco;
-                }}
-                beforeMount={(monaco) => {
-                  monaco.editor.defineTheme('rdfa-dark', {
-                    base: 'vs-dark',
-                    inherit: true,
-                    rules: [],
-                    colors: {
-                      'editor.background': '#0B0A10',
-                      'editor.lineHighlightBackground': '#ffffff0a',
-                    },
-                  });
-                  monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-                    validate: true,
-                    schemas: [
-                      {
-                        uri: 'http://react-dataflow-animator/schema.json',
-                        fileMatch: ['*'],
-                        schema: dataFlowSchema,
-                      },
-                    ],
-                  });
-                }}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: monoSize,
-                  fontFamily: "'JetBrains Mono', monospace",
-                  wordWrap: 'on',
-                  scrollBeyondLastLine: false,
-                  lineNumbers: 'on',
-                  renderLineHighlight: 'none',
-                  hideCursorInOverviewRuler: true,
-                  scrollbar: {
-                    verticalScrollbarSize: 8,
-                    horizontalScrollbarSize: 8,
-                  },
-                  padding: { top: 16, bottom: 16 },
-                  overviewRulerBorder: false,
-                }}
-                loading={
-                  <div className="flex items-center justify-center w-full h-full text-slate-500 dark:text-white/30 text-sm font-sans">
-                    {t.playground.loadingEditor}
-                  </div>
-                }
-              />
-            </div>
-
-            {/* Error bar */}
-            {parseError && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                className="flex-none flex items-start gap-2 px-3 py-2.5 text-xs bg-red-500/[.08] border-t border-red-500/20 text-red-600 dark:text-red-300 font-mono text-[10px]"
-              >
-                <AlertCircle size={12} className="mt-0.5 shrink-0" />
-                <span className="break-all">{parseError}</span>
-              </motion.div>
-            )}
-          </div>
-
-          {/* Resizer Handle (Desktop only) */}
-          <div
-            className={`hidden md:block w-[1.5px] hover:w-1.5 hover:-ml-[2px] hover:-mr-[2px] cursor-col-resize hover:bg-violet-500 transition-colors z-10 shrink-0 ${isResizing ? 'bg-violet-500 w-1.5 -ml-[2px] -mr-[2px]' : 'bg-slate-900/[0.1] dark:bg-white/[.06]'}`}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              setIsResizing(true);
-            }}
-          />
-
-          {/* ─── RIGHT: Preview ─── */}
-          <div
-            className="flex flex-col flex-1 overflow-hidden bg-surface-alt relative"
-            style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
-          >
-            <div className="flex-1 overflow-hidden relative bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,0.07)_0%,transparent_70%)]">
-              {spec ? (
-                <DataFlowPlayer
-                  spec={spec}
-                  theme="auto"
-                  controls={true}
-                  exportable={true}
-                  density={density}
-                  height="100%"
-                  className="w-full h-full rounded-none border-x-0 border-t-0 bg-transparent border-none"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center text-sm text-slate-400 dark:text-white/20 font-sans">
-                    {t.playground.emptyState}
-                  </div>
-                </div>
-              )}
-            </div>
-            {schemaErrors.length > 0 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                className="flex-none overflow-hidden"
-              >
-                <ul className="rdfa-playground-errors">
-                  {schemaErrors.map((err, i) => (
-                    <li key={i}>
-                      <span className="rdfa-playground-errors-path">
-                        {err.path}
-                      </span>
-                      {' — '}
-                      {err.message}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-          </div>
-        </div>
-      </main>
+      <PlaygroundContent />
     </Layout>
   );
 }
