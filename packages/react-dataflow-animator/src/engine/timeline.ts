@@ -17,6 +17,7 @@ export type ClipKind =
   | 'comment'
   | 'highlight'
   | 'set_visible'
+  | 'set_color'
   | 'rotate';
 
 interface ClipBase {
@@ -93,6 +94,18 @@ export interface SetVisibleClip extends ClipBase {
   visible: boolean;
 }
 
+export interface SetColorClip extends ClipBase {
+  kind: 'set_color';
+  /** Mutated static node ID. */
+  objectId: string;
+  /** New background color (predefined name or hex), if this clip changes it. */
+  backgroundColor?: string;
+  /** New border/stroke color, if this clip changes it. */
+  borderColor?: string;
+  /** New text color, if this clip changes it. */
+  textColor?: string;
+}
+
 export interface RotateClip extends ClipBase {
   kind: 'rotate';
   /** ID of the rotated static node. */
@@ -117,6 +130,7 @@ export type Clip =
   | CommentClip
   | HighlightClip
   | SetVisibleClip
+  | SetColorClip
   | RotateClip;
 
 export interface Step {

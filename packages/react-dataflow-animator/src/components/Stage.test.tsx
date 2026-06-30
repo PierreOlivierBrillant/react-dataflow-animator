@@ -355,4 +355,105 @@ describe('Stage — rendu à t fixe', () => {
     );
     expect(ids).not.toContain('server');
   });
+
+  it('recolore un nœud via set_color (cross-fade color-mix, fin de transition)', () => {
+    const spec: DataFlowSpec = {
+      nodes: [
+        { id: 'client', type: 'laptop', lane: 1 },
+        { id: 'server', type: 'circle', lane: 2, background_color: 'crimson' },
+      ],
+      packets: [],
+      timeline: [
+        {
+          type: 'set_color',
+          object: 'server',
+          background_color: '#1a1a1a',
+          duration: 400,
+        },
+      ],
+    };
+    const { timeline } = compile(spec);
+    // set_color startMs=0, endMs=400, durationMs=400. At t=400, progress=1 →
+    // color-mix at 100% of the target, faded from the node's initial crimson.
+    const { container } = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={400}
+        highlight={highlightCode}
+      />
+    );
+    const node = container.querySelector(
+      '[data-node-id="server"]'
+    ) as HTMLElement;
+    const fill = node.style.getPropertyValue('--rdfa-fill');
+    expect(fill).toContain('color-mix');
+    expect(fill).toContain('crimson'); // cross-faded FROM the initial color
+    expect(fill).toContain('#1a1a1a'); // ...TO the target
+    expect(fill).toContain('100.00%'); // fully reached at end of transition
+    // The pictogram tint badge is enabled by the override too.
+    expect(node.classList.contains('rdfa-node--tinted')).toBe(true);
+  });
+
+  it('set_color sur un nœud sans couleur initiale : adoption directe (sans color-mix)', () => {
+    const spec: DataFlowSpec = {
+      nodes: [
+        { id: 'client', type: 'laptop', lane: 1 },
+        { id: 'server', type: 'circle', lane: 2 },
+      ],
+      packets: [],
+      timeline: [
+        {
+          type: 'set_color',
+          object: 'server',
+          background_color: 'seagreen',
+          duration: 400,
+        },
+      ],
+    };
+    const { timeline } = compile(spec);
+    // No faithful "from": the override adopts the target directly rather than
+    // inventing an origin color to mix from.
+    const { container } = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={200}
+        highlight={highlightCode}
+      />
+    );
+    const node = container.querySelector(
+      '[data-node-id="server"]'
+    ) as HTMLElement;
+    expect(node.style.getPropertyValue('--rdfa-fill')).toBe('seagreen');
+  });
+
+  it('set_color : avant le début de la transition, la couleur initiale tient', () => {
+    const spec: DataFlowSpec = {
+      nodes: [
+        { id: 'client', type: 'laptop', lane: 1 },
+        { id: 'server', type: 'circle', lane: 2, background_color: 'crimson' },
+      ],
+      packets: [],
+      timeline: [
+        { type: 'arrow', id: 'A', from: 'client', to: 'server', duration: 300 },
+        {
+          type: 'set_color',
+          object: 'server',
+          background_color: '#1a1a1a',
+          duration: 400,
+        },
+      ],
+    };
+    const { timeline } = compile(spec);
+    // At t=0 the set_color has not started: the node keeps its static crimson,
+    // with no color-mix override yet.
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    const node = container.querySelector(
+      '[data-node-id="server"]'
+    ) as HTMLElement;
+    expect(node.style.getPropertyValue('--rdfa-fill')).toBe('crimson');
+  });
 });

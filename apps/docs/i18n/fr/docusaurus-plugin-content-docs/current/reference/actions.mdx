@@ -12,6 +12,7 @@ import {
   setContentExample,
   commentExample,
   setVisibleExample,
+  setColorExample,
   rotateExample,
   highlightExample,
 } from './_actions/examples';
@@ -208,6 +209,34 @@ Voir [Nœuds → `visible`](../concepts/nodes.mdx#visible--visibilité-initiale)
 pour l'usage combiné avec la visibilité initiale.
 
 <DataFlowPlayer spec={setVisibleExample} theme="auto" height={300} />
+
+## `set_color`
+
+Recolore un nœud statique à l'exécution. Mute n'importe lequel des trois canaux
+de couleur — `background_color`, `border_color`, `text_color` — sur `duration`
+ms, avec un fondu enchaîné _eased_ et **déterministe** entre l'ancienne couleur
+et la nouvelle (via `color-mix` CSS, donc scrubbable dans les deux sens). Seuls
+les canaux que vous fournissez changent ; les autres gardent leur valeur
+courante.
+
+```ts
+{ type: 'set_color', object: 'noeud', background_color: '#1f2937', duration: 600 }
+```
+
+Même espace de valeurs que les [couleurs de nœud](../concepts/nodes.mdx) :
+un nom CSS prédéfini (`tomato`, `steelblue`…) ou un hexadécimal exact
+(`#1a1a1a`). Les mêmes dérivations automatiques s'appliquent — un
+`background_color` sans `border_color` dérive une bordure coordonnée, et sans
+`text_color` une encre à fort contraste (hors zones de coloration syntaxique).
+La couleur atteinte **persiste** jusqu'à la fin de la chronologie (comme
+`set_visible`), et des `set_color` successifs sur le même nœud **s'enchaînent** :
+chacun part en fondu de la couleur précédente.
+
+C'est l'opération centrale des visualisations d'algorithmes qui recolorent des
+nœuds — par exemple la recoloration rouge/noir d'un arbre rouge-noir. Ci-dessous,
+un nœud inséré « rouge » est recoloré en « noir » :
+
+<DataFlowPlayer spec={setColorExample} theme="auto" height={300} />
 
 ## `rotate`
 

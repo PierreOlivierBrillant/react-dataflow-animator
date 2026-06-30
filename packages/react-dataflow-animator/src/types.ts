@@ -390,6 +390,7 @@ export type ActionType =
   | 'comment'
   | 'highlight'
   | 'set_visible'
+  | 'set_color'
   | 'rotate'
   | 'wait';
 
@@ -512,6 +513,49 @@ interface SetVisibleAction extends ActionBase {
 }
 
 /**
+ * Recolors a static node at runtime. Mutates any of the node's three color
+ * channels — `background_color`, `border_color`, `text_color` — over `duration`
+ * ms, with a deterministic eased cross-fade between the previous color and the
+ * new one (via CSS `color-mix`, so it stays scrubbable in both directions).
+ *
+ * Same value space as the node's static colors: a predefined CSS color name
+ * (`tomato`, `steelblue`…) or an exact hex (`#1a1a1a`). Only the channels you
+ * provide change; the others keep their current value. Auto-derivations apply
+ * exactly as for a static node (a `background_color` without `border_color`
+ * derives a coordinated border; without `text_color`, a high-contrast ink —
+ * the latter only outside syntax-highlighted areas). The reached color persists
+ * until the end of the timeline, like {@link SetVisibleAction}.
+ *
+ * This is the core operation for algorithm visualizations that recolor nodes —
+ * e.g. the red/black recoloring of a red-black tree.
+ */
+interface SetColorAction extends ActionBase {
+  type: 'set_color';
+  /** ID of the node to recolor. */
+  object: string;
+  /**
+   * New background color (shape fill, panel background, pill behind a
+   * pictogram). Predefined CSS name or hex. Omit to leave it unchanged.
+   * @example "#1a1a1a"
+   */
+  background_color?: string;
+  /**
+   * New border / stroke color. Predefined CSS name or hex. Omit to leave it
+   * unchanged. If `background_color` is set without `border_color`, a
+   * coordinated border (darker background) is derived automatically.
+   * @example "crimson"
+   */
+  border_color?: string;
+  /**
+   * New color of the text inside the node (shape body, panel header/body),
+   * effective only when syntax highlighting is disabled. Predefined CSS name or
+   * hex. Omit to leave it unchanged.
+   * @example "white"
+   */
+  text_color?: string;
+}
+
+/**
  * Animates the visual rotation of a node. Two mutually exclusive modes:
  *
  * - **Target angle** (`to`): a single eased rotation toward an absolute angle.
@@ -564,6 +608,7 @@ export type Action =
   | CommentAction
   | HighlightAction
   | SetVisibleAction
+  | SetColorAction
   | RotateAction
   | WaitAction;
 

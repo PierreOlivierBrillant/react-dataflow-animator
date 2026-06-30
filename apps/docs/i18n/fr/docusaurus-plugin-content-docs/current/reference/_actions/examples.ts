@@ -219,6 +219,38 @@ export const setVisibleExample: DataFlowSpec = {
   ],
 };
 
+/** `set_color` : un nœud est recoloré en cours de chronologie (fondu rouge → noir). */
+export const setColorExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: [
+    {
+      id: 'n',
+      type: 'circle',
+      text: 'nœud',
+      body: '7',
+      background_color: 'crimson',
+      text_color: 'white',
+      lane: 1,
+    },
+  ],
+  packets: [],
+  timeline: [
+    { type: 'comment', object: 'n', text: 'Inséré rouge', duration: 900 },
+    {
+      type: 'set_color',
+      object: 'n',
+      background_color: '#1f2937',
+      duration: 600,
+    },
+    {
+      type: 'comment',
+      object: 'n',
+      text: 'Recoloré noir',
+      keep_until_end: true,
+    },
+  ],
+};
+
 /** `rotate` : rotations enchaînées vers des angles absolus ; le label reste droit. */
 export const rotateExample: DataFlowSpec = {
   direction: 'left-to-right',

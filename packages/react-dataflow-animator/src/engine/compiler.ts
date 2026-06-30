@@ -13,6 +13,7 @@ import type {
   LoadingClip,
   MoveClip,
   RotateClip,
+  SetColorClip,
   SetContentClip,
   SetVisibleClip,
   Step,
@@ -50,6 +51,7 @@ const DEFAULT_DURATION: Record<ActionType, number> = {
   highlight: 600,
   parallel: 0,
   set_visible: 300,
+  set_color: 400,
   rotate: 600,
   wait: 1000,
 };
@@ -63,6 +65,7 @@ const DEFAULT_KEEP_NEXT: Partial<Record<ActionType, boolean>> = {
   highlight: true,
   loading: false,
   set_visible: false,
+  set_color: false,
   rotate: false,
 };
 
@@ -313,6 +316,40 @@ function compileAction(
         visible: action.visible,
         // keepEnd forced to true: visibility state persists until the end of the
         // timeline so Stage can query the clip at any time.
+        keepEnd: true,
+      };
+      ctx.pending.push({
+        clip,
+        keepUntil: undefined,
+        keepNext: false,
+        keepEnd: true,
+        stepIndex,
+      });
+      if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
+      break;
+    }
+    case 'set_color': {
+      const hasColor =
+        action.background_color != null ||
+        action.border_color != null ||
+        action.text_color != null;
+      if (!action.object || !hasColor) {
+        ctx.warnings.push(
+          `set_color "${id}": object and at least one color ` +
+            `(background_color/border_color/text_color) required.`
+        );
+        break;
+      }
+      const clip: SetColorClip = {
+        ...base,
+        kind: 'set_color',
+        objectId: action.object,
+        backgroundColor: action.background_color,
+        borderColor: action.border_color,
+        textColor: action.text_color,
+        // keepEnd forced to true: like set_visible, the color persists until the
+        // end of the timeline so Stage can read the node's color at any later
+        // instant (the clip stays in `active`, latest one per node winning).
         keepEnd: true,
       };
       ctx.pending.push({

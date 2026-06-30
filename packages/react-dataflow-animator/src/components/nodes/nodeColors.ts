@@ -2,6 +2,19 @@ import type { CSSProperties } from 'react';
 import type { Node } from '../../types';
 
 /**
+ * Runtime recolor override (the `set_color` action). Each channel, when present,
+ * replaces the node's corresponding static color before derivation — so a
+ * `background_color` override alone still derives a coordinated border / ink,
+ * exactly like a static tint. Values are already-resolved CSS color strings,
+ * possibly a `color-mix(...)` expression (the eased recolor cross-fade).
+ */
+export interface ColorOverride {
+  background_color?: string;
+  border_color?: string;
+  text_color?: string;
+}
+
+/**
  * Node tint CSS variables, computed from `background_color` /
  * `border_color`. Applied to the `.rdfa-node` root; the CSS for shapes, panels
  * and pictograms reads them with a fallback to theme colors.
@@ -18,9 +31,15 @@ import type { Node } from '../../types';
  * - Text: if `text_color` is absent but a background is defined, a very high
  *   contrast color (black or white) based on the background luminance, via the
  *   relative color syntax `oklch(from …)`.
+ *
+ * An optional `override` (from an active `set_color`) takes precedence over the
+ * static colors per channel; derivations then run on the effective values, so
+ * the border/ink follow a recolored background.
  */
-export function nodeTint(node: Node): CSSProperties {
-  const { background_color: bg, border_color: border, text_color: text } = node;
+export function nodeTint(node: Node, override?: ColorOverride): CSSProperties {
+  const bg = override?.background_color ?? node.background_color;
+  const border = override?.border_color ?? node.border_color;
+  const text = override?.text_color ?? node.text_color;
   const style: Record<string, string> = {};
   if (bg) style['--rdfa-fill'] = bg;
   const stroke = border ?? (bg ? complementaryBorder(bg) : undefined);

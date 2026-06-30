@@ -26,6 +26,7 @@ import { webhook } from './demos/webhook';
 import { circular } from './demos/circular';
 import { collision } from './demos/collision';
 import { pushNotifications } from './demos/pushNotifications';
+import { redBlackTree } from './demos/redBlackTree';
 
 /** Clé de catégorie (stable, indépendante de la langue). Les libellés affichés
  * sont traduits via le dictionnaire (`gallery.categories`). */
@@ -499,6 +500,37 @@ export const demos: Demo[] = [
       en: ['layout', 'circular', 'orchestrator', 'layout', 'fan-out'],
     },
     spec: circular,
+  },
+  {
+    id: 'redBlackTree',
+    title: {
+      fr: 'Arbre rouge-noir — recoloration',
+      en: 'Red-black tree — recoloring',
+    },
+    description: {
+      fr: "Insertion d'une feuille rouge sous un parent rouge dont l'oncle est rouge aussi : le rééquilibrage se fait par pure recoloration (parent et oncle en noir, grand-parent en rouge), sans rotation. Illustre l'action set_color.",
+      en: 'Inserting a red leaf under a red parent whose uncle is also red: rebalancing is a pure recoloring (parent and uncle to black, grandparent to red), no rotation. Showcases the set_color action.',
+    },
+    category: 'engine',
+    tags: {
+      fr: [
+        'arbre',
+        'rouge-noir',
+        'recoloration',
+        'set_color',
+        'équilibrage',
+        'structure de données',
+      ],
+      en: [
+        'tree',
+        'red-black',
+        'recoloring',
+        'set_color',
+        'balancing',
+        'data structure',
+      ],
+    },
+    spec: redBlackTree,
   },
   {
     id: 'collision',

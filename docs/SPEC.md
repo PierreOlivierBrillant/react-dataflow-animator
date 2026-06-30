@@ -171,7 +171,17 @@ The timeline compiles an array of ordered actions. See
 9. **set_visible**: shows or hides a static node (`object`) with a fade.
    The visibility state persists until the end of the chronology (or a
    contrary `set_visible`); complements the initial `visible` field of the nodes.
-10. **rotate**: animates the visual rotation of a node (`object`). Two mutually
+10. **set_color**: recolors a static node (`object`) at runtime — any of
+    `background_color` / `border_color` / `text_color`, only the channels
+    provided changing. Eased, **deterministic** cross-fade between the previous
+    color and the new one (CSS `color-mix`, so it stays scrubbable both ways).
+    Same value space and auto-derivations as the static node colors (a
+    `background_color` without border/text derives a coordinated border and a
+    high-contrast ink). Like `set_visible`, the reached color persists until the
+    end of the chronology, and successive `set_color` on a node chain (each
+    fades from the previous color). Core operation for recoloring visualizations
+    (e.g. the red/black recoloring of a red-black tree).
+11. **rotate**: animates the visual rotation of a node (`object`). Two mutually
     exclusive modes:
     - **target angle** `to` (degrees): a single _eased_ rotation. The start
       angle is the node's current rotation (its static `rotation`, or a previous

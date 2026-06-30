@@ -21,6 +21,7 @@ import {
   type HighlightClip,
   type MoveClip,
   type RotateClip,
+  type SetColorClip,
   type SetContentClip,
   type SetVisibleClip,
   type Timeline,
@@ -42,6 +43,7 @@ import { useStageGeometry } from '../hooks/useStageGeometry';
 import { buildStageSignature } from './stageSignature';
 import { clipOpacity, contentCrossfade } from './clipOpacity';
 import { StaticNode } from './nodes/StaticNode';
+import type { ColorOverride } from './nodes/nodeColors';
 import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
 import { CommentBubble } from './CommentBubble';
@@ -399,6 +401,44 @@ export function Stage({
     }
   }
 
+  // Color override by node: accumulates active set_color clips in startMs order.
+  // Each clip overrides only the channels it sets, cross-fading (eased) from the
+  // accumulated value to its target via CSS `color-mix` — deterministic in t, so
+  // it scrubs both ways (unlike a wall-clock CSS transition). Like set_visible,
+  // set_color clips have keepEnd=true, so a finished recolor stays applied
+  // (progress 1 → 100% of the target). The map is seeded with the static colors
+  // so the very first recolor cross-fades FROM the node's initial color; only
+  // nodes actually touched by an active clip receive an override (see render).
+  const nodeColor: Record<string, ColorOverride> = {};
+  for (const node of spec.nodes) {
+    if (node.background_color || node.border_color || node.text_color)
+      nodeColor[node.id] = {
+        background_color: node.background_color,
+        border_color: node.border_color,
+        text_color: node.text_color,
+      };
+  }
+  const recoloredNodes = new Set<string>();
+  for (const a of active) {
+    if (a.clip.kind !== 'set_color') continue;
+    const clip = a.clip as SetColorClip;
+    recoloredNodes.add(clip.objectId);
+    const p = easeInOutCubic(a.progress);
+    const prev = nodeColor[clip.objectId] ?? {};
+    // No faithful "from" when the channel was never colored: adopt the target
+    // directly rather than inventing an origin and flashing a wrong color.
+    const mix = (from: string | undefined, to: string): string =>
+      from ? `color-mix(in srgb, ${from}, ${to} ${(p * 100).toFixed(2)}%)` : to;
+    const next: ColorOverride = { ...prev };
+    if (clip.backgroundColor != null)
+      next.background_color = mix(prev.background_color, clip.backgroundColor);
+    if (clip.borderColor != null)
+      next.border_color = mix(prev.border_color, clip.borderColor);
+    if (clip.textColor != null)
+      next.text_color = mix(prev.text_color, clip.textColor);
+    nodeColor[clip.objectId] = next;
+  }
+
   const loadingNodes = useMemo(() => {
     const set = new Set<string>();
     for (const a of active)
@@ -563,6 +603,9 @@ export function Stage({
             highlight={highlight}
             opacity={nodeOpacity < 1 ? nodeOpacity : undefined}
             rotation={nodeRotation[o.id]}
+            colorOverride={
+              recoloredNodes.has(o.id) ? nodeColor[o.id] : undefined
+            }
             reveal={revealByNode[o.id]}
             contentLimit={
               contentLimits[o.id]

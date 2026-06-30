@@ -8,7 +8,7 @@ import type { NodePlacement } from '../../engine/layout';
 import { ContentPanel } from '../dynamic/ContentPanel';
 import { NodeView } from './NodeView';
 import { isPanelNode, isShapeType } from './nodeKinds';
-import { nodeTint } from './nodeColors';
+import { nodeTint, type ColorOverride } from './nodeColors';
 import { getSubIcon } from './subIcons';
 
 export interface StaticNodeProps {
@@ -27,6 +27,8 @@ export interface StaticNodeProps {
   opacity?: number;
   /** Clockwise rotation (deg) of the node visual. The label stays upright. */
   rotation?: number;
+  /** Runtime color override (active set_color), eased cross-fade per channel. */
+  colorOverride?: ColorOverride;
   /** Revealed fraction [0..1] of the panel during a set_content transition. The
    *  reveal happens from TOP to bottom via `clip-path` — which does not change the
    *  layout size, so the ResizeObserver always measures the full panel
@@ -52,6 +54,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     highlight,
     opacity,
     rotation,
+    colorOverride,
     reveal,
     contentLimit,
     codeFontScale,
@@ -139,7 +142,9 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       (content ? ' rdfa-node--content' : '') +
       (!content && isPanel ? ' rdfa-node--panel' : '') +
       (!content && isShape ? ' rdfa-node--shape' : '') +
-      (!content && object.background_color ? ' rdfa-node--tinted' : '') +
+      (!content && (colorOverride?.background_color ?? object.background_color)
+        ? ' rdfa-node--tinted'
+        : '') +
       (highlighted ? ' rdfa-node--highlight' : '');
 
     return (
@@ -159,7 +164,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
                   '--rdfa-content-maxh': `${contentLimit.maxH}px`,
                 }
               : {}),
-            ...nodeTint(object),
+            ...nodeTint(object, colorOverride),
           } as CSSProperties
         }
       >

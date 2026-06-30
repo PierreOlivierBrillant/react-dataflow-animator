@@ -26,6 +26,7 @@ import { graphql } from '../../../apps/docs/src/site-content/demos/graphql';
 import { webhook } from '../../../apps/docs/src/site-content/demos/webhook';
 import { circular } from '../../../apps/docs/src/site-content/demos/circular';
 import { collision } from '../../../apps/docs/src/site-content/demos/collision';
+import { redBlackTree } from '../../../apps/docs/src/site-content/demos/redBlackTree';
 
 function collectIds(actions: Action[]): Set<string> {
   const ids = new Set<string>();
@@ -87,6 +88,7 @@ const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['webhook', webhook],
   ['circular', circular],
   ['collision', collision],
+  ['redBlackTree', redBlackTree],
 ];
 
 const LOCALES = ['en', 'fr'] as const;

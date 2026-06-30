@@ -12,6 +12,7 @@ import {
   setContentExample,
   commentExample,
   setVisibleExample,
+  setColorExample,
   rotateExample,
   highlightExample,
 } from './_actions/examples';
@@ -206,6 +207,32 @@ a contrary `set_visible`).
 ```
 
 <DataFlowPlayer spec={setVisibleExample} theme="auto" height={300} />
+
+## `set_color`
+
+Recolors a static node at runtime. Mutates any of the three color channels —
+`background_color`, `border_color`, `text_color` — over `duration` ms, with a
+deterministic eased cross-fade between the previous color and the new one (via
+CSS `color-mix`, so it stays scrubbable in both directions). Only the channels
+you provide change; the others keep their current value.
+
+```ts
+{ type: 'set_color', object: 'node', background_color: '#1f2937', duration: 600 }
+```
+
+Same value space as the [node colors](../concepts/nodes.mdx): a predefined
+CSS name (`tomato`, `steelblue`…) or an exact hex (`#1a1a1a`). The same
+auto-derivations apply — a `background_color` without `border_color` derives a
+coordinated border, and without `text_color` a high-contrast ink (outside
+syntax-highlighted areas). The reached color **persists** until the end of the
+timeline (like `set_visible`), and successive `set_color` on the same node
+**chain**: each one cross-fades from the previous color.
+
+This is the core operation for algorithm visualizations that recolor nodes — for
+instance the red/black recoloring of a red-black tree. Below, a node inserted
+"red" is recolored to "black":
+
+<DataFlowPlayer spec={setColorExample} theme="auto" height={300} />
 
 ## `rotate`
 

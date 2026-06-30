@@ -646,6 +646,68 @@ describe('compile — rotate', () => {
   });
 });
 
+describe('compile — set_color', () => {
+  type SetColorClip = import('./timeline').SetColorClip;
+
+  it('produces a set_color clip with keepEnd=true and visibleUntilMs=durationMs', () => {
+    const { timeline } = compile(
+      specOf([
+        {
+          type: 'set_color',
+          id: 'SC',
+          object: 'a',
+          background_color: '#1a1a1a',
+          text_color: 'white',
+        },
+        { type: 'arrow', id: 'AR', from: 'a', to: 'b', duration: 300 },
+      ])
+    );
+    const sc = timeline.clips.find((c) => c.id === 'SC')! as SetColorClip;
+    expect(sc.kind).toBe('set_color');
+    expect(sc.keepEnd).toBe(true);
+    expect(sc.visibleUntilMs).toBe(timeline.durationMs);
+    expect(sc.backgroundColor).toBe('#1a1a1a');
+    expect(sc.textColor).toBe('white');
+    // Only the provided channels are carried; the rest stay undefined.
+    expect(sc.borderColor).toBeUndefined();
+  });
+
+  it('emits a warning if object is missing', () => {
+    const { timeline, warnings } = compile(
+      specOf([
+        { type: 'set_color', background_color: 'red' } as unknown as Action,
+      ])
+    );
+    expect(timeline.clips).toHaveLength(0);
+    expect(warnings.some((w) => w.includes('set_color'))).toBe(true);
+  });
+
+  it('emits a warning if no color channel is provided', () => {
+    const { timeline, warnings } = compile(
+      specOf([{ type: 'set_color', object: 'a' } as unknown as Action])
+    );
+    expect(timeline.clips).toHaveLength(0);
+    expect(warnings.some((w) => w.includes('set_color'))).toBe(true);
+  });
+
+  it('two successive set_color on the same node both persist to the end', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'set_color', id: 'RED', object: 'a', background_color: 'red' },
+        {
+          type: 'set_color',
+          id: 'BLK',
+          object: 'a',
+          background_color: 'black',
+        },
+      ])
+    );
+    const clips = timeline.clips.filter((c) => c.kind === 'set_color');
+    expect(clips).toHaveLength(2);
+    for (const c of clips) expect(c.visibleUntilMs).toBe(timeline.durationMs);
+  });
+});
+
 describe('compile — wait', () => {
   it('does not emit any clip but creates a step that shifts the following ones', () => {
     const { timeline } = compile(

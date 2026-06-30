@@ -207,6 +207,38 @@ export const setVisibleExample: DataFlowSpec = {
   ],
 };
 
+/** `set_color`: a node is recolored mid-timeline (eased red → black cross-fade). */
+export const setColorExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: [
+    {
+      id: 'n',
+      type: 'circle',
+      text: 'node',
+      body: '7',
+      background_color: 'crimson',
+      text_color: 'white',
+      lane: 1,
+    },
+  ],
+  packets: [],
+  timeline: [
+    { type: 'comment', object: 'n', text: 'Inserted red', duration: 900 },
+    {
+      type: 'set_color',
+      object: 'n',
+      background_color: '#1f2937',
+      duration: 600,
+    },
+    {
+      type: 'comment',
+      object: 'n',
+      text: 'Recolored black',
+      keep_until_end: true,
+    },
+  ],
+};
+
 /** `rotate`: chained rotations toward absolute angles; the label stays upright. */
 export const rotateExample: DataFlowSpec = {
   direction: 'left-to-right',
