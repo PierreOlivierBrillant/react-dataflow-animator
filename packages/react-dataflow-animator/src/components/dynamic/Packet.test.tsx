@@ -58,4 +58,31 @@ describe('Packet — rendu des paquets mobiles', () => {
     expect(container.querySelector('.rdfa-node-panel-header')).toBeNull();
     expect(container.querySelector('.rdfa-packet--panel')).toBeTruthy();
   });
+
+  it('subicon : badge techno connu, rendu via getSubIcon dans un cercle', () => {
+    const { container } = renderPacket({
+      id: 'p',
+      kind: 'subicon',
+      icon: 'react',
+    });
+    // Same resolver as the node corner badge: a known tech yields an svg icon.
+    const subicon = container.querySelector('.rdfa-node-subicon svg');
+    expect(subicon).toBeTruthy();
+    expect(subicon?.querySelector('title')?.textContent).toBe('react');
+    // Round-badge modifier, no node panel.
+    expect(container.querySelector('.rdfa-packet--subicon')).toBeTruthy();
+    expect(container.querySelector('.rdfa-node-panel')).toBeNull();
+  });
+
+  it('subicon : texte libre court rendu en pastille', () => {
+    const { container } = renderPacket({
+      id: 'p',
+      kind: 'subicon',
+      icon: 'v2',
+    });
+    // Unknown name falls back to the free-text badge (truncated to 4 chars).
+    expect(
+      container.querySelector('.rdfa-node-subicon svg text')?.textContent
+    ).toBe('v2');
+  });
 });

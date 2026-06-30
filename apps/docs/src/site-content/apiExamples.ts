@@ -369,6 +369,16 @@ function build(locale: Locale): ApiExamples {
       ],
       timeline: [{ type: 'move', object: 'p', from: 'a', to: 'b' }],
     },
+    'Packet.icon': {
+      // A `subicon` packet: the node's tech badge, but it travels. Same value
+      // space as the node `icon`, resolved by the same getSubIcon.
+      nodes: [
+        { id: 'a', type: 'laptop', text: 'Client', lane: 1 },
+        { id: 'b', type: 'server', text: 'API', lane: 2 },
+      ],
+      packets: [{ id: 'p', kind: 'subicon', icon: 'react' }],
+      timeline: [{ type: 'move', object: 'p', from: 'a', to: 'b' }],
+    },
 
     // ── ObjectContent ─────────────────────────────────────────────────────────
     'ObjectContent.type': {
@@ -570,6 +580,10 @@ function build(locale: Locale): ApiExamples {
     'Packet.body': tr(
       '`simple_node` / `complex_node` packet: the text node, but it travels.',
       'Paquet `simple_node` / `complex_node` : le nœud texte, mais il voyage.'
+    ),
+    'Packet.icon': tr(
+      '`subicon` packet: the tech badge, but it travels.',
+      'Paquet `subicon` : le badge techno, mais il voyage.'
     ),
 
     'ObjectContent.type': tr(

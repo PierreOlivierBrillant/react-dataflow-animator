@@ -625,6 +625,25 @@
   --rdfa-scale: var(--rdfa-content-scale, 1);
 }
 
+/* Paquet `subicon` : le badge techno du nœud, mais qui voyage. On garde le fond
+   plein + bordure du wrapper et on le rend circulaire (comme le badge de coin du
+   nœud, en autonome et plus gros). L'icône suit l'échelle de CONTENU comme les
+   autres paquets. */
+.rdfa-packet--subicon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(7px * var(--rdfa-content-scale, 1));
+  border-radius: 50%;
+  max-width: none;
+}
+
+.rdfa-packet--subicon .rdfa-node-subicon svg,
+.rdfa-packet--subicon .rdfa-node-subicon img {
+  width: calc(24px * var(--rdfa-content-scale, 1));
+  height: calc(24px * var(--rdfa-content-scale, 1));
+}
+
 .rdfa-packet-header {
   font-weight: 600;
 }

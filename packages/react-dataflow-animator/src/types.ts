@@ -54,7 +54,8 @@ export type PacketKind =
   | 'sql_request'
   | 'sql_response'
   | 'simple_node'
-  | 'complex_node';
+  | 'complex_node'
+  | 'subicon';
 
 /** Line style (SVG/CSS terminology). `full` is accepted as an alias for `solid`. */
 export type LineStyle = 'solid' | 'dotted' | 'dashed' | 'animated';
@@ -336,9 +337,11 @@ export interface Packet {
    * Packet category, which sets its appearance and expected content:
    * `http_packet` (header + body via `packet_content`), `sql_request` (textual
    * request via `request_content`), `sql_response` (response via `response_content`),
-   * or a **text panel** (`simple_node` / `complex_node`) that travels: same look
+   * a **text panel** (`simple_node` / `complex_node`) that travels: same look
    * and content fields as the homonymous {@link NodeType} (`body`, plus `header`
-   * for `complex_node`, optionally syntax-highlighted via `language`).
+   * for `complex_node`, optionally syntax-highlighted via `language`), or a
+   * **tech badge** (`subicon`) that travels: the same {@link Node.icon} badge
+   * (known technology, registered icon, or short free text), via `icon`.
    */
   kind: PacketKind;
   /**
@@ -369,6 +372,13 @@ export interface Packet {
    * {@link HighlightLanguage}. Same role as {@link Node.language}.
    */
   language?: HighlightLanguage | (string & {});
+  /**
+   * (`subicon`) The tech badge that travels: name of a known technology
+   * (e.g., 'react', 'postgres'), name of a registered icon, or short free text
+   * (e.g., 'v2', 'API'). Same role as {@link Node.icon}.
+   * @example "react"
+   */
+  icon?: string;
 }
 
 export type ActionType =

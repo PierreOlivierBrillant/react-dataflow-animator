@@ -95,6 +95,13 @@ These two types are **also valid packet kinds**: a packet declared with
 moving wrapper drops its own box (`rdfa-packet--panel`) to avoid a box-in-a-box; the
 panel is otherwise identical to the static node.
 
+The node `subicon` likewise **doubles as a packet kind**: a packet declared with
+`kind: 'subicon'` carries an `icon` field (same value space as the node `icon`:
+known technology, registered icon, or short free text) and is resolved by the very
+same `getSubIcon`, so a tech badge can **travel** on its own. The wrapper becomes a
+round badge (`rdfa-packet--subicon`) — like the node's corner badge, but standalone
+and larger.
+
 **Geometric shapes** (`square`, `diamond`, `circle`, `triangle`, `parallelogram`,
 `width_rectangle`, `height_rectangle`, `star`): an SVG shape drawn that can
 contain a **short centered text** via `body` (`text` remains the label under the shape).

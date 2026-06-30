@@ -2,8 +2,8 @@ import { DataFlowSpec } from 'react-dataflow-animator';
 
 /**
  * A full round-trip showing the packet `kind`s: http_packet (with body),
- * sql_request, sql_response (table), then a complex_node — a text node that
- * travels, pushed by the API to the browser.
+ * sql_request, sql_response (table), a complex_node — a text node that travels,
+ * pushed by the API to the browser — and a subicon, the tech badge that travels.
  */
 export const packetsExample: DataFlowSpec = {
   direction: 'left-to-right',
@@ -66,6 +66,11 @@ export const packetsExample: DataFlowSpec = {
       body: '{ "users": 2 }',
       language: 'json',
     },
+    {
+      id: 'lib',
+      kind: 'subicon',
+      icon: 'react',
+    },
   ],
   timeline: [
     { type: 'move', object: 'req', from: 'browser', to: 'api', duration: 700 },
@@ -88,5 +93,6 @@ export const packetsExample: DataFlowSpec = {
     },
     { type: 'move', object: 'res', from: 'api', to: 'browser', duration: 700 },
     { type: 'move', object: 'evt', from: 'api', to: 'browser', duration: 700 },
+    { type: 'move', object: 'lib', from: 'browser', to: 'api', duration: 700 },
   ],
 };

@@ -27,6 +27,7 @@ The `kind` determines the appearance and available content fields:
 | `sql_response` | A SQL result              | `response_content`             |
 | `simple_node`  | A traveling text box      | `body` / `language`            |
 | `complex_node` | A traveling header + body | `header` / `body` / `language` |
+| `subicon`      | A traveling tech badge    | `icon`                         |
 
 ## `http_packet` — `packet_content`
 
@@ -141,6 +142,24 @@ to **look exactly like** a `complex_node` node already on stage (same box, same
 `packet_content` shape (typed `body`, image bodies).
 
 :::
+
+## `subicon` — a tech badge that travels
+
+The node [subicon](./nodes.mdx) — the small corner badge naming a technology —
+doubles as a packet kind: declare a packet with `kind: 'subicon'` and an `icon`, and
+the badge travels on its own. `icon` takes the **same values as the node's**: a known
+technology (`react`, `postgres`…), a registered icon, or short free text (`v2`, `API`).
+
+```ts
+{
+  id: 'lib',
+  kind: 'subicon',
+  icon: 'react',
+}
+```
+
+It is resolved by the same `getSubIcon` as the node badge — any name your nodes
+already use works here too — and the moving wrapper renders as a round badge.
 
 ## Setting a packet in motion
 

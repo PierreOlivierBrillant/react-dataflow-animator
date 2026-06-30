@@ -5,6 +5,7 @@ import {
 import type { Packet as PacketSpec, Highlighter } from '../../types';
 import { NodePanel } from '../nodes/NodePanel';
 import { isPanelNode } from '../nodes/nodeKinds';
+import { getSubIcon } from '../nodes/subIcons';
 import { escapeHtml } from '../../highlight/highlight';
 
 /** Moving packet. Positioned absolutely at the current point of the path. */
@@ -154,6 +155,19 @@ const PanelPacket = defineAnimatable<{
   );
 });
 
+/**
+ * `subicon` packet: the node's tech badge that travels. Reuses `getSubIcon` —
+ * the very resolver behind the node's corner badge — so a known technology, a
+ * registered icon or a short free-text badge can fly via `icon`, with no
+ * duplicated icon table.
+ */
+const SubIconPacket = defineAnimatable<{
+  object: PacketSpec;
+  highlight?: Highlighter;
+}>(({ object }) => (
+  <span className="rdfa-node-subicon">{getSubIcon(object.icon ?? '')}</span>
+));
+
 // ---------------------------------------------------------------------------
 // PACKET REGISTRY
 // ---------------------------------------------------------------------------
@@ -172,6 +186,7 @@ const packetRegistry: Record<
   sql_response: SqlResponsePacket,
   simple_node: PanelPacket,
   complex_node: PanelPacket,
+  subicon: SubIconPacket,
 };
 
 // ---------------------------------------------------------------------------
@@ -188,13 +203,18 @@ export const Packet: AnimatableComponent<PacketProps> = defineAnimatable(
     highlight,
   }: PacketProps) {
     const SpecificPacket = packetRegistry[object.kind];
-    // A panel-kind packet draws its own box (NodePanel); the wrapper just
-    // positions it, so we strip the wrapper's box via this modifier.
-    const panelClass = isPanelNode(object.kind) ? ' rdfa-packet--panel' : '';
+    // A panel-kind packet draws its own box (NodePanel) and a subicon packet
+    // is a round badge; both replace the wrapper's default box via a modifier
+    // (panel strips it, subicon makes it a circle). Other kinds keep the box.
+    const modifier = isPanelNode(object.kind)
+      ? ' rdfa-packet--panel'
+      : object.kind === 'subicon'
+        ? ' rdfa-packet--subicon'
+        : '';
 
     return (
       <div
-        className={`rdfa-packet rdfa-packet-${object.kind}${panelClass}`}
+        className={`rdfa-packet rdfa-packet-${object.kind}${modifier}`}
         style={{
           left: x,
           top: y,

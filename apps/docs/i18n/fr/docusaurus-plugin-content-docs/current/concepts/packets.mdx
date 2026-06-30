@@ -27,6 +27,7 @@ Le `kind` détermine l'apparence et les champs de contenu disponibles :
 | `sql_response` | Un résultat SQL           | `response_content`             |
 | `simple_node`  | Une boîte de texte mobile | `body` / `language`            |
 | `complex_node` | Un en-tête + corps mobile | `header` / `body` / `language` |
+| `subicon`      | Un badge techno mobile    | `icon`                         |
 
 ## `http_packet` — `packet_content`
 
@@ -142,6 +143,26 @@ présent (même boîte, même API `body`/`header`/`language`) ; gardez `http_pac
 pour sa forme dédiée `packet_content` (`body` typé, corps image).
 
 :::
+
+## `subicon` — un badge techno qui voyage
+
+Le [subicon](./nodes.mdx) du nœud — le petit badge de coin qui nomme une
+technologie — sert aussi de `kind` de paquet : déclarez un paquet avec
+`kind: 'subicon'` et un `icon`, et le badge voyage seul. `icon` prend les **mêmes
+valeurs que celui du nœud** : une technologie connue (`react`, `postgres`…), une
+icône enregistrée, ou un court texte libre (`v2`, `API`).
+
+```ts
+{
+  id: 'lib',
+  kind: 'subicon',
+  icon: 'react',
+}
+```
+
+Il est résolu par le même `getSubIcon` que le badge du nœud — n'importe quel nom
+déjà utilisé par vos nœuds fonctionne ici aussi — et le wrapper mobile s'affiche
+sous forme de pastille ronde.
 
 ## Mettre un paquet en mouvement
 
