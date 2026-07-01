@@ -32,6 +32,8 @@ import { avlTree } from './demos/avlTree';
 import { bstSearch } from './demos/bstSearch';
 import { bstInsert } from './demos/bstInsert';
 import { dijkstra } from './demos/dijkstra';
+import { astar } from './demos/astar';
+import { mst } from './demos/mst';
 
 /** Clé de catégorie (stable, indépendante de la langue). Les libellés affichés
  * sont traduits via le dictionnaire (`gallery.categories`). */
@@ -41,6 +43,7 @@ export type DemoCategory =
   | 'security'
   | 'infrastructure'
   | 'distributed'
+  | 'data-structures'
   | 'engine';
 
 /** Ordre d'affichage des catégories dans le filtre de la galerie. */
@@ -50,6 +53,7 @@ export const demoCategories: DemoCategory[] = [
   'security',
   'infrastructure',
   'distributed',
+  'data-structures',
   'engine',
 ];
 
@@ -516,7 +520,7 @@ export const demos: Demo[] = [
       fr: "Insertion d'une feuille rouge sous un parent rouge dont l'oncle est rouge aussi : le rééquilibrage se fait par pure recoloration (parent et oncle en noir, grand-parent en rouge), sans rotation. Illustre l'action set_color.",
       en: 'Inserting a red leaf under a red parent whose uncle is also red: rebalancing is a pure recoloring (parent and uncle to black, grandparent to red), no rotation. Showcases the set_color action.',
     },
-    category: 'engine',
+    category: 'data-structures',
     tags: {
       fr: [
         'arbre',
@@ -547,7 +551,7 @@ export const demos: Demo[] = [
       fr: "Le cas rotation : on insère un nœud rouge sous un parent rouge dont l'oncle est noir. La recoloration ne suffit pas — il faut une rotation puis une recoloration. Combine les actions rotate_subtree et set_color.",
       en: 'The rotation case: inserting a red node under a red parent whose uncle is black. Recoloring alone is not enough — it takes a rotation then a recoloring. Combines the rotate_subtree and set_color actions.',
     },
-    category: 'engine',
+    category: 'data-structures',
     tags: {
       fr: [
         'arbre',
@@ -578,7 +582,7 @@ export const demos: Demo[] = [
       fr: "Insertion de 10, 20, 30 : l'arbre dégénère en chaîne à droite (facteur d'équilibre −2). Une seule rotation gauche le rééquilibre. Illustre direction:'tree' et l'action rotate_subtree (les nœuds glissent à leur nouvelle profondeur).",
       en: "Inserting 10, 20, 30 degenerates into a right-leaning chain (balance factor −2). A single left rotation rebalances it. Showcases direction:'tree' and the rotate_subtree action (nodes glide to their new depth).",
     },
-    category: 'engine',
+    category: 'data-structures',
     tags: {
       fr: [
         'arbre',
@@ -609,7 +613,7 @@ export const demos: Demo[] = [
       fr: "Recherche d'une clé dans un arbre binaire de recherche : un jeton descend depuis la racine, compare à chaque nœud et bifurque à gauche ou à droite jusqu'à trouver la valeur. Illustre la descente pas à pas en O(log n).",
       en: 'Searching a key in a binary search tree: a token descends from the root, compares at each node and branches left or right until it finds the value. Shows the step-by-step O(log n) descent.',
     },
-    category: 'engine',
+    category: 'data-structures',
     tags: {
       fr: [
         'arbre',
@@ -640,7 +644,7 @@ export const demos: Demo[] = [
       fr: "Insertion d'une clé dans un arbre binaire de recherche : la nouvelle clé arrive orpheline et descend pas à pas en comparant à chaque nœud, jusqu'au slot vide où le nœud est alors créé.",
       en: 'Inserting a key into a binary search tree: the new key arrives as an orphan and walks down step by step, comparing at each node, until the empty slot where the node is then created.',
     },
-    category: 'engine',
+    category: 'data-structures',
     tags: {
       fr: [
         'arbre',
@@ -664,7 +668,7 @@ export const demos: Demo[] = [
       fr: "Algorithme de Dijkstra sur un graphe pondéré libre (direction:'graph', nœuds placés en x/y). On règle tour à tour le nœud non visité le plus proche ; chaque étape recolore le nœud et l’arête empruntée, faisant croître l’arbre des plus courts chemins jusqu’à la cible.",
       en: "Dijkstra's algorithm on a free weighted graph (direction:'graph', nodes placed via x/y). It settles the nearest unvisited node in turn; each step recolours the node and the edge it was reached through, growing the shortest-path tree to the target.",
     },
-    category: 'engine',
+    category: 'data-structures',
     tags: {
       fr: [
         'graphe',
@@ -684,6 +688,54 @@ export const demos: Demo[] = [
       ],
     },
     spec: dijkstra,
+  },
+  {
+    id: 'astar',
+    title: {
+      fr: 'Plus court chemin — A*',
+      en: 'Shortest path — A*',
+    },
+    description: {
+      fr: "A* sur une grille (direction:'graph', nœuds placés en x/y) : Dijkstra guidé par une heuristique h(n) = distance de Manhattan restante. On développe toujours le nœud au plus petit f = g + h, si bien que la recherche file droit vers le but sans explorer les cases de côté.",
+      en: "A* on a grid (direction:'graph', nodes placed via x/y): Dijkstra guided by a heuristic h(n) = Manhattan distance still to go. It always expands the node with the smallest f = g + h, so the search heads straight for the goal without exploring the sideways cells.",
+    },
+    category: 'data-structures',
+    tags: {
+      fr: ['graphe', 'a*', 'heuristique', 'plus court chemin', 'grille', 'x/y'],
+      en: ['graph', 'a*', 'heuristic', 'shortest path', 'grid', 'x/y'],
+    },
+    spec: astar,
+  },
+  {
+    id: 'mst',
+    title: {
+      fr: 'Arbre couvrant minimal — Kruskal',
+      en: 'Minimum spanning tree — Kruskal',
+    },
+    description: {
+      fr: "Algorithme de Kruskal (direction:'graph') : on trie les arêtes par poids et on ajoute la moins chère qui ne crée pas de cycle, jusqu’à relier les six nœuds par cinq arêtes. Les arêtes retenues passent au vert, celles qui formeraient un cycle sont écartées.",
+      en: "Kruskal's algorithm (direction:'graph'): sort the edges by weight and add the cheapest one that does not form a cycle, until all six nodes are linked by five edges. Accepted edges turn green; those that would close a cycle are skipped.",
+    },
+    category: 'data-structures',
+    tags: {
+      fr: [
+        'graphe',
+        'kruskal',
+        'arbre couvrant minimal',
+        'recouvrement minimal',
+        'cycle',
+        'pondéré',
+      ],
+      en: [
+        'graph',
+        'kruskal',
+        'minimum spanning tree',
+        'mst',
+        'cycle',
+        'weighted',
+      ],
+    },
+    spec: mst,
   },
   {
     id: 'collision',

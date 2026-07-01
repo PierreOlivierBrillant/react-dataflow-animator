@@ -212,6 +212,7 @@ export const en: Messages = {
       security: 'Security',
       infrastructure: 'Infrastructure',
       distributed: 'Distributed systems',
+      'data-structures': 'Data structures',
       engine: 'Engine concepts',
     },
   },

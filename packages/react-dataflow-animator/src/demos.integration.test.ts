@@ -32,6 +32,8 @@ import { avlTree } from '../../../apps/docs/src/site-content/demos/avlTree';
 import { bstSearch } from '../../../apps/docs/src/site-content/demos/bstSearch';
 import { bstInsert } from '../../../apps/docs/src/site-content/demos/bstInsert';
 import { dijkstra } from '../../../apps/docs/src/site-content/demos/dijkstra';
+import { astar } from '../../../apps/docs/src/site-content/demos/astar';
+import { mst } from '../../../apps/docs/src/site-content/demos/mst';
 
 function collectIds(actions: Action[]): Set<string> {
   const ids = new Set<string>();
@@ -99,6 +101,8 @@ const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['bstSearch', bstSearch],
   ['bstInsert', bstInsert],
   ['dijkstra', dijkstra],
+  ['astar', astar],
+  ['mst', mst],
 ];
 
 const LOCALES = ['en', 'fr'] as const;

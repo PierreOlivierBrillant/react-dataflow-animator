@@ -222,6 +222,7 @@ export const fr = {
       security: 'Sécurité',
       infrastructure: 'Infrastructure',
       distributed: 'Systèmes distribués',
+      'data-structures': 'Structures de données',
       engine: 'Concepts moteur',
     },
   },
