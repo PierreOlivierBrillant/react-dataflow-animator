@@ -13,6 +13,7 @@ export type Direction =
   | 'top-to-bottom'
   | 'bottom-to-top'
   | 'circular'
+  | 'graph'
   | 'tree';
 
 /**
@@ -172,6 +173,27 @@ export interface Node {
    * aligning two nodes from different lanes. Ignored in circular layout.
    */
   align_with?: string;
+  /**
+   * (`graph`) Horizontal position as a fraction of the Stage, from 0 (left edge)
+   * to 1 (right edge). Used **only** when `direction` is `'graph'`, where you
+   * place each node yourself — the escape hatch for an arbitrary graph (road
+   * network, weighted graph for a shortest-path / minimum-spanning-tree demo)
+   * that has no natural flow order. Ignored by every other direction (which
+   * derive positions from `lane` / `main` / the tree). Default: 0.5 (centered).
+   * @minimum 0
+   * @maximum 1
+   * @example 0.25
+   */
+  x?: number;
+  /**
+   * (`graph`) Vertical position as a fraction of the Stage, from 0 (top edge) to
+   * 1 (bottom edge). Companion of {@link Node.x}; used only when `direction` is
+   * `'graph'`, ignored otherwise. Default: 0.5 (centered).
+   * @minimum 0
+   * @maximum 1
+   * @example 0.8
+   */
+  y?: number;
   /**
    * Edge convergence on the node's faces. When `true` (the default), all
    * connections / arrows / moves attaching to the same face of this node meet
@@ -694,10 +716,13 @@ export type Action =
 
 export interface DataFlowSpec {
   /**
-   * Automatic node placement direction (no coordinates to provide).
-   * Default: 'left-to-right'. Use `'tree'` to lay out a binary {@link TreeSpec}
-   * (in-order rank → horizontal, depth → vertical) and enable the
-   * {@link RotateSubtreeAction}.
+   * Node placement direction. For the flow (`left-to-right` …), `circular` and
+   * `tree` modes you provide **no coordinates** — the engine arranges nodes from
+   * `lane` / `main` / the {@link TreeSpec}. Default: 'left-to-right'. Use `'tree'`
+   * to lay out a binary tree (in-order rank → horizontal, depth → vertical) and
+   * enable the {@link RotateSubtreeAction}. Use `'graph'` to place nodes yourself
+   * via their `x` / `y` (free 2D layout) — the escape hatch for an arbitrary
+   * graph (Dijkstra, A\*, minimum spanning tree…).
    */
   direction?: Direction;
   /**

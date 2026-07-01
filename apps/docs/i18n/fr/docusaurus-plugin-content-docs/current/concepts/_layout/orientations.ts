@@ -97,6 +97,31 @@ export const treeExample: DataFlowSpec = {
   timeline: [],
 };
 
+/**
+ * Mode graphe : un graphe pondéré quelconque placé à la main via les `x`/`y` de
+ * chaque nœud (fractions de la scène). Les arêtes sont de simples `connections` —
+ * non orientées (`arrow_head: 'none'`), droites, et pondérées via `text`. Les
+ * clés (`body`) et les poids sont invariants par langue.
+ */
+export const graphExample: DataFlowSpec = {
+  direction: 'graph',
+  nodes: [
+    { id: 'A', type: 'circle', body: 'A', x: 0.12, y: 0.5 },
+    { id: 'B', type: 'circle', body: 'B', x: 0.42, y: 0.18 },
+    { id: 'C', type: 'circle', body: 'C', x: 0.42, y: 0.82 },
+    { id: 'D', type: 'circle', body: 'D', x: 0.72, y: 0.5 },
+  ],
+  packets: [],
+  connections: [
+    { from: 'A', to: 'B', text: '7', path: 'straight', arrow_head: 'none' },
+    { from: 'A', to: 'C', text: '2', path: 'straight', arrow_head: 'none' },
+    { from: 'B', to: 'C', text: '3', path: 'straight', arrow_head: 'none' },
+    { from: 'B', to: 'D', text: '4', path: 'straight', arrow_head: 'none' },
+    { from: 'C', to: 'D', text: '6', path: 'straight', arrow_head: 'none' },
+  ],
+  timeline: [],
+};
+
 /** Exemple concret de la section « Mode circulaire » : un hub central. */
 export const circularHubExample: DataFlowSpec = {
   direction: 'circular',

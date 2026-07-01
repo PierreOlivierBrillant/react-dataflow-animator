@@ -7,7 +7,7 @@
       "properties": {
         "direction": {
           "$ref": "#/definitions/Direction",
-          "description": "Automatic node placement direction (no coordinates to provide). Default: 'left-to-right'. Use `'tree'` to lay out a binary  {@link  TreeSpec }  (in-order rank → horizontal, depth → vertical) and enable the  {@link  RotateSubtreeAction } ."
+          "description": "Node placement direction. For the flow (`left-to-right` …), `circular` and `tree` modes you provide **no coordinates** — the engine arranges nodes from `lane` / `main` / the  {@link  TreeSpec } . Default: 'left-to-right'. Use `'tree'` to lay out a binary tree (in-order rank → horizontal, depth → vertical) and enable the  {@link  RotateSubtreeAction } . Use `'graph'` to place nodes yourself via their `x` / `y` (free 2D layout) — the escape hatch for an arbitrary graph (Dijkstra, A\\*, minimum spanning tree…)."
         },
         "nodes": {
           "type": "array",
@@ -64,6 +64,7 @@
         "top-to-bottom",
         "bottom-to-top",
         "circular",
+        "graph",
         "tree"
       ],
       "description": "TypeScript types of the DataFlow specification. The JSON Schema (`schema.ts`, exposed by the API Doc page) is GENERATED from these types via `ts-json-schema-generator` (`generate:schema` script). Do not edit the schema manually — modify here then regenerate."
@@ -108,6 +109,24 @@
         "align_with": {
           "type": "string",
           "description": "Aligns this node on the transverse axis of another node (by ID): useful for aligning two nodes from different lanes. Ignored in circular layout."
+        },
+        "x": {
+          "type": "number",
+          "description": "(`graph`) Horizontal position as a fraction of the Stage, from 0 (left edge) to 1 (right edge). Used **only** when `direction` is `'graph'`, where you place each node yourself — the escape hatch for an arbitrary graph (road network, weighted graph for a shortest-path / minimum-spanning-tree demo) that has no natural flow order. Ignored by every other direction (which derive positions from `lane` / `main` / the tree). Default: 0.5 (centered).",
+          "examples": [
+            0.25
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y": {
+          "type": "number",
+          "description": "(`graph`) Vertical position as a fraction of the Stage, from 0 (top edge) to 1 (bottom edge). Companion of  {@link  Node.x } ; used only when `direction` is `'graph'`, ignored otherwise. Default: 0.5 (centered).",
+          "examples": [
+            0.8
+          ],
+          "minimum": 0,
+          "maximum": 1
         },
         "merge_edges": {
           "type": "boolean",

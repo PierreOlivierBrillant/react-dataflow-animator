@@ -10,20 +10,24 @@ import {
   circularHubExample,
   mergeEdgesExample,
   treeExample,
+  graphExample,
 } from './_layout/orientations';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-La disposition des nœuds repose sur quatre concepts : `direction`, `lane`,
-`align_with`, et le mode `circular`. Vous ne fournissez **aucune
-coordonnée** — le moteur place chaque nœud en ratios relatifs au conteneur,
-ce qui rend l'animation responsive sans calcul manuel.
+La disposition des nœuds repose sur quelques concepts : `direction`, `lane`,
+`align_with`, et les modes `circular` / `tree`. Dans tous ceux-ci, vous ne
+fournissez **aucune coordonnée** — le moteur place chaque nœud en ratios
+relatifs au conteneur, ce qui rend l'animation responsive sans calcul manuel.
+La seule exception est le [mode `graph`](#mode-graphe), où vous placez chaque
+nœud vous-même via `x` / `y` pour dessiner un graphe quelconque.
 
 ## `direction`
 
-Six valeurs possibles pour `direction` (au niveau racine de la spec). Cinq
-placent des nœuds libres ; la sixième, [`tree`](#mode-arbre), dispose un arbre
-binaire :
+Sept valeurs possibles pour `direction` (au niveau racine de la spec). Quatre
+disposent des nœuds libres le long d'un flux, [`circular`](#mode-circulaire) les
+place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire, et
+[`graph`](#mode-graphe) vous laisse les placer vous-même :
 
 <Tabs
   defaultValue="left-to-right"
@@ -266,6 +270,50 @@ l'exécution** : l'action [`rotate_subtree`](../reference/actions.mdx#rotate_sub
 effectue une rotation d'arbre autour d'un pivot, et le moteur recalcule la
 disposition et re-câble les arêtes depuis le même modèle — les nœuds glissent à
 leur nouvelle profondeur. C'est ce qui anime les démos AVL et rouge-noir.
+
+## Mode graphe
+
+`graph` est l'échappatoire pour un **graphe quelconque** — un diagramme
+nœuds-liens sans ordre naturel de flux, de cercle ou d'arbre (un réseau routier,
+ou un graphe pondéré pour une démonstration de Dijkstra / A\* / arbre couvrant
+minimal). Ici, vous **fournissez** bien des coordonnées : chaque nœud porte un
+`x` et un `y`, chacun une fraction de la scène de `0` (bord gauche / haut) à `1`
+(bord droit / bas). `lane`, `align_with` et `main` sont ignorés.
+
+Les arêtes sont de simples [`connections`](./decor.mdx) : rendez-les non
+orientées avec `arrow_head: 'none'`, pondérez-les avec `text`, et recolorez-les
+à l'exécution avec [`set_color`](../reference/actions.mdx#set_color) pour
+allumer un chemin ou un arbre couvrant.
+
+```ts
+{
+  direction: 'graph',
+  nodes: [
+    { id: 'A', type: 'circle', body: 'A', x: 0.12, y: 0.5 },
+    { id: 'B', type: 'circle', body: 'B', x: 0.42, y: 0.18 },
+    { id: 'C', type: 'circle', body: 'C', x: 0.42, y: 0.82 },
+    { id: 'D', type: 'circle', body: 'D', x: 0.72, y: 0.5 },
+  ],
+  connections: [
+    { from: 'A', to: 'B', text: '7', path: 'straight', arrow_head: 'none' },
+    { from: 'A', to: 'C', text: '2', path: 'straight', arrow_head: 'none' },
+    { from: 'B', to: 'C', text: '3', path: 'straight', arrow_head: 'none' },
+    { from: 'B', to: 'D', text: '4', path: 'straight', arrow_head: 'none' },
+    { from: 'C', to: 'D', text: '6', path: 'straight', arrow_head: 'none' },
+  ],
+}
+```
+
+<DataFlowPlayer
+  theme="auto"
+  controls={false}
+  height={460}
+  spec={graphExample}
+/>
+
+La démo complète **Plus court chemin — Dijkstra** de la galerie s'appuie
+là-dessus : elle règle les nœuds un à un et recolore les arêtes du plus court
+chemin au fil du parcours du graphe.
 
 ## Mise à l'échelle responsive
 

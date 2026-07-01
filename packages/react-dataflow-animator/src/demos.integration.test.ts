@@ -31,6 +31,7 @@ import { redBlackRotation } from '../../../apps/docs/src/site-content/demos/redB
 import { avlTree } from '../../../apps/docs/src/site-content/demos/avlTree';
 import { bstSearch } from '../../../apps/docs/src/site-content/demos/bstSearch';
 import { bstInsert } from '../../../apps/docs/src/site-content/demos/bstInsert';
+import { dijkstra } from '../../../apps/docs/src/site-content/demos/dijkstra';
 
 function collectIds(actions: Action[]): Set<string> {
   const ids = new Set<string>();
@@ -97,6 +98,7 @@ const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['avlTree', avlTree],
   ['bstSearch', bstSearch],
   ['bstInsert', bstInsert],
+  ['dijkstra', dijkstra],
 ];
 
 const LOCALES = ['en', 'fr'] as const;

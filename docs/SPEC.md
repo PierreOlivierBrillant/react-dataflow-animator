@@ -44,6 +44,14 @@ the container (pure CSS placement). See [`packages/react-dataflow-animator/src/e
   are distributed and centered on the transverse axis. Spacing proportional to the container.
 - **Circular** (`circular`): the `is_main` node is placed at the center; the others are
   equidistant on a circle (trigonometry), ratio corrected to remain round.
+- **Graph** (`graph`): free 2D layout — each node is placed at its own `x` / `y`
+  (fractions of the Stage, `0`..`1`; missing → centered). The escape hatch for an
+  **arbitrary graph** (Dijkstra, A\*, minimum spanning tree…) that has no natural
+  flow, ring or tree order. Positions are authored, not derived; `lane`,
+  `align_with` and `main` are ignored. Edges are ordinary `connections` (weighted
+  via `text`, undirected via `arrow_head: 'none'`, recolorable via `set_color`).
+  Like `circular`, the connection anchor axis falls back to the dominant **pixel**
+  axis (no flow direction).
 - **Tree** (`tree`): a binary tree described by the `tree` root block (`root` +
   per-node `left`/`right` children). Each node is placed by its **in-order rank**
   (horizontal) and **depth** (vertical); the parent→child **edges are drawn

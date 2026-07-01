@@ -115,6 +115,22 @@ function circularLayout(nodes: Node[], aspect: number): LayoutMap {
 }
 
 /**
+ * Free 2D layout: each node sits exactly where its own `x`/`y` place it, as a
+ * fraction of the Stage (0..1). Unlike the flow / ring / tree layouts, positions
+ * are **authored, not derived** — this is the escape hatch for an arbitrary
+ * graph (road network, weighted graph for a shortest-path or minimum-spanning-
+ * tree demo) whose nodes have no natural flow order. A node without coordinates
+ * falls back to the center; `lane`, `align_with` and `main` are ignored.
+ */
+function graphLayout(nodes: Node[]): LayoutMap {
+  const map: LayoutMap = {};
+  for (const node of nodes) {
+    map[node.id] = { cx: node.x ?? 0.5, cy: node.y ?? 0.5 };
+  }
+  return map;
+}
+
+/**
  * Applies `align_with`: aligns a node on the TRANSVERSE axis of another
  * (vertical if the direction is horizontal, and vice versa).
  */
@@ -250,6 +266,9 @@ export function computeLayout(
       spec.tree
     );
   }
+  if (direction === 'graph') {
+    return graphLayout(nodes);
+  }
   if (direction === 'circular') {
     return circularLayout(nodes, options.aspect ?? 1.6);
   }
@@ -276,8 +295,8 @@ const SAME_LANE_EPS = 1e-3;
  *   starts/arrives horizontally (East/West faces); two nodes from the **same lane**
  *   (same `cx`, stacked) connect vertically.
  * - Vertical flow (`top-to-bottom` / `bottom-to-top`): symmetric.
- * - `circular`: no flow axis → dominant axis in **pixels** (ratios × aspect),
- *   which matches what the eye sees on the ring.
+ * - `circular` / `graph`: no flow axis → dominant axis in **pixels** (ratios ×
+ *   aspect), which matches what the eye sees between two freely placed nodes.
  *
  * SINGLE decision, shared by {@link computePortOffsets} (fan-out distribution) and
  * `connection` anchoring: so both cannot contradict each other.
@@ -301,6 +320,7 @@ export function connectionAxis(
       // Parent sits above its child: edges always leave the bottom face and
       // enter the top face, regardless of the horizontal gap between them.
       return 'vertical';
+    case 'graph':
     case 'circular':
     default:
       return Math.abs(dCx * aspect) >= Math.abs(dCy)

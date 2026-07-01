@@ -171,6 +171,48 @@ describe('computeLayout — circular', () => {
   });
 });
 
+describe('computeLayout — graph', () => {
+  it('places each node at its own x/y (free 2D layout)', () => {
+    const spec: DataFlowSpec = {
+      direction: 'graph',
+      nodes: [
+        { id: 'a', type: 'circle', x: 0.1, y: 0.5 },
+        { id: 'b', type: 'circle', x: 0.9, y: 0.2 },
+      ],
+      packets: [],
+      timeline: [],
+    };
+    const layout = computeLayout(spec);
+    expect(layout.a).toEqual({ cx: 0.1, cy: 0.5 });
+    expect(layout.b).toEqual({ cx: 0.9, cy: 0.2 });
+  });
+
+  it('a node without coordinates falls back to the center', () => {
+    const spec: DataFlowSpec = {
+      direction: 'graph',
+      nodes: [{ id: 'a', type: 'circle' }],
+      packets: [],
+      timeline: [],
+    };
+    expect(computeLayout(spec).a).toEqual({ cx: 0.5, cy: 0.5 });
+  });
+
+  it('ignores lane / main / align_with (only x/y matter)', () => {
+    const spec: DataFlowSpec = {
+      direction: 'graph',
+      nodes: [
+        { id: 'a', type: 'circle', x: 0.3, y: 0.3, lane: 5, main: true },
+        { id: 'b', type: 'circle', x: 0.7, y: 0.7, align_with: 'a' },
+      ],
+      packets: [],
+      timeline: [],
+    };
+    const layout = computeLayout(spec);
+    expect(layout.a).toEqual({ cx: 0.3, cy: 0.3 });
+    expect(layout.b).toEqual({ cx: 0.7, cy: 0.7 });
+  });
+});
+
 describe('connectionAxis', () => {
   it('left-to-right: inter-lane → horizontal, even with steep slope', () => {
     // significant Δcx (different lanes) → horizontal, regardless of Δcy.
@@ -217,6 +259,13 @@ describe('connectionAxis', () => {
     const b = { cx: 0.5, cy: 0.9 }; // Δcx=0.3, Δcy=0.4
     expect(connectionAxis(a, b, 'circular', 1)).toBe('vertical');
     expect(connectionAxis(a, b, 'circular', 3)).toBe('horizontal'); // 0.3×3 > 0.4
+  });
+
+  it('graph: dominant axis in pixels, like circular (no flow axis)', () => {
+    const a = { cx: 0.2, cy: 0.5 };
+    const b = { cx: 0.5, cy: 0.9 }; // Δcx=0.3, Δcy=0.4
+    expect(connectionAxis(a, b, 'graph', 1)).toBe('vertical');
+    expect(connectionAxis(a, b, 'graph', 3)).toBe('horizontal'); // 0.3×3 > 0.4
   });
 
   it('tree: parent→child edge always anchors vertically', () => {

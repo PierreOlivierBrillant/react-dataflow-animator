@@ -31,6 +31,7 @@ import { redBlackRotation } from './demos/redBlackRotation';
 import { avlTree } from './demos/avlTree';
 import { bstSearch } from './demos/bstSearch';
 import { bstInsert } from './demos/bstInsert';
+import { dijkstra } from './demos/dijkstra';
 
 /** Clé de catégorie (stable, indépendante de la langue). Les libellés affichés
  * sont traduits via le dictionnaire (`gallery.categories`). */
@@ -652,6 +653,37 @@ export const demos: Demo[] = [
       en: ['tree', 'insertion', 'bst', 'orphan', 'descent', 'data structure'],
     },
     spec: bstInsert,
+  },
+  {
+    id: 'dijkstra',
+    title: {
+      fr: 'Plus court chemin — Dijkstra',
+      en: 'Shortest path — Dijkstra',
+    },
+    description: {
+      fr: "Algorithme de Dijkstra sur un graphe pondéré libre (direction:'graph', nœuds placés en x/y). On règle tour à tour le nœud non visité le plus proche ; chaque étape recolore le nœud et l’arête empruntée, faisant croître l’arbre des plus courts chemins jusqu’à la cible.",
+      en: "Dijkstra's algorithm on a free weighted graph (direction:'graph', nodes placed via x/y). It settles the nearest unvisited node in turn; each step recolours the node and the edge it was reached through, growing the shortest-path tree to the target.",
+    },
+    category: 'engine',
+    tags: {
+      fr: [
+        'graphe',
+        'dijkstra',
+        'plus court chemin',
+        'pondéré',
+        'x/y',
+        'set_color',
+      ],
+      en: [
+        'graph',
+        'dijkstra',
+        'shortest path',
+        'weighted',
+        'x/y',
+        'set_color',
+      ],
+    },
+    spec: dijkstra,
   },
   {
     id: 'collision',
