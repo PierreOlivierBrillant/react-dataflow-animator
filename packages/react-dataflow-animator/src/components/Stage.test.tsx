@@ -574,4 +574,76 @@ describe('Stage — rendu à t fixe', () => {
     );
     expect(end.container.querySelector('[data-node-id="h"]')).toBeTruthy();
   });
+
+  const TWO_NODE_GEOMETRY = {
+    client: { id: 'client', x: 100, y: 300, width: 60, height: 60 },
+    server: { id: 'server', x: 700, y: 300, width: 60, height: 60 },
+  };
+
+  it('applique la couleur statique d’une connexion (override local de --rdfa-arrow)', () => {
+    mockGeometry = { ...TWO_NODE_GEOMETRY };
+    const spec: DataFlowSpec = {
+      nodes: BASE_NODES,
+      packets: [],
+      connections: [{ from: 'client', to: 'server', color: 'steelblue' }],
+      timeline: [],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    const g = (
+      container.querySelector('.rdfa-arrow-line') as SVGElement
+    ).closest('g') as SVGGElement;
+    expect(g.style.getPropertyValue('--rdfa-arrow')).toBe('steelblue');
+  });
+
+  it('surligne une connexion via le champ statique highlighted', () => {
+    mockGeometry = { ...TWO_NODE_GEOMETRY };
+    const spec: DataFlowSpec = {
+      nodes: BASE_NODES,
+      packets: [],
+      connections: [{ from: 'client', to: 'server', highlighted: true }],
+      timeline: [],
+    };
+    const { timeline } = compile(spec);
+    const { container } = render(
+      <Stage spec={spec} timeline={timeline} t={0} highlight={highlightCode} />
+    );
+    const line = container.querySelector('.rdfa-arrow-line') as SVGElement;
+    expect(line.classList.contains('rdfa-arrow-line--highlight')).toBe(true);
+  });
+
+  it('recolore une connexion via set_color (cross-fade color-mix depuis sa couleur statique)', () => {
+    mockGeometry = { ...TWO_NODE_GEOMETRY };
+    const spec: DataFlowSpec = {
+      nodes: BASE_NODES,
+      packets: [],
+      connections: [
+        { id: 'c1', from: 'client', to: 'server', color: 'steelblue' },
+      ],
+      timeline: [
+        { type: 'set_color', object: 'c1', color: 'crimson', duration: 400 },
+      ],
+    };
+    const { timeline } = compile(spec);
+    // set_color startMs=0, endMs=400, durationMs=400. At t=400 progress=1 →
+    // color-mix at 100% of crimson, faded from the connection's static steelblue.
+    const { container } = render(
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={400}
+        highlight={highlightCode}
+      />
+    );
+    const g = (
+      container.querySelector('.rdfa-arrow-line') as SVGElement
+    ).closest('g') as SVGGElement;
+    const stroke = g.style.getPropertyValue('--rdfa-arrow');
+    expect(stroke).toContain('color-mix');
+    expect(stroke).toContain('steelblue'); // cross-faded FROM the static color
+    expect(stroke).toContain('crimson'); // ...TO the target
+    expect(stroke).toContain('100.00%'); // fully reached at end of transition
+  });
 });

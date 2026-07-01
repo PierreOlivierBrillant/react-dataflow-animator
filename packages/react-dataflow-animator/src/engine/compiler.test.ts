@@ -672,6 +672,20 @@ describe('compile — set_color', () => {
     expect(sc.borderColor).toBeUndefined();
   });
 
+  it('accepts `color` alone (connection recolor) and carries it on the clip', () => {
+    const { timeline, warnings } = compile(
+      specOf([
+        { type: 'set_color', id: 'SC', object: 'link', color: 'crimson' },
+      ])
+    );
+    const sc = timeline.clips.find((c) => c.id === 'SC')! as SetColorClip;
+    expect(sc.kind).toBe('set_color');
+    expect(sc.color).toBe('crimson');
+    // The three node channels stay undefined; `color` is the connection channel.
+    expect(sc.backgroundColor).toBeUndefined();
+    expect(warnings).toHaveLength(0);
+  });
+
   it('emits a warning if object is missing', () => {
     const { timeline, warnings } = compile(
       specOf([

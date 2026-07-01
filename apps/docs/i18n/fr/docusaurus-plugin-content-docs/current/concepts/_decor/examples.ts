@@ -54,6 +54,22 @@ export const arrowHeadExample: DataFlowSpec = {
   timeline: [],
 };
 
+/** Une connexion teintée et une autre surlignée en permanence (accent + halo). */
+export const connectionColorExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: [
+    { id: 'gw', type: 'server', text: 'Passerelle', icon: 'nginx', lane: 1 },
+    { id: 'auth', type: 'server', text: 'Auth', lane: 2 },
+    { id: 'db', type: 'database', text: 'BdD', icon: 'postgres', lane: 3 },
+  ],
+  packets: [],
+  connections: [
+    { from: 'gw', to: 'auth', color: 'steelblue', text: 'OIDC' },
+    { from: 'auth', to: 'db', highlighted: true, text: 'chemin chaud' },
+  ],
+  timeline: [],
+};
+
 /** Deux zones colorées et labellisées (frontend / backend). */
 export const zonesExample: DataFlowSpec = {
   direction: 'left-to-right',

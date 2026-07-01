@@ -13,6 +13,7 @@ import {
   commentExample,
   setVisibleExample,
   setColorExample,
+  connectionRecolorExample,
   rotateExample,
   rotateSubtreeExample,
   highlightExample,
@@ -235,6 +236,18 @@ instance the red/black recoloring of a red-black tree. Below, a node inserted
 
 <DataFlowPlayer spec={setColorExample} theme="auto" height={300} />
 
+`set_color` also recolors a **permanent [connection](../concepts/decor.mdx)**:
+pass the connection's `id` as `object` and a single `color` (the three node
+channels don't apply to a line). It cross-fades the line and its arrow head from
+the current color — ideal for lighting up the edge a graph traversal just
+followed:
+
+```ts
+{ type: 'set_color', object: 'edge', color: 'seagreen', duration: 500 }
+```
+
+<DataFlowPlayer spec={connectionRecolorExample} theme="auto" height={300} />
+
 ## `rotate`
 
 Animates the visual rotation of a node. Two **mutually exclusive** modes; only
@@ -305,6 +318,10 @@ Here the halo pulses first on the `db` node, then on the permanent
 connection `link`:
 
 <DataFlowPlayer spec={highlightExample} theme="auto" height={300} />
+
+To emphasize a connection from the start (no timeline action), use its static
+[`highlighted`](../concepts/decor.mdx#highlighted--permanent-emphasis) field
+instead.
 
 ## `wait`
 

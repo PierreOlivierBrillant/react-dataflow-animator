@@ -98,7 +98,7 @@ export interface SetVisibleClip extends ClipBase {
 
 export interface SetColorClip extends ClipBase {
   kind: 'set_color';
-  /** Mutated static node ID. */
+  /** Mutated static node OR connection ID. */
   objectId: string;
   /** New background color (predefined name or hex), if this clip changes it. */
   backgroundColor?: string;
@@ -106,6 +106,8 @@ export interface SetColorClip extends ClipBase {
   borderColor?: string;
   /** New text color, if this clip changes it. */
   textColor?: string;
+  /** New connection line color, if this clip recolors a connection. */
+  color?: string;
 }
 
 export interface RotateClip extends ClipBase {

@@ -165,7 +165,9 @@ The timeline compiles an array of ordered actions. See
    Stroke styles `solid` / `dotted` / `dashed` / `animated` and path shape
    `path` (`bezier` by default, `simplebezier` / `straight` / `step` / `smoothstep`),
    optional middle text. **Permanent** arrows (decor) are declared in the
-   `connections` root array (displayed from init).
+   `connections` root array (displayed from init); each also accepts a `color`
+   (line color, predefined name or hex) and `highlighted` (permanent accent +
+   glow, the static form of the `highlight` action).
 3. **parallel**: encapsulates child actions executed at the same timestamp.
 4. **loading**: spinner attached to a target node (simulates processing).
 5. **set_content**: mutates the content of a node. Mode `code` (terminal + Prism highlighting,
@@ -179,16 +181,18 @@ The timeline compiles an array of ordered actions. See
 9. **set_visible**: shows or hides a static node (`object`) with a fade.
    The visibility state persists until the end of the chronology (or a
    contrary `set_visible`); complements the initial `visible` field of the nodes.
-10. **set_color**: recolors a static node (`object`) at runtime — any of
-    `background_color` / `border_color` / `text_color`, only the channels
-    provided changing. Eased, **deterministic** cross-fade between the previous
-    color and the new one (CSS `color-mix`, so it stays scrubbable both ways).
-    Same value space and auto-derivations as the static node colors (a
-    `background_color` without border/text derives a coordinated border and a
-    high-contrast ink). Like `set_visible`, the reached color persists until the
-    end of the chronology, and successive `set_color` on a node chain (each
-    fades from the previous color). Core operation for recoloring visualizations
-    (e.g. the red/black recoloring of a red-black tree).
+10. **set_color**: recolors a static node — or a permanent connection —
+    (`object`) at runtime. A node uses any of `background_color` /
+    `border_color` / `text_color`; a connection uses `color` (its single line
+    color). Only the channels provided change. Eased, **deterministic**
+    cross-fade between the previous color and the new one (CSS `color-mix`, so it
+    stays scrubbable both ways). Same value space and auto-derivations as the
+    static node colors (a `background_color` without border/text derives a
+    coordinated border and a high-contrast ink). Like `set_visible`, the reached
+    color persists until the end of the chronology, and successive `set_color` on
+    the same target chain (each fades from the previous color). Core operation
+    for recoloring visualizations (e.g. the red/black recoloring of a red-black
+    tree, or lighting the edges a graph traversal follows).
 11. **rotate**: animates the visual rotation of a node (`object`). Two mutually
     exclusive modes:
     - **target angle** `to` (degrees): a single _eased_ rotation. The start

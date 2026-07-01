@@ -308,6 +308,21 @@ export interface Connection {
    * @example "HTTPS"
    */
   text?: string;
+  /**
+   * Line color (predefined CSS name or hex). Tints the whole path and its arrow
+   * head(s); the median `text` label keeps the theme color for legibility.
+   * Default: the theme's neutral connection color. A runtime `set_color` on this
+   * connection's `id` recolors it, and an active `highlight` (accent) takes
+   * precedence over both.
+   * @example "steelblue"
+   */
+  color?: string;
+  /**
+   * Emphasizes the connection permanently, from initialization — the same accent
+   * color, thicker stroke and glow the {@link HighlightAction} applies, but
+   * static (no timeline action needed). Default: false.
+   */
+  highlighted?: boolean;
 }
 
 export interface PacketBody {
@@ -542,25 +557,29 @@ interface SetVisibleAction extends ActionBase {
 }
 
 /**
- * Recolors a static node at runtime. Mutates any of the node's three color
- * channels — `background_color`, `border_color`, `text_color` — over `duration`
- * ms, with a deterministic eased cross-fade between the previous color and the
- * new one (via CSS `color-mix`, so it stays scrubbable in both directions).
+ * Recolors a static node — or a permanent {@link Connection} — at runtime, over
+ * `duration` ms, with a deterministic eased cross-fade between the previous
+ * color and the new one (via CSS `color-mix`, so it stays scrubbable in both
+ * directions). What `object` refers to selects the channels that apply: a node
+ * uses `background_color` / `border_color` / `text_color`; a connection uses
+ * `color` (its single line color). Only the channels you provide change; the
+ * others keep their current value.
  *
- * Same value space as the node's static colors: a predefined CSS color name
- * (`tomato`, `steelblue`…) or an exact hex (`#1a1a1a`). Only the channels you
- * provide change; the others keep their current value. Auto-derivations apply
- * exactly as for a static node (a `background_color` without `border_color`
- * derives a coordinated border; without `text_color`, a high-contrast ink —
- * the latter only outside syntax-highlighted areas). The reached color persists
- * until the end of the timeline, like {@link SetVisibleAction}.
+ * Same value space as the static colors: a predefined CSS color name
+ * (`tomato`, `steelblue`…) or an exact hex (`#1a1a1a`). Node auto-derivations
+ * apply exactly as for a static node (a `background_color` without
+ * `border_color` derives a coordinated border; without `text_color`, a
+ * high-contrast ink — the latter only outside syntax-highlighted areas). The
+ * reached color persists until the end of the timeline, like
+ * {@link SetVisibleAction}.
  *
- * This is the core operation for algorithm visualizations that recolor nodes —
- * e.g. the red/black recoloring of a red-black tree.
+ * This is the core operation for algorithm visualizations that recolor elements
+ * — e.g. the red/black recoloring of a red-black tree, or lighting up the edge a
+ * traversal just followed.
  */
 interface SetColorAction extends ActionBase {
   type: 'set_color';
-  /** ID of the node to recolor. */
+  /** ID of the node or connection to recolor. */
   object: string;
   /**
    * New background color (shape fill, panel background, pill behind a
@@ -582,6 +601,13 @@ interface SetColorAction extends ActionBase {
    * @example "white"
    */
   text_color?: string;
+  /**
+   * New line color when `object` is a {@link Connection} id (recolors the path
+   * and its arrow head). Predefined CSS name or hex. Ignored for a node — use
+   * the three channels above. Omit to leave it unchanged.
+   * @example "crimson"
+   */
+  color?: string;
 }
 
 /**

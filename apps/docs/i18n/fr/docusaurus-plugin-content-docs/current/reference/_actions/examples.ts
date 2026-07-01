@@ -251,6 +251,26 @@ export const setColorExample: DataFlowSpec = {
   ],
 };
 
+/** `set_color` sur une connexion : un parcours allume chaque arête de A → B → C. */
+export const connectionRecolorExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: [
+    { id: 'a', type: 'circle', body: 'A', lane: 1 },
+    { id: 'b', type: 'circle', body: 'B', lane: 2 },
+    { id: 'c', type: 'circle', body: 'C', lane: 3 },
+  ],
+  packets: [],
+  connections: [
+    { id: 'ab', from: 'a', to: 'b' },
+    { id: 'bc', from: 'b', to: 'c' },
+  ],
+  timeline: [
+    { type: 'comment', text: 'Parcours du chemin A → B → C', duration: 700 },
+    { type: 'set_color', object: 'ab', color: 'seagreen', duration: 500 },
+    { type: 'set_color', object: 'bc', color: 'seagreen', duration: 500 },
+  ],
+};
+
 /** `rotate` : rotations enchaînées vers des angles absolus ; le label reste droit. */
 export const rotateExample: DataFlowSpec = {
   direction: 'left-to-right',

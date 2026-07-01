@@ -526,14 +526,17 @@
   animation: rdfa-pulse 1.4s ease-in-out infinite;
 }
 
-.rdfa-arrow-line--highlight {
+/* Two classes for specificity: the base `.rdfa-arrow-line` rule (and any local
+   `--rdfa-arrow` color override) is declared later, so the highlight must win on
+   specificity, not source order — accent color and thicker stroke over both. */
+.rdfa-arrow-line.rdfa-arrow-line--highlight {
   stroke: var(--rdfa-accent);
   stroke-width: calc(3.5px * var(--rdfa-scale, 1));
   filter: drop-shadow(
     0 0 4px color-mix(in srgb, var(--rdfa-accent) 70%, transparent)
   );
 }
-.rdfa-arrow-head--highlight {
+.rdfa-arrow-head.rdfa-arrow-head--highlight {
   fill: var(--rdfa-accent);
 }
 

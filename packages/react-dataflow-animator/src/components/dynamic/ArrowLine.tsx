@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import {
   defineAnimatable,
   type AnimatableComponent,
@@ -30,6 +31,12 @@ export interface ArrowLineProps {
   progress: number;
   /** Highlighted by a highlight action. */
   highlighted?: boolean;
+  /**
+   * Line color (CSS string, possibly a `color-mix(...)` cross-fade). Overrides
+   * the theme's neutral stroke for the path and its head; an active `highlighted`
+   * still wins (it paints the accent). Undefined = theme color.
+   */
+  color?: string;
   /** All stage nodes — to avoid labels during routing. */
   obstacles?: NodeGeom[];
   /** Anchor axis derived from layout flow (see `connectionAxis`). Determines the
@@ -50,6 +57,7 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     text,
     progress,
     highlighted,
+    color,
     obstacles,
     arrow_head,
     axis,
@@ -113,8 +121,15 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     const lineCls = `rdfa-arrow-line${highlighted ? ' rdfa-arrow-line--highlight' : ''}`;
     const headCls = `rdfa-arrow-head${highlighted ? ' rdfa-arrow-head--highlight' : ''}`;
 
+    // A custom color overrides the theme's neutral stroke variable that both the
+    // line (stroke) and the head (fill) read; the `--highlight` classes paint
+    // `--rdfa-accent` instead, so a highlighted connection keeps the accent.
+    const gStyle = color
+      ? ({ '--rdfa-arrow': color } as CSSProperties)
+      : undefined;
+
     return (
-      <g>
+      <g style={gStyle}>
         <polyline className={lineCls} data-style={style} points={ptStr} />
         {renderForward && progress > 0.02 ? (
           <polygon className={headCls} points={headFwd} />

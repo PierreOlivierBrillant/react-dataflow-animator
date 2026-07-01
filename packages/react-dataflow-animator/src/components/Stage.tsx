@@ -494,17 +494,39 @@ export function Stage({
         text_color: node.text_color,
       };
   }
+  // Connection line color, keyed by id. Seeded with the static `Connection.color`
+  // (the value a set_color cross-fades FROM), exactly like the node seeding above.
+  // `connectionIds` also lets the set_color loop tell a connection target from a
+  // node target — the same id space, resolved here rather than in the compiler.
+  const connectionColor: Record<string, string> = {};
+  const connectionIds = new Set<string>();
+  for (const link of spec.connections ?? []) {
+    if (link.id) {
+      connectionIds.add(link.id);
+      if (link.color) connectionColor[link.id] = link.color;
+    }
+  }
   const recoloredNodes = new Set<string>();
   for (const a of active) {
     if (a.clip.kind !== 'set_color') continue;
     const clip = a.clip as SetColorClip;
-    recoloredNodes.add(clip.objectId);
     const p = easeInOutCubic(a.progress);
-    const prev = nodeColor[clip.objectId] ?? {};
     // No faithful "from" when the channel was never colored: adopt the target
     // directly rather than inventing an origin and flashing a wrong color.
     const mix = (from: string | undefined, to: string): string =>
       from ? `color-mix(in srgb, ${from}, ${to} ${(p * 100).toFixed(2)}%)` : to;
+    // A connection target recolors its single line color; a node target its
+    // background / border / text channels.
+    if (connectionIds.has(clip.objectId)) {
+      if (clip.color != null)
+        connectionColor[clip.objectId] = mix(
+          connectionColor[clip.objectId],
+          clip.color
+        );
+      continue;
+    }
+    recoloredNodes.add(clip.objectId);
+    const prev = nodeColor[clip.objectId] ?? {};
     const next: ColorOverride = { ...prev };
     if (clip.backgroundColor != null)
       next.background_color = mix(prev.background_color, clip.backgroundColor);
@@ -650,7 +672,10 @@ export function Stage({
               arrow_head={link.arrow_head}
               text={link.text}
               progress={1}
-              highlighted={!!link.id && highlightedIds.has(link.id)}
+              color={(link.id && connectionColor[link.id]) || link.color}
+              highlighted={
+                link.highlighted || (!!link.id && highlightedIds.has(link.id))
+              }
               obstacles={allEffectiveNodes}
               axis={axisFor(link.from, link.to)}
             />

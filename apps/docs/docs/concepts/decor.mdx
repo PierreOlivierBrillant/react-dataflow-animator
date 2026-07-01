@@ -8,6 +8,7 @@ import {
   lineStyleExample,
   pathShapeExample,
   arrowHeadExample,
+  connectionColorExample,
   zonesExample,
   nestedZonesExample,
 } from './_decor/examples';
@@ -180,6 +181,36 @@ An optional `text` is displayed in the middle of the link (e.g., a protocol, a p
 ```ts
 { from: 'api', to: 'db', text: 'TCP 5432' }
 ```
+
+### `color` — line color
+
+`color` tints the whole path and its arrow head(s) — a predefined CSS name
+(`steelblue`, `tomato`…) or an exact hex. The median `text` label keeps the theme
+color so it stays legible. Left out, the connection uses the theme's neutral
+color. A [`set_color`](../reference/actions.mdx#set_color) action on the
+connection's `id` recolors it at runtime.
+
+```ts
+{ from: 'api', to: 'db', color: 'steelblue' }
+```
+
+### `highlighted` — permanent emphasis
+
+`highlighted: true` gives the connection the accent color, a thicker stroke and a
+glow — the same emphasis the [`highlight`](../reference/actions.mdx#highlight)
+action applies at a moment in the timeline, but static (displayed from the
+start). It takes precedence over `color`.
+
+```ts
+{ from: 'api', to: 'db', highlighted: true }
+```
+
+<DataFlowPlayer
+  spec={connectionColorExample}
+  theme="auto"
+  controls={false}
+  height={300}
+/>
 
 ## Zones
 

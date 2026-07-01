@@ -13,6 +13,7 @@ import {
   commentExample,
   setVisibleExample,
   setColorExample,
+  connectionRecolorExample,
   rotateExample,
   rotateSubtreeExample,
   highlightExample,
@@ -239,6 +240,18 @@ un nœud inséré « rouge » est recoloré en « noir » :
 
 <DataFlowPlayer spec={setColorExample} theme="auto" height={300} />
 
+`set_color` recolore aussi une **[connexion](../concepts/decor.mdx) permanente** :
+passez l'`id` de la connexion comme `object` et un unique `color` (les trois
+canaux de nœud ne s'appliquent pas à un trait). Le trait et sa pointe passent en
+fondu depuis leur couleur courante — idéal pour allumer l'arête qu'un parcours de
+graphe vient d'emprunter :
+
+```ts
+{ type: 'set_color', object: 'edge', color: 'seagreen', duration: 500 }
+```
+
+<DataFlowPlayer spec={connectionRecolorExample} theme="auto" height={300} />
+
 ## `rotate`
 
 Anime la rotation du visuel d'un nœud. Deux modes **mutuellement exclusifs** ;
@@ -313,6 +326,10 @@ Ici, le halo pulse d'abord sur le nœud `db`, puis sur la connexion
 permanente `link` :
 
 <DataFlowPlayer spec={highlightExample} theme="auto" height={300} />
+
+Pour mettre en avant une connexion dès le départ (sans action de timeline),
+utilisez plutôt son champ statique
+[`highlighted`](../concepts/decor.mdx#highlighted--mise-en-avant-permanente).
 
 ## `wait`
 

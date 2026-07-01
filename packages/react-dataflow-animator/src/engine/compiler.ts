@@ -406,11 +406,13 @@ function compileAction(
       const hasColor =
         action.background_color != null ||
         action.border_color != null ||
-        action.text_color != null;
+        action.text_color != null ||
+        action.color != null;
       if (!action.object || !hasColor) {
         ctx.warnings.push(
           `set_color "${id}": object and at least one color ` +
-            `(background_color/border_color/text_color) required.`
+            `(background_color/border_color/text_color for a node, ` +
+            `color for a connection) required.`
         );
         break;
       }
@@ -421,6 +423,7 @@ function compileAction(
         backgroundColor: action.background_color,
         borderColor: action.border_color,
         textColor: action.text_color,
+        color: action.color,
         // keepEnd forced to true: like set_visible, the color persists until the
         // end of the timeline so Stage can read the node's color at any later
         // instant (the clip stays in `active`, latest one per node winning).

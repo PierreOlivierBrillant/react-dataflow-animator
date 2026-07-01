@@ -8,6 +8,7 @@ import {
   lineStyleExample,
   pathShapeExample,
   arrowHeadExample,
+  connectionColorExample,
   zonesExample,
   nestedZonesExample,
 } from './_decor/examples';
@@ -180,6 +181,36 @@ Un `text` optionnel s'affiche au milieu du lien (ex. un protocole, un port) :
 ```ts
 { from: 'api', to: 'db', text: 'TCP 5432' }
 ```
+
+### `color` — couleur du trait
+
+`color` teinte tout le tracé et sa (ses) pointe(s) — un nom CSS prédéfini
+(`steelblue`, `tomato`…) ou un hex exact. L'étiquette médiane `text` conserve la
+couleur du thème pour rester lisible. Omise, la connexion prend la couleur neutre
+du thème. Une action [`set_color`](../reference/actions.mdx#set_color) sur l'`id`
+de la connexion la recolore à l'exécution.
+
+```ts
+{ from: 'api', to: 'db', color: 'steelblue' }
+```
+
+### `highlighted` — mise en avant permanente
+
+`highlighted: true` donne à la connexion la couleur d'accent, un trait plus épais
+et un halo — la même mise en avant que l'action
+[`highlight`](../reference/actions.mdx#highlight) applique à un instant de la
+timeline, mais statique (affichée dès le départ). Elle prime sur `color`.
+
+```ts
+{ from: 'api', to: 'db', highlighted: true }
+```
+
+<DataFlowPlayer
+  spec={connectionColorExample}
+  theme="auto"
+  controls={false}
+  height={300}
+/>
 
 ## Zones
 
