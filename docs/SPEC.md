@@ -201,7 +201,16 @@ The timeline compiles an array of ordered actions. See
     the same target chain (each fades from the previous color). Core operation
     for recoloring visualizations (e.g. the red/black recoloring of a red-black
     tree, or lighting the edges a graph traversal follows).
-11. **rotate**: animates the visual rotation of a node (`object`). Two mutually
+11. **set_icon**: updates a static node's corner **icon badge** (`object`) at
+    runtime — the small overlaid badge (`icon`: known technology, registered
+    icon, or short free text). The badge swaps to the new value when the clip
+    starts and, like `set_color`, the reached value persists until the end of
+    the chronology; successive `set_icon` on the same node chain. Deterministic
+    and scrubbable both ways. This is how a visualization keeps a **per-node
+    scalar that evolves** legible on the node itself — a Dijkstra node's
+    tentative distance (∞→7→5), an A\* node's `f = g + h` — instead of only in a
+    comment. An empty string clears the badge.
+12. **rotate**: animates the visual rotation of a node (`object`). Two mutually
     exclusive modes:
     - **target angle** `to` (degrees): a single _eased_ rotation. The start
       angle is the node's current rotation (its static `rotation`, or a previous
@@ -218,7 +227,7 @@ The timeline compiles an array of ordered actions. See
     an open-ended `keep_until`/`keep_until_end` spin is not known at compile
     time, so a later `rotate` on that node resumes from the pre-spin angle).
 
-12. **rotate_subtree**: restructures the binary `tree` (only in `direction: 'tree'`)
+13. **rotate_subtree**: restructures the binary `tree` (only in `direction: 'tree'`)
     with a left/right **tree rotation** around the pivot `object`, then animates
     the nodes gliding to their new depths while the edges re-route. The engine
     mutates the topology and recomputes BOTH positions and edges from that single

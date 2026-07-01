@@ -17,6 +17,7 @@ import type {
   RotateClip,
   SetColorClip,
   SetContentClip,
+  SetIconClip,
   SetVisibleClip,
   Step,
   Timeline,
@@ -55,6 +56,7 @@ const DEFAULT_DURATION: Record<ActionType, number> = {
   parallel: 0,
   set_visible: 300,
   set_color: 400,
+  set_icon: 300,
   rotate: 600,
   rotate_subtree: 700,
   wait: 1000,
@@ -70,6 +72,7 @@ const DEFAULT_KEEP_NEXT: Partial<Record<ActionType, boolean>> = {
   loading: false,
   set_visible: false,
   set_color: false,
+  set_icon: false,
   rotate: false,
   rotate_subtree: false,
 };
@@ -426,6 +429,31 @@ function compileAction(
         color: action.color,
         // keepEnd forced to true: like set_visible, the color persists until the
         // end of the timeline so Stage can read the node's color at any later
+        // instant (the clip stays in `active`, latest one per node winning).
+        keepEnd: true,
+      };
+      ctx.pending.push({
+        clip,
+        keepUntil: undefined,
+        keepNext: false,
+        keepEnd: true,
+        stepIndex,
+      });
+      if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
+      break;
+    }
+    case 'set_icon': {
+      if (!action.object || action.icon == null) {
+        ctx.warnings.push(`set_icon "${id}": object and icon required.`);
+        break;
+      }
+      const clip: SetIconClip = {
+        ...base,
+        kind: 'set_icon',
+        objectId: action.object,
+        icon: action.icon,
+        // keepEnd forced to true: like set_color, the badge value persists until
+        // the end of the timeline so Stage can read a node's icon at any later
         // instant (the clip stays in `active`, latest one per node winning).
         keepEnd: true,
       };

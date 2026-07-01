@@ -456,6 +456,7 @@ export type ActionType =
   | 'highlight'
   | 'set_visible'
   | 'set_color'
+  | 'set_icon'
   | 'rotate'
   | 'rotate_subtree'
   | 'wait';
@@ -633,6 +634,32 @@ interface SetColorAction extends ActionBase {
 }
 
 /**
+ * Updates a node's corner **icon badge** at runtime — the small overlaid badge
+ * ({@link Node.icon}: a known technology, a registered icon, or short free
+ * text). The badge swaps to the new value when the clip starts and, like
+ * {@link SetVisibleAction} / {@link SetColorAction}, the reached value persists
+ * until the end of the timeline; successive `set_icon` on the same node chain
+ * (each replaces the previous badge). It is scrubbable in both directions.
+ *
+ * This is how an algorithm visualization keeps a **per-node scalar that
+ * evolves** legible right on the node — the tentative distance of a Dijkstra
+ * node (∞ → 7 → 5…), the `f = g + h` of an A\* node — instead of relying only on
+ * a comment.
+ */
+interface SetIconAction extends ActionBase {
+  type: 'set_icon';
+  /** ID of the node whose badge changes. */
+  object: string;
+  /**
+   * New badge value: a known technology (e.g. 'react'), a registered icon name,
+   * or short free text (a number like '7', a symbol like '∞'). An empty string
+   * clears the badge.
+   * @example "7"
+   */
+  icon: string;
+}
+
+/**
  * Animates the visual rotation of a node. Two mutually exclusive modes:
  *
  * - **Target angle** (`to`): a single eased rotation toward an absolute angle.
@@ -710,6 +737,7 @@ export type Action =
   | HighlightAction
   | SetVisibleAction
   | SetColorAction
+  | SetIconAction
   | RotateAction
   | RotateSubtreeAction
   | WaitAction;

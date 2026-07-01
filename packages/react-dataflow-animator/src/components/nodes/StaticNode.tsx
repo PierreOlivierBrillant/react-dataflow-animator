@@ -29,6 +29,9 @@ export interface StaticNodeProps {
   rotation?: number;
   /** Runtime color override (active set_color), eased cross-fade per channel. */
   colorOverride?: ColorOverride;
+  /** Runtime icon-badge override (set_icon). Undefined = keep the static
+   *  `object.icon`; an empty string clears the badge. */
+  iconOverride?: string;
   /** Revealed fraction [0..1] of the panel during a set_content transition. The
    *  reveal happens from TOP to bottom via `clip-path` — which does not change the
    *  layout size, so the ResizeObserver always measures the full panel
@@ -55,11 +58,15 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     opacity,
     rotation,
     colorOverride,
+    iconOverride,
     reveal,
     contentLimit,
     codeFontScale,
     onCodeFit,
   }: StaticNodeProps) {
+    // Runtime set_icon wins over the static badge; '' clears it (nullish
+    // coalescing keeps '' distinct from "no override").
+    const effIcon = iconOverride ?? object.icon;
     const isPanel = isPanelNode(object.type);
     const isShape = isShapeType(object.type);
     const visual: ReactNode = content ? (
@@ -78,12 +85,10 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
             share the same positioned container, so they always remain
             concentric. The container holds the solid background that serves
             as the backdrop for the spinner ("inwards"). */}
-        {object.icon || loading ? (
+        {effIcon || loading ? (
           <span className="rdfa-node-badge">
-            {object.icon ? (
-              <span className="rdfa-node-subicon">
-                {getSubIcon(object.icon)}
-              </span>
+            {effIcon ? (
+              <span className="rdfa-node-subicon">{getSubIcon(effIcon)}</span>
             ) : null}
             {loading ? (
               <span className="rdfa-spinner" aria-hidden="true" />

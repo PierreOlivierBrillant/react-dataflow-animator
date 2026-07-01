@@ -23,6 +23,7 @@ import {
   type ReflowClip,
   type RotateClip,
   type SetColorClip,
+  type SetIconClip,
   type SetContentClip,
   type SetVisibleClip,
   type Timeline,
@@ -537,6 +538,18 @@ export function Stage({
     nodeColor[clip.objectId] = next;
   }
 
+  // Icon badge override by node: active set_icon clips in startMs order, latest
+  // wins. Like set_color, set_icon clips have keepEnd=true so a swapped badge
+  // stays applied. Empty string is a real value (clears the badge) and is kept
+  // distinct from "no override" (undefined → fall back to the static icon).
+  const nodeIcon: Record<string, string> = {};
+  for (const a of active) {
+    if (a.clip.kind === 'set_icon') {
+      const clip = a.clip as SetIconClip;
+      nodeIcon[clip.objectId] = clip.icon;
+    }
+  }
+
   const loadingNodes = useMemo(() => {
     const set = new Set<string>();
     for (const a of active)
@@ -736,6 +749,7 @@ export function Stage({
             colorOverride={
               recoloredNodes.has(o.id) ? nodeColor[o.id] : undefined
             }
+            iconOverride={nodeIcon[o.id]}
             reveal={revealByNode[o.id]}
             contentLimit={
               contentLimits[o.id]

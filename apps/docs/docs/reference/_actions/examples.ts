@@ -260,6 +260,31 @@ export const connectionRecolorExample: DataFlowSpec = {
 };
 
 /** `rotate`: chained rotations toward absolute angles; the label stays upright. */
+export const setIconExample: DataFlowSpec = {
+  direction: 'left-to-right',
+  nodes: [
+    { id: 'v', type: 'circle', text: 'node', body: 'v', icon: '∞', lane: 1 },
+  ],
+  packets: [],
+  timeline: [
+    {
+      type: 'comment',
+      object: 'v',
+      text: 'Tentative distance: ∞',
+      duration: 900,
+    },
+    { type: 'set_icon', object: 'v', icon: '7' },
+    { type: 'comment', object: 'v', text: 'Relaxed to 7', duration: 900 },
+    { type: 'set_icon', object: 'v', icon: '5' },
+    {
+      type: 'comment',
+      object: 'v',
+      text: 'Improved to 5',
+      keep_until_end: true,
+    },
+  ],
+};
+
 export const rotateExample: DataFlowSpec = {
   direction: 'left-to-right',
   nodes: [{ id: 'gear', type: 'star', text: 'gear', body: '⚙', lane: 1 }],

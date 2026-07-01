@@ -493,6 +493,53 @@ describe('compile — set_visible', () => {
   });
 });
 
+describe('compile — set_icon', () => {
+  type SetIconClip = import('./timeline').SetIconClip;
+
+  it('produces a set_icon clip carrying the value, keepEnd=true, persisting to the end', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'set_icon', id: 'SI', object: 'a', icon: '7' },
+        { type: 'arrow', id: 'AR', from: 'a', to: 'b', duration: 300 },
+      ])
+    );
+    const si = timeline.clips.find((c) => c.id === 'SI')! as SetIconClip;
+    expect(si.kind).toBe('set_icon');
+    expect(si.icon).toBe('7');
+    expect(si.keepEnd).toBe(true);
+    expect(si.visibleUntilMs).toBe(timeline.durationMs);
+  });
+
+  it('accepts an empty string (clears the badge)', () => {
+    const { timeline, warnings } = compile(
+      specOf([{ type: 'set_icon', id: 'SI', object: 'a', icon: '' }])
+    );
+    const si = timeline.clips.find((c) => c.id === 'SI')! as SetIconClip;
+    expect(si.icon).toBe('');
+    expect(warnings).toEqual([]);
+  });
+
+  it('emits a warning if object or icon is missing', () => {
+    const { timeline, warnings } = compile(
+      specOf([{ type: 'set_icon', icon: '7' } as unknown as Action])
+    );
+    expect(timeline.clips).toHaveLength(0);
+    expect(warnings.some((w) => w.includes('set_icon'))).toBe(true);
+  });
+
+  it('two successive set_icon on the same node both persist (chaining)', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'set_icon', id: 'I1', object: 'a', icon: '∞' },
+        { type: 'set_icon', id: 'I2', object: 'a', icon: '5' },
+      ])
+    );
+    const icons = timeline.clips.filter((c) => c.kind === 'set_icon');
+    expect(icons).toHaveLength(2);
+    for (const c of icons) expect(c.visibleUntilMs).toBe(timeline.durationMs);
+  });
+});
+
 describe('compile — rotate', () => {
   type RotateClip = import('./timeline').RotateClip;
 

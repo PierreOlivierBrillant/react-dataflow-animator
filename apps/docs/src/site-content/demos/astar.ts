@@ -60,7 +60,8 @@ function buildGrid(): {
   return { nodes, connections };
 }
 
-/** Expand one node on the straight line, colouring it and the edge walked in. */
+/** Expand one node on the straight line: colour it, badge its f-value (all 3
+ *  along the optimal line), and colour the edge walked in. */
 const expand = (
   node: string,
   text: string,
@@ -74,6 +75,7 @@ const expand = (
       background_color: CLOSED,
       text_color: INK,
     },
+    { type: 'set_icon', object: node, icon: '3' },
     ...(edge
       ? [{ type: 'set_color' as const, object: edge, color: CLOSED }]
       : []),

@@ -1,24 +1,27 @@
 import type { DataFlowSpec } from 'react-dataflow-animator';
 import type { Locale } from '../../i18n';
 
-// Dijkstra's shortest path on a free `direction: 'graph'` layout — the case
-// the x/y coordinates exist for. Nodes are placed by hand (a real node-link
-// diagram, not a flow/ring/tree); undirected weighted edges carry their cost
-// in `text`. The algorithm expands the nearest unsettled node in turn; each
-// `settle` recolours the node AND the edge it was reached through, so the
-// shortest-path tree grows visibly. At the end the whole A→F path lights up.
+// Dijkstra's shortest path on a free `direction: 'graph'` layout — the case the
+// x/y coordinates exist for. Every node carries its current tentative distance
+// as a corner icon badge (∞ at first, updated with `set_icon` as edges relax):
+// that badge is the whole point — without it you cannot remember each node's
+// value. Nodes are coloured amber when first reached (frontier) and teal once
+// settled; the final shortest path lights up green.
 //
-// Settle order from A: A(0) → C(2) → B(3, via C) → D(8, via B) → E(10, via D)
-// → F(13, via E). Shortest path A→C→B→D→E→F = 13 (edges ac, bc, bd, de, ef).
-// Node keys (A…F) and edge weights are language-invariant.
-const SETTLED = '#0d9488'; // teal — settled node / tree edge
+// Trace from A: A=0 → C=2 → B=3 (via C) → D=8 (via B) → E=10 (via D) → F=13
+// (via E). Shortest path A→C→B→D→E→F = 13 (edges ac, bc, bd, de, ef). Node keys
+// (A…F), distances and edge weights are language-invariant.
+const SETTLED = '#0d9488'; // teal — settled (final) node
+const FRONTIER = '#b45309'; // amber — reached but not settled yet
 const PATH = '#16a34a'; // green — final shortest path
 const INK = 'white';
 
+/** Circle node showing its key (body) and its distance badge (icon, starts ∞). */
 const N = (id: string, x: number, y: number) => ({
   id,
   type: 'circle' as const,
   body: id,
+  icon: '∞',
   x,
   y,
 });
@@ -32,62 +35,52 @@ const E = (id: string, from: string, to: string, w: number) => ({
   arrow_head: 'none' as const,
 });
 
-/** One Dijkstra step: settle `node`, colouring it and the edge it was reached
- *  through (omitted for the source). The comment holds the distance reasoning. */
-const settle = (
-  node: string,
-  text: string,
-  edge?: string
-): DataFlowSpec['timeline'][number] => ({
-  type: 'parallel',
-  actions: [
-    {
-      type: 'set_color',
-      object: node,
-      background_color: SETTLED,
-      text_color: INK,
-    },
-    ...(edge
-      ? [{ type: 'set_color' as const, object: edge, color: SETTLED }]
-      : []),
-    { type: 'comment', object: node, text, keep_until_next: true },
-  ],
+// Recolour / rebadge helpers (each is one action inside a parallel step).
+const settled = (id: string): DataFlowSpec['timeline'][number] => ({
+  type: 'set_color',
+  object: id,
+  background_color: SETTLED,
+  text_color: INK,
+});
+const frontier = (id: string): DataFlowSpec['timeline'][number] => ({
+  type: 'set_color',
+  object: id,
+  background_color: FRONTIER,
+  text_color: INK,
+});
+const dist = (id: string, v: string): DataFlowSpec['timeline'][number] => ({
+  type: 'set_icon',
+  object: id,
+  icon: v,
 });
 
 const strings = {
   en: {
     intro:
-      'Dijkstra: find the cheapest route from A to F. Each edge shows its cost. The rule is simple — always settle the nearest node not yet settled.',
-    settleA:
-      'Start at A, distance 0. A is settled: the shortest route to itself is trivial.',
-    settleC: 'The nearest unsettled node is C at cost 2 (A→C). Settle C.',
-    settleB:
-      'Through C, B costs 2 + 1 = 3 — cheaper than the direct A→B (4). Settle B at 3.',
-    settleD: 'From B, D costs 3 + 5 = 8. It is now the nearest. Settle D at 8.',
-    settleE: 'From D, E costs 8 + 2 = 10. Settle E at 10.',
-    settleF: 'From E, the target F costs 10 + 3 = 13. Settle F — done.',
-    done: 'Shortest path A→C→B→D→E→F = 13. Note it is not the straightest line, but the cheapest.',
+      'Dijkstra keeps a tentative distance on every node — the badge, ∞ at first. It repeatedly settles the nearest unsettled node and relaxes its edges, lowering neighbours’ badges.',
+    a: 'A is the source: distance 0, settle it. Relax A→B (4) and A→C (2): B and C get their first badges.',
+    c: 'C = 2 is the nearest → settle it. Via C: B improves 4→3, and D = 10, E = 12 appear.',
+    b: 'B = 3 is next. Relax B→D: 3 + 5 = 8 beats 10, so D drops to 8.',
+    d: 'D = 8. Via D: E improves 12→10, and the target F appears at 14.',
+    e: 'E = 10. Relax E→F: 10 + 3 = 13 beats 14, so F drops to 13.',
+    f: 'F = 13 is settled — the shortest distance to the target is final.',
+    done: 'Shortest path A→C→B→D→E→F = 13. Each badge is that node’s final shortest distance from A.',
   },
   fr: {
     intro:
-      'Dijkstra : trouver la route la moins chère de A à F. Chaque arête affiche son coût. La règle est simple — on règle toujours le nœud le plus proche pas encore réglé.',
-    settleA:
-      'Départ en A, distance 0. A est réglé : le plus court chemin vers lui-même est trivial.',
-    settleC:
-      'Le nœud non réglé le plus proche est C, coût 2 (A→C). On règle C.',
-    settleB:
-      'En passant par C, B coûte 2 + 1 = 3 — moins cher que le direct A→B (4). On règle B à 3.',
-    settleD:
-      'Depuis B, D coûte 3 + 5 = 8. C’est désormais le plus proche. On règle D à 8.',
-    settleE: 'Depuis D, E coûte 8 + 2 = 10. On règle E à 10.',
-    settleF: 'Depuis E, la cible F coûte 10 + 3 = 13. On règle F — terminé.',
-    done: 'Plus court chemin A→C→B→D→E→F = 13. Remarquez qu’il n’est pas le plus droit, mais le moins cher.',
+      'Dijkstra garde une distance provisoire sur chaque nœud — le badge, ∞ au départ. Il règle tour à tour le nœud non réglé le plus proche et relâche ses arêtes, abaissant les badges des voisins.',
+    a: 'A est la source : distance 0, on le règle. On relâche A→B (4) et A→C (2) : B et C reçoivent leurs premiers badges.',
+    c: 'C = 2 est le plus proche → on le règle. Via C : B s’améliore 4→3, et D = 10, E = 12 apparaissent.',
+    b: 'B = 3 ensuite. On relâche B→D : 3 + 5 = 8 bat 10, donc D tombe à 8.',
+    d: 'D = 8. Via D : E s’améliore 12→10, et la cible F apparaît à 14.',
+    e: 'E = 10. On relâche E→F : 10 + 3 = 13 bat 14, donc F tombe à 13.',
+    f: 'F = 13 est réglé — la distance la plus courte vers la cible est définitive.',
+    done: 'Plus court chemin A→C→B→D→E→F = 13. Chaque badge est la distance finale la plus courte du nœud depuis A.',
   },
 };
 
 export const dijkstra = (locale: Locale): DataFlowSpec => {
   const s = strings[locale];
-  // Path nodes/edges recoloured green at the end.
   const pathNodes = ['A', 'C', 'B', 'D', 'E', 'F'];
   const pathEdges = ['ac', 'bc', 'bd', 'de', 'ef'];
   return {
@@ -113,13 +106,64 @@ export const dijkstra = (locale: Locale): DataFlowSpec => {
     ],
     packets: [],
     timeline: [
-      { type: 'comment', text: s.intro, duration: 3600 },
-      settle('A', s.settleA),
-      settle('C', s.settleC, 'ac'),
-      settle('B', s.settleB, 'bc'),
-      settle('D', s.settleD, 'bd'),
-      settle('E', s.settleE, 'de'),
-      settle('F', s.settleF, 'ef'),
+      { type: 'comment', text: s.intro, duration: 4000 },
+      {
+        type: 'parallel',
+        actions: [
+          dist('A', '0'),
+          settled('A'),
+          dist('B', '4'),
+          frontier('B'),
+          dist('C', '2'),
+          frontier('C'),
+          { type: 'comment', object: 'A', text: s.a, keep_until_next: true },
+        ],
+      },
+      {
+        type: 'parallel',
+        actions: [
+          settled('C'),
+          dist('B', '3'),
+          dist('D', '10'),
+          frontier('D'),
+          dist('E', '12'),
+          frontier('E'),
+          { type: 'comment', object: 'C', text: s.c, keep_until_next: true },
+        ],
+      },
+      {
+        type: 'parallel',
+        actions: [
+          settled('B'),
+          dist('D', '8'),
+          { type: 'comment', object: 'B', text: s.b, keep_until_next: true },
+        ],
+      },
+      {
+        type: 'parallel',
+        actions: [
+          settled('D'),
+          dist('E', '10'),
+          dist('F', '14'),
+          frontier('F'),
+          { type: 'comment', object: 'D', text: s.d, keep_until_next: true },
+        ],
+      },
+      {
+        type: 'parallel',
+        actions: [
+          settled('E'),
+          dist('F', '13'),
+          { type: 'comment', object: 'E', text: s.e, keep_until_next: true },
+        ],
+      },
+      {
+        type: 'parallel',
+        actions: [
+          settled('F'),
+          { type: 'comment', object: 'F', text: s.f, keep_until_next: true },
+        ],
+      },
       {
         type: 'parallel',
         actions: [

@@ -14,6 +14,7 @@ import {
   setVisibleExample,
   setColorExample,
   connectionRecolorExample,
+  setIconExample,
   rotateExample,
   rotateSubtreeExample,
   highlightExample,
@@ -251,6 +252,27 @@ graphe vient d'emprunter :
 ```
 
 <DataFlowPlayer spec={connectionRecolorExample} theme="auto" height={300} />
+
+## `set_icon`
+
+Met à jour le **badge d'icône** d'angle d'un nœud à l'exécution — le petit badge
+superposé (`icon` : une techno connue, une icône enregistrée, ou un court texte
+libre). Le badge bascule sur la nouvelle valeur au démarrage de l'action ; la
+valeur atteinte **persiste** jusqu'à la fin de la chronologie (comme
+`set_color`), et les `set_icon` successifs sur le même nœud **s'enchaînent**. Une
+chaîne vide efface le badge.
+
+```ts
+{ type: 'set_icon', object: 'v', icon: '7' }
+```
+
+C'est ainsi qu'une visualisation d'algorithme garde lisible, sur le nœud
+lui-même, un **scalaire par nœud qui évolue** — la distance provisoire d'un nœud
+Dijkstra (∞ → 7 → 5), le `f = g + h` d'un nœud A\* — plutôt que seulement dans un
+commentaire. Ci-dessous, le badge d'un nœud descend de ∞ jusqu'à sa valeur
+finale :
+
+<DataFlowPlayer spec={setIconExample} theme="auto" height={300} />
 
 ## `rotate`
 

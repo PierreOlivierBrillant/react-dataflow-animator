@@ -19,6 +19,7 @@ export type ClipKind =
   | 'highlight'
   | 'set_visible'
   | 'set_color'
+  | 'set_icon'
   | 'rotate'
   | 'reflow';
 
@@ -110,6 +111,14 @@ export interface SetColorClip extends ClipBase {
   color?: string;
 }
 
+export interface SetIconClip extends ClipBase {
+  kind: 'set_icon';
+  /** ID of the node whose corner icon badge changes. */
+  objectId: string;
+  /** New badge value (tech / icon name or short free text; '' clears it). */
+  icon: string;
+}
+
 export interface RotateClip extends ClipBase {
   kind: 'rotate';
   /** ID of the rotated static node. */
@@ -145,6 +154,7 @@ export type Clip =
   | HighlightClip
   | SetVisibleClip
   | SetColorClip
+  | SetIconClip
   | RotateClip
   | ReflowClip;
 

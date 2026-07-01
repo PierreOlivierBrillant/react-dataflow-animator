@@ -14,6 +14,7 @@ import {
   setVisibleExample,
   setColorExample,
   connectionRecolorExample,
+  setIconExample,
   rotateExample,
   rotateSubtreeExample,
   highlightExample,
@@ -247,6 +248,25 @@ followed:
 ```
 
 <DataFlowPlayer spec={connectionRecolorExample} theme="auto" height={300} />
+
+## `set_icon`
+
+Updates a node's corner **icon badge** at runtime — the small overlaid badge
+(`icon`: a known technology, a registered icon, or short free text). The badge
+swaps to the new value when the action starts; the reached value **persists**
+until the end of the timeline (like `set_color`), and successive `set_icon` on
+the same node **chain**. An empty string clears the badge.
+
+```ts
+{ type: 'set_icon', object: 'v', icon: '7' }
+```
+
+This is how an algorithm visualization keeps a **per-node scalar that evolves**
+legible on the node itself — a Dijkstra node's tentative distance (∞ → 7 → 5),
+an A\* node's `f = g + h` — rather than only in a comment. Below, a node's badge
+walks from ∞ down to its final value:
+
+<DataFlowPlayer spec={setIconExample} theme="auto" height={300} />
 
 ## `rotate`
 
