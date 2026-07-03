@@ -172,7 +172,55 @@ describe('computeLayout — circular', () => {
 });
 
 describe('computeLayout — graph', () => {
-  it('places each node at its own x/y (free 2D layout)', () => {
+  /** Straight-edge crossing count (mirrors the engine's own check), so the
+   *  auto-layout can be asserted crossing-free. Edges sharing a node are
+   *  skipped; a "crossing" is a proper interior intersection. */
+  const crossings = (
+    layout: Record<string, { cx: number; cy: number }>,
+    edges: Array<[string, string]>
+  ): number => {
+    const o = (
+      p: { cx: number; cy: number },
+      q: { cx: number; cy: number },
+      r: { cx: number; cy: number }
+    ) => (q.cx - p.cx) * (r.cy - p.cy) - (q.cy - p.cy) * (r.cx - p.cx);
+    let n = 0;
+    for (let i = 0; i < edges.length; i++) {
+      for (let j = i + 1; j < edges.length; j++) {
+        const [a1, a2] = edges[i];
+        const [b1, b2] = edges[j];
+        if (a1 === b1 || a1 === b2 || a2 === b1 || a2 === b2) continue;
+        const p1 = layout[a1];
+        const p2 = layout[a2];
+        const p3 = layout[b1];
+        const p4 = layout[b2];
+        const d1 = o(p3, p4, p1);
+        const d2 = o(p3, p4, p2);
+        const d3 = o(p1, p2, p3);
+        const d4 = o(p1, p2, p4);
+        if (
+          d1 > 0 !== d2 > 0 &&
+          d3 > 0 !== d4 > 0 &&
+          d1 !== 0 &&
+          d2 !== 0 &&
+          d3 !== 0 &&
+          d4 !== 0
+        )
+          n++;
+      }
+    }
+    return n;
+  };
+
+  const circleNodes = (ids: string[]): DataFlowSpec['nodes'] =>
+    ids.map((id) => ({ id, type: 'circle' as const }));
+  const edge = (from: string, to: string) => ({
+    from,
+    to,
+    arrow_head: 'none' as const,
+  });
+
+  it('a fully anchored graph is an exact passthrough of x/y', () => {
     const spec: DataFlowSpec = {
       direction: 'graph',
       nodes: [
@@ -187,7 +235,7 @@ describe('computeLayout — graph', () => {
     expect(layout.b).toEqual({ cx: 0.9, cy: 0.2 });
   });
 
-  it('a node without coordinates falls back to the center', () => {
+  it('a lone node without coordinates falls back to the center', () => {
     const spec: DataFlowSpec = {
       direction: 'graph',
       nodes: [{ id: 'a', type: 'circle' }],
@@ -197,7 +245,7 @@ describe('computeLayout — graph', () => {
     expect(computeLayout(spec).a).toEqual({ cx: 0.5, cy: 0.5 });
   });
 
-  it('ignores lane / main / align_with (only x/y matter)', () => {
+  it('ignores lane / main / align_with on anchored nodes (only x/y matter)', () => {
     const spec: DataFlowSpec = {
       direction: 'graph',
       nodes: [
@@ -210,6 +258,74 @@ describe('computeLayout — graph', () => {
     const layout = computeLayout(spec);
     expect(layout.a).toEqual({ cx: 0.3, cy: 0.3 });
     expect(layout.b).toEqual({ cx: 0.7, cy: 0.7 });
+  });
+
+  // Planar graph: a path A–B–C–D–E–F plus the chords A–C, B–E, C–F (the MST
+  // demo topology). A crossing-free straight-line embedding exists.
+  const planarEdges: Array<[string, string]> = [
+    ['A', 'B'],
+    ['B', 'C'],
+    ['A', 'C'],
+    ['C', 'D'],
+    ['D', 'E'],
+    ['B', 'E'],
+    ['E', 'F'],
+    ['C', 'F'],
+  ];
+  const planarSpec: DataFlowSpec = {
+    direction: 'graph',
+    nodes: circleNodes(['A', 'B', 'C', 'D', 'E', 'F']),
+    connections: planarEdges.map(([a, b]) => edge(a, b)),
+    packets: [],
+    timeline: [],
+  };
+
+  it('auto-places coordinate-free nodes with no edge crossings', () => {
+    const layout = computeLayout(planarSpec);
+    expect(crossings(layout, planarEdges)).toBe(0);
+    // and every node lands on the stage
+    for (const id of ['A', 'B', 'C', 'D', 'E', 'F']) {
+      expect(layout[id].cx).toBeGreaterThanOrEqual(0);
+      expect(layout[id].cx).toBeLessThanOrEqual(1);
+      expect(layout[id].cy).toBeGreaterThanOrEqual(0);
+      expect(layout[id].cy).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('is deterministic (no Math.random): two runs are identical', () => {
+    expect(computeLayout(planarSpec)).toEqual(computeLayout(planarSpec));
+  });
+
+  it('keeps anchored nodes fixed and spreads the free ones around them', () => {
+    const spec: DataFlowSpec = {
+      direction: 'graph',
+      nodes: [
+        { id: 'A', type: 'circle', x: 0.05, y: 0.5 },
+        ...circleNodes(['B', 'C', 'D', 'E']),
+        { id: 'F', type: 'circle', x: 0.95, y: 0.5 },
+      ],
+      connections: [
+        edge('A', 'B'),
+        edge('B', 'C'),
+        edge('C', 'D'),
+        edge('D', 'E'),
+        edge('E', 'F'),
+        edge('A', 'C'),
+        edge('D', 'F'),
+      ],
+      packets: [],
+      timeline: [],
+    };
+    const layout = computeLayout(spec);
+    // anchors are honored exactly
+    expect(layout.A).toEqual({ cx: 0.05, cy: 0.5 });
+    expect(layout.F).toEqual({ cx: 0.95, cy: 0.5 });
+    // free nodes are actually placed (not all stacked at the center)
+    const free = ['B', 'C', 'D', 'E'].map((id) => layout[id]);
+    const distinct = new Set(
+      free.map((p) => `${p.cx.toFixed(3)},${p.cy.toFixed(3)}`)
+    );
+    expect(distinct.size).toBe(4);
   });
 });
 

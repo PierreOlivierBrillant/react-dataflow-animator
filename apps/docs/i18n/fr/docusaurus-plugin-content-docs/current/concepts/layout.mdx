@@ -19,15 +19,16 @@ La disposition des nœuds repose sur quelques concepts : `direction`, `lane`,
 `align_with`, et les modes `circular` / `tree`. Dans tous ceux-ci, vous ne
 fournissez **aucune coordonnée** — le moteur place chaque nœud en ratios
 relatifs au conteneur, ce qui rend l'animation responsive sans calcul manuel.
-La seule exception est le [mode `graph`](#mode-graphe), où vous placez chaque
-nœud vous-même via `x` / `y` pour dessiner un graphe quelconque.
+Même le [mode `graph`](#mode-graphe), pour les diagrammes de nœuds quelconques,
+place les nœuds automatiquement (en minimisant les croisements d'arêtes) — vous
+n'ajoutez `x` / `y` que pour épingler un nœud précis.
 
 ## `direction`
 
 Sept valeurs possibles pour `direction` (au niveau racine de la spec). Quatre
 disposent des nœuds libres le long d'un flux, [`circular`](#mode-circulaire) les
 place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire, et
-[`graph`](#mode-graphe) vous laisse les placer vous-même :
+[`graph`](#mode-graphe) place automatiquement un graphe quelconque :
 
 <Tabs
   defaultValue="left-to-right"
@@ -273,12 +274,16 @@ leur nouvelle profondeur. C'est ce qui anime les démos AVL et rouge-noir.
 
 ## Mode graphe
 
-`graph` est l'échappatoire pour un **graphe quelconque** — un diagramme
-nœuds-liens sans ordre naturel de flux, de cercle ou d'arbre (un réseau routier,
-ou un graphe pondéré pour une démonstration de Dijkstra / A\* / arbre couvrant
-minimal). Ici, vous **fournissez** bien des coordonnées : chaque nœud porte un
-`x` et un `y`, chacun une fraction de la scène de `0` (bord gauche / haut) à `1`
-(bord droit / bas). `lane`, `align_with` et `main` sont ignorés.
+`graph` est le mode pour un **graphe quelconque** — un diagramme nœuds-liens
+sans ordre naturel de flux, de cercle ou d'arbre (un réseau routier, ou un
+graphe pondéré pour une démonstration de Dijkstra / A\* / arbre couvrant
+minimal). Vous ne décrivez **que les arêtes** ; les nœuds sont placés
+**automatiquement**. Le moteur exécute une disposition dirigée par les forces,
+déterministe, qui **minimise les croisements d'arêtes** (il essaie plusieurs
+placements graines, garde le plus clair, puis effectue une courte recherche
+locale pour supprimer les croisements restants) : la même spec rend toujours le
+même graphe et le redimensionnement du lecteur ne le réagence jamais. `lane`,
+`align_with` et `main` sont ignorés.
 
 Les arêtes sont de simples [`connections`](./decor.mdx) : rendez-les non
 orientées avec `arrow_head: 'none'`, pondérez-les avec `text`, et recolorez-les
@@ -288,11 +293,12 @@ allumer un chemin ou un arbre couvrant.
 ```ts
 {
   direction: 'graph',
+  // Aucune coordonnée : les quatre nœuds sont auto-placés pour éviter les croisements.
   nodes: [
-    { id: 'A', type: 'circle', body: 'A', x: 0.12, y: 0.5 },
-    { id: 'B', type: 'circle', body: 'B', x: 0.42, y: 0.18 },
-    { id: 'C', type: 'circle', body: 'C', x: 0.42, y: 0.82 },
-    { id: 'D', type: 'circle', body: 'D', x: 0.72, y: 0.5 },
+    { id: 'A', type: 'circle', body: 'A' },
+    { id: 'B', type: 'circle', body: 'B' },
+    { id: 'C', type: 'circle', body: 'C' },
+    { id: 'D', type: 'circle', body: 'D' },
   ],
   connections: [
     { from: 'A', to: 'B', text: '7', path: 'straight', arrow_head: 'none' },
@@ -310,6 +316,23 @@ allumer un chemin ou un arbre couvrant.
   height={460}
   spec={graphExample}
 />
+
+### Épingler un nœud
+
+Ajoutez `x` et `y` (chacun une fraction de la scène, `0`..`1`) pour **épingler**
+un nœud comme ancre fixe ; le placement automatique de tous les autres nœuds
+contourne alors cette ancre. Pratique pour fixer une source à gauche et une
+cible à droite, ou pour verrouiller l'orientation générale tout en laissant le
+reste automatique :
+
+```ts
+nodes: [
+  { id: 'A', type: 'circle', body: 'A', x: 0.1, y: 0.5 }, // épinglé (source)
+  { id: 'B', type: 'circle', body: 'B' }, // auto-placé
+  { id: 'C', type: 'circle', body: 'C' }, // auto-placé
+  { id: 'D', type: 'circle', body: 'D', x: 0.9, y: 0.5 }, // épinglé (cible)
+];
+```
 
 La démo complète **Plus court chemin — Dijkstra** de la galerie s'appuie
 là-dessus : elle règle les nœuds un à un et recolore les arêtes du plus court

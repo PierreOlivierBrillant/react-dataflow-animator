@@ -18,16 +18,16 @@ import TabItem from '@theme/TabItem';
 Node layout relies on a few concepts: `direction`, `lane`, `align_with`, and the
 `circular` / `tree` modes. In all of these you provide **no coordinates** — the
 engine places each node in relative ratios to the container, which makes the
-animation responsive without manual calculations. The one exception is
-[`graph` mode](#graph-mode), where you place each node yourself via `x` / `y` to
-draw an arbitrary graph.
+animation responsive without manual calculations. Even [`graph` mode](#graph-mode),
+for arbitrary node-link diagrams, places nodes automatically (minimizing edge
+crossings) — you only add `x` / `y` when you want to pin a specific node.
 
 ## `direction`
 
 Seven possible values for `direction` (at the root level of the spec). Four
 arrange free-form nodes along a flow, [`circular`](#circular-mode) puts them on a
 ring, [`tree`](#tree-mode) lays out a binary tree, and [`graph`](#graph-mode)
-lets you place them yourself:
+auto-places an arbitrary graph:
 
 <Tabs
   defaultValue="left-to-right"
@@ -272,12 +272,14 @@ the AVL and red-black tree demos.
 
 ## Graph mode
 
-`graph` is the escape hatch for an **arbitrary graph** — a node-link diagram
-with no natural flow, ring or tree order (a road network, or a weighted graph
-for a Dijkstra / A\* / minimum-spanning-tree walkthrough). Here you **do**
-provide coordinates: each node carries an `x` and a `y`, each a fraction of the
-stage from `0` (left / top edge) to `1` (right / bottom edge). `lane`,
-`align_with` and `main` are ignored.
+`graph` is the mode for an **arbitrary graph** — a node-link diagram with no
+natural flow, ring or tree order (a road network, or a weighted graph for a
+Dijkstra / A\* / minimum-spanning-tree walkthrough). You describe **only the
+edges**; nodes are placed **automatically**. The engine runs a deterministic
+force-directed layout that **minimizes edge crossings** (it tries several seeded
+placements, keeps the clearest, then does a short local search to remove any
+remaining crossing), so the same spec always renders the same graph and resizing
+the player never reshuffles it. `lane`, `align_with` and `main` are ignored.
 
 Edges are ordinary [`connections`](./decor.mdx): make them undirected with
 `arrow_head: 'none'`, weight them with `text`, and recolour them at runtime with
@@ -287,11 +289,12 @@ spanning tree.
 ```ts
 {
   direction: 'graph',
+  // No coordinates: the four nodes are auto-placed to avoid crossings.
   nodes: [
-    { id: 'A', type: 'circle', body: 'A', x: 0.12, y: 0.5 },
-    { id: 'B', type: 'circle', body: 'B', x: 0.42, y: 0.18 },
-    { id: 'C', type: 'circle', body: 'C', x: 0.42, y: 0.82 },
-    { id: 'D', type: 'circle', body: 'D', x: 0.72, y: 0.5 },
+    { id: 'A', type: 'circle', body: 'A' },
+    { id: 'B', type: 'circle', body: 'B' },
+    { id: 'C', type: 'circle', body: 'C' },
+    { id: 'D', type: 'circle', body: 'D' },
   ],
   connections: [
     { from: 'A', to: 'B', text: '7', path: 'straight', arrow_head: 'none' },
@@ -309,6 +312,22 @@ spanning tree.
   height={460}
   spec={graphExample}
 />
+
+### Pinning a node
+
+Add `x` and `y` (each a fraction of the stage, `0`..`1`) to **pin** a node as a
+fixed anchor; the auto-placement of every other node then routes around it.
+Handy to fix a source on the left and a target on the right, or to lock the
+overall orientation while the rest stays automatic:
+
+```ts
+nodes: [
+  { id: 'A', type: 'circle', body: 'A', x: 0.1, y: 0.5 }, // pinned (source)
+  { id: 'B', type: 'circle', body: 'B' }, // auto-placed
+  { id: 'C', type: 'circle', body: 'C' }, // auto-placed
+  { id: 'D', type: 'circle', body: 'D', x: 0.9, y: 0.5 }, // pinned (target)
+];
+```
 
 The full **Shortest path — Dijkstra** demo in the gallery builds on this: it
 settles nodes one by one and recolours the shortest-path edges as it walks the

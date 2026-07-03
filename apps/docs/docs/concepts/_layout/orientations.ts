@@ -97,18 +97,18 @@ export const treeExample: DataFlowSpec = {
 };
 
 /**
- * Graph mode: an arbitrary weighted graph placed by hand via per-node `x`/`y`
- * (fractions of the stage). Edges are ordinary `connections` — undirected
- * (`arrow_head: 'none'`), straight, and weighted through `text`. Keys (`body`)
- * and weights are language-invariant.
+ * Graph mode: an arbitrary weighted graph. Nodes carry NO coordinates — the
+ * engine auto-places them to minimize edge crossings. Edges are ordinary
+ * `connections` — undirected (`arrow_head: 'none'`), straight, and weighted
+ * through `text`. Keys (`body`) and weights are language-invariant.
  */
 export const graphExample: DataFlowSpec = {
   direction: 'graph',
   nodes: [
-    { id: 'A', type: 'circle', body: 'A', x: 0.12, y: 0.5 },
-    { id: 'B', type: 'circle', body: 'B', x: 0.42, y: 0.18 },
-    { id: 'C', type: 'circle', body: 'C', x: 0.42, y: 0.82 },
-    { id: 'D', type: 'circle', body: 'D', x: 0.72, y: 0.5 },
+    { id: 'A', type: 'circle', body: 'A' },
+    { id: 'B', type: 'circle', body: 'B' },
+    { id: 'C', type: 'circle', body: 'C' },
+    { id: 'D', type: 'circle', body: 'D' },
   ],
   packets: [],
   connections: [

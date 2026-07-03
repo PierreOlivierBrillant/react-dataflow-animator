@@ -1,8 +1,9 @@
 import type { DataFlowSpec } from 'react-dataflow-animator';
 import type { Locale } from '../../i18n';
 
-// Dijkstra's shortest path on a free `direction: 'graph'` layout — the case the
-// x/y coordinates exist for. Every node carries its current tentative distance
+// Dijkstra's shortest path on a `direction: 'graph'` layout. Nodes carry NO
+// coordinates: the engine auto-places them (minimizing edge crossings). Every
+// node carries its current tentative distance
 // as a corner icon badge (∞ at first, updated with `set_icon`): that badge is
 // the whole point — without it you cannot remember each node's value. The run is
 // decomposed for students into one step per operation: SETTLE the nearest node,
@@ -18,13 +19,11 @@ const PATH = '#16a34a'; // green — final shortest path
 const INK = 'white';
 
 /** Circle node showing its key (body) and its distance badge (icon, starts ∞). */
-const N = (id: string, x: number, y: number) => ({
+const N = (id: string) => ({
   id,
   type: 'circle' as const,
   body: id,
   icon: '∞',
-  x,
-  y,
 });
 
 const E = (id: string, from: string, to: string, w: number) => ({
@@ -110,14 +109,7 @@ export const dijkstra = (locale: Locale): DataFlowSpec => {
   const pathEdges = ['ac', 'bc', 'bd', 'de', 'ef'];
   return {
     direction: 'graph',
-    nodes: [
-      N('A', 0.1, 0.5),
-      N('B', 0.35, 0.18),
-      N('C', 0.35, 0.82),
-      N('D', 0.62, 0.35),
-      N('E', 0.62, 0.78),
-      N('F', 0.9, 0.5),
-    ],
+    nodes: ['A', 'B', 'C', 'D', 'E', 'F'].map(N),
     connections: [
       E('ab', 'A', 'B', 4),
       E('ac', 'A', 'C', 2),

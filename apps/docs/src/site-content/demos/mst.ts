@@ -1,8 +1,9 @@
 import type { DataFlowSpec } from 'react-dataflow-animator';
 import type { Locale } from '../../i18n';
 
-// Kruskal's minimum spanning tree on a free `direction: 'graph'` layout. Edges
-// are taken in increasing weight; each is ADDED if it joins two separate trees,
+// Kruskal's minimum spanning tree on an auto-placed `direction: 'graph'` layout
+// (no coordinates — the engine positions the nodes to avoid edge crossings).
+// Edges are taken in increasing weight; each is ADDED if it joins two separate trees,
 // or SKIPPED if both ends are already connected (that would close a cycle).
 // Decomposed for students: one step per edge, in sorted order — so the
 // cycle-forming edges are actually MET while the forest is still growing, and
@@ -17,12 +18,10 @@ const JOIN = '#0d9488'; // teal — node joined to the forest
 const REJECT = '#dc2626'; // red — edge skipped (would close a cycle)
 const INK = 'white';
 
-const N = (id: string, x: number, y: number) => ({
+const N = (id: string) => ({
   id,
   type: 'circle' as const,
   body: id,
-  x,
-  y,
 });
 
 const E = (id: string, from: string, to: string, w: number) => ({
@@ -107,18 +106,9 @@ export const mst = (locale: Locale): DataFlowSpec => {
   const s = strings[locale];
   return {
     direction: 'graph',
-    // Crossing-free placement: C and E are the two hubs, joined by three
-    // parallel routes (via B on top, D in the middle, F at the bottom), with A
-    // hanging off the C–B corner. Drawing the graph without edge crossings makes
-    // each rejected cycle (B–C–D–E, C–D–E–F) read as a clean closed loop.
-    nodes: [
-      N('A', 0.1, 0.3),
-      N('B', 0.56, 0.18),
-      N('C', 0.32, 0.5),
-      N('D', 0.56, 0.5),
-      N('E', 0.82, 0.5),
-      N('F', 0.56, 0.82),
-    ],
+    // No coordinates: the engine auto-places the nodes (minimizing edge
+    // crossings), so each rejected cycle (B–C–D–E, C–D–E–F) reads as a clean loop.
+    nodes: ['A', 'B', 'C', 'D', 'E', 'F'].map(N),
     connections: [
       E('ab', 'A', 'B', 1),
       E('bc', 'B', 'C', 2),

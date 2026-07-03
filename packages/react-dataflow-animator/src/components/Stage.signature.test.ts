@@ -73,6 +73,35 @@ describe('buildStageSignature', () => {
     expect(after).not.toBe(before);
   });
 
+  it('change quand les connexions changent en mode graph (auto-layout)', () => {
+    const graphBase: DataFlowSpec = {
+      direction: 'graph',
+      nodes: [
+        { id: 'a', type: 'circle' },
+        { id: 'b', type: 'circle' },
+        { id: 'c', type: 'circle' },
+      ],
+      connections: [{ from: 'a', to: 'b', arrow_head: 'none' }],
+      packets: [],
+      timeline: [],
+    };
+    const before = buildStageSignature(graphBase);
+    const after = buildStageSignature({
+      ...graphBase,
+      connections: [{ from: 'a', to: 'c', arrow_head: 'none' }],
+    });
+    expect(after).not.toBe(before);
+  });
+
+  it('ignore les connexions hors mode graph (pas de re-mesure inutile)', () => {
+    const before = buildStageSignature(base);
+    const after = buildStageSignature({
+      ...base,
+      connections: [{ from: 'a', to: 'b', arrow_head: 'none' }],
+    });
+    expect(after).toBe(before);
+  });
+
   it('est stable à spec identique', () => {
     expect(buildStageSignature(base)).toBe(buildStageSignature(base));
   });

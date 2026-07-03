@@ -175,11 +175,12 @@ export interface Node {
   align_with?: string;
   /**
    * (`graph`) Horizontal position as a fraction of the Stage, from 0 (left edge)
-   * to 1 (right edge). Used **only** when `direction` is `'graph'`, where you
-   * place each node yourself — the escape hatch for an arbitrary graph (road
-   * network, weighted graph for a shortest-path / minimum-spanning-tree demo)
-   * that has no natural flow order. Ignored by every other direction (which
-   * derive positions from `lane` / `main` / the tree). Default: 0.5 (centered).
+   * to 1 (right edge). Used **only** when `direction` is `'graph'`. **Optional:**
+   * omit it and the node is placed AUTOMATICALLY (the layout minimizes edge
+   * crossings). Provide it to **pin** the node as a fixed anchor the
+   * auto-placement of the other nodes routes around — handy to fix a source, a
+   * target, or the overall orientation. Ignored by every other direction (which
+   * derive positions from `lane` / `main` / the tree).
    * @minimum 0
    * @maximum 1
    * @example 0.25
@@ -187,8 +188,9 @@ export interface Node {
   x?: number;
   /**
    * (`graph`) Vertical position as a fraction of the Stage, from 0 (top edge) to
-   * 1 (bottom edge). Companion of {@link Node.x}; used only when `direction` is
-   * `'graph'`, ignored otherwise. Default: 0.5 (centered).
+   * 1 (bottom edge). Companion of {@link Node.x}: used only when `direction` is
+   * `'graph'`, omit for automatic placement, provide to pin the node. Ignored
+   * otherwise.
    * @minimum 0
    * @maximum 1
    * @example 0.8
