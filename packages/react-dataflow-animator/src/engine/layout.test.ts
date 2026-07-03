@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { DataFlowSpec, TreeSpec } from '../types';
-import { computeLayout, connectionAxis, treeEdges, treeLayout } from './layout';
+import {
+  computeLayout,
+  connectionAxis,
+  treeEdges,
+  treeEdgeStyle,
+  treeLayout,
+} from './layout';
 
 describe('computeLayout — linear', () => {
   it('left-to-right: increasing lane = increasing x', () => {
@@ -448,5 +454,49 @@ describe('treeLayout', () => {
   it('a node unreachable from the root falls back to the center', () => {
     const m = treeLayout(['g', 'orphan'], { root: 'g', children: {} });
     expect(m.orphan).toEqual({ cx: 0.5, cy: 0.5 });
+  });
+});
+
+describe('treeEdgeStyle', () => {
+  const tree: TreeSpec = {
+    root: 'g',
+    children: { g: { left: 'p', right: 'u' }, p: { left: 'n' } },
+  };
+
+  it('applies the tree edge defaults (straight, solid, no head)', () => {
+    expect(treeEdgeStyle(tree, 'p')).toEqual({
+      style: 'solid',
+      path: 'straight',
+      arrow_head: 'none',
+      text: undefined,
+      color: undefined,
+      highlighted: false,
+    });
+  });
+
+  it('the tree-wide `edge_style` default applies to every edge', () => {
+    const styled: TreeSpec = { ...tree, edge_style: { path: 'step' } };
+    expect(treeEdgeStyle(styled, 'p').path).toBe('step');
+    expect(treeEdgeStyle(styled, 'u').path).toBe('step');
+  });
+
+  it('a per-edge override merges over the default (keyed by child id)', () => {
+    const styled: TreeSpec = {
+      ...tree,
+      edge_style: { path: 'step', color: 'gray' },
+      edges: { p: { style: 'dashed', color: 'crimson' } },
+    };
+    // Edge above `p`: override wins on style/color, keeps the default path.
+    expect(treeEdgeStyle(styled, 'p')).toMatchObject({
+      style: 'dashed',
+      path: 'step',
+      color: 'crimson',
+    });
+    // Edge above `u`: only the default applies.
+    expect(treeEdgeStyle(styled, 'u')).toMatchObject({
+      style: 'solid',
+      path: 'step',
+      color: 'gray',
+    });
   });
 });

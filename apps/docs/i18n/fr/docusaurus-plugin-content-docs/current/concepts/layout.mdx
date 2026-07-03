@@ -272,6 +272,42 @@ effectue une rotation d'arbre autour d'un pivot, et le moteur recalcule la
 disposition et re-câble les arêtes depuis le même modèle — les nœuds glissent à
 leur nouvelle profondeur. C'est ce qui anime les démos AVL et rouge-noir.
 
+### Styliser les arêtes
+
+Les arêtes tracées automatiquement sont **stylables depuis le même bloc `tree`** —
+inutile de les recréer en `connections`. Définissez un défaut pour **toutes** les
+arêtes avec `tree.edge_style`, et surchargez-le **arête par arête** avec
+`tree.edges`, indexé par l'id du nœud **enfant** (chaque nœud n'a qu'une arête
+parente, donc l'enfant la désigne — et le style suit le nœud à travers un
+`rotate_subtree`). L'entrée par arête fusionne par-dessus le défaut, champ par
+champ. Par défaut, une arête d'arbre utilise un chemin `straight` sans tête de
+flèche (contrairement au `bezier` par défaut des connexions ordinaires).
+
+```ts
+{
+  direction: 'tree',
+  tree: {
+    root: '8',
+    children: {
+      '8': { left: '3', right: '13' },
+      '3': { left: '1', right: '6' },
+    },
+    // Défaut pour chaque arête parent→enfant :
+    edge_style: { path: 'step' },
+    // Surcharge d'une arête (indexée par l'id de l'enfant) :
+    edges: {
+      '6': { style: 'dashed', color: 'crimson', text: 'x' },
+    },
+  },
+  nodes: [
+    /* … */
+  ],
+}
+```
+
+Les champs disponibles reprennent ceux d'une [`connexion`](./decor.mdx) : `style`,
+`path`, `color`, `arrow_head`, `text` et `highlighted`.
+
 ## Mode graphe
 
 `graph` est le mode pour un **graphe quelconque** — un diagramme nœuds-liens

@@ -14,6 +14,7 @@ export type {
   Zone,
   TreeSpec,
   TreeChildren,
+  TreeEdgeStyle,
   Packet,
   Action,
   ActionType,

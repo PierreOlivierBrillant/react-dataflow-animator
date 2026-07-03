@@ -295,6 +295,43 @@ export interface TreeChildren {
 }
 
 /**
+ * Visual styling for the parent→child edges auto-drawn in a `'tree'` layout.
+ * Orthogonal to the topology (`children` stays a pure structure): it is applied
+ * at RENDER time, so it survives {@link RotateSubtreeAction} re-routing — a style
+ * keyed to a child follows that node as its depth changes. Used both as the
+ * tree-wide default ({@link TreeSpec.edge_style}) and as a per-edge override
+ * ({@link TreeSpec.edges}), the override merged over the default field by field.
+ *
+ * Same vocabulary as a {@link Connection}, but tree edges have their own
+ * defaults: a **`straight`** path (not `bezier`) and **no** arrow head (they are
+ * plain hierarchy links, not directed arrows).
+ */
+export interface TreeEdgeStyle {
+  /** Line style. Default: 'solid'. */
+  style?: LineStyle;
+  /** Shape of the edge path. Default (tree): 'straight'. See {@link PathShape}. */
+  path?: PathShape;
+  /** Arrow head. Default (tree): 'none' — parent→child links carry no head. */
+  arrow_head?: 'forward' | 'backward' | 'both' | 'none';
+  /**
+   * Optional median label drawn on the edge.
+   * @example "L"
+   */
+  text?: string;
+  /**
+   * Line color (predefined CSS name or hex). Tints the whole path and its arrow
+   * head(s). Default: the theme's neutral connection color.
+   * @example "steelblue"
+   */
+  color?: string;
+  /**
+   * Emphasizes the edge permanently — accent color, thicker stroke and glow —
+   * like a statically {@link Connection.highlighted} link. Default: false.
+   */
+  highlighted?: boolean;
+}
+
+/**
  * Binary-tree topology (used when `direction` is `'tree'`). Single source of
  * truth for the structure: parent/child **edges are derived from it** (and drawn
  * automatically — no `connections` to maintain), and the layout places each node
@@ -311,6 +348,23 @@ export interface TreeSpec {
    * @example { "g": { "left": "p", "right": "u" }, "p": { "left": "n" } }
    */
   children: Record<string, TreeChildren>;
+  /**
+   * Default styling applied to EVERY parent→child edge — the place to set the
+   * `path` (or the line style / color) once for the whole tree. Tree edges
+   * otherwise default to a `straight` path and no arrow head. Overridden per edge
+   * by {@link TreeSpec.edges}. See {@link TreeEdgeStyle}.
+   * @example { "path": "step" }
+   */
+  edge_style?: TreeEdgeStyle;
+  /**
+   * Per-edge styling override, keyed by the **child** node ID: since every node
+   * has exactly one parent, its id names the incoming edge unambiguously (and the
+   * style follows the node through {@link RotateSubtreeAction}). Each entry is
+   * merged OVER {@link TreeSpec.edge_style}, field by field. See
+   * {@link TreeEdgeStyle}.
+   * @example { "6": { "style": "dashed", "color": "crimson" } }
+   */
+  edges?: Record<string, TreeEdgeStyle>;
 }
 
 /** Permanent link/arrow (decor), displayed upon initialization. */

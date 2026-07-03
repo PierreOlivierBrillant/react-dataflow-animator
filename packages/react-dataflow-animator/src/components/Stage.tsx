@@ -28,7 +28,12 @@ import {
   type SetVisibleClip,
   type Timeline,
 } from '../engine/timeline';
-import { computeLayout, connectionAxis, treeEdges } from '../engine/layout';
+import {
+  computeLayout,
+  connectionAxis,
+  treeEdges,
+  treeEdgeStyle,
+} from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
 import { computePlacements, computeContentLimits } from '../engine/placements';
 import {
@@ -642,15 +647,19 @@ export function Stage({
       {/* Back layer: arrows */}
       <svg className="rdfa-arrow-svg">
         {/* Tree edges (parent→child), drawn from the live topology so they
-            re-route as nodes glide during a rotation. Plain links, no head;
-            anchored bottom-of-parent → top-of-child (vertical axis). */}
+            re-route as nodes glide during a rotation. Styling (line style, path,
+            color, head, label) is resolved per edge from the `tree` block —
+            keyed by child id, so it follows the node through rotations; tree
+            edges default to a plain `straight` link with no head. Anchored
+            bottom-of-parent → top-of-child (vertical axis). */}
         {isTree &&
           treeEdgesNow.map(([from, to]) => {
             const f = effectiveGeometry[from];
             const tg = effectiveGeometry[to];
-            if (!f || !tg) return null;
+            if (!f || !tg || !spec.tree) return null;
             const progress = treeEdgeProgress(to);
             if (progress <= 0) return null;
+            const edge = treeEdgeStyle(spec.tree, to);
             return (
               <ArrowLine
                 key={`tree|${from}|${to}`}
@@ -658,8 +667,12 @@ export function Stage({
                 to={tg}
                 startPortOffset={0}
                 endPortOffset={0}
-                style="solid"
-                arrow_head="none"
+                style={edge.style}
+                path={edge.path}
+                arrow_head={edge.arrow_head}
+                text={edge.text}
+                color={edge.color}
+                highlighted={edge.highlighted}
                 progress={progress}
                 obstacles={allEffectiveNodes}
                 axis="vertical"

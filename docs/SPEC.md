@@ -65,6 +65,14 @@ the container (pure CSS placement). See [`packages/react-dataflow-animator/src/e
   the [`rotate_subtree` action](#5-animation-engine-and-actions) — a rotation
   preserves the in-order order, so only depths change and the nodes glide. `lane`
   and `align_with` are ignored.
+  The auto-drawn edges are **stylable** without leaving the `tree` block: a
+  `tree.edge_style` object sets a default for **every** edge (line `style`,
+  `path`, `color`, `arrow_head`, `text`, `highlighted`), and `tree.edges` overrides
+  it **per edge**, keyed by the **child** node id (each node has one parent edge, so
+  the child names it — and the style follows the node through `rotate_subtree`).
+  The override merges over the default field by field. Tree edges default to a
+  **`straight`** path with **no** arrow head (unlike the `bezier` default of
+  ordinary `connections`).
 - **`align_with`**: aligns a node on the transverse axis of another (vertical if the
   direction is horizontal) → align two nodes from different lanes.
 - **Zones** (`zones` root array): background rectangles encompassing a

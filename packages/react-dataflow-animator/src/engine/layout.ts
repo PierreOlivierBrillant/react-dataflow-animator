@@ -2,7 +2,9 @@ import type {
   Connection,
   DataFlowSpec,
   Direction,
+  LineStyle,
   Node,
+  PathShape,
   TreeSpec,
 } from '../types';
 
@@ -648,6 +650,37 @@ export function treeEdges(tree: TreeSpec): Array<[string, string]> {
     if (ch?.right) edges.push([parent, ch.right]);
   }
   return edges;
+}
+
+/** Fully-resolved styling of one tree edge (tree defaults applied). */
+interface ResolvedTreeEdgeStyle {
+  style: LineStyle;
+  path: PathShape;
+  arrow_head: 'forward' | 'backward' | 'both' | 'none';
+  text?: string;
+  color?: string;
+  highlighted: boolean;
+}
+
+/**
+ * Effective styling of a tree edge, identified by its CHILD id. Merges the
+ * tree-wide `edge_style` default under the per-edge `edges[childId]` override,
+ * then applies the tree edge defaults: a `straight` path and no arrow head
+ * (parent→child links are plain hierarchy links, not directed arrows).
+ */
+export function treeEdgeStyle(
+  tree: TreeSpec,
+  childId: string
+): ResolvedTreeEdgeStyle {
+  const merged = { ...tree.edge_style, ...tree.edges?.[childId] };
+  return {
+    style: merged.style ?? 'solid',
+    path: merged.path ?? 'straight',
+    arrow_head: merged.arrow_head ?? 'none',
+    text: merged.text,
+    color: merged.color,
+    highlighted: merged.highlighted ?? false,
+  };
 }
 
 export function computeLayout(

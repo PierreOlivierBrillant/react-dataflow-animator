@@ -270,6 +270,41 @@ tree rotation around a pivot, and the engine re-lays-out and re-routes the edges
 from the same model — the nodes glide to their new depths. This is what powers
 the AVL and red-black tree demos.
 
+### Styling the edges
+
+The auto-drawn edges are **stylable from the same `tree` block** — you never
+recreate them as `connections`. Set a default for **every** edge with
+`tree.edge_style`, and override it **per edge** with `tree.edges`, keyed by the
+**child** node id (each node has a single parent edge, so the child names it — and
+the style follows the node through a `rotate_subtree`). The per-edge entry merges
+over the default, field by field. Tree edges default to a `straight` path with no
+arrow head (unlike the `bezier` default of ordinary connections).
+
+```ts
+{
+  direction: 'tree',
+  tree: {
+    root: '8',
+    children: {
+      '8': { left: '3', right: '13' },
+      '3': { left: '1', right: '6' },
+    },
+    // Default for every parent→child edge:
+    edge_style: { path: 'step' },
+    // Override one edge (keyed by the child id):
+    edges: {
+      '6': { style: 'dashed', color: 'crimson', text: 'x' },
+    },
+  },
+  nodes: [
+    /* … */
+  ],
+}
+```
+
+The available fields mirror a [`connection`](./decor.mdx): `style`, `path`,
+`color`, `arrow_head`, `text` and `highlighted`.
+
 ## Graph mode
 
 `graph` is the mode for an **arbitrary graph** — a node-link diagram with no
