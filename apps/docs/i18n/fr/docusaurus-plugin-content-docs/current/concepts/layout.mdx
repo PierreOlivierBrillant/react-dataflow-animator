@@ -9,6 +9,7 @@ import {
   circularExample,
   circularHubExample,
   mergeEdgesExample,
+  portsExample,
   treeExample,
   graphExample,
 } from './_layout/orientations';
@@ -200,6 +201,68 @@ La décision est **par face de nœud** : dans `c → srv`, les liens convergent 
 s'écarte. Plusieurs liens entre les **deux mêmes** nœuds gardent leurs voies
 parallèles dans tous les cas, pour que les flux requête/réponse bidirectionnels
 restent lisibles.
+
+## Points de connexion des nœuds ronds (`ports`)
+
+Un `circle` se connecte sur son **contour**, pas sur quatre côtés cardinaux :
+chaque arête touche le cercle exactement là où elle pointe, en visant le centre.
+C'est ce qui rend les graphes et les arbres binaires naturels — les arêtes
+parent→enfant et rayon→hub abordent le disque de face au lieu de laisser un vide
+dans les coins. C'est le comportement **par défaut** de tout `circle` ; aucun
+champ n'est requis.
+
+Donnez à `ports` un entier positif pour exposer exactement ce nombre de points
+d'attache, répartis régulièrement sur le contour. Chaque arête se colle alors au
+plus proche, et les arêtes qui visent le même créneau y fusionnent — un rendu
+discret, par ex. un nœud de routage à nombre fixe de terminaux. `ports: 'direct'`
+rétablit le défaut (une infinité de points, c.-à-d. le chemin le plus direct).
+
+<Tabs
+  defaultValue="direct"
+  values={[
+    { label: "ports : 'direct' (défaut)", value: 'direct' },
+    { label: 'ports : 4', value: 'four' },
+  ]}
+>
+  <TabItem value="direct">
+    <DataFlowPlayer
+      spec={portsExample('direct')}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+  <TabItem value="four">
+    <DataFlowPlayer
+      spec={portsExample(4)}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+</Tabs>
+
+```ts
+{
+  direction: 'circular',
+  nodes: [
+    // ports: 4 → les huit rayons se collent aux quatre points réguliers du hub
+    // (N/E/S/O) ; avec 'direct', chaque rayon toucherait le hub sur son rayon.
+    { id: 'hub', type: 'circle', body: 'H', main: true, ports: 4 },
+    { id: 'n1', type: 'circle', body: '1' },
+    // …n2 … n8
+  ],
+  connections: [
+    { from: 'n1', to: 'hub', path: 'straight', arrow_head: 'none' },
+    // …un par rayon
+  ],
+}
+```
+
+`ports` n'agit que sur les nœuds ronds ; les autres types gardent l'ancrage sur
+les côtés cardinaux (et leur comportement `merge_edges`). Les ports d'un nœud
+rond respectent quand même l'écartement bidirectionnel : une paire
+requête/réponse entre deux cercles reste sur deux points distincts.
 
 ## Mode circulaire
 

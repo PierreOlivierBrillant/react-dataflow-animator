@@ -7,6 +7,7 @@ import {
   connection,
   pathTip,
   visiblePath,
+  type NodeContour,
   type NodeGeom,
 } from '../../engine/geometry';
 import type { ConnectionAxis } from '../../engine/layout';
@@ -42,6 +43,10 @@ export interface ArrowLineProps {
   /** Anchor axis derived from layout flow (see `connectionAxis`). Determines the
    *  face (E/W vs N/S) and the start/end orientation of the path. */
   axis?: ConnectionAxis;
+  /** Outline policy of the `from`/`to` node when it is round: the edge then
+   *  anchors radially on the outline instead of on a cardinal face. */
+  fromContour?: NodeContour;
+  toContour?: NodeContour;
 }
 
 const HEAD = 9;
@@ -61,6 +66,8 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     obstacles,
     arrow_head,
     axis,
+    fromContour,
+    toContour,
   }: ArrowLineProps) {
     const headStyle = arrow_head ?? 'forward';
     const renderForward = headStyle === 'forward' || headStyle === 'both';
@@ -75,7 +82,9 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
       startPortOffset,
       endPortOffset,
       path,
-      axis
+      axis,
+      fromContour,
+      toContour
     );
 
     // Position and angle of the tip at parameter `progress`.

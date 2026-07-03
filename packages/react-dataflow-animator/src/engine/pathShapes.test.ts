@@ -63,6 +63,43 @@ describe('shapeWaypoints — bezier / simplebezier', () => {
   });
 });
 
+describe('shapeWaypoints — radial normals (round outline)', () => {
+  it('bezier handles leave along the given outward normals', () => {
+    // Aligned chord (0,0)→(100,0), but both endpoints exit UPWARD (normal 0,-1):
+    // the curve must bow above the straight segment despite no transverse shift.
+    const pts = shapeWaypoints([A, ALIGNED], 'bezier', undefined, {
+      start: { x: 0, y: -1 },
+      end: { x: 0, y: -1 },
+    });
+    expect(pts).toBeDefined();
+    expect(pts!.some((p) => p.y < -1)).toBe(true);
+    // x stays within the chord span.
+    for (const p of pts!) {
+      expect(p.x).toBeGreaterThanOrEqual(A.x - 1e-6);
+      expect(p.x).toBeLessThanOrEqual(ALIGNED.x + 1e-6);
+    }
+  });
+
+  it('normals aligned with the chord → samples stay on the straight line', () => {
+    // start exits +x, end exits −x (i.e. toward each other) = a plain straight link.
+    const pts = shapeWaypoints([A, ALIGNED], 'bezier', undefined, {
+      start: { x: 1, y: 0 },
+      end: { x: -1, y: 0 },
+    });
+    expect(pts).toBeDefined();
+    expect(maxAbsDeviation(pts!, A, ALIGNED)).toBeCloseTo(0, 6);
+  });
+
+  it('normals override the endpoint axis for the handles', () => {
+    // endpointAxis says horizontal, but the normals say vertical → curve bows.
+    const pts = shapeWaypoints([A, ALIGNED], 'bezier', 'horizontal', {
+      start: { x: 0, y: -1 },
+      end: { x: 0, y: -1 },
+    });
+    expect(maxAbsDeviation(pts!, A, ALIGNED)).toBeGreaterThan(1);
+  });
+});
+
 describe('shapeWaypoints — step', () => {
   it('orthogonal corners: alternatively H and V segments', () => {
     const pts = shapeWaypoints([A, DIAG], 'step')!;

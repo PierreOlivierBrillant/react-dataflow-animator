@@ -42,8 +42,10 @@ import {
 } from '../engine/portOffsets';
 import {
   connection,
+  nodeContour,
   pathTip,
   type GeometryMap,
+  type NodeContour,
   type NodeGeom,
 } from '../engine/geometry';
 import { useStageGeometry } from '../hooks/useStageGeometry';
@@ -259,6 +261,17 @@ export function Stage({
       ),
     [spec]
   );
+  // Outline anchoring policy per node (round nodes attach radially). Reference-
+  // stable per node so it doesn't defeat ArrowLine memoization; undefined for
+  // nodes that keep the cardinal-face model.
+  const contourByNode = useMemo(() => {
+    const map: Record<string, NodeContour> = {};
+    for (const n of spec.nodes) {
+      const c = nodeContour(n.type, n.ports);
+      if (c) map[n.id] = c;
+    }
+    return map;
+  }, [spec]);
   const portOffsets = useMemo(
     () =>
       computePortOffsets(
@@ -676,6 +689,8 @@ export function Stage({
                 progress={progress}
                 obstacles={allEffectiveNodes}
                 axis="vertical"
+                fromContour={contourByNode[from]}
+                toContour={contourByNode[to]}
               />
             );
           })}
@@ -704,6 +719,8 @@ export function Stage({
               }
               obstacles={allEffectiveNodes}
               axis={axisFor(link.from, link.to)}
+              fromContour={contourByNode[link.from]}
+              toContour={contourByNode[link.to]}
             />
           );
         })}
@@ -736,6 +753,8 @@ export function Stage({
               progress={a.progress}
               obstacles={allEffectiveNodes}
               axis={axisFor(clip.fromId, clip.toId)}
+              fromContour={contourByNode[clip.fromId]}
+              toContour={contourByNode[clip.toId]}
             />
           );
         })}
@@ -825,7 +844,9 @@ export function Stage({
             movePorts.start,
             movePorts.end,
             undefined,
-            axisFor(clip.fromId, clip.toId)
+            axisFor(clip.fromId, clip.toId),
+            contourByNode[clip.fromId],
+            contourByNode[clip.toId]
           );
           const pt = pathTip(conn, easeInOutCubic(a.progress));
           const opacity = clipOpacity(clip, t);

@@ -9,6 +9,7 @@ import {
   circularExample,
   circularHubExample,
   mergeEdgesExample,
+  portsExample,
   treeExample,
   graphExample,
 } from './_layout/orientations';
@@ -198,6 +199,67 @@ The decision is **per node face**: in `c → srv`, the links converge at `srv`
 only if `srv` merges, and leave `c` spread only if `c` fans out. Multiple
 links between the **same two** nodes keep their parallel tracks regardless, so
 bidirectional request/response flows stay legible.
+
+## Connection points on round nodes (`ports`)
+
+A `circle` is connected on its **outline**, not on four cardinal sides: each
+edge meets the circle exactly where it points, aiming at the centre. This is why
+graphs and binary trees look organic — the parent→child and spoke→hub edges
+touch the disc head-on instead of leaving a gap at the corners. It is the
+**default** for every `circle`; no field is needed.
+
+Set `ports` to a positive integer to expose exactly that many attach points,
+spread evenly around the outline. Each edge then snaps to the nearest one, and
+edges pointing at the same slot merge onto it — a discrete look, e.g. a routing
+node with a fixed number of terminals. `ports: 'direct'` restores the default
+(infinitely many points, i.e. the most direct path).
+
+<Tabs
+  defaultValue="direct"
+  values={[
+    { label: "ports: 'direct' (default)", value: 'direct' },
+    { label: 'ports: 4', value: 'four' },
+  ]}
+>
+  <TabItem value="direct">
+    <DataFlowPlayer
+      spec={portsExample('direct')}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+  <TabItem value="four">
+    <DataFlowPlayer
+      spec={portsExample(4)}
+      theme="auto"
+      controls={false}
+      height={500}
+    />
+  </TabItem>
+</Tabs>
+
+```ts
+{
+  direction: 'circular',
+  nodes: [
+    // ports: 4 → the eight spokes snap to the hub's four evenly-spread points
+    // (N/E/S/W); with 'direct' each spoke would meet the hub on its own radius.
+    { id: 'hub', type: 'circle', body: 'H', main: true, ports: 4 },
+    { id: 'n1', type: 'circle', body: '1' },
+    // …n2 … n8
+  ],
+  connections: [
+    { from: 'n1', to: 'hub', path: 'straight', arrow_head: 'none' },
+    // …one per spoke
+  ],
+}
+```
+
+`ports` only affects round nodes; other node types keep the cardinal-side
+anchoring (and their `merge_edges` behaviour). A round node's ports still respect
+the bidirectional spread, so a request/response pair between two circles stays on
+two distinct points.
 
 ## Circular mode
 

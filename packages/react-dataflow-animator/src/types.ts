@@ -213,6 +213,23 @@ export interface Node {
    */
   merge_edges?: boolean;
   /**
+   * Connection points on a **round** node's outline (`type: 'circle'`), so edges
+   * meet the circle wherever they naturally point instead of snapping to the four
+   * cardinal sides — the reason graphs and binary trees look more organic.
+   *
+   * - `'direct'` (**the default for a circle**): the edge aims at the node centre
+   *   and attaches exactly where that straight line crosses the outline — an
+   *   *infinite* set of possible points, i.e. the most direct path.
+   * - a positive integer `N`: exactly `N` attach points, spread evenly around the
+   *   outline; each edge snaps to the nearest one (`4` reproduces N/E/S/W on the
+   *   round contour). Edges landing on the same point merge, like `merge_edges`.
+   *
+   * Ignored on non-round node types (which keep cardinal-side anchoring).
+   * @example "direct"
+   * @example 6
+   */
+  ports?: 'direct' | number;
+  /**
    * URL making the node clickable (opens in a new tab).
    * @example "https://status.example.com"
    */

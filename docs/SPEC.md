@@ -94,8 +94,10 @@ an HTTP packet) and eight **geometric shapes** (`square`, `diamond`,
 Each node can receive: a `text` (label), a `subicon` (known tech, registered icon
 **or free text**), an `url` (making the node clickable), an
 initial `content`, **colors** `background_color` / `border_color`, a
-`rotation` (orientation in degrees), and `merge_edges` (edge convergence on its
-faces — default `true`, see [§4](#4-routing-and-collision-prevention)).
+`rotation` (orientation in degrees), `merge_edges` (edge convergence on its
+faces — default `true`, see [§4](#4-routing-and-collision-prevention)), and, on a
+`circle`, `ports` (connection points on the outline — default `'direct'`, see
+[§4](#4-routing-and-collision-prevention)).
 
 **Rotation** (`rotation`, degrees, clockwise, default 0): orients the node's
 **visual** (pictogram, shape or panel) without rotating its label (which stays
@@ -178,6 +180,19 @@ node (`NODE_GAP`). See [`packages/react-dataflow-animator/src/engine/geometry.ts
   per-node-face (a link converges at the end whose node merges) and is
   independent of the intra-pair spreading above, which always applies. See
   [`packages/react-dataflow-animator/src/engine/portOffsets.ts`](../packages/react-dataflow-animator/src/engine/portOffsets.ts).
+- **Outline anchoring on round nodes (`ports`)**: cardinal N/S/E/W anchoring
+  fits boxes, not discs — an edge meeting a `circle` at an angle would leave a
+  visible gap. A round node therefore anchors each edge on its **outline**,
+  where the straight line to the other node's centre crosses it (radial). This
+  is the default (`ports: 'direct'`, infinitely many points — "the most direct
+  path"), which is what makes trees and graphs of circles look organic. Setting
+  `ports` to a positive integer `N` exposes `N` evenly-spread points instead and
+  snaps each edge to the nearest (edges on the same point merge; `4` reproduces
+  N/E/S/W on the disc). The intra-pair bidirectional spread still applies (as a
+  tangential nudge). Non-round nodes ignore `ports`. Implemented in
+  `ellipseAttach` / `connection` in
+  [`geometry.ts`](../packages/react-dataflow-animator/src/engine/geometry.ts);
+  bezier handles leave along the radial normal (`pathShapes.ts`).
 
 ## 5. Animation engine and actions
 

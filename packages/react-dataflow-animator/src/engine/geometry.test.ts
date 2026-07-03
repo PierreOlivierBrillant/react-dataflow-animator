@@ -279,6 +279,164 @@ describe('accroche cardinale', () => {
   });
 });
 
+// ─── Contour anchoring (round nodes: radial / N ports) ────────────────────
+
+describe('contour anchoring', () => {
+  // A circle centred at the origin, radius 20 (no outset).
+  const circle = (): NodeGeom => mkNode('c', 0, 0, 40, 40);
+  const DIRECT = { kind: 'ellipse', ports: 'direct' } as const;
+  const dist = (p: { x: number; y: number }) => Math.hypot(p.x, p.y);
+
+  it("'direct': anchor lands on the outline, aimed at the other centre (radial)", () => {
+    // Diagonal target: cardinal would pick East (20,0); radial aims at 45°.
+    const c = connection(
+      circle(),
+      mkNode('t', 100, 100),
+      undefined,
+      0,
+      0,
+      'straight',
+      undefined,
+      DIRECT
+    );
+    expect(dist(c.start)).toBeCloseTo(20, 4); // exactly on the circle
+    expect(c.start.x).toBeCloseTo(20 / Math.SQRT2, 4);
+    expect(c.start.y).toBeCloseTo(20 / Math.SQRT2, 4);
+  });
+
+  it("'direct': a 'to' contour anchors the END on the outline toward the source", () => {
+    const c = connection(
+      mkNode('f', 100, 100),
+      circle(),
+      undefined,
+      0,
+      0,
+      'straight',
+      undefined,
+      undefined,
+      DIRECT
+    );
+    expect(dist(c.end)).toBeCloseTo(20, 4);
+    expect(c.end.x).toBeCloseTo(20 / Math.SQRT2, 4);
+    expect(c.end.y).toBeCloseTo(20 / Math.SQRT2, 4);
+  });
+
+  it('borderOutset extends the anchoring radius (badge outline)', () => {
+    const c = connection(
+      mkNode('c', 0, 0, 40, 40, 0, undefined, 5), // outset 5 → R = 25
+      mkNode('t', 200, 0),
+      undefined,
+      0,
+      0,
+      'straight',
+      undefined,
+      DIRECT
+    );
+    expect(c.start.x).toBeCloseTo(25, 4);
+    expect(c.start.y).toBeCloseTo(0, 4);
+  });
+
+  it('non-square ellipse: anchor satisfies the ellipse equation', () => {
+    const rx = 20;
+    const ry = 40;
+    const c = connection(
+      mkNode('c', 0, 0, 2 * rx, 2 * ry),
+      mkNode('t', 100, 100),
+      undefined,
+      0,
+      0,
+      'straight',
+      undefined,
+      DIRECT
+    );
+    const onEllipse = (c.start.x / rx) ** 2 + (c.start.y / ry) ** 2;
+    expect(onEllipse).toBeCloseTo(1, 4);
+  });
+
+  it('N ports: the direction snaps to the nearest of N evenly-spread slots', () => {
+    // N=4, phase at top → slots at N/E/S/W. A target just below East snaps East.
+    const east = connection(
+      circle(),
+      mkNode('t', 100, 20),
+      undefined,
+      0,
+      0,
+      'straight',
+      undefined,
+      { kind: 'ellipse', ports: 4 }
+    );
+    expect(east.start.x).toBeCloseTo(20, 4);
+    expect(east.start.y).toBeCloseTo(0, 4);
+    // A target just right of straight-up snaps to the TOP slot (0,-20).
+    const top = connection(
+      circle(),
+      mkNode('t', 5, -100),
+      undefined,
+      0,
+      0,
+      'straight',
+      undefined,
+      { kind: 'ellipse', ports: 4 }
+    );
+    expect(top.start.x).toBeCloseTo(0, 4);
+    expect(top.start.y).toBeCloseTo(-20, 4);
+  });
+
+  it('port offset nudges the anchor along the tangent (bidirectional split)', () => {
+    const base = connection(
+      circle(),
+      mkNode('t', 200, 0),
+      undefined,
+      0,
+      0,
+      'straight',
+      undefined,
+      DIRECT
+    );
+    const nudged = connection(
+      circle(),
+      mkNode('t', 200, 0),
+      undefined,
+      10,
+      0,
+      'straight',
+      undefined,
+      DIRECT
+    );
+    expect(base.start.y).toBeCloseTo(0, 4);
+    expect(nudged.start.y).toBeGreaterThan(0); // rotated off the axis…
+    expect(dist(nudged.start)).toBeCloseTo(20, 4); // …but still on the circle
+  });
+
+  it('no contour → cardinal behavior is unchanged', () => {
+    // Same diagonal, but no contour: keeps the East cardinal anchor (20,0).
+    const c = connection(circle(), mkNode('t', 100, 100));
+    expect(c.start.x).toBeCloseTo(20, 4);
+    expect(c.start.y).toBeCloseTo(0, 4);
+  });
+
+  it('bezier between two round nodes bows along the radial normals', () => {
+    // Vertically stacked circles (tree-like): a bezier must leave/join along the
+    // vertical normals, i.e. the samples stay on the shared x axis (no sideways
+    // bulge) and progress downward.
+    const c = connection(
+      circle(),
+      mkNode('t', 0, 200),
+      undefined,
+      0,
+      0,
+      'bezier',
+      undefined,
+      DIRECT,
+      DIRECT
+    );
+    expect(c.start.y).toBeCloseTo(20, 4); // bottom of the top circle
+    expect(c.end.y).toBeCloseTo(180, 4); // top of the bottom circle
+    expect(c.waypoints).toBeDefined();
+    for (const p of c.waypoints!) expect(p.x).toBeCloseTo(0, 4);
+  });
+});
+
 // ─── labelBounds (tested via observable effects on connection) ──────────
 
 describe('labelBounds', () => {

@@ -26,6 +26,14 @@ const SMOOTH_RADIUS = 14;
  */
 const STRAIGHT_EPS = 0.5;
 
+/** Outward unit normals of the two extremities, when they anchor on a round
+ *  outline instead of a cardinal face. Bezier handles then leave/arrive along
+ *  these radial directions (not an axis), so an edge meets a circle smoothly. */
+export interface EndpointNormals {
+  start: Point;
+  end: Point;
+}
+
 export function shapeWaypoints(
   control: Point[],
   shape: PathShape,
@@ -34,7 +42,13 @@ export function shapeWaypoints(
    * Orients the curve handles / the first corner so that the path starts and
    * arrives PERPENDICULARLY to the face, independently of the chord's slope.
    */
-  endpointAxis?: ConnectionAxis
+  endpointAxis?: ConnectionAxis,
+  /**
+   * Outward normals when an extremity anchors on a round outline (radial). When
+   * present they take precedence over `endpointAxis` for the bezier handles.
+   * Only the smooth shapes read them; `straight`/`step` are unaffected.
+   */
+  normals?: EndpointNormals
 ): Point[] | undefined {
   // control = [start, …anti-collision detours, end] (length ≥ 2).
   switch (shape) {
@@ -45,10 +59,10 @@ export function shapeWaypoints(
     case 'smoothstep':
       return stepWaypoints(control, shape === 'smoothstep', endpointAxis);
     case 'simplebezier':
-      return curveWaypoints(control, true, endpointAxis);
+      return curveWaypoints(control, true, endpointAxis, normals);
     case 'bezier':
     default:
-      return curveWaypoints(control, false, endpointAxis);
+      return curveWaypoints(control, false, endpointAxis, normals);
   }
 }
 
@@ -78,26 +92,31 @@ function cubicAt(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point {
 /** STRICTLY interior points (a and b excluded) of a cubic a→b whose
  *  handles follow the segment's dominant axis — or `forceHorizontal` when
  *  the extremity anchors to an imposed face (the curve then starts along the
- *  face normal, not the chord). */
+ *  face normal, not the chord). A `startDir`/`endDir` outward normal, when given
+ *  (round outline), overrides that endpoint's handle to leave/arrive radially. */
 function bezierBetween(
   a: Point,
   b: Point,
   simple: boolean,
-  forceHorizontal?: boolean
+  forceHorizontal?: boolean,
+  startDir?: Point,
+  endDir?: Point
 ): Point[] {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const horizontal = forceHorizontal ?? Math.abs(dx) >= Math.abs(dy);
-  let cp1: Point;
-  let cp2: Point;
-  if (horizontal) {
-    const off = ctrlOffset(dx, simple);
-    cp1 = { x: a.x + off, y: a.y };
-    cp2 = { x: b.x - off, y: b.y };
-  } else {
-    const off = ctrlOffset(dy, simple);
-    cp1 = { x: a.x, y: a.y + off };
-    cp2 = { x: b.x, y: b.y - off };
+  let cp1: Point = horizontal
+    ? { x: a.x + ctrlOffset(dx, simple), y: a.y }
+    : { x: a.x, y: a.y + ctrlOffset(dy, simple) };
+  let cp2: Point = horizontal
+    ? { x: b.x - ctrlOffset(dx, simple), y: b.y }
+    : { x: b.x, y: b.y - ctrlOffset(dy, simple) };
+  if (startDir || endDir) {
+    // Handle length scales with the chord so the curvature stays proportional.
+    const reach = (simple ? 0.25 : 0.5) * Math.hypot(dx, dy);
+    if (startDir)
+      cp1 = { x: a.x + startDir.x * reach, y: a.y + startDir.y * reach };
+    if (endDir) cp2 = { x: b.x + endDir.x * reach, y: b.y + endDir.y * reach };
   }
   const pts: Point[] = [];
   for (let i = 1; i < BEZIER_SAMPLES; i++) {
@@ -109,10 +128,16 @@ function bezierBetween(
 function curveWaypoints(
   control: Point[],
   simple: boolean,
-  endpointAxis?: ConnectionAxis
+  endpointAxis?: ConnectionAxis,
+  normals?: EndpointNormals
 ): Point[] | undefined {
   if (control.length === 2) {
     const [a, b] = control;
+    // Radial endpoints: handles follow the outward normals. A near-straight
+    // radial edge (normals aligned with the chord) samples to a straight line.
+    if (normals) {
+      return bezierBetween(a, b, simple, undefined, normals.start, normals.end);
+    }
     // Axis imposed by face (see shapeWaypoints); otherwise dominant axis of chord.
     const horizontal = endpointAxis
       ? endpointAxis === 'horizontal'
@@ -122,11 +147,24 @@ function curveWaypoints(
     if (Math.abs(crossDelta) < STRAIGHT_EPS) return undefined;
     return bezierBetween(a, b, simple, horizontal);
   }
-  // Detour(s) present: we chain one cubic per control segment,
-  // reinserting each junction point so the curve passes through it.
+  // Detour(s) present: we chain one cubic per control segment, reinserting each
+  // junction point so the curve passes through it. The first/last handle follows
+  // its radial normal when the matching endpoint anchors on a round outline.
   const out: Point[] = [];
   for (let i = 0; i < control.length - 1; i++) {
-    out.push(...bezierBetween(control[i], control[i + 1], simple));
+    const startDir = normals && i === 0 ? normals.start : undefined;
+    const endDir =
+      normals && i === control.length - 2 ? normals.end : undefined;
+    out.push(
+      ...bezierBetween(
+        control[i],
+        control[i + 1],
+        simple,
+        undefined,
+        startDir,
+        endDir
+      )
+    );
     if (i < control.length - 2) out.push(control[i + 1]);
   }
   return out;

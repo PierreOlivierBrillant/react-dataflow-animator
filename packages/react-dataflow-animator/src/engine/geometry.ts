@@ -41,6 +41,32 @@ export interface NodeGeom {
 
 export type GeometryMap = Record<string, NodeGeom>;
 
+/**
+ * Attachment policy for a node whose edges anchor on a continuous outline
+ * (a round node) rather than on the four cardinal sides. `ports` mirrors the
+ * spec field {@link Node.ports}: `'direct'` = the edge meets the outline exactly
+ * where the line to the other centre crosses it (infinite points); a positive
+ * integer `N` = the nearest of `N` evenly-spread points around the outline.
+ */
+export interface NodeContour {
+  kind: 'ellipse';
+  ports: 'direct' | number;
+}
+
+/**
+ * Resolves a node's contour policy from its spec (`type` + `ports`). Only round
+ * nodes (`circle`) get an elliptical contour today; every other type keeps the
+ * cardinal-side anchoring, so `ports` is ignored there. Centralised here so the
+ * renderer and any future caller derive the SAME contour.
+ */
+export function nodeContour(
+  type: string,
+  ports?: 'direct' | number
+): NodeContour | undefined {
+  if (type !== 'circle') return undefined;
+  return { kind: 'ellipse', ports: ports ?? 'direct' };
+}
+
 /** Routing margin (px, at scale 1): detour around a third-party label and
  *  median label anchor shift. NOT the anchor (arrow touches border).
  *  Scaled by `NodeGeom.scale` in {@link connection}. */
@@ -159,6 +185,81 @@ function cardinalAttach(node: NodeGeom, face: Face, portOffset: number): Point {
   }
 }
 
+/** Anchor point on a node's outline plus the OUTWARD unit normal there — the
+ *  direction the path leaves/arrives perpendicularly (curve handles read it). */
+interface ContourAnchor {
+  point: Point;
+  normal: Point;
+}
+
+/** Outward unit normal of a cardinal face (used to orient curve handles the same
+ *  way for cardinal and contour endpoints). */
+function faceNormal(face: Face): Point {
+  switch (face) {
+    case 'east':
+      return { x: 1, y: 0 };
+    case 'west':
+      return { x: -1, y: 0 };
+    case 'north':
+      return { x: 0, y: -1 };
+    case 'south':
+      return { x: 0, y: 1 };
+  }
+}
+
+/**
+ * Attaches an edge end on a node's ELLIPTICAL outline (a round node), aimed at
+ * `toward` — the other node's centre.
+ *
+ * - `ports: 'direct'` → the anchor is the exact ray/outline intersection in the
+ *   direction of `toward`: the edge meets the circle right where the straight
+ *   line to the other centre crosses it (radial, infinite possible points).
+ * - `ports: N` (positive integer) → the direction is snapped to the nearest of
+ *   `N` evenly-spread angles before intersecting; edges that snap to the same
+ *   angle merge on one point (like `merge_edges`). Phase is chosen so a slot
+ *   sits at the top and bottom (natural for trees; `N = 4` gives N/E/S/W).
+ *
+ * `offset` (the intra-pair / fan-out spread in px, reused from the cardinal port
+ * model) nudges the anchor along the tangent so bidirectional tracks stay apart.
+ */
+function ellipseAttach(
+  node: NodeGeom,
+  ports: 'direct' | number,
+  toward: Point,
+  offset: number
+): ContourAnchor {
+  const outset = node.borderOutset ?? 0;
+  const rx = node.width / 2 + outset;
+  const ry = node.height / 2 + outset;
+  let ang = Math.atan2(toward.y - node.y, toward.x - node.x);
+  if (typeof ports === 'number' && ports > 0) {
+    const step = (2 * Math.PI) / ports;
+    // Phase so that, for an even count, one slot is at the top (−π/2) and one at
+    // the bottom: parent/child edges of a tree stay vertical, and N = 4 lands on
+    // the four cardinal points of the round outline.
+    const phase = -Math.PI / 2;
+    ang = phase + Math.round((ang - phase) / step) * step;
+  }
+  // Tangential nudge: arc length (px) → angle, so two bidirectional edges on the
+  // same direction do not collapse onto a single point.
+  const rMean = (rx + ry) / 2;
+  if (offset && rMean > 1e-6) ang += offset / rMean;
+  const cos = Math.cos(ang);
+  const sin = Math.sin(ang);
+  // Ray/ellipse intersection along `ang`: the point of the outline in that exact
+  // direction from the centre (t·(cos,sin) satisfies (x/rx)²+(y/ry)² = 1).
+  const t = 1 / Math.hypot(cos / rx, sin / ry);
+  const point = { x: node.x + t * cos, y: node.y + t * sin };
+  // Outward normal ∝ gradient of (x/rx)²+(y/ry)² at the point ∝ (cos/rx², sin/ry²)
+  // — exactly radial for a circle (rx = ry).
+  let nx = cos / (rx * rx);
+  let ny = sin / (ry * ry);
+  const nLen = Math.hypot(nx, ny) || 1;
+  nx /= nLen;
+  ny /= nLen;
+  return { point, normal: { x: nx, y: ny } };
+}
+
 /**
  * Connection points between two nodes.
  *
@@ -181,7 +282,9 @@ export function connection(
   startPortOffset = 0,
   endPortOffset = 0,
   shape: PathShape = 'bezier',
-  axis?: ConnectionAxis
+  axis?: ConnectionAxis,
+  fromContour?: NodeContour,
+  toContour?: NodeContour
 ): Connection {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
@@ -210,8 +313,26 @@ export function connection(
       ? 'north'
       : 'south';
 
-  const start: Point = cardinalAttach(from, fromFace, startPortOffset);
-  const end: Point = cardinalAttach(to, toFace, endPortOffset);
+  // Endpoints: a round node anchors on its outline aimed at the OTHER centre
+  // (see {@link ellipseAttach}); otherwise on its cardinal face. Each endpoint
+  // also yields the outward normal used to orient the curve handles below.
+  const cf: Point = { x: from.x, y: from.y };
+  const ct: Point = { x: to.x, y: to.y };
+  const fromAnchor: ContourAnchor = fromContour
+    ? ellipseAttach(from, fromContour.ports, ct, startPortOffset)
+    : {
+        point: cardinalAttach(from, fromFace, startPortOffset),
+        normal: faceNormal(fromFace),
+      };
+  const toAnchor: ContourAnchor = toContour
+    ? ellipseAttach(to, toContour.ports, cf, endPortOffset)
+    : {
+        point: cardinalAttach(to, toFace, endPortOffset),
+        normal: faceNormal(toFace),
+      };
+  const start: Point = fromAnchor.point;
+  const end: Point = toAnchor.point;
+  const hasContour = fromContour !== undefined || toContour !== undefined;
 
   // Detects the first third-party label the segment crosses and inserts a detour
   // just above/beside to bypass it. This detour is shape-independent:
@@ -256,7 +377,10 @@ export function connection(
   const waypoints = shapeWaypoints(
     control,
     shape,
-    isHorizontal ? 'horizontal' : 'vertical'
+    isHorizontal ? 'horizontal' : 'vertical',
+    // A contour endpoint leaves along its outward normal (radial), not along a
+    // cardinal axis — pass the normals so bezier handles bend accordingly.
+    hasContour ? { start: fromAnchor.normal, end: toAnchor.normal } : undefined
   );
 
   // Last segment angle (for arrowhead).

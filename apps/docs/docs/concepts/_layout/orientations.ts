@@ -48,6 +48,42 @@ export const mergeEdgesExample: (merge: boolean) => DataFlowSpec = (merge) => ({
   timeline: [],
 });
 
+/**
+ * Connection points on a round node (`ports`): a hub circle with eight spokes.
+ * `'direct'` (the default) lets every edge meet the hub exactly where it points
+ * — eight distinct radial anchors. A finite count snaps those directions to that
+ * many evenly-spread slots, so spokes group onto shared points. Keys (`body`)
+ * are language-invariant.
+ */
+export const portsExample: (ports: 'direct' | number) => DataFlowSpec = (
+  ports
+) => ({
+  direction: 'circular',
+  nodes: [
+    { id: 'hub', type: 'circle', body: 'H', main: true, ports },
+    { id: 'n1', type: 'circle', body: '1' },
+    { id: 'n2', type: 'circle', body: '2' },
+    { id: 'n3', type: 'circle', body: '3' },
+    { id: 'n4', type: 'circle', body: '4' },
+    { id: 'n5', type: 'circle', body: '5' },
+    { id: 'n6', type: 'circle', body: '6' },
+    { id: 'n7', type: 'circle', body: '7' },
+    { id: 'n8', type: 'circle', body: '8' },
+  ],
+  packets: [],
+  connections: [
+    { from: 'n1', to: 'hub', path: 'straight', arrow_head: 'none' },
+    { from: 'n2', to: 'hub', path: 'straight', arrow_head: 'none' },
+    { from: 'n3', to: 'hub', path: 'straight', arrow_head: 'none' },
+    { from: 'n4', to: 'hub', path: 'straight', arrow_head: 'none' },
+    { from: 'n5', to: 'hub', path: 'straight', arrow_head: 'none' },
+    { from: 'n6', to: 'hub', path: 'straight', arrow_head: 'none' },
+    { from: 'n7', to: 'hub', path: 'straight', arrow_head: 'none' },
+    { from: 'n8', to: 'hub', path: 'straight', arrow_head: 'none' },
+  ],
+  timeline: [],
+});
+
 export const circularExample: DataFlowSpec = {
   direction: 'circular',
   nodes: [
