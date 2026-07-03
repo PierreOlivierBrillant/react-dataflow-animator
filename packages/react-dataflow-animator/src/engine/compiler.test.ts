@@ -251,6 +251,38 @@ describe('compile — stops', () => {
     // Sorted.
     expect([...timeline.stops].sort((x, y) => x - y)).toEqual(timeline.stops);
   });
+
+  it('a parallel is atomic: one stop at its end, children never stepped into', () => {
+    const { timeline } = compile(
+      specOf([
+        { type: 'arrow', id: 'A', from: 'a', to: 'b', duration: 300 },
+        {
+          type: 'parallel',
+          actions: [
+            {
+              type: 'move',
+              id: 'x',
+              object: 'p',
+              from: 'a',
+              to: 'b',
+              duration: 400,
+            },
+            { type: 'arrow', id: 'y', from: 'a', to: 'b', duration: 600 },
+          ],
+        },
+      ])
+    );
+    const a = timeline.clips.find((c) => c.id === 'A')!;
+    const x = timeline.clips.find((c) => c.id === 'x')!;
+    const y = timeline.clips.find((c) => c.id === 'y')!;
+    // The root arrow keeps its own stop; the whole parallel contributes exactly
+    // ONE stop (its end = last child to finish). The children's intermediate
+    // instants (move appearance/arrival, arrow end) are NOT navigation stops.
+    const groupEnd = Math.max(x.endMs, y.endMs);
+    expect(timeline.stops).toEqual([a.endMs, groupEnd]);
+    expect(timeline.stops).not.toContain(x.animStartMs);
+    expect(timeline.stops).not.toContain(y.endMs);
+  });
 });
 
 describe('compile — wait_for on root action: clamped to step start', () => {

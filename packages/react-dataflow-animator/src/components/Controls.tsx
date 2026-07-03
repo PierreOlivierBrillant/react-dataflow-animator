@@ -71,7 +71,7 @@ const Icon = {
 };
 
 function fmt(ms: number): string {
-  return `${(ms / 1000).toFixed(1)}s`;
+  return `${Math.round(ms / 1000)}s`;
 }
 
 export function Controls({

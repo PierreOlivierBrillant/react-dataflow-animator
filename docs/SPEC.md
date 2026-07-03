@@ -31,6 +31,10 @@ Displayed according to the `controls` prop (default: `true`):
 - **Step navigation** (Previous / Next): navigates by "logical steps"
   (= root actions). "Next" plays until the end of the current step then
   stops; "Previous" goes back to the beginning of the step (then to the previous one).
+  A `parallel` action is **atomic**: it counts as a single step (one stop at the
+  group's end), so stepping never stops inside it on individual children.
+- **Time readout**: the current instant and total duration are shown rounded to
+  whole seconds (no decimals).
 - **Fullscreen** (Fullscreen API).
 - **Debug** (`debug` prop): overlays inspecting the internal state of the timeline.
 

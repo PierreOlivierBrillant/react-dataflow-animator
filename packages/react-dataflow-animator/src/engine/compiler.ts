@@ -166,6 +166,12 @@ interface PendingClip {
   keepEnd: boolean;
   stepIndex: number;
   /**
+   * True when this clip is emitted by a `parallel` child. Such clips do NOT
+   * contribute their own navigation stops: a `parallel` is atomic for stepping
+   * (a single stop at the group's end), so its children are never stepped into.
+   */
+  inParallel?: boolean;
+  /**
    * Continuous-spin speed (deg/s) for a `rotate` spin. When set, pass 2 resolves
    * the clip's spin-stop instant (`endMs`) and final `toDeg` from the timing
    * fields (`duration` / `keep_until` / `keep_until_end`).
@@ -178,6 +184,12 @@ interface Ctx {
   timingById: Map<string, { startMs: number; endMs: number }>;
   warnings: string[];
   counter: number;
+  /**
+   * Navigation stops contributed by top-level `parallel` groups (their end
+   * instant). A parallel is a single logical action for stepping, so it yields
+   * one stop for the whole group instead of one per child clip.
+   */
+  parallelStops: number[];
   /**
    * Running rotation angle (deg) per node, seeded from `node.rotation`.
    * Each `rotate` action reads it as the interpolation start, then updates it
@@ -210,13 +222,16 @@ interface Window {
  * @param minStartMs — floor for startMs (used for root actions so
  *   that wait_for can only delay, never go back before step start).
  *   Not passed to parallel children, which keep strict semantics.
+ * @param inParallel — true when compiling inside a `parallel` group. Emitted
+ *   clips are then flagged so they don't produce individual navigation stops.
  */
 function compileAction(
   action: Action,
   baseStart: number,
   stepIndex: number,
   ctx: Ctx,
-  minStartMs = 0
+  minStartMs = 0,
+  inParallel = false
 ): Window {
   // wait_for resolution (reference to an already compiled action).
   let startMs = baseStart;
@@ -240,10 +255,14 @@ function compileAction(
     let occupiedEndMs = startMs;
     for (const child of children) {
       // minStartMs not passed: children keep strict semantics.
-      const r = compileAction(child, startMs, stepIndex, ctx);
+      // inParallel = true: child clips won't emit their own stops.
+      const r = compileAction(child, startMs, stepIndex, ctx, 0, true);
       if (r.animEndMs > animEndMs) animEndMs = r.animEndMs;
       if (r.occupiedEndMs > occupiedEndMs) occupiedEndMs = r.occupiedEndMs;
     }
+    // A parallel is atomic for stepping: only the OUTERMOST group contributes a
+    // single stop (its end). Nested parallels are absorbed by the outer one.
+    if (!inParallel && animEndMs > startMs) ctx.parallelStops.push(animEndMs);
     if (action.id) ctx.timingById.set(action.id, { startMs, endMs: animEndMs });
     return { startMs, animEndMs, occupiedEndMs };
   }
@@ -256,6 +275,11 @@ function compileAction(
     if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
     return { startMs, animEndMs: endMs, occupiedEndMs: endMs };
   }
+
+  // Clips emitted below (leaf action) all share this action's `inParallel`
+  // flag: mark them in one place before returning rather than at each of the
+  // scattered push sites (single source, no per-site drift).
+  const pendingStart = ctx.pending.length;
 
   const duration = action.duration ?? DEFAULT_DURATION[action.type];
   const isMove = action.type === 'move';
@@ -591,6 +615,12 @@ function compileAction(
     }
   }
 
+  if (inParallel) {
+    for (let i = pendingStart; i < ctx.pending.length; i++) {
+      ctx.pending[i].inParallel = true;
+    }
+  }
+
   return { startMs, animEndMs: endMs, occupiedEndMs };
 }
 
@@ -608,6 +638,7 @@ export function compile(spec: DataFlowSpec): CompileResult {
     timingById: new Map(),
     warnings: [],
     counter: 0,
+    parallelStops: [],
     rotationById: new Map(
       spec.nodes
         .filter((n) => typeof n.rotation === 'number')
@@ -704,12 +735,16 @@ export function compile(spec: DataFlowSpec): CompileResult {
   }
 
   // Stop points: a move stops at appearance (animStart) AND at arrival
-  // (end); other clips stop once "settled" (end).
+  // (end); other clips stop once "settled" (end). Clips emitted inside a
+  // `parallel` are skipped — the group is atomic for stepping and contributes
+  // a single stop (its end) via `ctx.parallelStops`.
   const stopSet = new Set<number>();
-  for (const { clip } of ctx.pending) {
+  for (const { clip, inParallel } of ctx.pending) {
+    if (inParallel) continue;
     if (clip.kind === 'move') stopSet.add(clip.animStartMs);
     stopSet.add(clip.endMs);
   }
+  for (const stop of ctx.parallelStops) stopSet.add(stop);
   // NB: `Array.from` rather than `[...stopSet]`. Docusaurus Babel in mode
   // "loose" transpiles iterable spread to `[].concat(iterable)`,
   // which does NOT flatten a Set and produces an empty array after filter.
