@@ -107,13 +107,17 @@ export const mst = (locale: Locale): DataFlowSpec => {
   const s = strings[locale];
   return {
     direction: 'graph',
+    // Crossing-free placement: C and E are the two hubs, joined by three
+    // parallel routes (via B on top, D in the middle, F at the bottom), with A
+    // hanging off the C–B corner. Drawing the graph without edge crossings makes
+    // each rejected cycle (B–C–D–E, C–D–E–F) read as a clean closed loop.
     nodes: [
-      N('A', 0.1, 0.28),
-      N('B', 0.1, 0.72),
-      N('C', 0.36, 0.5),
-      N('D', 0.6, 0.5),
-      N('E', 0.86, 0.28),
-      N('F', 0.86, 0.72),
+      N('A', 0.1, 0.3),
+      N('B', 0.56, 0.18),
+      N('C', 0.32, 0.5),
+      N('D', 0.56, 0.5),
+      N('E', 0.82, 0.5),
+      N('F', 0.56, 0.82),
     ],
     connections: [
       E('ab', 'A', 'B', 1),
