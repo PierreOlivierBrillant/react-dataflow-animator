@@ -111,6 +111,34 @@ describe('orthoRouter', () => {
     expect(p.length).toBeGreaterThan(2); // an orthogonal step, not a slanted line
   });
 
+  it('keeps a straight lead before the first/last turn at hard connectors', () => {
+    // Opposite faces offset on the transverse axis ⇒ the wire MUST bend. It may
+    // not bend flush against a pin: each end runs straight along its normal for
+    // at least the minimum lead (PIN_LEAD = 14) before turning.
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 120, 100, 1, 0),
+        to: pin('b', 280, 160, -1, 0),
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 100, 100), body('b', 300, 160)],
+      wires
+    );
+    const p = routes.get('w')!;
+    expect(allOrthogonal(p)).toBe(true);
+    expect(p.length).toBeGreaterThan(2); // it does bend
+    const seg = (i: number) =>
+      Math.hypot(p[i + 1].x - p[i].x, p[i + 1].y - p[i].y);
+    // First run leaves along the +x normal (horizontal); last run enters b along
+    // -x (horizontal). Each is at least the lead, minus a sub-pixel tolerance.
+    expect(Math.abs(p[1].y - p[0].y)).toBeLessThan(0.6);
+    expect(seg(0)).toBeGreaterThanOrEqual(13.5);
+    expect(Math.abs(p[p.length - 1].y - p[p.length - 2].y)).toBeLessThan(0.6);
+    expect(seg(p.length - 2)).toBeGreaterThanOrEqual(13.5);
+  });
+
   it('routes around a component that sits between the terminals', () => {
     const mid = body('m', 200, 100);
     const wires: RouterWire[] = [

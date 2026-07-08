@@ -54,12 +54,21 @@ const config = {
       };
     },
     // Allows webpack to detect changes in the lib dist when running in dev
-    // (docusaurus doesn't watch node_modules by default).
+    // (docusaurus doesn't watch node_modules by default). Two things are needed:
+    //  1. watchOptions.ignored must NOT ignore the linked lib;
+    //  2. snapshot.unmanagedPaths must mark it MUTABLE — webpack 5 treats
+    //     node_modules as "managed" (immutable, cached by version) and will
+    //     otherwise never re-read the rebuilt dist even when it is being watched.
+    // The lib is a workspace symlink and webpack resolves symlinks, so we list
+    // BOTH the node_modules path and the real packages/ path.
     function watchLibPlugin() {
+      const libPathRe =
+        /[\\/](?:node_modules|packages)[\\/]react-dataflow-animator[\\/]/;
       return {
         name: 'watch-lib-dist',
         configureWebpack() {
           return {
+            snapshot: { unmanagedPaths: [libPathRe] },
             watchOptions: {
               ignored: /node_modules\/(?!react-dataflow-animator)/,
             },

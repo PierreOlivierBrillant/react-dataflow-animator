@@ -7,6 +7,8 @@ import type { Point } from './geometry';
  * that:
  *   • never cross a component body (hard obstacle avoidance, all obstacles);
  *   • leave/enter a terminal PERPENDICULAR to its face (the pin normal);
+ *   • keep a straight lead ({@link PIN_LEAD} px) out of / into a hard connector
+ *     before the first / last turn, so a wire never bends flush against a pin;
  *   • take as few corners as possible (a turn is penalised);
  *   • do NOT run on top of a parallel wire — two wires may only meet where they
  *     cross at a right angle (lane separation).
@@ -72,12 +74,23 @@ export interface RouteOptions {
 const TURN_COST = 12;
 const LANE_COST = 40;
 const EPS = 0.5;
-/** Straight run kept along a pin's normal before a diagonal miter may start, so
- *  a wire still leaves a component face perpendicularly (a soft POINT endpoint
- *  needs none). */
-const DIAG_STUB = 8;
 /** A miter shorter than this is pointless — keep the sharp corner instead. */
 const DIAG_MIN = 3;
+/** Target straight run a wire keeps out of — and into — a hard connector (a
+ *  component pin / cardinal face) before it turns / bifurcates, so every terminal
+ *  gets a clean perpendicular lead instead of a bend flush against the face.
+ *  THE tunable lead. Governs BOTH render paths: on an ORTHOGONAL wire it is a
+ *  strong preference (see {@link LEAD_COST}) — where a body leaves no room the
+ *  wire bends as late as it can rather than fail; on a `diagonal` wire it is the
+ *  straight stub kept before the 45° miter/elbow begins. A soft POINT endpoint
+ *  (a junction/pad) is a branch point and has no lead. */
+const PIN_LEAD = 30;
+/** Cost (per pixel of missing lead) charged when an ORTHOGONAL wire turns INSIDE
+ *  a lead zone. Graduated, so A* pushes an unavoidable bend as far from the pin as
+ *  the layout allows and always prefers the full lead where routes are otherwise
+ *  equal. (A `diagonal` wire keeps its {@link PIN_LEAD} stub geometrically and so
+ *  ignores this.) */
+const LEAD_COST = 6;
 
 /** Does the open segment a→b cross the OPEN rectangle interior? Liang–Barsky
  *  parametric clip; used to keep a 45° miter clear of a body/label/clearance
@@ -241,6 +254,14 @@ export function routeOrthogonal(
   for (const w of wires) {
     xsBase.push(w.from.point.x, w.to.point.x);
     ysBase.push(w.from.point.y, w.to.point.y);
+    // A grid line exactly at each hard connector's lead boundary, so a wire can
+    // turn PRECISELY at PIN_LEAD instead of overshooting to the next Hanan line.
+    for (const e of [w.from, w.to]) {
+      if (!e.hardNormal) continue;
+      const u = axisUnit(e.normal);
+      if (u.x !== 0) xsBase.push(e.point.x + u.x * PIN_LEAD);
+      else ysBase.push(e.point.y + u.y * PIN_LEAD);
+    }
   }
   // Outer margin lines so a wire can detour AROUND the whole cluster, not only
   // between bodies (a long span past several components in a row).
@@ -334,6 +355,32 @@ export function routeOrthogonal(
     if (!wire.from.hardNormal) bodySkip.add(wire.from.node);
     if (!wire.to.hardNormal) bodySkip.add(wire.to.node);
 
+    // Lead corridors: a hard connector's wire should run PIN_LEAD px straight
+    // along its normal before the FIRST turn (and the last turn should stay
+    // PIN_LEAD before the pin), so it leaves/enters a component face cleanly
+    // instead of bending flush against it. Turning at a grid vertex lying ON such
+    // a corridor, within PIN_LEAD of the pin, is charged {@link LEAD_COST} per
+    // pixel of missing lead — a preference, not a ban, so a boxed-in pin still
+    // routes (it just bends as late as it can). Soft POINT endpoints have none.
+    const leadZones: { px: number; py: number; ux: number; uy: number }[] = [];
+    for (const e of [wire.from, wire.to]) {
+      if (!e.hardNormal) continue;
+      const u = axisUnit(e.normal);
+      leadZones.push({ px: e.point.x, py: e.point.y, ux: u.x, uy: u.y });
+    }
+    // Extra cost for turning AT (px, py): 0 outside every lead zone, else grows
+    // linearly the closer the turn sits to the pin (max at the face).
+    const leadPenalty = (px: number, py: number): number => {
+      let worst = 0;
+      for (const z of leadZones) {
+        const along = (px - z.px) * z.ux + (py - z.py) * z.uy;
+        const transverse = (px - z.px) * -z.uy + (py - z.py) * z.ux;
+        if (Math.abs(transverse) < EPS && along > EPS && along < PIN_LEAD - EPS)
+          worst = Math.max(worst, (PIN_LEAD - along) * LEAD_COST);
+      }
+      return worst;
+    };
+
     // A diagonal wire first tries a direct octilinear elbow (a bold centred
     // diagonal). It only wins if collision-free; otherwise we fall through to the
     // orthogonal A* and miter its corners — so a diagonal is never a regression.
@@ -342,7 +389,7 @@ export function routeOrthogonal(
         wire.from,
         wire.to,
         (a, b) => segClear(a, b, skip, bodySkip),
-        DIAG_STUB
+        PIN_LEAD
       );
       if (elbow) {
         results.set(wire.key, elbow);
@@ -425,6 +472,10 @@ export function routeOrthogonal(
         if (inRect(mx, my, skip, bodySkip)) continue;
         const len = Math.abs(xs[ni] - xs[cur.i]) + Math.abs(ys[nj] - ys[cur.j]);
         const turned = (cur.di || cur.dj) && (ddi !== cur.di || ddj !== cur.dj);
+        // Keep a clean lead at each connector: turning inside a pin's lead zone
+        // (the turn happens AT `cur`) is charged, so A* prefers the full lead and,
+        // where boxed in, bends as late as it can.
+        const leadCost = turned ? leadPenalty(xs[cur.i], ys[cur.j]) : 0;
         const orient: 'h' | 'v' = ddi !== 0 ? 'h' : 'v';
         const fixed = orient === 'h' ? nj : ni;
         const uk = edgeKey(
@@ -434,7 +485,7 @@ export function routeOrthogonal(
           orient === 'h' ? ni : nj
         );
         const lane = (usage.get(uk) ?? 0) * LANE_COST;
-        const ng = cur.g + len + (turned ? TURN_COST : 0) + lane;
+        const ng = cur.g + len + (turned ? TURN_COST : 0) + lane + leadCost;
         const nk = key(ni, nj, ddi, ddj);
         if (ng < (gScore.get(nk) ?? Infinity)) {
           gScore.set(nk, ng);
@@ -489,9 +540,9 @@ export function routeOrthogonal(
     }
     const simplified = simplify(poly);
     if (wire.diagonal) {
-      // Keep a straight stub only at a hard pin (a POINT endpoint may turn at once).
-      const stubStart = wire.from.hardNormal ? DIAG_STUB : 0;
-      const stubEnd = wire.to.hardNormal ? DIAG_STUB : 0;
+      // Keep a straight lead only at a hard pin (a POINT endpoint may turn at once).
+      const stubStart = wire.from.hardNormal ? PIN_LEAD : 0;
+      const stubEnd = wire.to.hardNormal ? PIN_LEAD : 0;
       results.set(
         wire.key,
         diagonalize(

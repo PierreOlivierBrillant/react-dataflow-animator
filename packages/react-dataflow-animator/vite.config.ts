@@ -15,9 +15,13 @@ export default defineConfig({
     },
     emptyOutDir: false,
     sourcemap: true,
-    // En mode --watch, Rollup surveille le module graph mais pas les CSS (traités
-    // par le plugin Vite avant Rollup). On les ajoute explicitement.
-    watch: watchMode ? { include: ['src/**/*.css'] } : null,
+    // In --watch mode, watch ALL source files. `watch.include` is NOT additive:
+    // as soon as it is set, Rollup narrows watching to the matching files only.
+    // A CSS-only pattern (which Vite processes before Rollup, so it is otherwise
+    // missed) would silently stop watching every `.ts`/`.tsx` in the graph — a
+    // lib source edit would then never rebuild `dist/`, and the docs site (which
+    // imports the built lib) would serve a stale bundle. `src/**/*` covers both.
+    watch: watchMode ? { include: ['src/**/*'] } : null,
     rollupOptions: {
       external: (id: string) =>
         /^(react|react-dom|react-icons|prismjs)(\/|$)/.test(id),
