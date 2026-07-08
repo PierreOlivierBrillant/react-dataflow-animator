@@ -92,6 +92,9 @@ export const srLatch = (locale: Locale): DataFlowSpec => {
   });
   return {
     direction: 'circuit',
+    // 45° wires: the same-row inputs/outputs stay straight, while the two
+    // cross-coupling feedback wires become clean diagonals.
+    diagonal_wires: true,
     nodes: [
       { id: 'Sbar', type: 'signal', x: 0.1, y: 0.28, text: s.sbar, icon: '1' },
       { id: 'Rbar', type: 'signal', x: 0.1, y: 0.72, text: s.rbar, icon: '1' },

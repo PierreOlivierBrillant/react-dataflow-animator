@@ -90,7 +90,14 @@ the container (pure CSS placement). See [`packages/react-dataflow-animator/src/e
   network, a disconnected gallery) is positioned by the author with `x` / `y` (a
   fraction of the Stage, like a hand-authored `graph`), using `junction` dots for
   corners. A `junction` anchors every wire at its exact **centre** (a
-  dimensionless point), so a labelled junction never skews the wires. The current is animated with the
+  dimensionless point), so a labelled junction never skews the wires. Set
+  **`diagonal_wires: true`** (spec level) to draw wires **octilinearly**: their
+  corners are mitered into exact **45°** segments (only 45 / 135 / 225 / 315°), so
+  long L-shapes and staircases collapse into clean diagonal runs while
+  already-straight (aligned) wires stay straight; a short perpendicular stub is
+  kept at each pin, and a miter that would cross a body falls back to a right
+  angle. Override it per wire with **`Connection.diagonal`** (`true`/`false`). The
+  current is animated with the
   [`flow` action](#5-animation-engine-and-actions) and switches actuated with
   [`toggle`](#5-animation-engine-and-actions).
 - **`align_with`**: aligns a node on the transverse axis of another (vertical if the

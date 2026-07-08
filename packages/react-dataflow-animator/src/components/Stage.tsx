@@ -693,6 +693,7 @@ export function Stage({
       // pin, or a cardinal face — e.g. a signal pad connects on its side). Only a
       // POINT contour (a junction dot, centre-anchored) is soft: the wire may
       // reach its centre, so its body must not block that wire.
+      // A per-connection `diagonal` overrides the circuit-wide `diagonal_wires`.
       wires.push({
         key,
         from: {
@@ -707,6 +708,7 @@ export function Stage({
           normal: ends.to.normal,
           hardNormal: toC?.kind !== 'point',
         },
+        diagonal: link.diagonal ?? spec.diagonal_wires ?? false,
       });
     });
     if (!wires.length) return routes;
@@ -715,6 +717,7 @@ export function Stage({
     isCircuit,
     geometry,
     spec.connections,
+    spec.diagonal_wires,
     contourFor,
     portOffsets,
     layout,

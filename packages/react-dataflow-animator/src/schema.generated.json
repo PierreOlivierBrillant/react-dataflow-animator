@@ -9,6 +9,10 @@
           "$ref": "#/definitions/Direction",
           "description": "Node placement direction. For the flow (`left-to-right` …), `circular` and `tree` modes you provide **no coordinates** — the engine arranges nodes from `lane` / `main` / the  {@link  TreeSpec } . Default: 'left-to-right'. Use `'tree'` to lay out a binary tree (in-order rank → horizontal, depth → vertical) and enable the  {@link  RotateSubtreeAction } . Use `'graph'` to place nodes yourself via their `x` / `y` (free 2D layout) — the escape hatch for an arbitrary graph (Dijkstra, A\\*, minimum spanning tree…). Use `'circuit'` for an electrical schematic: nodes placed by `x` / `y` on a grid, `connections` drawn as orthogonal **wires** (no arrow head) by default, and edges anchored on the components' **named terminals** (`\"node:pin\"`)."
         },
+        "diagonal_wires": {
+          "type": "boolean",
+          "description": "(`direction: 'circuit'` only) Draw wires **octilinearly**: their corners are mitered into exact 45° segments (only 45 / 135 / 225 / 315°), so long L-shapes and staircases collapse into clean diagonal runs, while wires that are already straight (aligned terminals) stay straight. A short perpendicular stub is kept at each component pin, and a miter that would cross a body falls back to a right angle. Override per wire with  {@link  Connection.diagonal } . Default: false (strict horizontal/vertical wires). Ignored by every other direction."
+        },
         "nodes": {
           "type": "array",
           "items": {
@@ -749,6 +753,10 @@
         "path": {
           "$ref": "#/definitions/PathShape",
           "description": "Shape of the link path. Default: 'bezier'. See  {@link  PathShape } ."
+        },
+        "diagonal": {
+          "type": "boolean",
+          "description": "(`direction: 'circuit'` only) Draw THIS wire octilinearly (`true`, 45° miters) or force it strictly orthogonal (`false`), **overriding** the circuit-wide  {@link  DataFlowSpec.diagonal_wires } . Unset = inherit that circuit default. Ignored outside `circuit`."
         },
         "arrow_head": {
           "type": "string",

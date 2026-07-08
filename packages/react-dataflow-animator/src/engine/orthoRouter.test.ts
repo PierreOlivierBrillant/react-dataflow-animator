@@ -37,6 +37,26 @@ const allOrthogonal = (pts: { x: number; y: number }[]): boolean => {
   return true;
 };
 
+/** Every segment is horizontal, vertical, or an EXACT 45° diagonal (|Δx|=|Δy|). */
+const allOctilinear = (pts: { x: number; y: number }[]): boolean => {
+  for (let i = 0; i < pts.length - 1; i++) {
+    const dx = Math.abs(pts[i + 1].x - pts[i].x);
+    const dy = Math.abs(pts[i + 1].y - pts[i].y);
+    if (dx < 0.6 || dy < 0.6) continue; // H, V, or a coincident point
+    if (Math.abs(dx - dy) > 0.6) return false; // slanted but not 45°
+  }
+  return true;
+};
+
+/** At least one segment is a genuine diagonal (both deltas non-negligible). */
+const hasDiagonal = (pts: { x: number; y: number }[]): boolean =>
+  pts.some(
+    (_, i) =>
+      i < pts.length - 1 &&
+      Math.abs(pts[i + 1].x - pts[i].x) > 0.6 &&
+      Math.abs(pts[i + 1].y - pts[i].y) > 0.6
+  );
+
 const hitsBody = (
   pts: { x: number; y: number }[],
   o: RouterObstacle
@@ -275,5 +295,157 @@ describe('orthoRouter', () => {
       { x: 20, y: 0 },
       { x: 20, y: 10 },
     ]);
+  });
+
+  it('simplify fuses two aligned DIAGONAL segments into one', () => {
+    expect(
+      simplify([
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+        { x: 20, y: 20 },
+        { x: 20, y: 40 },
+      ])
+    ).toEqual([
+      { x: 0, y: 0 },
+      { x: 20, y: 20 },
+      { x: 20, y: 40 },
+    ]);
+  });
+
+  it('draws a flagged wire octilinearly (only 45/90°) and adds a diagonal', () => {
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 120, 100, 1, 0),
+        to: pin('b', 280, 140, -1, 0),
+        diagonal: true,
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 100, 100), body('b', 300, 140)],
+      wires
+    );
+    const p = routes.get('w')!;
+    expect(allOctilinear(p)).toBe(true);
+    expect(hasDiagonal(p)).toBe(true); // the corner became a 45° miter
+  });
+
+  it('keeps a diagonal wire clear of a body it must route around', () => {
+    const mid = body('m', 200, 120);
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 120, 100, 1, 0),
+        to: pin('c', 280, 160, -1, 0),
+        diagonal: true,
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 100, 100), mid, body('c', 300, 160)],
+      wires
+    );
+    const p = routes.get('w')!;
+    expect(allOctilinear(p)).toBe(true);
+    expect(hitsBody(p, mid)).toBe(false); // the miter never cuts into the body
+  });
+
+  it('routes a feedback wire as ONE centred diagonal (the elbow), not a dogleg', () => {
+    // Output on the right of one gate → input on the left of a gate below it (the
+    // SR-latch cross-couple). The elbow must draw a single bold 45° diagonal
+    // between two straight rails, so a pair of these reads as a central X.
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('g1', 210, 78, 1, 0),
+        to: pin('g2', 170, 194, -1, 0),
+        diagonal: true,
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('g1', 190, 78), body('g2', 190, 194)],
+      wires
+    );
+    const p = routes.get('w')!;
+    expect(allOctilinear(p)).toBe(true);
+    const diagAt: number[] = [];
+    for (let i = 0; i < p.length - 1; i++) {
+      const dx = Math.abs(p[i + 1].x - p[i].x);
+      const dy = Math.abs(p[i + 1].y - p[i].y);
+      if (dx > 0.6 && dy > 0.6) diagAt.push(i);
+    }
+    expect(diagAt).toHaveLength(1); // ONE diagonal, no mid-jog
+    expect(diagAt[0]).toBeGreaterThan(0); // flanked by a rail before…
+    expect(diagAt[0]).toBeLessThan(p.length - 2); // …and after
+  });
+
+  it('leaves a hard pin along its normal (a straight stub before any diagonal)', () => {
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 120, 100, 1, 0),
+        to: pin('b', 280, 160, -1, 0),
+        diagonal: true,
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 100, 100), body('b', 300, 160)],
+      wires
+    );
+    const p = routes.get('w')!;
+    // First segment runs along the +x normal (horizontal), not straight into 45°.
+    expect(Math.abs(p[1].y - p[0].y)).toBeLessThan(0.6);
+    expect(p[1].x - p[0].x).toBeGreaterThan(6);
+  });
+
+  it('leaves an aligned wire straight even when flagged diagonal', () => {
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 120, 100, 1, 0),
+        to: pin('b', 280, 100, -1, 0),
+        diagonal: true,
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 100, 100), body('b', 300, 100)],
+      wires
+    );
+    const p = routes.get('w')!;
+    expect(p).toHaveLength(2); // no corner to miter → unchanged
+    expect(hasDiagonal(p)).toBe(false);
+  });
+
+  it('handles vertical pin normals in diagonal mode', () => {
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 100, 100, 0, 1), // exits downward
+        to: pin('b', 220, 60, 0, -1), // enters from below
+        diagonal: true,
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 100, 80), body('b', 220, 80)],
+      wires
+    );
+    const p = routes.get('w')!;
+    expect(allOctilinear(p)).toBe(true);
+    expect(hasDiagonal(p)).toBe(true);
+  });
+
+  it('is identical to orthogonal routing when the flag is off/absent', () => {
+    const build = (diagonal?: boolean): RouterWire[] => [
+      {
+        key: 'w',
+        from: pin('a', 120, 100, 1, 0),
+        to: pin('b', 280, 140, -1, 0),
+        ...(diagonal === undefined ? {} : { diagonal }),
+      },
+    ];
+    const obstacles = [body('a', 100, 100), body('b', 300, 140)];
+    const off = routeOrthogonal(obstacles, build(false)).get('w')!;
+    const absent = routeOrthogonal(obstacles, build()).get('w')!;
+    expect(allOrthogonal(off)).toBe(true);
+    expect(off).toEqual(absent); // an explicit false and an absent flag agree
   });
 });

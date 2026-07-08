@@ -515,6 +515,34 @@ une lampe/LED n'est qu'un [`set_color`](../reference/actions.mdx#set_color) ou u
 [`highlight`](../reference/actions.mdx#highlight). La démo complète **Circuit
 électrique** de la galerie ferme l'interrupteur, puis met la boucle sous tension.
 
+### Fils en diagonale (45°)
+
+Par défaut les fils sont strictement horizontaux/verticaux. Mettez
+**`diagonal_wires: true`** au niveau de la spec pour les tracer de façon
+**octilinéaire** : chaque coin est biseauté en un segment à **45°** exactement
+(uniquement 45 / 135 / 225 / 315°). Le biseau est maximisé, si bien qu'un long
+`L` ou un escalier s'effondre en une diagonale nette, tandis qu'un fil entre
+bornes alignées reste droit ; un court segment droit est conservé à chaque borne
+pour que le fil quitte le composant perpendiculairement, et tout biseau qui
+traverserait un corps retombe sur l'angle droit. Surchargez fil par fil avec
+**`diagonal`** — pratique pour forcer un bus en orthogonal dans un schéma sinon
+diagonal (ou l'inverse).
+
+```ts
+{
+  direction: 'circuit',
+  diagonal_wires: true, // tout le schéma passe en 45° là où c'est utile
+  connections: [
+    { from: 'g1:y', to: 'g2:a' }, // rebouclage en 45° (hérite de diagonal_wires)
+    { from: 'g1:y', to: 'Q', diagonal: false }, // celui-ci forcé orthogonal
+  ],
+}
+```
+
+La démo **verrou SR** de la galerie utilise `diagonal_wires` : ses deux fils de
+rebouclage croisés se lisent en diagonales nettes tandis que les bus
+d'entrée/sortie restent droits.
+
 ## Mise à l'échelle responsive
 
 Le composant calcule une **« cellule »** (plus petite distance entre deux

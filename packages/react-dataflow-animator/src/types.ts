@@ -467,6 +467,13 @@ export interface Connection {
   style?: LineStyle;
   /** Shape of the link path. Default: 'bezier'. See {@link PathShape}. */
   path?: PathShape;
+  /**
+   * (`direction: 'circuit'` only) Draw THIS wire octilinearly (`true`, 45° miters)
+   * or force it strictly orthogonal (`false`), **overriding** the circuit-wide
+   * {@link DataFlowSpec.diagonal_wires}. Unset = inherit that circuit default.
+   * Ignored outside `circuit`.
+   */
+  diagonal?: boolean;
   /** Arrow head. Default: 'forward'. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   /**
@@ -963,6 +970,17 @@ export interface DataFlowSpec {
    * on the components' **named terminals** (`"node:pin"`).
    */
   direction?: Direction;
+  /**
+   * (`direction: 'circuit'` only) Draw wires **octilinearly**: their corners are
+   * mitered into exact 45° segments (only 45 / 135 / 225 / 315°), so long
+   * L-shapes and staircases collapse into clean diagonal runs, while wires that
+   * are already straight (aligned terminals) stay straight. A short perpendicular
+   * stub is kept at each component pin, and a miter that would cross a body falls
+   * back to a right angle. Override per wire with {@link Connection.diagonal}.
+   * Default: false (strict horizontal/vertical wires). Ignored by every other
+   * direction.
+   */
+  diagonal_wires?: boolean;
   /**
    * Fixed elements of the scene (servers, clients, databases…). They form the permanent
    * decor and are placed automatically according to `direction` and their `lane`.

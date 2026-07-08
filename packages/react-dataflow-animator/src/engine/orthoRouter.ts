@@ -3,8 +3,8 @@ import type { Point } from './geometry';
 /**
  * Global orthogonal wire router for schematic (`direction: 'circuit'`) diagrams.
  *
- * Every wire is drawn as strictly HORIZONTAL and VERTICAL segments — never a
- * diagonal — that:
+ * By default every wire is drawn as strictly HORIZONTAL and VERTICAL segments
+ * that:
  *   • never cross a component body (hard obstacle avoidance, all obstacles);
  *   • leave/enter a terminal PERPENDICULAR to its face (the pin normal);
  *   • take as few corners as possible (a turn is penalised);
@@ -16,6 +16,18 @@ import type { Point } from './geometry';
  * are routed in order; each marks the grid edges it used, and later wires pay a
  * penalty to reuse a segment in the SAME orientation — so parallels spread onto
  * neighbouring tracks while perpendicular crossings stay free.
+ *
+ * A wire may opt into `diagonal` (octilinear, only 45 / 135 / 225 / 315°). It is
+ * routed in two tiers, each collision-checked so a diagonal is never a
+ * regression:
+ *   1. a direct {@link octilinearElbow} — one bold 45° diagonal centred between
+ *      the two pin stubs, so a feedback pair reads as a single crossing (the
+ *      SR-latch X) instead of a tight dogleg;
+ *   2. failing that, the orthogonal A* route with its corners mitered into 45°
+ *      segments by {@link diagonalize} (long L-shapes and staircases collapse
+ *      into clean diagonal runs; a short perpendicular stub is kept at each pin).
+ * Obstacle avoidance and lane separation are still decided on the orthogonal
+ * skeleton, so neither tier re-introduces a crossing.
  */
 
 /** A rectangular component body, CENTRE-anchored (like `NodeGeom`). The optional
@@ -45,6 +57,9 @@ export interface RouterWire {
   key: string;
   from: RouterEndpoint;
   to: RouterEndpoint;
+  /** Draw this wire octilinearly: its corners are mitered into exact 45°
+   *  segments (see {@link diagonalize}). Default: false (strict orthogonal). */
+  diagonal?: boolean;
 }
 
 export interface RouteOptions {
@@ -57,6 +72,47 @@ export interface RouteOptions {
 const TURN_COST = 12;
 const LANE_COST = 40;
 const EPS = 0.5;
+/** Straight run kept along a pin's normal before a diagonal miter may start, so
+ *  a wire still leaves a component face perpendicularly (a soft POINT endpoint
+ *  needs none). */
+const DIAG_STUB = 8;
+/** A miter shorter than this is pointless — keep the sharp corner instead. */
+const DIAG_MIN = 3;
+
+/** Does the open segment a→b cross the OPEN rectangle interior? Liang–Barsky
+ *  parametric clip; used to keep a 45° miter clear of a body/label/clearance
+ *  ring (the miter cuts the INNER corner, i.e. toward the obstacle side). */
+function segHitsRect(
+  a: Point,
+  b: Point,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number
+): boolean {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  let t0 = 0;
+  let t1 = 1;
+  // Each edge is a constraint `p·t <= q`; clip [t0,t1] against it.
+  const clip = (p: number, q: number): boolean => {
+    if (Math.abs(p) < 1e-9) return q >= 0; // parallel to this slab: inside iff q≥0
+    const r = q / p;
+    if (p < 0) {
+      if (r > t1) return false;
+      if (r > t0) t0 = r;
+    } else {
+      if (r < t0) return false;
+      if (r < t1) t1 = r;
+    }
+    return true;
+  };
+  if (!clip(-dx, a.x - x0)) return false;
+  if (!clip(dx, x1 - a.x)) return false;
+  if (!clip(-dy, a.y - y0)) return false;
+  if (!clip(dy, y1 - a.y)) return false;
+  return t1 - t0 > 1e-6; // a positive-length overlap lies inside the rect
+}
 
 /** Sorted, de-duplicated coordinates (values within EPS are merged). */
 function uniqSorted(values: number[]): number[] {
@@ -233,6 +289,35 @@ export function routeOrthogonal(
     return false;
   };
 
+  // Segment version of `inRect`, for the diagonal miter pass: a straight a→b run
+  // is clear iff it enters no HARD body (respecting `bodySkip`) and no unrelated
+  // label / clearance ring (respecting `skip`). Same skip semantics as `inRect`.
+  const segClear = (
+    a: Point,
+    b: Point,
+    skip: Set<string>,
+    bodySkip: Set<string>
+  ): boolean => {
+    for (const r of rects) {
+      // STRICT interior (shrunk by EPS), like `inRect`: a run exactly on a
+      // boundary is allowed (a tight detour hugging a component).
+      const hitBody = segHitsRect(
+        a,
+        b,
+        r.bx0 + EPS,
+        r.by0 + EPS,
+        r.bx1 - EPS,
+        r.by1 - EPS
+      );
+      if (hitBody && r.hard && !bodySkip.has(r.id)) return false;
+      if (skip.has(r.id)) continue; // own node: its label / clearance don't block
+      if (hitBody) return false; // an unrelated label
+      if (segHitsRect(a, b, r.x0 + EPS, r.y0 + EPS, r.x1 - EPS, r.y1 - EPS))
+        return false;
+    }
+    return true;
+  };
+
   // Shared lane usage across wires: keyed by a segment's fixed line + span.
   const usage = new Map<string, number>();
   const edgeKey = (o: 'h' | 'v', fixed: number, a: number, b: number): string =>
@@ -248,6 +333,23 @@ export function routeOrthogonal(
     const bodySkip = new Set<string>();
     if (!wire.from.hardNormal) bodySkip.add(wire.from.node);
     if (!wire.to.hardNormal) bodySkip.add(wire.to.node);
+
+    // A diagonal wire first tries a direct octilinear elbow (a bold centred
+    // diagonal). It only wins if collision-free; otherwise we fall through to the
+    // orthogonal A* and miter its corners — so a diagonal is never a regression.
+    if (wire.diagonal) {
+      const elbow = octilinearElbow(
+        wire.from,
+        wire.to,
+        (a, b) => segClear(a, b, skip, bodySkip),
+        DIAG_STUB
+      );
+      if (elbow) {
+        results.set(wire.key, elbow);
+        continue;
+      }
+    }
+
     const si = indexOf(xs, wire.from.point.x);
     const sj = indexOf(ys, wire.from.point.y);
     const gi = indexOf(xs, wire.to.point.x);
@@ -385,14 +487,33 @@ export function routeOrthogonal(
       const corner = horizFirst ? { x: e.x, y: s.y } : { x: s.x, y: e.y };
       poly = [s, corner, e];
     }
-    results.set(wire.key, simplify(poly));
+    const simplified = simplify(poly);
+    if (wire.diagonal) {
+      // Keep a straight stub only at a hard pin (a POINT endpoint may turn at once).
+      const stubStart = wire.from.hardNormal ? DIAG_STUB : 0;
+      const stubEnd = wire.to.hardNormal ? DIAG_STUB : 0;
+      results.set(
+        wire.key,
+        diagonalize(
+          simplified,
+          (a, b) => segClear(a, b, skip, bodySkip),
+          stubStart,
+          stubEnd
+        )
+      );
+    } else {
+      results.set(wire.key, simplified);
+    }
   }
 
   return results;
 }
 
 /** Removes duplicate and collinear interior points, so the polyline is the
- *  minimal set of corners (no invisible mid-vertices). */
+ *  minimal set of corners (no invisible mid-vertices). Collinearity is the
+ *  GENERAL case (perpendicular distance from the a–c line), so it also fuses two
+ *  aligned DIAGONAL segments into one — axis-aligned runs are just the special
+ *  case where that distance is zero. */
 export function simplify(points: Point[]): Point[] {
   const dedup: Point[] = [];
   for (const p of points) {
@@ -406,11 +527,129 @@ export function simplify(points: Point[]): Point[] {
     const a = out[out.length - 1];
     const b = dedup[i];
     const c = dedup[i + 1];
-    const collinear =
-      (Math.abs(a.x - b.x) < EPS && Math.abs(b.x - c.x) < EPS) ||
-      (Math.abs(a.y - b.y) < EPS && Math.abs(b.y - c.y) < EPS);
+    const acx = c.x - a.x;
+    const acy = c.y - a.y;
+    const cross = (b.x - a.x) * acy - (b.y - a.y) * acx;
+    const lenAC = Math.hypot(acx, acy) || 1;
+    const collinear = Math.abs(cross) / lenAC < EPS; // b's distance to line a–c
     if (!collinear) out.push(b);
   }
   out.push(dedup[dedup.length - 1]);
   return out;
+}
+
+/** Rewrites an orthogonal polyline into an OCTILINEAR one by mitering every
+ *  interior corner into an exact 45° segment. The miter is symmetric (equal
+ *  retreat on both legs → |Δx| = |Δy|), so the diagonal is always one of
+ *  45 / 135 / 225 / 315°. Its length is MAXIMISED — up to half of a segment
+ *  shared by two corners, or the whole segment minus a stub next to a terminal —
+ *  so a run of corners (a staircase, or an L with equal legs) collapses into a
+ *  single long diagonal, while already-straight wires are untouched. `clear(a, b)`
+ *  guards each miter against the bodies/labels (the cut is on the obstacle side
+ *  of a detour): on a collision the miter is halved a few times (still 45°) and,
+ *  failing that, the sharp corner is kept. `stubStart` / `stubEnd` keep a
+ *  perpendicular run next to a hard pin so the wire still leaves the face along
+ *  its normal. */
+function diagonalize(
+  poly: Point[],
+  clear: (a: Point, b: Point) => boolean,
+  stubStart: number,
+  stubEnd: number
+): Point[] {
+  if (poly.length < 3) return poly; // no interior corner to miter
+  const n = poly.length - 1;
+  const segLen = (i: number): number =>
+    Math.hypot(poly[i + 1].x - poly[i].x, poly[i + 1].y - poly[i].y);
+  const unit = (i: number, j: number): Point => {
+    const dx = poly[j].x - poly[i].x;
+    const dy = poly[j].y - poly[i].y;
+    const d = Math.hypot(dx, dy) || 1;
+    return { x: dx / d, y: dy / d };
+  };
+  const out: Point[] = [poly[0]];
+  for (let k = 1; k < n; k++) {
+    // A segment touching a terminal lends its whole length minus a stub; a
+    // segment shared with the neighbouring corner is split down the middle, so
+    // two adjacent miters never overlap.
+    const inBudget =
+      k - 1 === 0 ? Math.max(0, segLen(k - 1) - stubStart) : segLen(k - 1) / 2;
+    const outBudget =
+      k + 1 === n ? Math.max(0, segLen(k) - stubEnd) : segLen(k) / 2;
+    const dirIn = unit(k - 1, k);
+    const dirOut = unit(k, k + 1);
+    let m = Math.min(inBudget, outBudget);
+    let placed = false;
+    while (m > DIAG_MIN) {
+      const a = { x: poly[k].x - m * dirIn.x, y: poly[k].y - m * dirIn.y };
+      const b = { x: poly[k].x + m * dirOut.x, y: poly[k].y + m * dirOut.y };
+      if (clear(a, b)) {
+        out.push(a, b);
+        placed = true;
+        break;
+      }
+      m /= 2;
+    }
+    if (!placed) out.push(poly[k]); // no room for a miter: keep the right angle
+  }
+  out.push(poly[n]);
+  return simplify(out);
+}
+
+/** The dominant cardinal unit of a normal (snaps a pin normal to ±x / ±y). */
+function axisUnit(n: Point): Point {
+  return Math.abs(n.x) >= Math.abs(n.y)
+    ? { x: n.x >= 0 ? 1 : -1, y: 0 }
+    : { x: 0, y: n.y >= 0 ? 1 : -1 };
+}
+
+/** A direct OCTILINEAR connector between two terminals, used first for a
+ *  `diagonal` wire so a feedback pair reads as one bold diagonal crossing the
+ *  centre (the SR-latch X) rather than a tight orthogonal dogleg. Each pin is
+ *  left/entered along its normal (a straight stub), then the two stub ends are
+ *  joined by ONE 45° diagonal CENTRED on the dominant axis, flanked by two equal
+ *  straight rails (`rail — diagonal — rail`). Returns `null` if any segment
+ *  crosses a body/label, so the caller falls back to the orthogonal A* route —
+ *  the diagonal is a bonus, never a regression. */
+function octilinearElbow(
+  from: RouterEndpoint,
+  to: RouterEndpoint,
+  clear: (a: Point, b: Point) => boolean,
+  stub: number
+): Point[] | null {
+  const sDir = from.hardNormal ? axisUnit(from.normal) : null;
+  const tDir = to.hardNormal ? axisUnit(to.normal) : null;
+  const s0 = from.point;
+  const t0 = to.point;
+  // A hard pin gets a straight stub; a soft POINT endpoint is joined directly.
+  const s = sDir ? { x: s0.x + sDir.x * stub, y: s0.y + sDir.y * stub } : s0;
+  const t = tDir ? { x: t0.x + tDir.x * stub, y: t0.y + tDir.y * stub } : t0;
+  const dx = t.x - s.x;
+  const dy = t.y - s.y;
+  const adx = Math.abs(dx);
+  const ady = Math.abs(dy);
+  const sx = Math.sign(dx);
+  const sy = Math.sign(dy);
+  const mid: Point[] = [];
+  if (adx > 0.6 && ady > 0.6) {
+    const d = Math.min(adx, ady); // the 45° diagonal covers `d` on both axes
+    if (ady >= adx) {
+      const half = (ady - d) / 2; // split the vertical remainder either side
+      const y1 = s.y + sy * half;
+      mid.push({ x: s.x, y: y1 }, { x: s.x + sx * d, y: y1 + sy * d });
+    } else {
+      const half = (adx - d) / 2; // split the horizontal remainder either side
+      const x1 = s.x + sx * half;
+      mid.push({ x: x1, y: s.y }, { x: x1 + sx * d, y: s.y + sy * d });
+    }
+  }
+  const path = simplify([
+    s0,
+    ...(sDir ? [s] : []),
+    ...mid,
+    ...(tDir ? [t] : []),
+    t0,
+  ]);
+  for (let i = 0; i < path.length - 1; i++)
+    if (!clear(path[i], path[i + 1])) return null;
+  return path;
 }

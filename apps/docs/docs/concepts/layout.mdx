@@ -506,6 +506,31 @@ opens or closes a `switch`. Component labels use `value` + `unit` (`9 V`,
 or [`highlight`](../reference/actions.mdx#highlight). The full **Electrical
 circuit** demo in the gallery closes the switch, then energizes the loop.
 
+### Diagonal (45°) wires
+
+By default wires are strictly horizontal/vertical. Set **`diagonal_wires: true`**
+on the spec to draw them **octilinearly**: each corner is mitered into an exact
+**45°** segment (only 45 / 135 / 225 / 315°). The miter is maximised, so a long
+`L` or a staircase collapses into one clean diagonal, while a wire between aligned
+terminals stays straight; a short stub is kept at each pin so the wire still
+leaves the component perpendicularly, and any miter that would cross a body falls
+back to the right angle. Override it per wire with **`diagonal`** — handy to force
+one bus orthogonal in an otherwise diagonal schematic (or the reverse).
+
+```ts
+{
+  direction: 'circuit',
+  diagonal_wires: true, // whole schematic goes 45° where it helps
+  connections: [
+    { from: 'g1:y', to: 'g2:a' }, // 45° feedback (inherits diagonal_wires)
+    { from: 'g1:y', to: 'Q', diagonal: false }, // this one forced orthogonal
+  ],
+}
+```
+
+The **SR latch** demo in the gallery uses `diagonal_wires`: its two cross-coupled
+feedback wires read as clean diagonals while the input/output buses stay straight.
+
 ## Responsive scaling
 
 The component calculates a **"cell"** (smallest distance between two
