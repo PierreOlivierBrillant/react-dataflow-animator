@@ -253,6 +253,28 @@
   display: block;
 }
 
+/* Logic I/O pad (`signal`): a labelled bit terminal that shows its value in the
+   centre. `set_color` fills it via --rdfa-fill (with a contrast --rdfa-ink). */
+.rdfa-signal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: calc(36px * var(--rdfa-scale, 1));
+  height: calc(28px * var(--rdfa-scale, 1));
+  border-radius: calc(7px * var(--rdfa-scale, 1));
+  border: calc(1.6px * var(--rdfa-scale, 1)) solid
+    var(--rdfa-stroke, var(--rdfa-node-stroke));
+  background: var(--rdfa-fill, var(--rdfa-node-bg));
+  color: var(--rdfa-ink, var(--rdfa-text));
+}
+.rdfa-signal-value {
+  font-family: var(--rdfa-mono);
+  font-weight: 700;
+  font-size: calc(15px * var(--rdfa-scale, 1));
+  line-height: 1;
+}
+
 .rdfa-node-link {
   text-decoration: none;
   color: inherit;
@@ -297,6 +319,10 @@
   width: calc(16px * var(--rdfa-scale, 1));
   height: calc(16px * var(--rdfa-scale, 1));
   flex-shrink: 0;
+}
+
+.rdfa-node-badge:has(.rdfa-subicon-text) {
+  background: rgb(71, 85, 105);
 }
 
 /* Anneau de chargement : concentrique au badge (inset négatif → il tourne juste
@@ -589,6 +615,17 @@
   stroke: var(--rdfa-bg);
   stroke-width: 4px;
   stroke-linejoin: round;
+}
+
+/* Electric current: charge dots riding a wire (the `flow` action). The color
+   comes from `--rdfa-flow` (set per clip) with the theme accent as fallback. */
+.rdfa-flow-charge {
+  fill: var(--rdfa-flow, var(--rdfa-accent));
+  stroke: none;
+  filter: drop-shadow(
+    0 0 calc(3px * var(--rdfa-scale, 1))
+      color-mix(in srgb, var(--rdfa-flow, var(--rdfa-accent)) 70%, transparent)
+  );
 }
 
 /* ---------- Paquets mobiles ---------- */

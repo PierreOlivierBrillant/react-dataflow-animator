@@ -77,6 +77,22 @@ the container (pure CSS placement). See [`packages/react-dataflow-animator/src/e
   The override merges over the default field by field. Tree edges default to a
   **`straight`** path with **no** arrow head (unlike the `bezier` default of
   ordinary `connections`).
+- **Circuit** (`circuit`): an **electrical schematic**. Two things change versus a
+  dataflow diagram: (1) `connections` default to an **orthogonal wire**
+  (`path: 'step'`) with **no arrow head**; (2) edges anchor on the components'
+  **named terminals** via the `"node:pin"` endpoint syntax (see [§4](#4-routing-and-collision-prevention)).
+  Placement (when no node has `x` / `y`): a single simple **loop** is auto-placed
+  around a **rectangle** (in loop order; a component on a non-top edge is
+  auto-rotated 90°/180°/270° so its terminals face the wire —
+  `NodePlacement.rotation`); a connected **feed-forward** network (a logic
+  diagram: inputs → gates → outputs) is auto-placed **left-to-right in layers**
+  (longest-path layering + barycenter ordering). Anything else (a series-parallel
+  network, a disconnected gallery) is positioned by the author with `x` / `y` (a
+  fraction of the Stage, like a hand-authored `graph`), using `junction` dots for
+  corners. A `junction` anchors every wire at its exact **centre** (a
+  dimensionless point), so a labelled junction never skews the wires. The current is animated with the
+  [`flow` action](#5-animation-engine-and-actions) and switches actuated with
+  [`toggle`](#5-animation-engine-and-actions).
 - **`align_with`**: aligns a node on the transverse axis of another (vertical if the
   direction is horizontal) → align two nodes from different lanes.
 - **Zones** (`zones` root array): background rectangles encompassing a
@@ -89,8 +105,20 @@ the container (pure CSS placement). See [`packages/react-dataflow-animator/src/e
 last three represent **named characters**: Alice (bun), Bob (cap),
 Eve (headset, spy), useful for cryptography and network protocol diagrams), two **textual** nodes
 (`simple_node` = text box without pictogram, `complex_node` = header + body like
-an HTTP packet) and eight **geometric shapes** (`square`, `diamond`,
-`circle`, `triangle`, `parallelogram`, `width_rectangle`, `height_rectangle`, `star`).
+an HTTP packet), eight **geometric shapes** (`square`, `diamond`,
+`circle`, `triangle`, `parallelogram`, `width_rectangle`, `height_rectangle`, `star`)
+and a family of **electrical component** symbols (`resistor`, `potentiometer`,
+`capacitor`, `polarized_capacitor`, `inductor`, `fuse`, `battery`, `dc_source`,
+`ac_source`, `current_source`, `diode`, `led`, `transistor_npn`, `transistor_pnp`,
+`opamp`, `switch`, `push_button`, `lamp`, `motor`, `buzzer`, `ground`, `junction`,
+`signal` (a labelled logic I/O pad showing a bit, updated by `set_icon` and lit by
+`set_color`), `ammeter`, `voltmeter`, `antenna`, `transformer`, plus **digital logic gates**
+`and_gate`, `or_gate`, `not_gate`, `nand_gate`, `nor_gate`, `xor_gate`,
+`xnor_gate`, `buffer_gate` — inputs `a` / `b` on the left, output `y` on the
+right). Component symbols expose **named terminals** (see [§4](#4-routing-and-collision-prevention));
+`switch` / `push_button` carry a `closed` state animated by the [`toggle` action](#5-animation-engine-and-actions).
+Any node may also set `value` + `unit` to build its label (`"10 kΩ"`), combined
+with `text` if both are present (`"R1 · 10 kΩ"`).
 Each node can receive: a `text` (label), a `subicon` (known tech, registered icon
 **or free text**), an `url` (making the node clickable), an
 initial `content`, **colors** `background_color` / `border_color`, a
@@ -194,6 +222,19 @@ node (`NODE_GAP`). See [`packages/react-dataflow-animator/src/engine/geometry.ts
   [`geometry.ts`](../packages/react-dataflow-animator/src/engine/geometry.ts);
   bezier handles leave along the radial normal (`pathShapes.ts`).
 
+- **Named terminals on components (`"node:pin"`)**: electrical component symbols
+  expose fixed, named terminals (a resistor's `a` / `b`, a battery's `+` / `-`, a
+  transistor's `base` / `collector` / `emitter`). A `connection` (or `arrow` /
+  `move` / `flow` step) targets one with the `"node:pin"` endpoint syntax
+  (`"R1:a"`, `"battery:+"`); a bare `"node"` keeps the ordinary face/outline
+  anchoring. The terminal map per type lives in
+  [`packages/react-dataflow-animator/src/engine/pins.ts`](../packages/react-dataflow-animator/src/engine/pins.ts);
+  the anchor (position + outward normal) is computed by `pinAttach` in
+  `geometry.ts` and **rotates with the node** — so a vertical resistor
+  (`rotation: 90`) has its `a` / `b` terminals top and bottom, and its wires leave
+  vertically. Terminal endpoints are distinct points by construction, so the
+  bidirectional/fan-out port spread does not apply to them.
+
 ## 5. Animation engine and actions
 
 The timeline compiles an array of ordered actions. See
@@ -268,6 +309,18 @@ The timeline compiles an array of ordered actions. See
     Successive `rotate_subtree` chain (each from the previous topology) — AVL
     double rotations `LR`/`RL` are just two in a row. A rotation preserves the
     in-order traversal, so horizontal slots are stable and only depths change.
+
+14. **flow**: animates an **electric current** along a `route` (an ordered list of
+    `node` / `node:pin` refs forming a path or loop). A train of `count` charge
+    dots rides the concatenated wire path, one full lap per `duration` ms, looping
+    by default (`loop: false` = single pass). `reverse` flips the direction
+    (electron flow − → + vs conventional + → −), `color` tints the charges. The
+    dot phase is a pure function of `t`, so it scrubs both ways; each consecutive
+    pair of the route must be joined by a real wire. Signature animation of a
+    `circuit`.
+15. **toggle**: opens or closes a `switch` / `push_button` (`object`), swinging the
+    lever over `duration` ms. Like `set_visible`, the reached state persists until
+    the end of the chronology (or a contrary `toggle`) and is scrubbable both ways.
 
 ## 6. Temporal lifecycle
 

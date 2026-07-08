@@ -6,6 +6,7 @@
 
 import type { PathShape } from '../types';
 import type { ConnectionAxis } from './layout';
+import type { PinDef } from './pins';
 import { shapeWaypoints } from './pathShapes';
 
 export interface Point {
@@ -42,27 +43,40 @@ export interface NodeGeom {
 export type GeometryMap = Record<string, NodeGeom>;
 
 /**
- * Attachment policy for a node whose edges anchor on a continuous outline
- * (a round node) rather than on the four cardinal sides. `ports` mirrors the
- * spec field {@link Node.ports}: `'direct'` = the edge meets the outline exactly
- * where the line to the other centre crosses it (infinite points); a positive
- * integer `N` = the nearest of `N` evenly-spread points around the outline.
+ * Attachment policy for an edge endpoint that does NOT anchor on one of the four
+ * cardinal sides:
+ * - `ellipse`: a round node (`circle`). `ports` mirrors {@link Node.ports}:
+ *   `'direct'` = the edge meets the outline where the line to the other centre
+ *   crosses it (infinite points); a positive integer `N` = the nearest of `N`
+ *   evenly-spread points around the outline.
+ * - `pin`: a named terminal of an electrical component (see `pins.ts`). The edge
+ *   meets that exact terminal, rotated by the node's `rotationDeg`, and leaves
+ *   along its outward normal.
  */
-export interface NodeContour {
-  kind: 'ellipse';
-  ports: 'direct' | number;
-}
+export type NodeContour =
+  | { kind: 'ellipse'; ports: 'direct' | number }
+  | { kind: 'pin'; pin: PinDef; rotationDeg: number }
+  // A dimensionless connection point (a `junction` dot): every edge meets its
+  // exact centre, leaving/arriving radially. Unlike a cardinal face, no label
+  // shift and no box-size offset — so wires to a labelled junction stay aligned.
+  | { kind: 'point' };
 
 /**
- * Resolves a node's contour policy from its spec (`type` + `ports`). Only round
- * nodes (`circle`) get an elliptical contour today; every other type keeps the
- * cardinal-side anchoring, so `ports` is ignored there. Centralised here so the
- * renderer and any future caller derive the SAME contour.
+ * Resolves a node's contour policy from its spec (`type` + `ports`). A round
+ * node (`circle`) anchors on its outline; a `junction` anchors at its exact
+ * centre (a point); every other type keeps cardinal-side anchoring (so `ports`
+ * is ignored there). Centralised here so the renderer and any future caller
+ * derive the SAME contour. (Pin contours are resolved by the renderer per
+ * endpoint, since they depend on the terminal name carried by the connection.)
  */
 export function nodeContour(
   type: string,
   ports?: 'direct' | number
 ): NodeContour | undefined {
+  // A junction dot connects at its exact centre (wires meet AT the dot). A
+  // signal I/O pad is a real box: its wire attaches on the SIDE (cardinal face),
+  // like any other node — never from the middle of the pad.
+  if (type === 'junction') return { kind: 'point' };
   if (type !== 'circle') return undefined;
   return { kind: 'ellipse', ports: ports ?? 'direct' };
 }
@@ -93,6 +107,22 @@ export interface Connection {
    * to the line when midpoint would fall on an interleaved node's visual.
    */
   labelAnchor?: Point;
+}
+
+/** Bounding rect of a node's VISUAL body (centre-anchored). Used as an obstacle
+ *  for orthogonal wires, which must never cross a component. */
+function bodyBounds(node: NodeGeom): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} {
+  return {
+    x: node.x - node.width / 2,
+    y: node.y - node.height / 2,
+    w: node.width,
+    h: node.height,
+  };
 }
 
 /**
@@ -187,7 +217,7 @@ function cardinalAttach(node: NodeGeom, face: Face, portOffset: number): Point {
 
 /** Anchor point on a node's outline plus the OUTWARD unit normal there — the
  *  direction the path leaves/arrives perpendicularly (curve handles read it). */
-interface ContourAnchor {
+export interface ContourAnchor {
   point: Point;
   normal: Point;
 }
@@ -261,6 +291,159 @@ function ellipseAttach(
 }
 
 /**
+ * Attaches an edge end on a component's NAMED terminal (see `pins.ts`). The pin
+ * is expressed in the symbol's unrotated local box (`x`/`y` fractions, `nx`/`ny`
+ * outward normal); this rotates BOTH by `rotationDeg` — so a vertical resistor
+ * (`rotation: 90`) has its `a`/`b` terminals top/bottom and its wires leave
+ * vertically. `offset` (the intra-pair spread, px) nudges the anchor along the
+ * terminal's tangent so bidirectional tracks stay apart.
+ */
+function pinAttach(
+  node: NodeGeom,
+  pin: PinDef,
+  rotationDeg: number,
+  offset: number
+): ContourAnchor {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  // Terminal position, as a px offset from the node centre in the unrotated box,
+  // then rotated into place.
+  const lx = (pin.x - 0.5) * node.width;
+  const ly = (pin.y - 0.5) * node.height;
+  const rx = lx * cos - ly * sin;
+  const ry = lx * sin + ly * cos;
+  // Outward normal, rotated and normalized.
+  let nx = pin.nx * cos - pin.ny * sin;
+  let ny = pin.nx * sin + pin.ny * cos;
+  const nLen = Math.hypot(nx, ny) || 1;
+  nx /= nLen;
+  ny /= nLen;
+  // Tangent = normal turned 90°, used for the bidirectional spread.
+  const tx = -ny;
+  const ty = nx;
+  const outset = node.borderOutset ?? 0;
+  return {
+    point: {
+      x: node.x + rx + nx * outset + tx * offset,
+      y: node.y + ry + ny * outset + ty * offset,
+    },
+    normal: { x: nx, y: ny },
+  };
+}
+
+/**
+ * Slides a POINT endpoint (a junction / signal pad, which anchors at its centre)
+ * onto the axis of a nearby partner TERMINAL, so the wire runs straight into it
+ * instead of slanting from the pad centre — e.g. a signal I/O pad feeding a
+ * gate input that sits a third of the way up the gate. Only applied when the
+ * offset is small (under ~half the terminal node), so a genuine L corner (a far
+ * junction) is left untouched.
+ */
+function alignPointToTerminal(
+  point: ContourAnchor,
+  terminal: ContourAnchor,
+  terminalNode: NodeGeom
+): void {
+  const n = terminal.normal;
+  if (Math.abs(n.x) >= Math.abs(n.y)) {
+    // Horizontal terminal → straighten by matching the y.
+    if (Math.abs(point.point.y - terminal.point.y) < terminalNode.height * 0.45)
+      point.point = { x: point.point.x, y: terminal.point.y };
+  } else if (
+    Math.abs(point.point.x - terminal.point.x) <
+    terminalNode.width * 0.45
+  ) {
+    // Vertical terminal → straighten by matching the x.
+    point.point = { x: terminal.point.x, y: point.point.y };
+  }
+}
+
+/** Resolves the anchor for one endpoint from its (optional) contour policy. */
+function endpointAnchor(
+  node: NodeGeom,
+  contour: NodeContour | undefined,
+  face: Face,
+  towardCentre: Point,
+  portOffset: number
+): ContourAnchor {
+  if (!contour) {
+    return {
+      point: cardinalAttach(node, face, portOffset),
+      normal: faceNormal(face),
+    };
+  }
+  if (contour.kind === 'pin') {
+    return pinAttach(node, contour.pin, contour.rotationDeg, portOffset);
+  }
+  if (contour.kind === 'point') {
+    // Anchor at the exact centre; the outward normal points at the other node.
+    let nx = towardCentre.x - node.x;
+    let ny = towardCentre.y - node.y;
+    const len = Math.hypot(nx, ny) || 1;
+    nx /= len;
+    ny /= len;
+    return { point: { x: node.x, y: node.y }, normal: { x: nx, y: ny } };
+  }
+  return ellipseAttach(node, contour.ports, towardCentre, portOffset);
+}
+
+/**
+ * Resolves both ends of a wire to their exact anchor point + outward normal,
+ * applying the same face model and point-to-terminal straightening that
+ * {@link connection} draws through. Exported so the global orthogonal router
+ * (circuit schematics) anchors on the identical terminals — the two stay in
+ * lock-step because {@link connection} calls this too.
+ */
+export function wireEndpoints(
+  from: NodeGeom,
+  to: NodeGeom,
+  startPortOffset: number,
+  endPortOffset: number,
+  axis: ConnectionAxis | undefined,
+  fromContour?: NodeContour,
+  toContour?: NodeContour
+): { from: ContourAnchor; to: ContourAnchor } {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const isHorizontal = axis
+    ? axis === 'horizontal'
+    : Math.abs(dx) >= Math.abs(dy);
+  // Opposite cardinal faces: source points to destination, destination the
+  // opposite face.
+  const fromFace: Face = isHorizontal
+    ? dx >= 0
+      ? 'east'
+      : 'west'
+    : dy >= 0
+      ? 'south'
+      : 'north';
+  const toFace: Face = isHorizontal
+    ? dx >= 0
+      ? 'west'
+      : 'east'
+    : dy >= 0
+      ? 'north'
+      : 'south';
+  const cf: Point = { x: from.x, y: from.y };
+  const ct: Point = { x: to.x, y: to.y };
+  const fromAnchor = endpointAnchor(
+    from,
+    fromContour,
+    fromFace,
+    ct,
+    startPortOffset
+  );
+  const toAnchor = endpointAnchor(to, toContour, toFace, cf, endPortOffset);
+  // Straighten a point-to-terminal edge (a signal/junction feeding a pin nearby).
+  if (fromContour?.kind === 'point' && toContour?.kind === 'pin')
+    alignPointToTerminal(fromAnchor, toAnchor, to);
+  if (toContour?.kind === 'point' && fromContour?.kind === 'pin')
+    alignPointToTerminal(toAnchor, fromAnchor, from);
+  return { from: fromAnchor, to: toAnchor };
+}
+
+/**
  * Connection points between two nodes.
  *
  * - Anchors extremities to one of the 4 cardinal points (N/S/E/W) of the node,
@@ -296,61 +479,45 @@ export function connection(
   // NB: the anchor itself does NOT use it — the arrow touches the border.
   const gap = NODE_GAP * (from.scale ?? 1);
 
-  // Opposite cardinal faces: source points to destination,
-  // destination receives opposite face.
-  const fromFace: Face = isHorizontal
-    ? dx >= 0
-      ? 'east'
-      : 'west'
-    : dy >= 0
-      ? 'south'
-      : 'north';
-  const toFace: Face = isHorizontal
-    ? dx >= 0
-      ? 'west'
-      : 'east'
-    : dy >= 0
-      ? 'north'
-      : 'south';
-
-  // Endpoints: a round node anchors on its outline aimed at the OTHER centre
-  // (see {@link ellipseAttach}); otherwise on its cardinal face. Each endpoint
-  // also yields the outward normal used to orient the curve handles below.
-  const cf: Point = { x: from.x, y: from.y };
-  const ct: Point = { x: to.x, y: to.y };
-  const fromAnchor: ContourAnchor = fromContour
-    ? ellipseAttach(from, fromContour.ports, ct, startPortOffset)
-    : {
-        point: cardinalAttach(from, fromFace, startPortOffset),
-        normal: faceNormal(fromFace),
-      };
-  const toAnchor: ContourAnchor = toContour
-    ? ellipseAttach(to, toContour.ports, cf, endPortOffset)
-    : {
-        point: cardinalAttach(to, toFace, endPortOffset),
-        normal: faceNormal(toFace),
-      };
+  const { from: fromAnchor, to: toAnchor } = wireEndpoints(
+    from,
+    to,
+    startPortOffset,
+    endPortOffset,
+    axis,
+    fromContour,
+    toContour
+  );
   const start: Point = fromAnchor.point;
   const end: Point = toAnchor.point;
   const hasContour = fromContour !== undefined || toContour !== undefined;
 
-  // Detects the first third-party label the segment crosses and inserts a detour
-  // just above/beside to bypass it. This detour is shape-independent:
-  // all shapes pass through it (see control below).
+  // Detects the first third-party rect the segment crosses and inserts a detour
+  // just past it. This detour is shape-independent: all shapes pass through it
+  // (see control below). For orthogonal wires (step/smoothstep — the circuit
+  // schematics) the obstacle is the node BODY: a wire must NEVER run through a
+  // component, e.g. a skip-edge A→gate2 crossing the gate1 aligned between them.
+  // For the curved network diagrams the chord is a poor proxy for the drawn
+  // path, so only the label (below the node) is bypassed, as before.
+  const orthogonal = shape === 'step' || shape === 'smoothstep';
   let detour: Point[] | undefined;
   if (obstacles && obstacles.length > 0) {
     let firstT = Infinity;
     let bestWps: Point[] | null = null;
     for (const obs of obstacles) {
       if (obs.id === from.id || obs.id === to.id) continue;
-      const lb = labelBounds(obs);
-      if (!lb) continue;
-      const isect = segmentIntersectsRect(start, end, lb);
+      const rect = orthogonal ? bodyBounds(obs) : labelBounds(obs);
+      if (!rect) continue;
+      const isect = segmentIntersectsRect(start, end, rect);
       if (isect !== null && isect.tEntry < firstT && isect.tEntry > 1e-10) {
         firstT = isect.tEntry;
         if (isHorizontal) {
           const xAt = start.x + (end.x - start.x) * isect.tEntry;
-          bestWps = [{ x: xAt, y: lb.y - gap }];
+          // Bypass over the nearer edge (shorter detour, fewer added corners).
+          const above = (start.y + end.y) / 2 <= rect.y + rect.h / 2;
+          bestWps = [
+            { x: xAt, y: above ? rect.y - gap : rect.y + rect.h + gap },
+          ];
         } else {
           // Quasi-vertical segment: bypass laterally rather than
           // doubling back upwards, which produces an unnatural detour.
@@ -360,7 +527,7 @@ export function connection(
           // to avoid crosses with arrows going left.
           bestWps = [
             {
-              x: start.x < obs.x ? lb.x - gap : lb.x + lb.w + gap,
+              x: start.x < obs.x ? rect.x - gap : rect.x + rect.w + gap,
               y: yAt,
             },
           ];
@@ -374,12 +541,22 @@ export function connection(
   // `shapeWaypoints` returns actual intermediate points (curve samples,
   // corners...), traversed by arc length like a simple polyline.
   const control: Point[] = detour ? [start, ...detour, end] : [start, end];
+  // Orthogonal shapes (step/smoothstep) read a single axis: for a contour
+  // endpoint, derive it from the (already rotated) source normal so a wire
+  // leaves a terminal along the terminal, not along the layout flow.
+  const shapeAxis: ConnectionAxis = hasContour
+    ? Math.abs(fromAnchor.normal.x) >= Math.abs(fromAnchor.normal.y)
+      ? 'horizontal'
+      : 'vertical'
+    : isHorizontal
+      ? 'horizontal'
+      : 'vertical';
   const waypoints = shapeWaypoints(
     control,
     shape,
-    isHorizontal ? 'horizontal' : 'vertical',
-    // A contour endpoint leaves along its outward normal (radial), not along a
-    // cardinal axis — pass the normals so bezier handles bend accordingly.
+    shapeAxis,
+    // A contour endpoint leaves along its outward normal (radial/terminal), not
+    // along a cardinal axis — pass the normals so bezier handles bend accordingly.
     hasContour ? { start: fromAnchor.normal, end: toAnchor.normal } : undefined
   );
 
@@ -428,6 +605,39 @@ export function connection(
     angleDeg,
     ...(labelAnchor ? { labelAnchor } : {}),
   };
+}
+
+/**
+ * Point at fractional arc length `u` ∈ [0, 1] along an arbitrary polyline. Used
+ * to place the charge dots of a `flow` animation on a multi-segment wire path.
+ * Out-of-range `u` clamps to the endpoints.
+ */
+export function pointAtArc(points: Point[], u: number): Point {
+  if (points.length === 0) return { x: 0, y: 0 };
+  if (points.length === 1) return points[0];
+  const segLens: number[] = [];
+  let total = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const l = Math.hypot(
+      points[i + 1].x - points[i].x,
+      points[i + 1].y - points[i].y
+    );
+    segLens.push(l);
+    total += l;
+  }
+  if (total < 1e-10) return points[0];
+  let dist = (u <= 0 ? 0 : u >= 1 ? 1 : u) * total;
+  for (let i = 0; i < segLens.length; i++) {
+    if (dist <= segLens[i] || i === segLens.length - 1) {
+      const segT = segLens[i] > 1e-10 ? Math.min(dist / segLens[i], 1) : 1;
+      return {
+        x: points[i].x + (points[i + 1].x - points[i].x) * segT,
+        y: points[i].y + (points[i + 1].y - points[i].y) * segT,
+      };
+    }
+    dist -= segLens[i];
+  }
+  return points[points.length - 1];
 }
 
 /** Intermediate point on a segment, for positioning a moving packet. */

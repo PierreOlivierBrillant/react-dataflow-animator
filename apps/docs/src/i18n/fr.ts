@@ -223,6 +223,7 @@ export const fr = {
       infrastructure: 'Infrastructure',
       distributed: 'Systèmes distribués',
       'data-structures': 'Structures de données',
+      electronics: 'Électronique',
       engine: 'Concepts moteur',
     },
   },

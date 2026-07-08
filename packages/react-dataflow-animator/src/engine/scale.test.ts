@@ -76,4 +76,23 @@ describe('computeScale', () => {
     expect(result.contentMaxW).toBe(137); // 360×0.38
     expect(result.contentMaxH).toBe(176); // 200×0.88
   });
+
+  it('h. ignored nodes (junctions) do not shrink the scale', () => {
+    // Two well-spaced components, plus a junction crammed next to one of them.
+    const layout = {
+      a: { cx: 0.25, cy: 0.5 },
+      b: { cx: 0.75, cy: 0.5 },
+      j: { cx: 0.27, cy: 0.5 }, // tiny junction hugging `a`
+    };
+    const withJ = computeScale(layout, 800, 500, 'comfortable');
+    const ignored = computeScale(
+      layout,
+      800,
+      500,
+      'comfortable',
+      new Set(['j'])
+    );
+    // Ignoring the junction lifts the scale back up.
+    expect(ignored.scale).toBeGreaterThan(withJ.scale);
+  });
 });

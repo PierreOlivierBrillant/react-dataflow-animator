@@ -137,19 +137,27 @@ export function registerSubIcon(name: string, node: ReactNode): void {
   custom[name.toLowerCase()] = node;
 }
 
-/** Free text badge, for `subicon`s that are not known icons. */
+/** Free text badge, for `subicon`s that are not known icons (a value like
+ *  `5.7`, an abbreviation like `API`). The digit fills the badge: the disc
+ *  spans the whole badge (class `rdfa-subicon-text`, see CSS) and the font is
+ *  sized so the text nearly touches its edge — no wasted inner ring. */
 function renderText(text: string): ReactNode {
   const label = text.length > 4 ? text.slice(0, 4) : text;
   const fontSize =
     label.length >= 4
-      ? 7.5
+      ? 11
       : label.length === 3
-        ? 9.5
+        ? 14
         : label.length === 2
-          ? 12
-          : 16;
+          ? 17
+          : 21;
   return (
-    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="rdfa-subicon-text"
+      role="presentation"
+      aria-hidden="true"
+    >
       <circle cx="12" cy="12" r="12" fill="#475569" />
       <text
         x="12"

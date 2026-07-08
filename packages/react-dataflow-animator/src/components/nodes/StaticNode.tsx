@@ -11,6 +11,19 @@ import { isPanelNode, isShapeType } from './nodeKinds';
 import { nodeTint, type ColorOverride } from './nodeColors';
 import { getSubIcon } from './subIcons';
 
+/**
+ * Text under the node: its `text`, its `value` (+`unit`), or both joined —
+ * the label convenience for electrical components (`R1 · 10 kΩ`).
+ */
+function nodeLabel(o: Node): string | undefined {
+  const valuePart =
+    o.value != null && o.value !== ''
+      ? `${o.value}${o.unit ? ` ${o.unit}` : ''}`
+      : undefined;
+  if (o.text && valuePart) return `${o.text} · ${valuePart}`;
+  return o.text ?? valuePart;
+}
+
 export interface StaticNodeProps {
   object: Node;
   placement: NodePlacement;
@@ -27,6 +40,9 @@ export interface StaticNodeProps {
   opacity?: number;
   /** Clockwise rotation (deg) of the node visual. The label stays upright. */
   rotation?: number;
+  /** Live contact state (0..1) for stateful component icons (`switch`,
+   *  `push_button`), driven by the `toggle` action. Undefined = from `closed`. */
+  closed?: number;
   /** Runtime color override (active set_color), eased cross-fade per channel. */
   colorOverride?: ColorOverride;
   /** Runtime icon-badge override (set_icon). Undefined = keep the static
@@ -57,6 +73,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     highlight,
     opacity,
     rotation,
+    closed,
     colorOverride,
     iconOverride,
     reveal,
@@ -69,6 +86,8 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     const effIcon = iconOverride ?? object.icon;
     const isPanel = isPanelNode(object.type);
     const isShape = isShapeType(object.type);
+    // A `signal` I/O pad shows its value IN the pad (not as a corner badge).
+    const isSignal = object.type === 'signal';
     const visual: ReactNode = content ? (
       <ContentPanel
         content={content}
@@ -80,12 +99,18 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       />
     ) : (
       <>
-        <NodeView node={object} highlight={highlight} />
+        <NodeView
+          node={object}
+          highlight={highlight}
+          closed={closed}
+          signalValue={isSignal ? effIcon : undefined}
+        />
         {/* Unique corner badge: the subicon (tech) and the loading ring
             share the same positioned container, so they always remain
             concentric. The container holds the solid background that serves
-            as the backdrop for the spinner ("inwards"). */}
-        {effIcon || loading ? (
+            as the backdrop for the spinner ("inwards"). A signal pad shows its
+            value inside instead, so it carries no corner badge. */}
+        {!isSignal && (effIcon || loading) ? (
           <span className="rdfa-node-badge">
             {effIcon ? (
               <span className="rdfa-node-subicon">{getSubIcon(effIcon)}</span>
@@ -147,7 +172,10 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       (content ? ' rdfa-node--content' : '') +
       (!content && isPanel ? ' rdfa-node--panel' : '') +
       (!content && isShape ? ' rdfa-node--shape' : '') +
-      (!content && (colorOverride?.background_color ?? object.background_color)
+      (!content && isSignal ? ' rdfa-node--signal' : '') +
+      (!content &&
+      !isSignal &&
+      (colorOverride?.background_color ?? object.background_color)
         ? ' rdfa-node--tinted'
         : '') +
       (highlighted ? ' rdfa-node--highlight' : '');
@@ -174,9 +202,12 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
         }
       >
         {inner}
-        {object.text ? (
-          <span className="rdfa-node-label">{object.text}</span>
-        ) : null}
+        {(() => {
+          const label = nodeLabel(object);
+          return label ? (
+            <span className="rdfa-node-label">{label}</span>
+          ) : null;
+        })()}
       </div>
     );
   });

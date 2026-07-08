@@ -157,6 +157,50 @@ export const graphExample: DataFlowSpec = {
   timeline: [],
 };
 
+/**
+ * Circuit mode: an electrical schematic. Nodes are components placed by `x`/`y`;
+ * `connections` are drawn as orthogonal WIRES (no arrow head) between NAMED
+ * terminals (`"batt:+"`, `"R1:a"`…). A `flow` sends charge dots around the loop
+ * (conventional current, + → −). Component values are language-invariant.
+ */
+export const circuitExample: DataFlowSpec = {
+  direction: 'circuit',
+  // NO coordinates: the four components form one loop, so the engine auto-places
+  // them around a rectangle (vertical-edge components are auto-rotated).
+  nodes: [
+    { id: 'batt', type: 'battery', value: 9, unit: 'V' },
+    { id: 'sw', type: 'switch', closed: true },
+    { id: 'R1', type: 'resistor', value: 220, unit: 'Ω' },
+    { id: 'led', type: 'led', text: 'LED' },
+  ],
+  packets: [],
+  connections: [
+    { from: 'batt:+', to: 'sw:a' },
+    { from: 'sw:b', to: 'R1:a' },
+    { from: 'R1:b', to: 'led:a' },
+    { from: 'led:b', to: 'batt:-' },
+  ],
+  timeline: [
+    {
+      type: 'flow',
+      route: [
+        'batt:+',
+        'sw:a',
+        'sw:b',
+        'R1:a',
+        'R1:b',
+        'led:a',
+        'led:b',
+        'batt:-',
+      ],
+      color: '#f59e0b',
+      duration: 6000,
+      count: 8,
+      keep_until_end: true,
+    },
+  ],
+};
+
 /** Exemple concret de la section « Mode circulaire » : un hub central. */
 export const circularHubExample: DataFlowSpec = {
   direction: 'circular',

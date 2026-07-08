@@ -133,6 +133,53 @@ paragraphe entier serait tronqué. Pour du texte long, préférez un
 
 :::
 
+## Composants électriques
+
+Une famille de **symboles de schéma** — `resistor`, `capacitor`, `inductor`,
+`battery`, `dc_source` / `ac_source`, `diode`, `led`, `transistor_npn`, `opamp`,
+`switch`, `push_button`, `lamp`, `motor`, `ground`, `junction`, `ammeter`,
+`voltmeter`, `fuse`, `potentiometer`, `transformer`… — pour dessiner des circuits
+électriques. Contrairement aux autres types, ils exposent des **bornes nommées**
+que l'on câble par leur nom (`"R1:a"`, `"battery:+"`, `"Q1:collector"`), et
+s'utilisent au mieux en
+[`direction: 'circuit'`](./layout.mdx#mode-circuit-schémas-électriques), où les
+`connections` deviennent des fils orthogonaux. Deux champs les accompagnent :
+
+- `value` + `unit` construisent le libellé (`value: 220, unit: 'Ω'` → `"220 Ω"` ;
+  combiné à `text` si les deux sont présents, p. ex. `"R1 · 220 Ω"`) ;
+- `closed` (sur un `switch` / `push_button`) fixe l'état initial du contact,
+  animé à l'exécution par l'action [`toggle`](../reference/actions.mdx#toggle).
+
+La famille inclut aussi des **portes logiques numériques** — `and_gate`,
+`or_gate`, `not_gate`, `nand_gate`, `nor_gate`, `xor_gate`, `xnor_gate`,
+`buffer_gate` — avec deux entrées `a` / `b` à gauche et une sortie `y` à droite
+(une seule entrée pour `not_gate` / `buffer_gate`), et un nœud `signal` — un
+**pad d'E/S étiqueté** qui affiche un bit en son centre (posé via
+[`set_icon`](../reference/actions.mdx#set_icon), allumé par
+[`set_color`](../reference/actions.mdx#set_color)) — pour les entrées et sorties
+d'un schéma logique.
+
+Dans un schéma logique, chaque fil piloté par une entrée `signal` ou une sortie
+de porte est automatiquement teinté selon son **réseau** (son pilote), afin que
+les fils qui se croisent ou courent en parallèle se distinguent et ne semblent
+pas fusionner. La `color` explicite d'un fil (ou un
+[`set_color`](../reference/actions.mdx#set_color) sur la connexion) l'emporte
+toujours sur la teinte automatique ; les fils pilotés par une source non logique
+(une pile, une jonction) restent neutres.
+
+Plusieurs démos de la galerie s'appuient sur tout cela : **Circuit électrique**
+(une boucle pile/interrupteur/résistance/LED avec courant animé), **Circuit
+parallèle** (deux branches résistance + LED), **Loi d'Ohm** (tension vs courant
+vs résistance vs puissance), **Circuit RC** (un condensateur qui se charge — le
+régime transitoire et sa constante de temps τ = R·C), **Portes logiques** (les
+huit portes parcourant toute la table de vérité), **Demi-additionneur**, et une
+famille construite
+entièrement à partir de la **porte universelle NAND** — **Demi-additionneur**,
+**Demi-soustracteur**, **Additionneur complet**, **Soustracteur complet** et un
+**verrou SR** (deux NAND couplées en croix — un bit de mémoire). Dans les démos
+logiques, chaque fil est coloré selon le **bit qu'il transporte** (vert = 1) via
+`set_color`, pour que les étudiants tracent le signal à travers les portes.
+
 ## Couleurs : `background_color` et `border_color`
 
 Deux champs ajustent les couleurs d'un nœud :

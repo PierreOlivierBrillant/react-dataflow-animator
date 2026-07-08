@@ -12,6 +12,7 @@ import {
   portsExample,
   treeExample,
   graphExample,
+  circuitExample,
 } from './_layout/orientations';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -25,10 +26,11 @@ crossings) — you only add `x` / `y` when you want to pin a specific node.
 
 ## `direction`
 
-Seven possible values for `direction` (at the root level of the spec). Four
+Eight possible values for `direction` (at the root level of the spec). Four
 arrange free-form nodes along a flow, [`circular`](#circular-mode) puts them on a
-ring, [`tree`](#tree-mode) lays out a binary tree, and [`graph`](#graph-mode)
-auto-places an arbitrary graph:
+ring, [`tree`](#tree-mode) lays out a binary tree, [`graph`](#graph-mode)
+auto-places an arbitrary graph, and [`circuit`](#circuit-mode-electrical-schematics)
+draws an electrical schematic:
 
 <Tabs
   defaultValue="left-to-right"
@@ -429,6 +431,80 @@ nodes: [
 The full **Shortest path — Dijkstra** demo in the gallery builds on this: it
 settles nodes one by one and recolours the shortest-path edges as it walks the
 graph.
+
+## Circuit mode (electrical schematics)
+
+`circuit` is the mode for an **electrical schematic**. It differs from a dataflow
+diagram in three ways, and the engine adapts on all three:
+
+- **Components with named terminals.** Alongside the pictograms and shapes,
+  `circuit` unlocks a family of schematic symbols — `resistor`, `capacitor`,
+  `inductor`, `battery`, `dc_source` / `ac_source`, `diode`, `led`,
+  `transistor_npn`, `switch`, `lamp`, `ground`, `junction`, `ammeter`… (see the
+  full list in [nodes](./nodes.mdx)). Each exposes fixed **terminals** you wire
+  to by name: a resistor's `a` / `b`, a battery's `+` / `-`, a transistor's
+  `base` / `collector` / `emitter`. A `connection` targets a terminal with the
+  `"node:pin"` syntax (`"R1:a"`, `"battery:+"`). Terminals rotate with the
+  component, so a vertical resistor (`rotation: 90`) has its terminals top and
+  bottom.
+- **Wires, not arrows.** In `circuit`, `connections` default to an **orthogonal
+  wire** (`path: 'step'`) with **no arrow head** — you don't repeat those on
+  every link.
+- **Placement (no coordinates needed for the common cases).** With **no**
+  coordinates, the engine auto-arranges two shapes: a single **loop** (every node
+  has two wires) becomes a **rectangle** (components on a non-top edge are
+  auto-rotated so the wires stay straight); a connected **feed-forward** network
+  (a logic diagram — inputs → gates → outputs) is laid out **left-to-right in
+  layers**. For anything else (a series-parallel branch network, a disconnected
+  gallery of examples), place the components yourself with `x` / `y` (fractions
+  `0`..`1`), like a hand-authored `graph`; use `junction` dots for the corners.
+
+<DataFlowPlayer
+  theme="auto"
+  autoPlay
+  loop
+  controls={false}
+  height={460}
+  spec={circuitExample}
+/>
+
+```ts
+{
+  direction: 'circuit',
+  // No coordinates: the four components form one loop → auto-arranged rectangle.
+  nodes: [
+    { id: 'batt', type: 'battery', value: 9, unit: 'V' },
+    { id: 'sw', type: 'switch', closed: true },
+    { id: 'R1', type: 'resistor', value: 220, unit: 'Ω' },
+    { id: 'led', type: 'led', text: 'LED' },
+  ],
+  connections: [
+    // Wires between named terminals — orthogonal, no head, by default.
+    { from: 'batt:+', to: 'sw:a' },
+    { from: 'sw:b', to: 'R1:a' },
+    { from: 'R1:b', to: 'led:a' },
+    { from: 'led:b', to: 'batt:-' },
+  ],
+  timeline: [
+    // Charge dots ride the whole loop (conventional current, + → −):
+    {
+      type: 'flow',
+      route: ['batt:+', 'sw:a', 'sw:b', 'R1:a', 'R1:b',
+              'led:a', 'led:b', 'batt:-'],
+      color: '#f59e0b',
+      duration: 6000, // ms per lap — slow enough to read
+      keep_until_end: true,
+    },
+  ],
+}
+```
+
+Two actions are dedicated to circuits: [`flow`](../reference/actions.mdx#flow)
+animates the current around a route, and [`toggle`](../reference/actions.mdx#toggle)
+opens or closes a `switch`. Component labels use `value` + `unit` (`9 V`,
+`220 Ω`), and lighting a lamp/LED is just a [`set_color`](../reference/actions.mdx#set_color)
+or [`highlight`](../reference/actions.mdx#highlight). The full **Electrical
+circuit** demo in the gallery closes the switch, then energizes the loop.
 
 ## Responsive scaling
 

@@ -1,5 +1,6 @@
 import type { DataFlowSpec, Action, Direction } from '../types';
 import { connectionAxis } from './layout';
+import { refNode } from './pins';
 
 /** Spacing (px) between two edges of the same pair or a fan-out. */
 export const PORT_SPACING = 30;
@@ -34,7 +35,9 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
     const key = c.id ?? `${c.from}|${c.to}|${i}`;
     if (!keysSeen.has(key)) {
       keysSeen.add(key);
-      all.push({ key, from: c.from, to: c.to });
+      // ConnectionRef.from/to are bare node ids (any `:pin` dropped) so the
+      // pairing/offset math keys on nodes; the `key` stays raw to match Stage.
+      all.push({ key, from: refNode(c.from), to: refNode(c.to) });
       directedSeen.add(`${c.from}|${c.to}`);
       passe1Directed.add(`${c.from}|${c.to}`);
     }
@@ -53,7 +56,7 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
           const key = a.id ?? `${a.from}|${a.to}|action_${i}`;
           if (!keysSeen.has(key)) {
             keysSeen.add(key);
-            all.push({ key, from: a.from, to: a.to });
+            all.push({ key, from: refNode(a.from), to: refNode(a.to) });
           }
         }
       } else if (a.type === 'parallel' && a.actions) {
@@ -78,7 +81,7 @@ export function collectArrowConnections(spec: DataFlowSpec): ConnectionRef[] {
           const key = a.id ?? `${a.from}|${a.to}|move_${i}`;
           if (!keysSeen.has(key)) {
             keysSeen.add(key);
-            all.push({ key, from: a.from, to: a.to });
+            all.push({ key, from: refNode(a.from), to: refNode(a.to) });
           }
         }
       } else if (a.type === 'parallel' && a.actions) {

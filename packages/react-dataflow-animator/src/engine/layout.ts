@@ -7,6 +7,7 @@ import type {
   PathShape,
   TreeSpec,
 } from '../types';
+import { refNode } from './pins';
 
 /**
  * Spatial layout engine: calculates the position of each static node
@@ -23,6 +24,13 @@ export interface NodePlacement {
   cx: number;
   /** Vertical center, ratio 0..1. */
   cy: number;
+  /**
+   * Auto-assigned visual rotation (deg), set ONLY by the circuit auto-layout for
+   * a component that lands on a vertical edge of the loop (so its terminals point
+   * up/down and the vertical wires stay straight). An explicit `Node.rotation`
+   * takes precedence. Undefined otherwise.
+   */
+  rotation?: number;
 }
 
 export type LayoutMap = Record<string, NodePlacement>;
@@ -529,6 +537,343 @@ function graphLayout(nodes: Node[], connections: Connection[]): LayoutMap {
 }
 
 /**
+ * Auto-layout for a `direction: 'circuit'` that provides NO coordinates: if the
+ * `connections` form ONE simple loop (every node has exactly two wires), the
+ * nodes are placed around a rectangle perimeter, in loop order — the "at minimum
+ * a rectangle" case. A component landing on a vertical edge is rotated 90° so its
+ * terminals point up/down and the vertical wires stay perfectly straight.
+ *
+ * Returns `null` when the graph is NOT a single spanning cycle (a branch, a
+ * parallel network, disjoint loops…); the caller then falls back to the
+ * coordinate/grid layout — those circuits still need `x` / `y`.
+ */
+function circuitAutoLayout(
+  nodes: Node[],
+  connections: Connection[]
+): LayoutMap | null {
+  const ids = nodes.map((n) => n.id);
+  if (ids.length < 3) return null;
+  const idSet = new Set(ids);
+
+  // Undirected, de-duplicated adjacency (endpoints reduced to their node id).
+  const adj = new Map<string, string[]>();
+  for (const id of ids) adj.set(id, []);
+  const seen = new Set<string>();
+  for (const c of connections) {
+    const a = refNode(c.from);
+    const b = refNode(c.to);
+    if (a === b || !idSet.has(a) || !idSet.has(b)) continue;
+    const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    adj.get(a)!.push(b);
+    adj.get(b)!.push(a);
+  }
+  // One simple cycle ⇔ #edges = #nodes AND every node has degree 2.
+  if (seen.size !== ids.length) return null;
+  for (const id of ids) if (adj.get(id)!.length !== 2) return null;
+
+  // Walk the loop from the first node until it closes; a single spanning cycle
+  // visits every node exactly once (two disjoint cycles would close early).
+  const order: string[] = [];
+  const visited = new Set<string>();
+  let prev = '';
+  let curr = ids[0];
+  do {
+    if (visited.has(curr)) break;
+    visited.add(curr);
+    order.push(curr);
+    const [x, y] = adj.get(curr)!;
+    const next = x === prev ? y : x;
+    prev = curr;
+    curr = next;
+  } while (curr !== ids[0]);
+  if (order.length !== ids.length) return null;
+
+  const k = order.length;
+  const mx = 0.1;
+  const my = 0.22;
+  const w = 1 - 2 * mx;
+  const h = 1 - 2 * my;
+  const perimeter = 2 * (w + h);
+  const map: LayoutMap = {};
+  order.forEach((id, i) => {
+    // Arc position clockwise from the top-left corner; +0.5 keeps nodes OFF the
+    // corners (which stay empty, clean wire turns).
+    const s = ((i + 0.5) / k) * perimeter;
+    let cx: number;
+    let cy: number;
+    // Rotation orients each component so its FIRST terminal (`a` / `+`, originally
+    // west) faces the incoming wire as the loop runs CLOCKWISE — otherwise the two
+    // wires cross over the body. Top edge (left→right): 0°. Right edge
+    // (top→bottom): 90° (`a` on top). Bottom edge (right→left): 180° (`a` on the
+    // right). Left edge (bottom→top): 270° (`a` on the bottom).
+    let rotation = 0;
+    if (s < w) {
+      cx = mx + s; // top edge, left → right
+      cy = my;
+    } else if (s < w + h) {
+      cx = 1 - mx; // right edge, top → bottom
+      cy = my + (s - w);
+      rotation = 90;
+    } else if (s < 2 * w + h) {
+      cx = 1 - mx - (s - w - h); // bottom edge, right → left
+      cy = 1 - my;
+      rotation = 180;
+    } else {
+      cx = mx; // left edge, bottom → top
+      cy = 1 - my - (s - 2 * w - h);
+      rotation = 270;
+    }
+    map[id] = rotation !== 0 ? { cx, cy, rotation } : { cx, cy };
+  });
+  return map;
+}
+
+/**
+ * Positions ordered items as close as possible to `desired` (least squares)
+ * while keeping their order with a minimum gap: `out[k+1] ≥ out[k] + sep`.
+ * Runs pool-adjacent-violators (isotonic regression) on `d[k] = desired[k] −
+ * k·sep`, then re-adds the offsets — the exact optimum, so a column never
+ * overlaps yet stays as aligned with its neighbours as the order permits.
+ */
+function isotonicSeparation(desired: number[], sep: number): number[] {
+  const d = desired.map((v, k) => v - k * sep);
+  const blocks: { sum: number; count: number }[] = [];
+  for (const x of d) {
+    let b = { sum: x, count: 1 };
+    while (
+      blocks.length &&
+      blocks[blocks.length - 1].sum / blocks[blocks.length - 1].count >
+        b.sum / b.count
+    ) {
+      const p = blocks.pop()!;
+      b = { sum: p.sum + b.sum, count: p.count + b.count };
+    }
+    blocks.push(b);
+  }
+  const out: number[] = [];
+  for (const b of blocks) {
+    const v = b.sum / b.count;
+    for (let k = 0; k < b.count; k++) out.push(v);
+  }
+  return out.map((v, k) => v + k * sep);
+}
+
+/**
+ * Layered left-to-right auto-layout for a `direction: 'circuit'` that is a
+ * feed-forward network (a logic diagram: inputs → gates → outputs). Each
+ * CONNECTED component is laid out on its own: nodes go in columns by their
+ * longest directed path from a source (Sugiyama layering), ordered within a
+ * column by the barycenter of their neighbours to reduce crossings. Multiple
+ * components (a gallery of independent gate cells) are then tiled in a grid.
+ *
+ * A small per-row x-stagger inside each column separates the vertical channels
+ * of fan-out cross-wires (e.g. `A → AND` vs `B → XOR`) so they don't collapse
+ * onto a single line.
+ *
+ * Returns `null` when the graph has no edges or a directed cycle (an electrical
+ * loop is handled by {@link circuitAutoLayout}; anything else falls back to
+ * coordinates).
+ */
+function circuitDagLayout(
+  nodes: Node[],
+  connections: Connection[]
+): LayoutMap | null {
+  const ids = nodes.map((n) => n.id);
+  if (ids.length < 2) return null;
+  const idSet = new Set(ids);
+
+  const succ = new Map<string, string[]>();
+  const pred = new Map<string, string[]>();
+  const undirected = new Map<string, Set<string>>();
+  const indeg = new Map<string, number>();
+  for (const id of ids) {
+    succ.set(id, []);
+    pred.set(id, []);
+    undirected.set(id, new Set());
+    indeg.set(id, 0);
+  }
+  const seen = new Set<string>();
+  for (const c of connections) {
+    const u = refNode(c.from);
+    const v = refNode(c.to);
+    if (u === v || !idSet.has(u) || !idSet.has(v)) continue;
+    undirected.get(u)!.add(v);
+    undirected.get(v)!.add(u);
+    const dk = `${u}->${v}`;
+    if (seen.has(dk)) continue;
+    seen.add(dk);
+    succ.get(u)!.push(v);
+    pred.get(v)!.push(u);
+    indeg.set(v, indeg.get(v)! + 1);
+  }
+  if (seen.size === 0) return null; // no edges → not a network
+
+  // Global longest-path layering (Kahn topological order); a directed cycle → null.
+  const layer = new Map<string, number>(ids.map((id) => [id, 0]));
+  const work = new Map(indeg);
+  const queue = ids.filter((id) => work.get(id) === 0);
+  if (queue.length === 0) return null; // every node in a cycle
+  let processed = 0;
+  while (queue.length) {
+    const u = queue.shift()!;
+    processed++;
+    for (const v of succ.get(u)!) {
+      if (layer.get(u)! + 1 > layer.get(v)!) layer.set(v, layer.get(u)! + 1);
+      work.set(v, work.get(v)! - 1);
+      if (work.get(v) === 0) queue.push(v);
+    }
+  }
+  if (processed !== ids.length) return null; // directed cycle
+
+  // Connected components (undirected).
+  const comp = new Map<string, number>();
+  let nc = 0;
+  for (const id of ids) {
+    if (comp.has(id)) continue;
+    const c = nc++;
+    const st = [id];
+    comp.set(id, c);
+    while (st.length) {
+      const n = st.pop()!;
+      for (const m of undirected.get(n)!)
+        if (!comp.has(m)) {
+          comp.set(m, c);
+          st.push(m);
+        }
+    }
+  }
+
+  // Prefer FEWER grid columns (wider cells): each component is a horizontal
+  // input → gate → output diagram, so wide cells give the nodes more room and a
+  // larger overall scale.
+  const gcols = Math.max(1, Math.round(Math.sqrt(nc)));
+  const grows = Math.ceil(nc / gcols);
+  const map: LayoutMap = {};
+
+  for (let ci = 0; ci < nc; ci++) {
+    const cnodes = ids.filter((id) => comp.get(id) === ci);
+    const maxL = Math.max(...cnodes.map((id) => layer.get(id)!));
+    const cols: string[][] = Array.from({ length: maxL + 1 }, () => []);
+    for (const id of cnodes) cols[layer.get(id)!].push(id);
+    const orderIndex = new Map<string, number>();
+    cols.forEach((c) => c.forEach((id, i) => orderIndex.set(id, i)));
+    // Barycenter sweeps (neighbours restricted to this component).
+    for (let iter = 0; iter < 6; iter++) {
+      const forward = iter % 2 === 0;
+      const range = forward
+        ? [...cols.keys()].slice(1)
+        : [...cols.keys()].slice(0, -1).reverse();
+      for (const l of range) {
+        const neigh = forward ? pred : succ;
+        const bary = (id: string): number => {
+          const ns = neigh.get(id)!.filter((n) => comp.get(n) === ci);
+          if (ns.length === 0) return orderIndex.get(id)!;
+          return ns.reduce((s, n) => s + orderIndex.get(n)!, 0) / ns.length;
+        };
+        cols[l] = [...cols[l]].sort((a, b) => bary(a) - bary(b));
+        cols[l].forEach((id, i) => orderIndex.set(id, i));
+      }
+    }
+
+    // This component's cell in the grid, with margins (roomier when tiled).
+    const gc = ci % gcols;
+    const gr = Math.floor(ci / gcols);
+    const cellW = 1 / gcols;
+    const cellH = 1 / grows;
+    // Margins ~1/6 (x) and ~1/4 (y) balance the intra-cell spacing against the
+    // inter-cell gap, which maximises the minimum node distance → the largest
+    // scale the grid allows.
+    const x0 = gc * cellW + cellW * (nc > 1 ? 0.16 : 0.1);
+    const x1 = (gc + 1) * cellW - cellW * (nc > 1 ? 0.16 : 0.1);
+    const y0 = gr * cellH + cellH * (nc > 1 ? 0.25 : 0.22);
+    const y1 = (gr + 1) * cellH - cellH * (nc > 1 ? 0.25 : 0.22);
+    // Vertical coordinates (Sugiyama phase 4): the column ORDER is fixed above;
+    // now pull each node onto the MEDIAN of its neighbours' slots so a single-
+    // input link (a gate → its output pad, a straight chain) is drawn STRAIGHT
+    // instead of stepped — the biggest lever on corner count. A minimum slot gap,
+    // enforced by pool-adjacent-violators, keeps the column's order and spacing.
+    // Sweeps alternate pred/succ so both ends of a wire pull towards alignment.
+    const slot = new Map<string, number>();
+    cols.forEach((col) => col.forEach((id, i) => slot.set(id, i)));
+    for (let iter = 0; iter < 14; iter++) {
+      const usePred = iter % 2 === 0;
+      const sweep = usePred
+        ? cols.map((_, l) => l).slice(1)
+        : cols
+            .map((_, l) => l)
+            .slice(0, -1)
+            .reverse();
+      for (const l of sweep) {
+        const col = cols[l];
+        const desired = col.map((id) => {
+          // Move ONLY leaves (a single graph neighbour: an output pad, a lone
+          // input) — snap them straight onto their driver. A leaf has just one
+          // wire, so this can neither cascade nor cross another edge, and it
+          // lands on an EXISTING slot, so hubs and their spacing are untouched.
+          // Multi-neighbour nodes keep their crossing-minimised rank; the global
+          // rank-band normalisation below then aligns them across columns.
+          if (undirected.get(id)!.size !== 1) return slot.get(id)!;
+          const nb = (usePred ? pred : succ)
+            .get(id)!
+            .filter((n) => comp.get(n) === ci);
+          return nb.length === 1 ? slot.get(nb[0])! : slot.get(id)!;
+        });
+        const placed = isotonicSeparation(desired, 1);
+        col.forEach((id, i) => slot.set(id, placed[i]));
+      }
+    }
+    const svals = cnodes.map((id) => slot.get(id)!);
+    const smin = Math.min(...svals);
+    const smax = Math.max(...svals);
+    const stg = (x1 - x0) * 0.06;
+    cols.forEach((col, l) => {
+      col.forEach((id, i) => {
+        const baseX =
+          cols.length > 1
+            ? x0 + (x1 - x0) * (l / (cols.length - 1))
+            : (x0 + x1) / 2;
+        const cx = baseX + (i - (col.length - 1) / 2) * stg;
+        const cy =
+          smax > smin
+            ? y0 + (y1 - y0) * ((slot.get(id)! - smin) / (smax - smin))
+            : (y0 + y1) / 2;
+        map[id] = { cx, cy };
+      });
+    });
+  }
+  return map;
+}
+
+/**
+ * Free 2D grid layout for `direction: 'circuit'` (electrical schematics). Like a
+ * hand-authored `graph`, each node is placed by its own `x` / `y` (fractions of
+ * the Stage). Unlike `graph` there is NO force-directed auto-placement: a
+ * schematic's shape is deliberate (the loop, the ladder), so we trust the
+ * author's coordinates. A node that omits both `x` and `y` falls back onto a
+ * simple row-major grid so nothing collapses onto the centre.
+ */
+function circuitLayout(nodes: Node[]): LayoutMap {
+  const map: LayoutMap = {};
+  const missing = nodes.filter((n) => n.x === undefined && n.y === undefined);
+  const cols = Math.max(1, Math.ceil(Math.sqrt(missing.length)));
+  let gi = 0;
+  for (const node of nodes) {
+    if (node.x === undefined && node.y === undefined) {
+      const rows = Math.max(1, Math.ceil(missing.length / cols));
+      const col = gi % cols;
+      const row = Math.floor(gi / cols);
+      gi++;
+      map[node.id] = { cx: spread(col, cols), cy: spread(row, rows) };
+    } else {
+      map[node.id] = { cx: node.x ?? 0.5, cy: node.y ?? 0.5 };
+    }
+  }
+  return map;
+}
+
+/**
  * Applies `align_with`: aligns a node on the TRANSVERSE axis of another
  * (vertical if the direction is horizontal, and vice versa).
  */
@@ -700,6 +1045,19 @@ export function computeLayout(
     // frame, so resizing the player never reshuffles the graph.
     return graphLayout(nodes, spec.connections ?? []);
   }
+  if (direction === 'circuit') {
+    // No coordinates + a single loop → auto rectangle; otherwise the author
+    // places the components with x / y.
+    const hasCoords = nodes.some((n) => n.x !== undefined || n.y !== undefined);
+    if (!hasCoords) {
+      // A single loop → rectangle; a connected feed-forward network → layered.
+      const auto =
+        circuitAutoLayout(nodes, spec.connections ?? []) ??
+        circuitDagLayout(nodes, spec.connections ?? []);
+      if (auto) return auto;
+    }
+    return circuitLayout(nodes);
+  }
   if (direction === 'circular') {
     return circularLayout(nodes, options.aspect ?? 1.6);
   }
@@ -752,6 +1110,7 @@ export function connectionAxis(
       // enter the top face, regardless of the horizontal gap between them.
       return 'vertical';
     case 'graph':
+    case 'circuit':
     case 'circular':
     default:
       return Math.abs(dCx * aspect) >= Math.abs(dCy)

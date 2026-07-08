@@ -12,6 +12,7 @@ import {
   portsExample,
   treeExample,
   graphExample,
+  circuitExample,
 } from './_layout/orientations';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -26,10 +27,11 @@ n'ajoutez `x` / `y` que pour épingler un nœud précis.
 
 ## `direction`
 
-Sept valeurs possibles pour `direction` (au niveau racine de la spec). Quatre
+Huit valeurs possibles pour `direction` (au niveau racine de la spec). Quatre
 disposent des nœuds libres le long d'un flux, [`circular`](#mode-circulaire) les
-place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire, et
-[`graph`](#mode-graphe) place automatiquement un graphe quelconque :
+place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire,
+[`graph`](#mode-graphe) place automatiquement un graphe quelconque, et
+[`circuit`](#mode-circuit-schémas-électriques) trace un schéma électrique :
 
 <Tabs
   defaultValue="left-to-right"
@@ -436,6 +438,82 @@ nodes: [
 La démo complète **Plus court chemin — Dijkstra** de la galerie s'appuie
 là-dessus : elle règle les nœuds un à un et recolore les arêtes du plus court
 chemin au fil du parcours du graphe.
+
+## Mode circuit (schémas électriques)
+
+`circuit` est le mode pour un **schéma électrique**. Il diffère d'un diagramme de
+flux sur trois points, et le moteur s'adapte sur les trois :
+
+- **Des composants à bornes nommées.** En plus des pictogrammes et des formes,
+  `circuit` débloque une famille de symboles de schéma — `resistor`, `capacitor`,
+  `inductor`, `battery`, `dc_source` / `ac_source`, `diode`, `led`,
+  `transistor_npn`, `switch`, `lamp`, `ground`, `junction`, `ammeter`… (liste
+  complète dans [nodes](./nodes.mdx)). Chacun expose des **bornes** fixes que
+  l'on câble par leur nom : le `a` / `b` d'une résistance, le `+` / `-` d'une
+  pile, le `base` / `collector` / `emitter` d'un transistor. Une `connection`
+  vise une borne avec la syntaxe `"node:pin"` (`"R1:a"`, `"battery:+"`). Les
+  bornes tournent avec le composant : une résistance verticale (`rotation: 90`) a
+  ses bornes en haut et en bas.
+- **Des fils, pas des flèches.** En `circuit`, les `connections` sont par défaut
+  un **fil orthogonal** (`path: 'step'`) **sans tête de flèche** — inutile de le
+  répéter sur chaque lien.
+- **Placement (aucune coordonnée pour les cas courants).** **Sans** coordonnées,
+  le moteur dispose automatiquement deux formes : une **boucle** simple (chaque
+  nœud a deux fils) devient un **rectangle** (les composants sur une arête non
+  supérieure sont auto-tournés pour garder les fils droits) ; un réseau
+  **feed-forward** connecté (un schéma logique — entrées → portes → sorties) est
+  disposé **de gauche à droite en couches**. Pour tout le reste (un réseau
+  série-parallèle, une galerie d'exemples déconnectés), on place les composants
+  soi-même avec `x` / `y` (fractions `0`..`1`), comme un `graph` écrit à la
+  main ; on utilise des points de `junction` pour les coins.
+
+<DataFlowPlayer
+  theme="auto"
+  autoPlay
+  loop
+  controls={false}
+  height={460}
+  spec={circuitExample}
+/>
+
+```ts
+{
+  direction: 'circuit',
+  // Aucune coordonnée : les quatre composants forment une boucle → rectangle auto.
+  nodes: [
+    { id: 'batt', type: 'battery', value: 9, unit: 'V' },
+    { id: 'sw', type: 'switch', closed: true },
+    { id: 'R1', type: 'resistor', value: 220, unit: 'Ω' },
+    { id: 'led', type: 'led', text: 'LED' },
+  ],
+  connections: [
+    // Fils entre bornes nommées — orthogonaux, sans tête, par défaut.
+    { from: 'batt:+', to: 'sw:a' },
+    { from: 'sw:b', to: 'R1:a' },
+    { from: 'R1:b', to: 'led:a' },
+    { from: 'led:b', to: 'batt:-' },
+  ],
+  timeline: [
+    // Les charges parcourent toute la boucle (courant conventionnel, + → −) :
+    {
+      type: 'flow',
+      route: ['batt:+', 'sw:a', 'sw:b', 'R1:a', 'R1:b',
+              'led:a', 'led:b', 'batt:-'],
+      color: '#f59e0b',
+      duration: 6000, // ms par tour — assez lent pour être lisible
+      keep_until_end: true,
+    },
+  ],
+}
+```
+
+Deux actions sont dédiées aux circuits : [`flow`](../reference/actions.mdx#flow)
+anime le courant le long d'un parcours, et
+[`toggle`](../reference/actions.mdx#toggle) ouvre ou ferme un `switch`. Les
+libellés des composants utilisent `value` + `unit` (`9 V`, `220 Ω`), et allumer
+une lampe/LED n'est qu'un [`set_color`](../reference/actions.mdx#set_color) ou un
+[`highlight`](../reference/actions.mdx#highlight). La démo complète **Circuit
+électrique** de la galerie ferme l'interrupteur, puis met la boucle sous tension.
 
 ## Mise à l'échelle responsive
 

@@ -57,7 +57,12 @@ export function shapeWaypoints(
       return control.length > 2 ? control.slice(1, -1) : undefined;
     case 'step':
     case 'smoothstep':
-      return stepWaypoints(control, shape === 'smoothstep', endpointAxis);
+      return stepWaypoints(
+        control,
+        shape === 'smoothstep',
+        endpointAxis,
+        normals
+      );
     case 'simplebezier':
       return curveWaypoints(control, true, endpointAxis, normals);
     case 'bezier':
@@ -201,16 +206,47 @@ function dedupe(pts: Point[]): Point[] {
   return out;
 }
 
+/** Below this transverse offset (px), a single orthogonal segment is drawn
+ *  STRAIGHT instead of stepped: two `step` corners a couple of pixels apart would
+ *  otherwise leave a visible jog in the middle of a near-vertical/horizontal wire
+ *  (e.g. a component side-terminal meeting a junction almost in line). */
+const STEP_ALIGN_EPS = 6;
+
 function stepWaypoints(
   control: Point[],
   smooth: boolean,
-  endpointAxis?: ConnectionAxis
+  endpointAxis?: ConnectionAxis,
+  normals?: EndpointNormals
 ): Point[] | undefined {
+  // Perpendicular contour endpoints (a component terminal leaving one way and the
+  // next arriving another at a rectangle corner): route a SINGLE L corner at the
+  // intersection of the two axes, so the wire hugs the corner instead of a Z that
+  // cuts diagonally across the middle. This is what turns an auto-laid circuit
+  // loop into a clean rectangle.
+  if (control.length === 2 && normals) {
+    const [a, b] = control;
+    const startH = Math.abs(normals.start.x) >= Math.abs(normals.start.y);
+    const endH = Math.abs(normals.end.x) >= Math.abs(normals.end.y);
+    if (startH !== endH) {
+      const corner = startH ? { x: b.x, y: a.y } : { x: a.x, y: b.y };
+      const poly = dedupe([a, corner, b]);
+      if (poly.length <= 2) return undefined;
+      return smooth ? roundCorners(poly) : poly.slice(1, -1);
+    }
+    // Parallel normals fall through to the midpoint step / straight collapse.
+  }
   // Without detour (single segment), the first corner starts along the imposed face.
   const forceH =
     control.length === 2 && endpointAxis
       ? endpointAxis === 'horizontal'
       : undefined;
+  // Near-aligned single segment → straight line (no mid-jog).
+  if (control.length === 2) {
+    const [a, b] = control;
+    const horizontal = forceH ?? Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+    const transverse = horizontal ? Math.abs(b.y - a.y) : Math.abs(b.x - a.x);
+    if (transverse < STEP_ALIGN_EPS) return undefined;
+  }
   // Complete orthogonal polyline (extremities included).
   const ortho: Point[] = [control[0]];
   for (let i = 0; i < control.length - 1; i++) {

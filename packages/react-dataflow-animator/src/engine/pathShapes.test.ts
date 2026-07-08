@@ -120,6 +120,30 @@ describe('shapeWaypoints — step', () => {
     const pts = shapeWaypoints([A, ALIGNED], 'step');
     if (pts) expect(maxAbsDeviation(pts, A, ALIGNED)).toBeCloseTo(0, 6);
   });
+
+  it('near-aligned segment → straight (no mid-jog under the threshold)', () => {
+    // A 2px transverse offset over a 100px vertical run: no stepped corners.
+    const near = shapeWaypoints(
+      [
+        { x: 0, y: 0 },
+        { x: 2, y: 100 },
+      ],
+      'step',
+      'vertical'
+    );
+    expect(near).toBeUndefined();
+    // A clear offset still steps.
+    const far = shapeWaypoints(
+      [
+        { x: 0, y: 0 },
+        { x: 40, y: 100 },
+      ],
+      'step',
+      'vertical'
+    );
+    expect(far).toBeDefined();
+    expect(far!.length).toBeGreaterThan(0);
+  });
 });
 
 describe('shapeWaypoints — smoothstep', () => {

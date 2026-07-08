@@ -5,9 +5,12 @@ import {
   useMemo,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from 'react';
 import type {
+  Action,
   DataFlowSpec,
+  NodeType,
   Packet as PacketSpec,
   Highlighter,
   ObjectContent,
@@ -18,6 +21,7 @@ import {
   easeInOutCubic,
   type ArrowClip,
   type CommentClip,
+  type FlowClip,
   type HighlightClip,
   type MoveClip,
   type ReflowClip,
@@ -27,12 +31,14 @@ import {
   type SetContentClip,
   type SetVisibleClip,
   type Timeline,
+  type ToggleClip,
 } from '../engine/timeline';
 import {
   computeLayout,
   connectionAxis,
   treeEdges,
   treeEdgeStyle,
+  type ConnectionAxis,
 } from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
 import { computePlacements, computeContentLimits } from '../engine/placements';
@@ -44,10 +50,19 @@ import {
   connection,
   nodeContour,
   pathTip,
+  pointAtArc,
+  wireEndpoints,
   type GeometryMap,
   type NodeContour,
   type NodeGeom,
+  type Point,
 } from '../engine/geometry';
+import {
+  routeOrthogonal,
+  type RouterObstacle,
+  type RouterWire,
+} from '../engine/orthoRouter';
+import { parseRef, refNode, resolvePin } from '../engine/pins';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { buildStageSignature } from './stageSignature';
 import { clipOpacity, contentCrossfade } from './clipOpacity';
@@ -64,6 +79,139 @@ const useIsoLayoutEffect =
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
+}
+
+const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/** Every endpoint reference (`node` / `node:pin`) that appears in the spec —
+ *  connection ends, arrow/move ends, and `flow` route items — so their contour
+ *  can be resolved once into an immutable lookup. */
+function collectEndpointRefs(spec: DataFlowSpec): Set<string> {
+  const refs = new Set<string>();
+  for (const c of spec.connections ?? []) {
+    refs.add(c.from);
+    refs.add(c.to);
+  }
+  const walk = (actions: Action[]): void => {
+    for (const a of actions) {
+      if (a.type === 'arrow' || a.type === 'move') {
+        if (a.from) refs.add(a.from);
+        if (a.to) refs.add(a.to);
+      } else if (a.type === 'flow') {
+        for (const r of a.route ?? []) refs.add(r);
+      } else if (a.type === 'parallel') {
+        walk(a.actions ?? []);
+      }
+    }
+  };
+  walk(spec.timeline ?? []);
+  return refs;
+}
+
+/** A node that drives a logic net — a `signal` input or any `*_gate` output. */
+const isLogicType = (t: NodeType): boolean =>
+  t === 'signal' || t.endsWith('_gate');
+
+/** Muted mid-tones used to tint each logic net (see {@link netColorMap}). Chosen
+ *  to stay legible on both themes and to differ only slightly from the neutral
+ *  wire — enough to tell two crossing nets apart without shouting. */
+const NET_PALETTE = [
+  '#6b7bab',
+  '#ab6b7b',
+  '#6b9c78',
+  '#8f6bab',
+  '#ab946b',
+  '#6ba7a1',
+  '#9cab6b',
+  '#ab7b6b',
+];
+
+/**
+ * Assigns a stable colour to every logic net of a circuit schematic, so wires
+ * belonging to different nets (which may cross or run parallel) read as
+ * distinct and are visibly NOT joined. A net is identified by its driver — the
+ * source node of a wire — when that source is a logic node ({@link isLogicType});
+ * all wires sharing a driver share the colour. Non-logic sources (a battery, a
+ * junction) are left neutral, so electrical circuits are unaffected. Drivers are
+ * numbered in first-appearance order for determinism.
+ */
+function netColorMap(spec: DataFlowSpec): Map<string, string> {
+  const colors = new Map<string, string>();
+  if (spec.direction !== 'circuit') return colors;
+  const nodeById = new Map(spec.nodes.map((n) => [n.id, n]));
+  let i = 0;
+  for (const link of spec.connections ?? []) {
+    const src = refNode(link.from);
+    if (colors.has(src)) continue;
+    const n = nodeById.get(src);
+    if (n && isLogicType(n.type))
+      colors.set(src, NET_PALETTE[i++ % NET_PALETTE.length]);
+  }
+  return colors;
+}
+
+/**
+ * Concatenates the wire segments of a `flow` route into a single polyline the
+ * charge dots ride. Consecutive refs (`node` / `node:pin`) are joined by the
+ * SAME `connection()` geometry the wires use (orthogonal `step`, terminal
+ * anchoring), so the current follows the drawn path exactly. Segments whose
+ * endpoints aren't measured yet are skipped.
+ */
+function buildFlowPath(
+  route: string[],
+  geometry: GeometryMap,
+  contourFor: (ref: string) => NodeContour | undefined,
+  axisFor: (a: string, b: string) => ConnectionAxis | undefined,
+  obstacles: NodeGeom[],
+  routeByNodePair: Map<string, Point[]>
+): Point[] {
+  const pts: Point[] = [];
+  let prevEnd: Point | null = null;
+  for (let i = 0; i < route.length - 1; i++) {
+    const a = route[i];
+    const b = route[i + 1];
+    const gf = geometry[refNode(a)];
+    const gt = geometry[refNode(b)];
+    if (!gf || !gt) {
+      prevEnd = null;
+      continue;
+    }
+    // Prefer the SAME orthogonal route the wire is drawn with (circuit
+    // schematics), so the charge rides the drawn wire exactly; else route the
+    // segment on its own. A reversed pair reuses the wire route backwards.
+    const fwd = routeByNodePair.get(`${refNode(a)}|${refNode(b)}`);
+    const rev = routeByNodePair.get(`${refNode(b)}|${refNode(a)}`);
+    let seg: Point[];
+    if (fwd) seg = fwd;
+    else if (rev) seg = [...rev].reverse();
+    else {
+      const conn = connection(
+        gf,
+        gt,
+        obstacles,
+        0,
+        0,
+        'step',
+        axisFor(a, b),
+        contourFor(a),
+        contourFor(b)
+      );
+      seg = [conn.start, ...(conn.waypoints ?? []), conn.end];
+    }
+    if (prevEnd === null) {
+      pts.push(...seg);
+    } else if (Math.hypot(seg[0].x - prevEnd.x, seg[0].y - prevEnd.y) > 1) {
+      // The previous segment ended on one face of node `a` and this one leaves
+      // another (a corner junction): bridge through the node CENTRE so the
+      // charge turns the corner along the wires instead of cutting across it. A
+      // shared terminal (same pin) coincides, so no bridge is inserted there.
+      pts.push({ x: gf.x, y: gf.y }, ...seg);
+    } else {
+      pts.push(...seg.slice(1));
+    }
+    prevEnd = seg[seg.length - 1];
+  }
+  return pts;
 }
 
 /**
@@ -187,9 +335,26 @@ export function Stage({
   // small player is a strictly homogeneous reduction of a large one.
   const k = height > 0 ? height / DESIGN_H : 1;
   const designW = width > 0 && k > 0 ? width / k : 700;
+  // Junction dots claim no room: exclude them from the scale spacing so a corner
+  // junction next to a component doesn't shrink the whole schematic.
+  const compactNodeIds = useMemo(
+    () =>
+      new Set(spec.nodes.filter((n) => n.type === 'junction').map((n) => n.id)),
+    [spec]
+  );
+  // Circuit schematics pack their components tighter (the router keeps the wires
+  // between them clean), so their symbols and value labels render bigger.
   const design = useMemo(
-    () => computeScale(layout, designW, DESIGN_H, density),
-    [layout, designW, density]
+    () =>
+      computeScale(
+        layout,
+        designW,
+        DESIGN_H,
+        density,
+        compactNodeIds,
+        spec.direction === 'circuit' ? 0.68 : 1
+      ),
+    [layout, designW, density, compactNodeIds, spec.direction]
   );
   const scale = design.scale * k;
   const maxW = design.maxW * k;
@@ -261,17 +426,48 @@ export function Stage({
       ),
     [spec]
   );
-  // Outline anchoring policy per node (round nodes attach radially). Reference-
-  // stable per node so it doesn't defeat ArrowLine memoization; undefined for
-  // nodes that keep the cardinal-face model.
-  const contourByNode = useMemo(() => {
-    const map: Record<string, NodeContour> = {};
-    for (const n of spec.nodes) {
-      const c = nodeContour(n.type, n.ports);
-      if (c) map[n.id] = c;
-    }
-    return map;
-  }, [spec]);
+  // Circuit schematics: `connections` are orthogonal wires (no head) by default,
+  // and edges anchor on the components' named terminals.
+  const isCircuit = direction === 'circuit';
+
+  // Auto-rotation assigned by the circuit auto-layout (a component on a vertical
+  // edge of the loop). An explicit `Node.rotation` still wins. Aspect-independent,
+  // so this is stable across resizes.
+  const autoRotationById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const [id, p] of Object.entries(layout))
+      if (p.rotation != null) m.set(id, p.rotation);
+    return m;
+  }, [layout]);
+
+  // Anchoring policy for an endpoint REFERENCE (`node` or `node:pin`). A round
+  // node attaches radially on its outline; a `node:pin` on a component attaches
+  // on that terminal (rotated by the node's static — or auto-layout — rotation).
+  // Precomputed into an immutable map (every node id + every endpoint ref in the
+  // spec) so a STABLE object is returned per ref — otherwise ArrowLine
+  // memoization would break. The returned reader only reads; a ref outside the
+  // map (e.g. a tree edge) resolves purely. Undefined = the cardinal-face model.
+  const contourFor = useMemo(() => {
+    const nodeById = new Map(spec.nodes.map((n) => [n.id, n]));
+    const resolve = (ref: string): NodeContour | undefined => {
+      const { node, pin } = parseRef(ref);
+      const n = nodeById.get(node);
+      if (!n) return undefined;
+      const pinDef = resolvePin(n.type, pin);
+      const rotationDeg = n.rotation ?? autoRotationById.get(n.id) ?? 0;
+      return pinDef
+        ? { kind: 'pin', pin: pinDef, rotationDeg }
+        : nodeContour(n.type, n.ports);
+    };
+    const map = new Map<string, NodeContour | undefined>();
+    for (const n of spec.nodes) map.set(n.id, resolve(n.id));
+    for (const ref of collectEndpointRefs(spec))
+      if (!map.has(ref)) map.set(ref, resolve(ref));
+    return (ref: string): NodeContour | undefined =>
+      map.has(ref) ? map.get(ref) : resolve(ref);
+  }, [spec, autoRotationById]);
+  // Per-net wire tint (logic schematics only); a stable colour per driver node.
+  const netColorById = useMemo(() => netColorMap(spec), [spec]);
   const portOffsets = useMemo(
     () =>
       computePortOffsets(
@@ -288,10 +484,27 @@ export function Stage({
   // the same decision as computePortOffsets, passed to connection/ArrowLine so that
   // attachment and fan-out distribution match. undefined if a node is missing
   // from layout (connection then falls back to dominant pixel axis).
-  const axisFor = (fromId: string, toId: string) => {
-    const p1 = layout[fromId];
-    const p2 = layout[toId];
+  const axisFor = (fromRef: string, toRef: string) => {
+    const p1 = layout[refNode(fromRef)];
+    const p2 = layout[refNode(toRef)];
     return p1 && p2 ? connectionAxis(p1, p2, direction, aspect) : undefined;
+  };
+  // Port offsets do not apply to an endpoint that is already a precise point (a
+  // component terminal, or a junction dot): zero the spread there.
+  const isPrecise = (ref: string): boolean => {
+    const k = contourFor(ref)?.kind;
+    return k === 'pin' || k === 'point';
+  };
+  const portsFor = (
+    key: string,
+    fromRef: string,
+    toRef: string
+  ): { start: number; end: number } => {
+    const base = portOffsets[key] ?? { start: 0, end: 0 };
+    return {
+      start: isPrecise(fromRef) ? 0 : base.start,
+      end: isPrecise(toRef) ? 0 : base.end,
+    };
   };
 
   // Captures "icon" geometry of nodes that just entered
@@ -435,6 +648,90 @@ export function Stage({
     ? Object.values(effectiveGeometry)
     : allNodes;
 
+  // Circuit schematics: route ALL baseline wires TOGETHER on a global orthogonal
+  // router (strictly H/V, never through a component, parallels on separate
+  // lanes). Keyed exactly like the render below. Circuit nodes don't move, so
+  // this recomputes only on remeasure / spec change, not per animation frame.
+  const circuitRoutes = useMemo(() => {
+    const routes = new Map<string, Point[]>();
+    if (!isCircuit) return routes;
+    const obstacles: RouterObstacle[] = Object.entries(geometry).map(
+      ([id, g]) => ({
+        id,
+        x: g.x,
+        y: g.y,
+        w: g.width,
+        h: g.height,
+        labelW: g.labelW,
+        labelH: g.labelH,
+      })
+    );
+    const wires: RouterWire[] = [];
+    (spec.connections ?? []).forEach((link, i) => {
+      const f = geometry[refNode(link.from)];
+      const tg = geometry[refNode(link.to)];
+      if (!f || !tg) return;
+      const key = link.id ?? `${link.from}|${link.to}|${i}`;
+      const fromC = contourFor(link.from);
+      const toC = contourFor(link.to);
+      const p1 = layout[refNode(link.from)];
+      const p2 = layout[refNode(link.to)];
+      const axis =
+        p1 && p2 ? connectionAxis(p1, p2, direction, aspect) : undefined;
+      const base = portOffsets[key] ?? { start: 0, end: 0 };
+      const precise = (k?: string) => k === 'pin' || k === 'point';
+      const ends = wireEndpoints(
+        f,
+        tg,
+        precise(fromC?.kind) ? 0 : base.start,
+        precise(toC?.kind) ? 0 : base.end,
+        axis,
+        fromC,
+        toC
+      );
+      // hardNormal = the endpoint anchors on a BORDER with an enforced normal (a
+      // pin, or a cardinal face — e.g. a signal pad connects on its side). Only a
+      // POINT contour (a junction dot, centre-anchored) is soft: the wire may
+      // reach its centre, so its body must not block that wire.
+      wires.push({
+        key,
+        from: {
+          node: refNode(link.from),
+          point: ends.from.point,
+          normal: ends.from.normal,
+          hardNormal: fromC?.kind !== 'point',
+        },
+        to: {
+          node: refNode(link.to),
+          point: ends.to.point,
+          normal: ends.to.normal,
+          hardNormal: toC?.kind !== 'point',
+        },
+      });
+    });
+    if (!wires.length) return routes;
+    return routeOrthogonal(obstacles, wires, { clearance: 6, laneTracks: 3 });
+  }, [
+    isCircuit,
+    geometry,
+    spec.connections,
+    contourFor,
+    portOffsets,
+    layout,
+    direction,
+    aspect,
+  ]);
+  // Wire routes keyed by node pair, so a `flow` charge can ride the very route
+  // its wire is drawn with (see buildFlowPath).
+  const routeByNodePair = useMemo(() => {
+    const m = new Map<string, Point[]>();
+    (spec.connections ?? []).forEach((link, i) => {
+      const r = circuitRoutes.get(link.id ?? `${link.from}|${link.to}|${i}`);
+      if (r) m.set(`${refNode(link.from)}|${refNode(link.to)}`, r);
+    });
+    return m;
+  }, [spec.connections, circuitRoutes]);
+
   // Revealed fraction (0..1) by node: drives top-down clip-path of StaticNode.
   // = eased opacity of crossfade (contentCrossfade). Decoupled from geometry
   // (no dependency on measurement / iconGeom) → robust, works even frozen.
@@ -483,8 +780,10 @@ export function Stage({
   // the most recent rotate on a node wins (the one whose animation covers t).
   const nodeRotation: Record<string, number> = {};
   for (const node of spec.nodes) {
-    if (typeof node.rotation === 'number')
-      nodeRotation[node.id] = node.rotation;
+    // Explicit rotation wins; otherwise the circuit auto-layout may rotate a
+    // component that sits on a vertical edge of the loop.
+    const base = node.rotation ?? autoRotationById.get(node.id);
+    if (typeof base === 'number') nodeRotation[node.id] = base;
   }
   for (const a of active) {
     if (a.clip.kind === 'rotate') {
@@ -493,6 +792,20 @@ export function Stage({
       // eases in/out.
       const f = clip.spin ? a.progress : easeInOutCubic(a.progress);
       nodeRotation[clip.objectId] = lerp(clip.fromDeg, clip.toDeg, f);
+    }
+  }
+
+  // Contact state (0..1) per switch / push_button: the static `closed`, then
+  // eased by active toggle clips (a full swing from the opposite state). Like
+  // rotate/set_visible, toggle clips have keepEnd=true so a finished toggle
+  // stays in `active` and the reached state persists.
+  const nodeClosed: Record<string, number> = {};
+  for (const node of spec.nodes) if (node.closed) nodeClosed[node.id] = 1;
+  for (const a of active) {
+    if (a.clip.kind === 'toggle') {
+      const clip = a.clip as ToggleClip;
+      const f = easeInOutCubic(a.progress);
+      nodeClosed[clip.objectId] = clip.closed ? f : 1 - f;
     }
   }
 
@@ -689,18 +1002,18 @@ export function Stage({
                 progress={progress}
                 obstacles={allEffectiveNodes}
                 axis="vertical"
-                fromContour={contourByNode[from]}
-                toContour={contourByNode[to]}
+                fromContour={contourFor(from)}
+                toContour={contourFor(to)}
               />
             );
           })}
-        {/* Baseline connections */}
+        {/* Baseline connections (in a circuit: orthogonal wires with no head) */}
         {spec.connections?.map((link, i) => {
-          const f = effectiveGeometry[link.from];
-          const tg = effectiveGeometry[link.to];
+          const f = effectiveGeometry[refNode(link.from)];
+          const tg = effectiveGeometry[refNode(link.to)];
           if (!f || !tg) return null;
           const key = link.id ?? `${link.from}|${link.to}|${i}`;
-          const ports = portOffsets[key] ?? { start: 0, end: 0 };
+          const ports = portsFor(key, link.from, link.to);
           return (
             <ArrowLine
               key={key}
@@ -709,36 +1022,42 @@ export function Stage({
               startPortOffset={ports.start}
               endPortOffset={ports.end}
               style={link.style}
-              path={link.path}
-              arrow_head={link.arrow_head}
+              path={link.path ?? (isCircuit ? 'step' : undefined)}
+              arrow_head={link.arrow_head ?? (isCircuit ? 'none' : undefined)}
               text={link.text}
               progress={1}
-              color={(link.id && connectionColor[link.id]) || link.color}
+              color={
+                (link.id && connectionColor[link.id]) ||
+                link.color ||
+                netColorById.get(refNode(link.from))
+              }
               highlighted={
                 link.highlighted || (!!link.id && highlightedIds.has(link.id))
               }
               obstacles={allEffectiveNodes}
               axis={axisFor(link.from, link.to)}
-              fromContour={contourByNode[link.from]}
-              toContour={contourByNode[link.to]}
+              fromContour={contourFor(link.from)}
+              toContour={contourFor(link.to)}
+              route={circuitRoutes.get(key)}
             />
           );
         })}
         {active.map((a) => {
           if (a.clip.kind !== 'arrow') return null;
           const clip = a.clip as ArrowClip;
-          const f = effectiveGeometry[clip.fromId];
-          const tg = effectiveGeometry[clip.toId];
+          const f = effectiveGeometry[refNode(clip.fromId)];
+          const tg = effectiveGeometry[refNode(clip.toId)];
           if (!f || !tg) return null;
 
           let lineKey = clip.id;
           if (!portOffsets[lineKey]) {
             const matchingLine = lineConnections.find(
-              (c) => c.from === clip.fromId && c.to === clip.toId
+              (c) =>
+                c.from === refNode(clip.fromId) && c.to === refNode(clip.toId)
             );
             if (matchingLine) lineKey = matchingLine.key;
           }
-          const ports = portOffsets[lineKey] ?? { start: 0, end: 0 };
+          const ports = portsFor(lineKey, clip.fromId, clip.toId);
           return (
             <ArrowLine
               key={clip.id}
@@ -753,10 +1072,49 @@ export function Stage({
               progress={a.progress}
               obstacles={allEffectiveNodes}
               axis={axisFor(clip.fromId, clip.toId)}
-              fromContour={contourByNode[clip.fromId]}
-              toContour={contourByNode[clip.toId]}
+              fromContour={contourFor(clip.fromId)}
+              toContour={contourFor(clip.toId)}
             />
           );
+        })}
+        {/* Electric current: charge dots riding the wire route(s) */}
+        {active.map((a) => {
+          if (a.clip.kind !== 'flow') return null;
+          const clip = a.clip as FlowClip;
+          const pathPts = buildFlowPath(
+            clip.route,
+            effectiveGeometry,
+            contourFor,
+            axisFor,
+            allEffectiveNodes,
+            routeByNodePair
+          );
+          if (pathPts.length < 2) return null;
+          const lapMs = Math.max(1, clip.endMs - clip.animStartMs);
+          const raw = (t - clip.animStartMs) / lapMs;
+          const phase = clip.reverse ? -raw : raw;
+          const r = 3.4 * scale;
+          const dots: ReactNode[] = [];
+          for (let j = 0; j < clip.count; j++) {
+            let u = phase + j / clip.count;
+            u = clip.loop ? ((u % 1) + 1) % 1 : clamp01(u);
+            const p = pointAtArc(pathPts, u);
+            dots.push(
+              <circle
+                key={`${clip.id}|${j}`}
+                className="rdfa-flow-charge"
+                cx={p.x}
+                cy={p.y}
+                r={r}
+                style={
+                  clip.color
+                    ? ({ '--rdfa-flow': clip.color } as CSSProperties)
+                    : undefined
+                }
+              />
+            );
+          }
+          return <g key={clip.id}>{dots}</g>;
         })}
       </svg>
 
@@ -778,6 +1136,7 @@ export function Stage({
             highlight={highlight}
             opacity={nodeOpacity < 1 ? nodeOpacity : undefined}
             rotation={nodeRotation[o.id]}
+            closed={nodeClosed[o.id]}
             colorOverride={
               recoloredNodes.has(o.id) ? nodeColor[o.id] : undefined
             }
@@ -825,18 +1184,19 @@ export function Stage({
         {active.map((a) => {
           if (a.clip.kind !== 'move') return null;
           const clip = a.clip as MoveClip;
-          const f = effectiveGeometry[clip.fromId];
-          const tg = effectiveGeometry[clip.toId];
+          const f = effectiveGeometry[refNode(clip.fromId)];
+          const tg = effectiveGeometry[refNode(clip.toId)];
           const obj = dynamicById[clip.objectId];
           if (!f || !tg || !obj) return null;
           let moveKey = clip.id;
           if (!portOffsets[moveKey]) {
             const matchingLine = lineConnections.find(
-              (c) => c.from === clip.fromId && c.to === clip.toId
+              (c) =>
+                c.from === refNode(clip.fromId) && c.to === refNode(clip.toId)
             );
             if (matchingLine) moveKey = matchingLine.key;
           }
-          const movePorts = portOffsets[moveKey] ?? { start: 0, end: 0 };
+          const movePorts = portsFor(moveKey, clip.fromId, clip.toId);
           const conn = connection(
             f,
             tg,
@@ -845,8 +1205,8 @@ export function Stage({
             movePorts.end,
             undefined,
             axisFor(clip.fromId, clip.toId),
-            contourByNode[clip.fromId],
-            contourByNode[clip.toId]
+            contourFor(clip.fromId),
+            contourFor(clip.toId)
           );
           const pt = pathTip(conn, easeInOutCubic(a.progress));
           const opacity = clipOpacity(clip, t);

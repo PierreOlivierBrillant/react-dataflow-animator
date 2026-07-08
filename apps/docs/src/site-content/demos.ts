@@ -34,6 +34,17 @@ import { bstInsert } from './demos/bstInsert';
 import { dijkstra } from './demos/dijkstra';
 import { astar } from './demos/astar';
 import { mst } from './demos/mst';
+import { circuit } from './demos/circuit';
+import { circuitParallel } from './demos/circuitParallel';
+import { ohmsLaw } from './demos/ohmsLaw';
+import { logicGates } from './demos/logicGates';
+import { halfAdder } from './demos/halfAdder';
+import { halfAdderNand } from './demos/halfAdderNand';
+import { halfSubtractorNand } from './demos/halfSubtractorNand';
+import { fullAdderNand } from './demos/fullAdderNand';
+import { fullSubtractorNand } from './demos/fullSubtractorNand';
+import { srLatch } from './demos/srLatch';
+import { rcCircuit } from './demos/rcCircuit';
 
 /** Clé de catégorie (stable, indépendante de la langue). Les libellés affichés
  * sont traduits via le dictionnaire (`gallery.categories`). */
@@ -44,6 +55,7 @@ export type DemoCategory =
   | 'infrastructure'
   | 'distributed'
   | 'data-structures'
+  | 'electronics'
   | 'engine';
 
 /** Ordre d'affichage des catégories dans le filtre de la galerie. */
@@ -54,6 +66,7 @@ export const demoCategories: DemoCategory[] = [
   'infrastructure',
   'distributed',
   'data-structures',
+  'electronics',
   'engine',
 ];
 
@@ -767,6 +780,384 @@ export const demos: Demo[] = [
       en: ['push', 'notification', 'fcm', 'firebase', 'mobile'],
     },
     spec: pushNotifications,
+  },
+  {
+    id: 'circuit',
+    title: {
+      fr: 'Circuit électrique (courant)',
+      en: 'Electrical circuit (current)',
+    },
+    description: {
+      fr: 'Une boucle en série pile/interrupteur/résistance/LED sur `direction: circuit` : fils orthogonaux entre bornes nommées, fermeture de l’interrupteur (`toggle`) puis courant animé (`flow`) et LED qui s’allume.',
+      en: 'A battery/switch/resistor/LED series loop on `direction: circuit`: orthogonal wires between named terminals, closing the switch (`toggle`), then animated current (`flow`) and the LED lighting up.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'circuit',
+        'électricité',
+        'courant',
+        'résistance',
+        'led',
+        'interrupteur',
+        'bornes',
+      ],
+      en: [
+        'circuit',
+        'electricity',
+        'current',
+        'resistor',
+        'led',
+        'switch',
+        'terminals',
+      ],
+    },
+    spec: circuit,
+  },
+  {
+    id: 'circuitParallel',
+    title: {
+      fr: 'Circuit parallèle (deux LED)',
+      en: 'Parallel circuit (two LEDs)',
+    },
+    description: {
+      fr: 'Deux LED en parallèle sur `direction: circuit` : le courant (`flow`) se sépare à la jonction, alimente les deux branches à la fois, puis se recombine.',
+      en: 'Two LEDs in parallel on `direction: circuit`: the current (`flow`) splits at the junction, feeds both branches at once, then recombines.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: ['circuit', 'électricité', 'parallèle', 'courant', 'led', 'jonction'],
+      en: ['circuit', 'electricity', 'parallel', 'current', 'led', 'junction'],
+    },
+    spec: circuitParallel,
+  },
+  {
+    id: 'ohmsLaw',
+    title: {
+      fr: 'Loi d’Ohm (tension, courant, puissance)',
+      en: 'Ohm’s law (voltage, current, power)',
+    },
+    description: {
+      fr: 'Explique la différence entre tension (différence de potentiel, aux bornes), courant (ampérage, à travers), résistance et puissance (V·I) sur un circuit série avec ampèremètre et voltmètre.',
+      en: 'Explains the difference between voltage (potential difference, across), current (amperage, through), resistance and power (V·I) on a series circuit with an ammeter and a voltmeter.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'loi d’ohm',
+        'tension',
+        'courant',
+        'puissance',
+        'résistance',
+        'ampèremètre',
+        'voltmètre',
+        'volt',
+        'ampère',
+        'watt',
+      ],
+      en: [
+        'ohms law',
+        'voltage',
+        'current',
+        'power',
+        'resistance',
+        'ammeter',
+        'voltmeter',
+        'volt',
+        'ampere',
+        'watt',
+      ],
+    },
+    spec: ohmsLaw,
+  },
+  {
+    id: 'logicGates',
+    title: { fr: 'Portes logiques', en: 'Logic gates' },
+    description: {
+      fr: 'Les six portes logiques de base (AND, OR, XOR, NAND, NOR, NOT), alimentées par les mêmes entrées, avec la règle de chacune et sa sortie.',
+      en: 'The six core logic gates (AND, OR, XOR, NAND, NOR, NOT), fed the same inputs, with each one’s rule and output.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'logique',
+        'portes',
+        'numérique',
+        'and',
+        'or',
+        'xor',
+        'nand',
+        'nor',
+        'not',
+        'binaire',
+      ],
+      en: [
+        'logic',
+        'gates',
+        'digital',
+        'and',
+        'or',
+        'xor',
+        'nand',
+        'nor',
+        'not',
+        'binary',
+      ],
+    },
+    spec: logicGates,
+  },
+  {
+    id: 'halfAdder',
+    title: {
+      fr: 'Demi-additionneur (portes câblées)',
+      en: 'Half-adder (wired gates)',
+    },
+    description: {
+      fr: 'Diagramme numérique complet : deux bits A et B additionnés par un XOR (somme) et un AND (retenue), parcourant les quatre combinaisons.',
+      en: 'A complete digital diagram: two bits A and B added by a XOR (sum) and an AND (carry), stepping through all four combinations.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'additionneur',
+        'demi-additionneur',
+        'binaire',
+        'xor',
+        'and',
+        'portes',
+        'numérique',
+        'somme',
+        'retenue',
+      ],
+      en: [
+        'adder',
+        'half-adder',
+        'binary',
+        'xor',
+        'and',
+        'gates',
+        'digital',
+        'sum',
+        'carry',
+      ],
+    },
+    spec: halfAdder,
+  },
+  {
+    id: 'halfAdderNand',
+    title: {
+      fr: 'Demi-additionneur (portes NAND)',
+      en: 'Half-adder (NAND gates)',
+    },
+    description: {
+      fr: 'Le demi-additionneur reconstruit uniquement avec des portes NAND (« universelles ») : cinq NAND reproduisent le XOR (somme) et le AND (retenue).',
+      en: 'The half-adder rebuilt from NAND gates alone (the "universal" gate): five NANDs reproduce the XOR (sum) and AND (carry).',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'additionneur',
+        'demi-additionneur',
+        'nand',
+        'porte universelle',
+        'binaire',
+        'portes',
+        'numérique',
+        'somme',
+        'retenue',
+      ],
+      en: [
+        'adder',
+        'half-adder',
+        'nand',
+        'universal gate',
+        'binary',
+        'gates',
+        'digital',
+        'sum',
+        'carry',
+      ],
+    },
+    spec: halfAdderNand,
+  },
+  {
+    id: 'halfSubtractorNand',
+    title: {
+      fr: 'Demi-soustracteur (portes NAND)',
+      en: 'Half-subtractor (NAND gates)',
+    },
+    description: {
+      fr: 'Le demi-soustracteur (A − B) construit uniquement avec des NAND : cinq portes donnent la différence (XOR) et l’emprunt (A′·B), en miroir du demi-additionneur.',
+      en: 'The half-subtractor (A − B) from NAND gates alone: five gates give the difference (XOR) and the borrow (A′·B), mirroring the half-adder.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'soustracteur',
+        'demi-soustracteur',
+        'nand',
+        'porte universelle',
+        'binaire',
+        'portes',
+        'numérique',
+        'différence',
+        'emprunt',
+      ],
+      en: [
+        'subtractor',
+        'half-subtractor',
+        'nand',
+        'universal gate',
+        'binary',
+        'gates',
+        'digital',
+        'difference',
+        'borrow',
+      ],
+    },
+    spec: halfSubtractorNand,
+  },
+  {
+    id: 'fullAdderNand',
+    title: {
+      fr: 'Additionneur complet (portes NAND)',
+      en: 'Full adder (NAND gates)',
+    },
+    description: {
+      fr: 'L’additionneur complet (A + B + retenue) construit avec neuf portes NAND : deux XOR pour la somme, la retenue réutilisant leurs termes internes. La cellule de tout additionneur.',
+      en: 'The full adder (A + B + carry) from nine NAND gates: two XORs for the sum, the carry reusing their inner terms. The cell of every adder.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'additionneur',
+        'additionneur complet',
+        'nand',
+        'porte universelle',
+        'retenue',
+        'binaire',
+        'portes',
+        'numérique',
+        'somme',
+      ],
+      en: [
+        'adder',
+        'full adder',
+        'nand',
+        'universal gate',
+        'carry',
+        'binary',
+        'gates',
+        'digital',
+        'sum',
+      ],
+    },
+    spec: fullAdderNand,
+  },
+  {
+    id: 'fullSubtractorNand',
+    title: {
+      fr: 'Soustracteur complet (portes NAND)',
+      en: 'Full subtractor (NAND gates)',
+    },
+    description: {
+      fr: 'Le soustracteur complet (A − B − emprunt) construit avec onze portes NAND : un double XOR pour la différence, l’emprunt réutilisant les termes internes du XOR.',
+      en: 'The full subtractor (A − B − borrow) from eleven NAND gates: a double XOR for the difference, the borrow reusing the XOR’s inner terms.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'soustracteur',
+        'soustracteur complet',
+        'nand',
+        'porte universelle',
+        'emprunt',
+        'binaire',
+        'portes',
+        'numérique',
+        'différence',
+      ],
+      en: [
+        'subtractor',
+        'full subtractor',
+        'nand',
+        'universal gate',
+        'borrow',
+        'binary',
+        'gates',
+        'digital',
+        'difference',
+      ],
+    },
+    spec: fullSubtractorNand,
+  },
+  {
+    id: 'srLatch',
+    title: {
+      fr: 'Verrou SR (portes NAND)',
+      en: 'SR latch (NAND gates)',
+    },
+    description: {
+      fr: 'Deux portes NAND couplées en croix forment un verrou — un bit de mémoire. Entrées actives à l’état bas : mise à 1, remise à 0, et maintien (la mémoire).',
+      en: 'Two cross-coupled NAND gates form a latch — one bit of memory. Active-low inputs stepping through set, reset and hold (the memory).',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'verrou',
+        'bascule',
+        'mémoire',
+        'séquentiel',
+        'nand',
+        'sr',
+        'numérique',
+        'rebouclage',
+      ],
+      en: [
+        'latch',
+        'flip-flop',
+        'memory',
+        'sequential',
+        'nand',
+        'sr',
+        'digital',
+        'feedback',
+      ],
+    },
+    spec: srLatch,
+  },
+  {
+    id: 'rcCircuit',
+    title: {
+      fr: 'Circuit RC (charge)',
+      en: 'RC circuit (charging)',
+    },
+    description: {
+      fr: 'Une résistance charge un condensateur : le régime transitoire, la constante de temps τ = R·C, la montée exponentielle de la tension et l’arrêt du courant une fois chargé.',
+      en: 'A resistor charges a capacitor: the transient response, the time constant τ = R·C, the exponential voltage rise, and the current stopping once charged.',
+    },
+    category: 'electronics',
+    tags: {
+      fr: [
+        'rc',
+        'condensateur',
+        'charge',
+        'transitoire',
+        'constante de temps',
+        'exponentiel',
+        'résistance',
+      ],
+      en: [
+        'rc',
+        'capacitor',
+        'charging',
+        'transient',
+        'time constant',
+        'exponential',
+        'resistor',
+      ],
+    },
+    spec: rcCircuit,
   },
 ];
 

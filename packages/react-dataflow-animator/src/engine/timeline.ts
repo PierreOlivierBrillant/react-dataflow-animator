@@ -21,7 +21,9 @@ export type ClipKind =
   | 'set_color'
   | 'set_icon'
   | 'rotate'
-  | 'reflow';
+  | 'reflow'
+  | 'flow'
+  | 'toggle';
 
 interface ClipBase {
   /** Unique clip identifier (= action id if provided, otherwise generated). */
@@ -135,6 +137,28 @@ export interface RotateClip extends ClipBase {
   spin?: boolean;
 }
 
+export interface FlowClip extends ClipBase {
+  kind: 'flow';
+  /** Ordered wire path (node / `node:pin` refs) the charges ride. */
+  route: string[];
+  /** Travel reversed (−→+ electron flow instead of +→− conventional). */
+  reverse: boolean;
+  /** Charges wrap around the route continuously (vs a single pass). */
+  loop: boolean;
+  /** Number of charge dots spread along the route. */
+  count: number;
+  /** Charge color (predefined name or hex); undefined = theme accent. */
+  color?: string;
+}
+
+export interface ToggleClip extends ClipBase {
+  kind: 'toggle';
+  /** ID of the switch / push_button being actuated. */
+  objectId: string;
+  /** Target contact state: true = closed, false = open. */
+  closed: boolean;
+}
+
 export interface ReflowClip extends ClipBase {
   kind: 'reflow';
   /** Node placements (ratios) BEFORE this rotation — interpolation start. */
@@ -156,7 +180,9 @@ export type Clip =
   | SetColorClip
   | SetIconClip
   | RotateClip
-  | ReflowClip;
+  | ReflowClip
+  | FlowClip
+  | ToggleClip;
 
 export interface Step {
   index: number;

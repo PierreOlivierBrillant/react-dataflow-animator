@@ -7,8 +7,10 @@ import {
   connection,
   pathTip,
   visiblePath,
+  type Connection,
   type NodeContour,
   type NodeGeom,
+  type Point,
 } from '../../engine/geometry';
 import type { ConnectionAxis } from '../../engine/layout';
 import type { LineStyle, PathShape } from '../../types';
@@ -47,9 +49,28 @@ export interface ArrowLineProps {
    *  anchors radially on the outline instead of on a cardinal face. */
   fromContour?: NodeContour;
   toContour?: NodeContour;
+  /** Precomputed orthogonal polyline (circuit schematics): a global router lays
+   *  out all wires together so they avoid bodies and don't overlap. When given,
+   *  it fully replaces the per-wire `connection()` routing. */
+  route?: Point[];
 }
 
 const HEAD = 9;
+
+/** Builds a {@link Connection} from a ready-made polyline (router output), so
+ *  the arrowhead / progress animation traverse it exactly like a routed path. */
+function connectionFromRoute(route: Point[]): Connection {
+  const start = route[0];
+  const end = route[route.length - 1];
+  const prev = route[route.length - 2] ?? start;
+  const angleDeg = (Math.atan2(end.y - prev.y, end.x - prev.x) * 180) / Math.PI;
+  return {
+    start,
+    end,
+    waypoints: route.length > 2 ? route.slice(1, -1) : undefined,
+    angleDeg,
+  };
+}
 
 export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
   function ArrowLine({
@@ -68,24 +89,29 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     axis,
     fromContour,
     toContour,
+    route,
   }: ArrowLineProps) {
     const headStyle = arrow_head ?? 'forward';
     const renderForward = headStyle === 'forward' || headStyle === 'both';
     const renderBackward = headStyle === 'backward' || headStyle === 'both';
 
-    // Animation is managed by stroke-dasharray/stroke-dashoffset on a
-    // Intersection and geometric offsets (obstacles taken into account)
-    const conn = connection(
-      from,
-      to,
-      obstacles,
-      startPortOffset,
-      endPortOffset,
-      path,
-      axis,
-      fromContour,
-      toContour
-    );
+    // A precomputed orthogonal route (circuit schematics) fully replaces the
+    // per-wire routing; otherwise `connection()` anchors + shapes the path,
+    // taking obstacles (labels) into account.
+    const conn =
+      route && route.length >= 2
+        ? connectionFromRoute(route)
+        : connection(
+            from,
+            to,
+            obstacles,
+            startPortOffset,
+            endPortOffset,
+            path,
+            axis,
+            fromContour,
+            toContour
+          );
 
     // Position and angle of the tip at parameter `progress`.
     const tip = pathTip(conn, progress);

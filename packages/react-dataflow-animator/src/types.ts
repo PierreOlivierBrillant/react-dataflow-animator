@@ -14,17 +14,24 @@ export type Direction =
   | 'bottom-to-top'
   | 'circular'
   | 'graph'
-  | 'tree';
+  | 'tree'
+  // Free 2D grid schematic for electrical / logic circuits: orthogonal `wire`
+  // connections by default, node placement by `x`/`y`, terminal-aware routing.
+  | 'circuit';
 
 /**
  * Node types (appearance). Decor arrows live in `connections`.
  *
- * Three families:
+ * Four families:
  * - **Pictograms** (`desktop` … `cloud`): a fixed SVG icon.
  * - **Text nodes** (`simple_node`, `complex_node`): a text box
  *   (body only, or header + body like an HTTP packet).
  * - **Geometric shapes** (`square` … `star`): a drawn shape that can
  *   contain short centered text (`body` field).
+ * - **Electrical components** (`resistor` … `transformer`): schematic symbols
+ *   with **named terminals** (see {@link Node.pins} — actually resolved from the
+ *   type). A `Connection` targets a specific terminal with `"node:pin"` (e.g.
+ *   `"R1:a"`, `"Q1:base"`). Best drawn in `direction: 'circuit'`.
  */
 export type NodeType =
   | 'desktop'
@@ -49,7 +56,44 @@ export type NodeType =
   | 'parallelogram'
   | 'height_rectangle'
   | 'width_rectangle'
-  | 'star';
+  | 'star'
+  // ─── Electrical components (schematic symbols with named terminals) ──────────
+  | 'resistor'
+  | 'potentiometer'
+  | 'capacitor'
+  | 'polarized_capacitor'
+  | 'inductor'
+  | 'fuse'
+  | 'battery'
+  | 'dc_source'
+  | 'ac_source'
+  | 'current_source'
+  | 'diode'
+  | 'led'
+  | 'transistor_npn'
+  | 'transistor_pnp'
+  | 'opamp'
+  | 'switch'
+  | 'push_button'
+  | 'lamp'
+  | 'motor'
+  | 'buzzer'
+  | 'ground'
+  | 'junction'
+  | 'signal'
+  | 'ammeter'
+  | 'voltmeter'
+  | 'antenna'
+  | 'transformer'
+  // ─── Digital logic gates (inputs `a`/`b` on the left, output `y` on the right) ─
+  | 'and_gate'
+  | 'or_gate'
+  | 'not_gate'
+  | 'nand_gate'
+  | 'nor_gate'
+  | 'xor_gate'
+  | 'xnor_gate'
+  | 'buffer_gate';
 
 export type PacketKind =
   | 'http_packet'
@@ -286,9 +330,36 @@ export interface Node {
    * Clockwise rotation of the node visual, in degrees. The label below the
    * node stays upright and arrow anchoring is unchanged (the layout box is not
    * rotated). Can be animated with the `rotate` action. Default: 0.
+   *
+   * **Exception — electrical components:** a component's **named terminals**
+   * ({@link NodeType}: `resistor`, `transistor_npn`…) DO rotate with the
+   * symbol, so a vertical resistor (`rotation: 90`) has its `a`/`b` terminals at
+   * the top/bottom. This is the intended behavior for circuits.
    * @example 45
    */
   rotation?: number;
+  /**
+   * (Electrical `switch` / `push_button`) Initial state of the contact: `true` =
+   * closed (conducting), `false` = open (the default). Animate it with the
+   * `toggle` action — the lever swings and the state persists. Ignored by every
+   * other node type.
+   * @example true
+   */
+  closed?: boolean;
+  /**
+   * Component value shown in the label (mainly for electrical components): a
+   * resistance, capacitance, voltage… Combined with {@link Node.unit} to form
+   * `"<value> <unit>"`. If {@link Node.text} is also set, the value is appended
+   * to it (`"R1 · 10 kΩ"`). Purely a label convenience.
+   * @example "10"
+   */
+  value?: string | number;
+  /**
+   * Unit appended after {@link Node.value} in the label (`kΩ`, `µF`, `V`, `mA`…).
+   * Ignored when `value` is absent.
+   * @example "kΩ"
+   */
+  unit?: string;
 }
 
 /** Rectangular region enclosing a group of nodes and/or other zones. */
@@ -532,6 +603,8 @@ export type ActionType =
   | 'set_icon'
   | 'rotate'
   | 'rotate_subtree'
+  | 'flow'
+  | 'toggle'
   | 'wait';
 
 /** Common fields to all actions (sequencing and lifecycle). */
@@ -791,6 +864,65 @@ interface RotateSubtreeAction extends ActionBase {
 }
 
 /**
+ * Animates an **electric current** circulating along a chain of wires — the
+ * signature animation of a schematic. A train of evenly-spaced charges rides the
+ * `route` (an ordered list of `node` / `node:pin` references forming a path, a
+ * branch or a closed loop), advancing one full lap per `duration` ms and, by
+ * default, looping continuously. Deterministic in `t` (the phase is a pure
+ * function of time), so it scrubs both ways like everything else.
+ *
+ * Each consecutive pair of the `route` must be joined by an actual wire
+ * (`Connection`) so the charges follow the real path. Use `keep_until_end` (or
+ * `keep_until_next`) to keep the current flowing across the whole step.
+ */
+interface FlowAction extends ActionBase {
+  type: 'flow';
+  /**
+   * Ordered wire path the current follows: node ids or `"node:pin"` terminal
+   * references. A closed loop repeats the first id at the end.
+   * @example ["battery:+", "R1:a", "R1:b", "led:a", "led:b", "battery:-"]
+   */
+  route: string[];
+  /**
+   * Reverses the travel direction (e.g. electron flow − → + instead of
+   * conventional current + → −). Default: false.
+   */
+  reverse?: boolean;
+  /**
+   * Continuous circulation: the charges wrap around the `route` forever (until
+   * the clip ends). Set to `false` for a single pass. Default: true.
+   */
+  loop?: boolean;
+  /**
+   * Number of charge dots spread along the route. Default: derived from the
+   * route length (roughly one per segment).
+   * @minimum 1
+   * @multipleOf 1
+   */
+  count?: number;
+  /**
+   * Charge color (predefined CSS name or hex). Default: the theme's accent.
+   * @example "#f59e0b"
+   */
+  color?: string;
+}
+
+/**
+ * Flips an electrical `switch` / `push_button` between open and closed, swinging
+ * the lever over `duration` ms. Like {@link SetVisibleAction} the reached state
+ * persists until the end of the timeline (or the next contrary `toggle`), and it
+ * is scrubbable in both directions. Pair it with a `flow` that starts once the
+ * contact is closed to show the circuit energizing.
+ */
+interface ToggleAction extends ActionBase {
+  type: 'toggle';
+  /** ID of the `switch` / `push_button` node to actuate. */
+  object: string;
+  /** Target state: `true` = close the contact, `false` = open it. */
+  closed: boolean;
+}
+
+/**
  * Dead time: nothing happens for `duration` ms (default: 1000). Does not produce
  * any clip; simply inserts a pause between two steps (elements
  * maintained via `keep_until_next` remain displayed during the wait).
@@ -813,6 +945,8 @@ export type Action =
   | SetIconAction
   | RotateAction
   | RotateSubtreeAction
+  | FlowAction
+  | ToggleAction
   | WaitAction;
 
 export interface DataFlowSpec {
@@ -823,7 +957,10 @@ export interface DataFlowSpec {
    * to lay out a binary tree (in-order rank → horizontal, depth → vertical) and
    * enable the {@link RotateSubtreeAction}. Use `'graph'` to place nodes yourself
    * via their `x` / `y` (free 2D layout) — the escape hatch for an arbitrary
-   * graph (Dijkstra, A\*, minimum spanning tree…).
+   * graph (Dijkstra, A\*, minimum spanning tree…). Use `'circuit'` for an
+   * electrical schematic: nodes placed by `x` / `y` on a grid, `connections`
+   * drawn as orthogonal **wires** (no arrow head) by default, and edges anchored
+   * on the components' **named terminals** (`"node:pin"`).
    */
   direction?: Direction;
   /**

@@ -353,6 +353,43 @@ Pour mettre en avant une connexion dès le départ (sans action de timeline),
 utilisez plutôt son champ statique
 [`highlighted`](../concepts/decor.mdx#highlighted--mise-en-avant-permanente).
 
+## `flow`
+
+Anime un **courant électrique** qui circule le long d'une chaîne de fils — c'est
+l'animation phare d'un [schéma électrique](../concepts/layout.mdx#mode-circuit-schémas-électriques).
+Un train de charges régulièrement espacées parcourt le `route` (une liste
+ordonnée de références `node` / `node:pin` formant un parcours ou une boucle
+fermée), avançant d'un tour complet par `duration` ms et, par défaut, en boucle
+continue. Chaque paire consécutive du parcours doit être reliée par un vrai fil
+(`connection`), pour que les charges suivent exactement le tracé.
+
+```ts
+{
+  type: 'flow',
+  route: ['battery:+', 'R1:a', 'R1:b', 'led:a', 'led:b', 'battery:-'],
+  color: '#f59e0b', // défaut : l'accent du thème
+  keep_until_end: true,
+}
+```
+
+`reverse: true` envoie les charges dans l'autre sens (flux électronique − → + au
+lieu du courant conventionnel + → −) ; `loop: false` joue un seul passage ;
+`count` fixe le nombre de charges (défaut : environ une par segment). Étant une
+fonction pure de `t`, le courant se scrube dans les deux sens comme le reste.
+Voir la démo **Circuit électrique** de la galerie.
+
+## `toggle`
+
+Bascule un `switch` / `push_button` électrique entre ouvert et fermé, en faisant
+pivoter le levier sur `duration` ms. Comme [`set_visible`](#set_visible), l'état
+atteint **persiste** jusqu'à la fin de la chronologie (ou au prochain `toggle`
+contraire) et se scrube dans les deux sens. Associez-le à un `flow` qui démarre
+une fois le contact fermé pour montrer la mise sous tension du circuit.
+
+```ts
+{ type: 'toggle', object: 'sw', closed: true }
+```
+
 ## `wait`
 
 Insère un temps mort : rien ne se passe pendant `duration` ms (défaut :

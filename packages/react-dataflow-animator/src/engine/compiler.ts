@@ -10,6 +10,7 @@ import type {
   ArrowClip,
   Clip,
   CommentClip,
+  FlowClip,
   HighlightClip,
   LoadingClip,
   MoveClip,
@@ -21,6 +22,7 @@ import type {
   SetVisibleClip,
   Step,
   Timeline,
+  ToggleClip,
 } from './timeline';
 import { treeEdges, treeLayout, type LayoutMap } from './layout';
 
@@ -59,6 +61,9 @@ const DEFAULT_DURATION: Record<ActionType, number> = {
   set_icon: 300,
   rotate: 600,
   rotate_subtree: 700,
+  // One full lap of the current; slow enough to read a charge crossing a wire.
+  flow: 3000,
+  toggle: 400,
   wait: 1000,
 };
 
@@ -75,6 +80,10 @@ const DEFAULT_KEEP_NEXT: Partial<Record<ActionType, boolean>> = {
   set_icon: false,
   rotate: false,
   rotate_subtree: false,
+  // A current keeps circulating for the whole step (like a decor arrow); a
+  // toggle latches its reached state (handled via keepEnd in the clip).
+  flow: true,
+  toggle: false,
 };
 
 /** Normalizes line style (accepts historical alias `full`). */
@@ -596,6 +605,53 @@ function compileAction(
         edges: treeEdges(ctx.tree.state),
         // keepEnd forced true: the reached layout/edges persist until the end so
         // Stage can resolve the tree's placement at any later instant.
+        keepEnd: true,
+      };
+      ctx.pending.push({
+        clip,
+        keepUntil: undefined,
+        keepNext: false,
+        keepEnd: true,
+        stepIndex,
+      });
+      if (action.id) ctx.timingById.set(action.id, { startMs, endMs });
+      break;
+    }
+    case 'flow': {
+      const route = action.route ?? [];
+      if (route.length < 2) {
+        ctx.warnings.push(
+          `flow "${id}": route must list at least two node/pin references.`
+        );
+        break;
+      }
+      const clip: FlowClip = {
+        ...base,
+        kind: 'flow',
+        route,
+        reverse: action.reverse ?? false,
+        loop: action.loop ?? true,
+        // ~one charge per segment, at least two, so a lap always reads.
+        count: Math.max(2, action.count ?? route.length - 1),
+        color: action.color,
+      };
+      push(clip);
+      break;
+    }
+    case 'toggle': {
+      if (!action.object || typeof action.closed !== 'boolean') {
+        ctx.warnings.push(
+          `toggle "${id}": object and closed (boolean) required.`
+        );
+        break;
+      }
+      const clip: ToggleClip = {
+        ...base,
+        kind: 'toggle',
+        objectId: action.object,
+        closed: action.closed,
+        // keepEnd forced true: like set_visible/set_color, the reached contact
+        // state persists to the end so Stage can read it at any later instant.
         keepEnd: true,
       };
       ctx.pending.push({

@@ -133,6 +133,49 @@ entire paragraph would be truncated. For long text, prefer a
 
 :::
 
+## Electrical components
+
+A family of **schematic symbols** — `resistor`, `capacitor`, `inductor`,
+`battery`, `dc_source` / `ac_source`, `diode`, `led`, `transistor_npn`, `opamp`,
+`switch`, `push_button`, `lamp`, `motor`, `ground`, `junction`, `ammeter`,
+`voltmeter`, `fuse`, `potentiometer`, `transformer`… — for drawing electrical
+circuits. Unlike the other types, they expose **named terminals** you wire to by
+name (`"R1:a"`, `"battery:+"`, `"Q1:collector"`), and they read best in
+[`direction: 'circuit'`](./layout.mdx#circuit-mode-electrical-schematics), where
+`connections` become orthogonal wires. Two extra fields go with them:
+
+- `value` + `unit` build the label (`value: 220, unit: 'Ω'` → `"220 Ω"`;
+  combined with `text` if both are set, e.g. `"R1 · 220 Ω"`);
+- `closed` (on a `switch` / `push_button`) sets the initial contact state,
+  animated at runtime by the [`toggle`](../reference/actions.mdx#toggle) action.
+
+The family also includes **digital logic gates** — `and_gate`, `or_gate`,
+`not_gate`, `nand_gate`, `nor_gate`, `xor_gate`, `xnor_gate`, `buffer_gate` —
+with two inputs `a` / `b` on the left and an output `y` on the right (a single
+input for `not_gate` / `buffer_gate`), and a `signal` node — a **labelled I/O
+pad** that shows a bit in its centre (set via [`set_icon`](../reference/actions.mdx#set_icon),
+lit with [`set_color`](../reference/actions.mdx#set_color)) — for the inputs and
+outputs of a logic diagram.
+
+In a logic diagram, each wire driven by a `signal` input or a gate output is
+automatically tinted by its **net** (its driver), so wires that cross or run in
+parallel read as distinct and are visibly not joined. A wire's explicit `color`
+(or a [`set_color`](../reference/actions.mdx#set_color) on the connection) always
+overrides the automatic tint; wires driven by a non-logic source (a battery, a
+junction) stay neutral.
+
+Several gallery demos build on all this: **Electrical circuit** (a battery,
+switch, resistor and LED loop with animated current), **Parallel circuit** (two
+resistor + LED branches), **Ohm's law** (voltage vs current vs resistance vs
+power), **RC circuit** (a capacitor charging — the transient and its time
+constant τ = R·C), **Logic gates** (all eight gates stepping through the full
+truth table), **Half-adder**, and a family built entirely from the
+**universal NAND gate** —
+**Half-adder**, **Half-subtractor**, **Full adder**, **Full subtractor** and an
+**SR latch** (two cross-coupled NANDs — one bit of memory). In the logic demos
+each wire is coloured by the **bit it carries** (green = 1) via `set_color`, so
+students can trace the signal propagating through the gates.
+
 ## Colors: `background_color` and `border_color`
 
 Two fields adjust a node's colors:

@@ -343,6 +343,43 @@ To emphasize a connection from the start (no timeline action), use its static
 [`highlighted`](../concepts/decor.mdx#highlighted--permanent-emphasis) field
 instead.
 
+## `flow`
+
+Animates an **electric current** circulating along a chain of wires — the
+signature animation of an [electrical schematic](../concepts/layout.mdx#circuit-mode-electrical-schematics).
+A train of evenly-spaced charge dots rides the `route` (an ordered list of
+`node` / `node:pin` references forming a path or a closed loop), advancing one
+full lap per `duration` ms and, by default, looping continuously. Each
+consecutive pair of the route must be joined by an actual wire (`connection`), so
+the charges follow the drawn path exactly.
+
+```ts
+{
+  type: 'flow',
+  route: ['battery:+', 'R1:a', 'R1:b', 'led:a', 'led:b', 'battery:-'],
+  color: '#f59e0b', // default: the theme accent
+  keep_until_end: true,
+}
+```
+
+`reverse: true` sends the charges the other way (electron flow − → + instead of
+conventional current + → −); `loop: false` plays a single pass; `count` sets how
+many dots ride the route (default: about one per segment). Being a pure function
+of `t`, the current scrubs both ways like everything else. See the **Electrical
+circuit** demo in the gallery.
+
+## `toggle`
+
+Flips an electrical `switch` / `push_button` between open and closed, swinging
+the lever over `duration` ms. Like [`set_visible`](#set_visible), the reached
+state **persists** until the end of the timeline (or the next contrary `toggle`)
+and scrubs both ways. Pair it with a `flow` that starts once the contact is
+closed to show the circuit energizing.
+
+```ts
+{ type: 'toggle', object: 'sw', closed: true }
+```
+
 ## `wait`
 
 Inserts a dead time: nothing happens for `duration` ms (default:

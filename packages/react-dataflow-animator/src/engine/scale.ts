@@ -13,6 +13,8 @@ const DENSITY: Record<Density, { scale: number; maxw: number }> = {
   spacious: { scale: 1.18, maxw: 0.92 },
 };
 
+const EMPTY_IGNORE: ReadonlySet<string> = new Set();
+
 export interface ScaleResult {
   scale: number;
   maxW: number;
@@ -26,13 +28,23 @@ export function computeScale(
   layout: Record<string, { cx: number; cy: number }>,
   width: number,
   height: number,
-  density: Density
+  density: Density,
+  /** Node ids that claim (almost) no room — junction dots. They are excluded
+   *  from the spacing calc, so a corner junction next to a component does not
+   *  shrink the whole schematic. */
+  ignore: ReadonlySet<string> = EMPTY_IGNORE,
+  /** Tightens the min pair spacing (circuit schematics): schematic symbols read
+   *  well packed close, and the orthogonal router keeps the wires between them
+   *  clean, so a value < 1 lets the SAME diagram render its components bigger. */
+  spacingFactor = 1
 ): ScaleResult {
-  const ids = Object.keys(layout);
+  const ids = Object.keys(layout).filter((id) => !ignore.has(id));
   if (ids.length === 0 || width === 0 || height === 0) {
     return { scale: 1, maxW: 240, contentMaxW: 320, contentMaxH: 240 };
   }
 
+  const pairW = PAIR_W * spacingFactor;
+  const pairH = PAIR_H * spacingFactor;
   let maxAllowedScale = Infinity;
 
   for (let i = 0; i < ids.length; i++) {
@@ -46,7 +58,7 @@ export function computeScale(
       const b = layout[ids[j]];
       const dx = Math.abs(a.cx - b.cx) * width;
       const dy = Math.abs(a.cy - b.cy) * height;
-      const pairScale = Math.max(dx / PAIR_W, dy / PAIR_H);
+      const pairScale = Math.max(dx / pairW, dy / pairH);
       maxAllowedScale = Math.min(maxAllowedScale, pairScale);
     }
   }

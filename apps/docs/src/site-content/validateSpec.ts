@@ -138,6 +138,14 @@ function formatSingle(e: ErrorObject): SpecError {
 
 type AnyRecord = Record<string, unknown>;
 
+/** Endpoint refs may target a named terminal with `"node:pin"` (circuit mode).
+ *  Cross-reference checks only validate the NODE part, so drop any `:pin`. */
+function refNodeId(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  const i = value.indexOf(':');
+  return i < 0 ? value : value.slice(0, i);
+}
+
 function checkRefs(input: unknown): SpecError[] {
   if (!input || typeof input !== 'object') return [];
   const spec = input as AnyRecord;
@@ -161,8 +169,13 @@ function checkRefs(input: unknown): SpecError[] {
   if (Array.isArray(spec.connections)) {
     for (let i = 0; i < spec.connections.length; i++) {
       const conn = spec.connections[i] as AnyRecord;
-      checkRef(`/connections/${i}/from`, conn.from, staticIds, errors);
-      checkRef(`/connections/${i}/to`, conn.to, staticIds, errors);
+      checkRef(
+        `/connections/${i}/from`,
+        refNodeId(conn.from),
+        staticIds,
+        errors
+      );
+      checkRef(`/connections/${i}/to`, refNodeId(conn.to), staticIds, errors);
     }
   }
 
@@ -202,18 +215,31 @@ function walkActions(
     switch (a.type) {
       case 'move':
         checkRef(`${p}/object`, a.object, dynamicIds, errors);
-        checkRef(`${p}/from`, a.from, staticIds, errors);
-        checkRef(`${p}/to`, a.to, staticIds, errors);
+        checkRef(`${p}/from`, refNodeId(a.from), staticIds, errors);
+        checkRef(`${p}/to`, refNodeId(a.to), staticIds, errors);
         break;
       case 'arrow':
-        checkRef(`${p}/from`, a.from, staticIds, errors);
-        checkRef(`${p}/to`, a.to, staticIds, errors);
+        checkRef(`${p}/from`, refNodeId(a.from), staticIds, errors);
+        checkRef(`${p}/to`, refNodeId(a.to), staticIds, errors);
         break;
       case 'loading':
       case 'set_content':
       case 'comment':
       case 'rotate':
+      case 'toggle':
         checkRef(`${p}/object`, a.object, staticIds, errors);
+        break;
+      case 'flow':
+        if (Array.isArray(a.route)) {
+          for (let j = 0; j < a.route.length; j++) {
+            checkRef(
+              `${p}/route/${j}`,
+              refNodeId(a.route[j]),
+              staticIds,
+              errors
+            );
+          }
+        }
         break;
       case 'highlight': {
         // object peut être un static_object OU une connection (par ID)

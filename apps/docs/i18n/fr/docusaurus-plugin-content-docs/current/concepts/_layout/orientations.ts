@@ -159,6 +159,51 @@ export const graphExample: DataFlowSpec = {
   timeline: [],
 };
 
+/**
+ * Mode circuit : un schéma électrique. Les nœuds sont des composants placés par
+ * `x`/`y` ; les `connections` sont tracées comme des FILS orthogonaux (sans tête)
+ * entre des bornes NOMMÉES (`"batt:+"`, `"R1:a"`…). Un `flow` fait circuler des
+ * charges dans la boucle (courant conventionnel, + → −). Les valeurs des
+ * composants sont invariantes de langue.
+ */
+export const circuitExample: DataFlowSpec = {
+  direction: 'circuit',
+  // AUCUNE coordonnée : les quatre composants forment une boucle, donc le moteur
+  // les place automatiquement sur un rectangle (composants verticaux auto-tournés).
+  nodes: [
+    { id: 'batt', type: 'battery', value: 9, unit: 'V' },
+    { id: 'sw', type: 'switch', closed: true },
+    { id: 'R1', type: 'resistor', value: 220, unit: 'Ω' },
+    { id: 'led', type: 'led', text: 'LED' },
+  ],
+  packets: [],
+  connections: [
+    { from: 'batt:+', to: 'sw:a' },
+    { from: 'sw:b', to: 'R1:a' },
+    { from: 'R1:b', to: 'led:a' },
+    { from: 'led:b', to: 'batt:-' },
+  ],
+  timeline: [
+    {
+      type: 'flow',
+      route: [
+        'batt:+',
+        'sw:a',
+        'sw:b',
+        'R1:a',
+        'R1:b',
+        'led:a',
+        'led:b',
+        'batt:-',
+      ],
+      color: '#f59e0b',
+      duration: 6000,
+      count: 8,
+      keep_until_end: true,
+    },
+  ],
+};
+
 /** Exemple concret de la section « Mode circulaire » : un hub central. */
 export const circularHubExample: DataFlowSpec = {
   direction: 'circular',

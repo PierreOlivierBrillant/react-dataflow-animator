@@ -34,6 +34,17 @@ import { bstInsert } from '../../../apps/docs/src/site-content/demos/bstInsert';
 import { dijkstra } from '../../../apps/docs/src/site-content/demos/dijkstra';
 import { astar } from '../../../apps/docs/src/site-content/demos/astar';
 import { mst } from '../../../apps/docs/src/site-content/demos/mst';
+import { circuit } from '../../../apps/docs/src/site-content/demos/circuit';
+import { circuitParallel } from '../../../apps/docs/src/site-content/demos/circuitParallel';
+import { ohmsLaw } from '../../../apps/docs/src/site-content/demos/ohmsLaw';
+import { logicGates } from '../../../apps/docs/src/site-content/demos/logicGates';
+import { halfAdder } from '../../../apps/docs/src/site-content/demos/halfAdder';
+import { halfAdderNand } from '../../../apps/docs/src/site-content/demos/halfAdderNand';
+import { halfSubtractorNand } from '../../../apps/docs/src/site-content/demos/halfSubtractorNand';
+import { fullAdderNand } from '../../../apps/docs/src/site-content/demos/fullAdderNand';
+import { fullSubtractorNand } from '../../../apps/docs/src/site-content/demos/fullSubtractorNand';
+import { srLatch } from '../../../apps/docs/src/site-content/demos/srLatch';
+import { rcCircuit } from '../../../apps/docs/src/site-content/demos/rcCircuit';
 
 function collectIds(actions: Action[]): Set<string> {
   const ids = new Set<string>();
@@ -103,6 +114,17 @@ const demoBuilders: Array<[string, SpecOrBuilder]> = [
   ['dijkstra', dijkstra],
   ['astar', astar],
   ['mst', mst],
+  ['circuit', circuit],
+  ['circuitParallel', circuitParallel],
+  ['ohmsLaw', ohmsLaw],
+  ['logicGates', logicGates],
+  ['halfAdder', halfAdder],
+  ['halfAdderNand', halfAdderNand],
+  ['halfSubtractorNand', halfSubtractorNand],
+  ['fullAdderNand', fullAdderNand],
+  ['fullSubtractorNand', fullSubtractorNand],
+  ['srLatch', srLatch],
+  ['rcCircuit', rcCircuit],
 ];
 
 const LOCALES = ['en', 'fr'] as const;
