@@ -446,7 +446,9 @@ diagram in three ways, and the engine adapts on all three:
   `base` / `collector` / `emitter`. A `connection` targets a terminal with the
   `"node:pin"` syntax (`"R1:a"`, `"battery:+"`). Terminals rotate with the
   component, so a vertical resistor (`rotation: 90`) has its terminals top and
-  bottom.
+  bottom. Such a top/bottom-wired component draws its **label to a side** (left or
+  right, toward the outside) instead of below, so the text never sits on the
+  outgoing vertical wire.
 - **Wires, not arrows.** In `circuit`, `connections` default to an **orthogonal
   wire** (`path: 'step'`) with **no arrow head** — you don't repeat those on
   every link.

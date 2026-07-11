@@ -31,7 +31,10 @@ export function computePlacements(
   geometry: GeometryMap,
   width: number,
   height: number,
-  pad: number = PLACEMENT_PAD
+  pad: number = PLACEMENT_PAD,
+  /** Nodes whose label is drawn to a SIDE (circuit top/bottom-wired component)
+   *  rather than below — their reserved room is horizontal, not vertical. */
+  labelSides?: Map<string, 'left' | 'right'>
 ): Record<string, { cx: number; cy: number }> {
   const map: Record<string, { cx: number; cy: number }> = {};
   for (const id of Object.keys(layout)) {
@@ -41,8 +44,24 @@ export function computePlacements(
       map[id] = base;
       continue;
     }
-    const hwr = (g.width / 2 + pad) / width;
+    const halfW = g.width / 2;
     const halfH = g.height / 2;
+    const side = labelSides?.get(id);
+    if (side && g.labelW) {
+      // Side label: it extends horizontally past one face and is vertically
+      // centred on the visual, so it reserves room on that HORIZONTAL side (never
+      // below). Otherwise a node hugging the left/right edge would clip its text.
+      const reach = LABEL_GAP + g.labelW;
+      const leftR = (halfW + (side === 'left' ? reach : 0) + pad) / width;
+      const rightR = (halfW + (side === 'right' ? reach : 0) + pad) / width;
+      const vR = (Math.max(halfH, (g.labelH ?? 0) / 2) + pad) / height;
+      map[id] = {
+        cx: leftR + rightR < 1 ? clamp(base.cx, leftR, 1 - rightR) : base.cx,
+        cy: 2 * vR < 1 ? clamp(base.cy, vR, 1 - vR) : base.cy,
+      };
+      continue;
+    }
+    const hwr = (halfW + pad) / width;
     // The label lives UNDER the visual: its height expands the bottom bound, otherwise a
     // node near the bottom edge would have its text clipped by the Stage.
     const labelExtra = g.labelH ? LABEL_GAP + g.labelH : 0;

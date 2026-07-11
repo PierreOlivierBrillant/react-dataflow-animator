@@ -33,7 +33,7 @@ import type { Point } from './geometry';
  */
 
 /** A rectangular component body, CENTRE-anchored (like `NodeGeom`). The optional
- *  label (measured text under the node) is treated as an obstacle too — a wire
+ *  label (measured text next to the node) is treated as an obstacle too — a wire
  *  must never be hidden behind a label. */
 export interface RouterObstacle {
   id: string;
@@ -43,6 +43,10 @@ export interface RouterObstacle {
   h: number;
   labelW?: number;
   labelH?: number;
+  /** Where the label sits relative to the body. Default `'bottom'`; a component
+   *  wired top/bottom (vertical) moves its label to a side so it does not sit on
+   *  the outgoing vertical wire. Kept in sync with the rendered CSS side class. */
+  labelSide?: 'bottom' | 'left' | 'right';
 }
 
 /** One end of a wire: the exact terminal point and its outward unit normal.
@@ -65,10 +69,19 @@ export interface RouterWire {
 }
 
 export interface RouteOptions {
-  /** Keep-out margin around each body (px). */
+  /** Keep-out margin around each body, in DESIGN px (see {@link scale}). */
   clearance?: number;
   /** Extra lane tracks inserted between adjacent grid lines. */
   laneTracks?: number;
+  /**
+   * Player-px per design-px (`height / DESIGN_H`). The router's leads and costs
+   * are FIXED design-px constants, but it is handed geometry measured at the
+   * player's CURRENT size — so routing in raw pixels would pick different corners
+   * at a thumbnail vs full-screen. We normalize all coordinates to design space
+   * (÷ scale), route there, then scale the polylines back, so a diagram routes
+   * IDENTICALLY at any size. Default 1 (already design space, e.g. tests).
+   */
+  scale?: number;
 }
 
 const TURN_COST = 12;
@@ -188,6 +201,27 @@ export function routeOrthogonal(
   const clearance = opts.clearance ?? 6;
   const lanes = opts.laneTracks ?? 1;
 
+  // Normalize the measured geometry to design space so every fixed-px lead/cost
+  // below is scale-invariant; the routed polylines are scaled back before return
+  // (see {@link RouteOptions.scale}). Normals are unit vectors — untouched.
+  const scale = opts.scale && opts.scale > 0 ? opts.scale : 1;
+  if (scale !== 1) {
+    obstacles = obstacles.map((o) => ({
+      ...o,
+      x: o.x / scale,
+      y: o.y / scale,
+      w: o.w / scale,
+      h: o.h / scale,
+      ...(o.labelW != null ? { labelW: o.labelW / scale } : {}),
+      ...(o.labelH != null ? { labelH: o.labelH / scale } : {}),
+    }));
+    const norm = (e: RouterEndpoint): RouterEndpoint => ({
+      ...e,
+      point: { x: e.point.x / scale, y: e.point.y / scale },
+    });
+    wires = wires.map((w) => ({ ...w, from: norm(w.from), to: norm(w.to) }));
+  }
+
   // Rects per component. `hard` BODY = a real component: always an obstacle,
   // even for the wire it connects to (so a wire can't cut through a node to
   // reach a far-side pin); its clearance ring is skippable for own pins. A
@@ -229,18 +263,31 @@ export function routeOrthogonal(
       clearance
     );
     if (!o.labelH || o.labelH <= 0 || !o.labelW || o.labelW <= 0) return [body];
-    const top = o.y + o.h / 2 + LABEL_GAP;
+    // Label box, positioned on the SAME side the renderer draws it (single source
+    // of truth: Stage decides the side, both this obstacle and the CSS follow).
+    // `bottom` (default): centred under the body. `left`/`right`: vertically
+    // centred just past the body face (a top/bottom-wired component).
+    let lx0: number, ly0: number, lx1: number, ly1: number;
+    if (o.labelSide === 'left') {
+      lx1 = o.x - o.w / 2 - LABEL_GAP;
+      lx0 = lx1 - o.labelW;
+      ly0 = o.y - o.labelH / 2;
+      ly1 = o.y + o.labelH / 2;
+    } else if (o.labelSide === 'right') {
+      lx0 = o.x + o.w / 2 + LABEL_GAP;
+      lx1 = lx0 + o.labelW;
+      ly0 = o.y - o.labelH / 2;
+      ly1 = o.y + o.labelH / 2;
+    } else {
+      lx0 = o.x - o.labelW / 2;
+      lx1 = o.x + o.labelW / 2;
+      ly0 = o.y + o.h / 2 + LABEL_GAP;
+      ly1 = ly0 + o.labelH;
+    }
     return [
       body,
-      rect(
-        o.id,
-        true, // a label always blocks — wires contour AROUND it, never over it
-        o.x - o.labelW / 2,
-        top,
-        o.x + o.labelW / 2,
-        top + o.labelH,
-        LABEL_CLEAR
-      ),
+      // a label always blocks — wires contour AROUND it, never over it
+      rect(o.id, true, lx0, ly0, lx1, ly1, LABEL_CLEAR),
     ];
   });
 
@@ -557,6 +604,18 @@ export function routeOrthogonal(
     }
   }
 
+  // A routed wire must never cross itself: strip any loop the lead penalty may
+  // have preferred over a flush turn in a tight pin-to-pin gap.
+  for (const [k, pts] of results) results.set(k, deloop(pts));
+
+  // Back to player space (the inverse of the design-space normalization above).
+  if (scale !== 1)
+    for (const [k, pts] of results)
+      results.set(
+        k,
+        pts.map((p) => ({ x: p.x * scale, y: p.y * scale }))
+      );
+
   return results;
 }
 
@@ -644,6 +703,52 @@ function diagonalize(
   }
   out.push(poly[n]);
   return simplify(out);
+}
+
+/** Proper interior intersection of segments a→b and c→d, or null. Endpoints and
+ *  collinear overlaps are excluded (t/u strictly inside), so only a genuine
+ *  crossing is reported. General (works for orthogonal AND 45° segments). */
+function segCross(a: Point, b: Point, c: Point, d: Point): Point | null {
+  const rx = b.x - a.x;
+  const ry = b.y - a.y;
+  const sx = d.x - c.x;
+  const sy = d.y - c.y;
+  const denom = rx * sy - ry * sx;
+  if (Math.abs(denom) < 1e-9) return null; // parallel or collinear
+  const t = ((c.x - a.x) * sy - (c.y - a.y) * sx) / denom;
+  const u = ((c.x - a.x) * ry - (c.y - a.y) * rx) / denom;
+  const E = 1e-6;
+  if (t > E && t < 1 - E && u > E && u < 1 - E)
+    return { x: a.x + t * rx, y: a.y + t * ry };
+  return null;
+}
+
+/** Removes self-crossings (loops) from a routed polyline: where two segments of
+ *  the SAME wire cross, the sub-path between them is spliced out at the crossing
+ *  point. Both retained sub-segments lie on originally clear segments, so this
+ *  NEVER introduces a collision — it can only shorten the path. A routed wire
+ *  must not cross itself; where two opposing pins sit closer than twice
+ *  {@link PIN_LEAD}, the soft lead penalty can otherwise make a looping detour
+ *  cheaper than a flush turn, and A* emits a knot. This enforces the invariant. */
+export function deloop(pts: Point[]): Point[] {
+  let path = pts;
+  // Each splice removes ≥1 vertex, so the outer count is a safe termination bound.
+  for (let guard = path.length; guard > 0; guard--) {
+    let spliced = false;
+    for (let i = 0; i < path.length - 1 && !spliced; i++) {
+      // Prefer the FARTHEST crossing segment: it collapses the largest loop first.
+      for (let j = path.length - 2; j > i + 1; j--) {
+        const p = segCross(path[i], path[i + 1], path[j], path[j + 1]);
+        if (p) {
+          path = [...path.slice(0, i + 1), p, ...path.slice(j + 1)];
+          spliced = true;
+          break;
+        }
+      }
+    }
+    if (!spliced) break;
+  }
+  return simplify(path);
 }
 
 /** The dominant cardinal unit of a normal (snaps a pin normal to ±x / ±y). */

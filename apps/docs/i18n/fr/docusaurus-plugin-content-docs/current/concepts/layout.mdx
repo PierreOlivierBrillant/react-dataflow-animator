@@ -453,7 +453,9 @@ flux sur trois points, et le moteur s'adapte sur les trois :
   pile, le `base` / `collector` / `emitter` d'un transistor. Une `connection`
   vise une borne avec la syntaxe `"node:pin"` (`"R1:a"`, `"battery:+"`). Les
   bornes tournent avec le composant : une résistance verticale (`rotation: 90`) a
-  ses bornes en haut et en bas.
+  ses bornes en haut et en bas. Un tel composant câblé en haut et en bas affiche
+  son **libellé sur le côté** (à gauche ou à droite, vers l'extérieur) plutôt qu'en
+  dessous, pour que le texte ne se pose jamais sur le fil vertical sortant.
 - **Des fils, pas des flèches.** En `circuit`, les `connections` sont par défaut
   un **fil orthogonal** (`path: 'step'`) **sans tête de flèche** — inutile de le
   répéter sur chaque lien.

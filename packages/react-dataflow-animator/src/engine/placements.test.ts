@@ -72,6 +72,55 @@ describe('computePlacements', () => {
     // topR = (20 + 6) / 400 = 0.065 (the label does NOT expand the top bound).
     expect(result['a'].cy).toBeCloseTo(0.065, 5);
   });
+
+  describe('side label (circuit top/bottom-wired component)', () => {
+    const geo: GeometryMap = {
+      a: { id: 'a', x: 0, y: 0, width: 40, height: 40, labelW: 80, labelH: 18 },
+    };
+
+    it('right label near the right edge → cx shifted left to fit the text', () => {
+      const layout = { a: { cx: 1, cy: 0.5 } };
+      const result = computePlacements(
+        layout,
+        geo,
+        800,
+        400,
+        undefined,
+        new Map([['a', 'right']])
+      );
+      // rightR = (20 + (6 + 80) + 6) / 800 = 112/800 = 0.14 → cx capped at 0.86.
+      expect(result['a'].cx).toBeCloseTo(0.86, 5);
+    });
+
+    it('left label near the left edge → cx shifted right to fit the text', () => {
+      const layout = { a: { cx: 0, cy: 0.5 } };
+      const result = computePlacements(
+        layout,
+        geo,
+        800,
+        400,
+        undefined,
+        new Map([['a', 'left']])
+      );
+      // leftR = (20 + (6 + 80) + 6) / 800 = 0.14 → cx floored at 0.14.
+      expect(result['a'].cx).toBeCloseTo(0.14, 5);
+    });
+
+    it('right label does NOT reserve bottom room → cy free near the bottom edge', () => {
+      const layout = { a: { cx: 0.5, cy: 0.98 } };
+      const result = computePlacements(
+        layout,
+        geo,
+        800,
+        400,
+        undefined,
+        new Map([['a', 'right']])
+      );
+      // vR = (max(20, 9) + 6) / 400 = 26/400 = 0.065 → cy capped at 0.935
+      // (no LABEL_GAP+labelH bottom band, unlike a below label).
+      expect(result['a'].cy).toBeCloseTo(0.935, 5);
+    });
+  });
 });
 
 describe('computeContentLimits', () => {

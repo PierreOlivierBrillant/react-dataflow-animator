@@ -333,12 +333,12 @@ function pinAttach(
 }
 
 /**
- * Slides a POINT endpoint (a junction / signal pad, which anchors at its centre)
- * onto the axis of a nearby partner TERMINAL, so the wire runs straight into it
- * instead of slanting from the pad centre — e.g. a signal I/O pad feeding a
- * gate input that sits a third of the way up the gate. Only applied when the
- * offset is small (under ~half the terminal node), so a genuine L corner (a far
- * junction) is left untouched.
+ * Slides a POINT endpoint (a junction dot, which anchors at its dimensionless
+ * centre) onto the axis of a nearby partner TERMINAL, so the wire runs straight
+ * into it instead of slanting from the centre. Only applied when the offset is
+ * small (under ~half the terminal node), so a genuine L corner (a far junction)
+ * is left untouched. {@link alignFaceToTerminal} is the sibling for a pad that
+ * anchors on a cardinal FACE (a signal I/O pad) rather than at its centre.
  */
 function alignPointToTerminal(
   point: ContourAnchor,
@@ -356,6 +356,58 @@ function alignPointToTerminal(
   ) {
     // Vertical terminal → straighten by matching the x.
     point.point = { x: terminal.point.x, y: point.point.y };
+  }
+}
+
+/** Fraction of a node's half-face a face attachment may slide onto a pin before
+ *  it is clamped, so the wire meets the FLAT part of the edge and never a rounded
+ *  corner. 0.4 ⇒ up to 80% of the edge is usable. */
+const FACE_ALIGN_LIMIT = 0.4;
+
+/**
+ * Slides a FACE-anchored endpoint (a signal I/O pad, or any plain node meeting a
+ * cardinal face) ALONG its face so it lines up with a partner PIN — turning what
+ * would be a small dogleg into a straight lead. A gate's input terminals sit a
+ * third of the way up/down the body, so a signal on the SAME row as the gate
+ * would otherwise jog to reach one; sliding the pad's attach onto the pin's
+ * height keeps the wire dead straight. Only when the face opens along the SAME
+ * axis as the pin (they face each other — a perpendicular face is a real corner)
+ * and the pad centre is roughly on the pin's row/column; the slide is clamped to
+ * the face extent so the attach never leaves the node.
+ */
+function alignFaceToTerminal(
+  face: ContourAnchor,
+  faceNode: NodeGeom,
+  terminal: ContourAnchor,
+  terminalNode: NodeGeom
+): void {
+  const tn = terminal.normal;
+  const fn = face.normal;
+  const horizontal = Math.abs(tn.x) >= Math.abs(tn.y);
+  const faceHorizontal = Math.abs(fn.x) >= Math.abs(fn.y);
+  // A straight wire needs the face to open along the SAME axis as the pin; a
+  // perpendicular face is a genuine corner and is left alone.
+  if (horizontal !== faceHorizontal) return;
+  if (horizontal) {
+    // Vertical face (east/west) facing a left/right pin → slide in y onto it.
+    if (Math.abs(faceNode.y - terminal.point.y) >= terminalNode.height * 0.45)
+      return;
+    const lim = faceNode.height * FACE_ALIGN_LIMIT;
+    const y = Math.max(
+      faceNode.y - lim,
+      Math.min(faceNode.y + lim, terminal.point.y)
+    );
+    face.point = { x: face.point.x, y };
+  } else {
+    // Horizontal face (north/south) facing an up/down pin → slide in x onto it.
+    if (Math.abs(faceNode.x - terminal.point.x) >= terminalNode.width * 0.45)
+      return;
+    const lim = faceNode.width * FACE_ALIGN_LIMIT;
+    const x = Math.max(
+      faceNode.x - lim,
+      Math.min(faceNode.x + lim, terminal.point.x)
+    );
+    face.point = { x, y: face.point.y };
   }
 }
 
@@ -435,11 +487,25 @@ export function wireEndpoints(
     startPortOffset
   );
   const toAnchor = endpointAnchor(to, toContour, toFace, cf, endPortOffset);
-  // Straighten a point-to-terminal edge (a signal/junction feeding a pin nearby).
-  if (fromContour?.kind === 'point' && toContour?.kind === 'pin')
-    alignPointToTerminal(fromAnchor, toAnchor, to);
-  if (toContour?.kind === 'point' && fromContour?.kind === 'pin')
-    alignPointToTerminal(toAnchor, fromAnchor, from);
+  // Straighten an edge feeding a component PIN when the other end is flexible: a
+  // junction dot slides freely onto the pin's axis; a plain face-anchored pad (a
+  // signal I/O) slides ALONG its face. Either turns a small dogleg — e.g. a
+  // signal on the gate's row reaching an input a third of the way up — into a
+  // straight lead. A pin↔pin edge (both fixed) is left to the router.
+  const straighten = (
+    flex: ContourAnchor,
+    flexNode: NodeGeom,
+    flexContour: NodeContour | undefined,
+    pin: ContourAnchor,
+    pinNode: NodeGeom
+  ): void => {
+    if (flexContour?.kind === 'point') alignPointToTerminal(flex, pin, pinNode);
+    else if (!flexContour) alignFaceToTerminal(flex, flexNode, pin, pinNode);
+  };
+  if (toContour?.kind === 'pin')
+    straighten(fromAnchor, from, fromContour, toAnchor, to);
+  if (fromContour?.kind === 'pin')
+    straighten(toAnchor, to, toContour, fromAnchor, from);
   return { from: fromAnchor, to: toAnchor };
 }
 

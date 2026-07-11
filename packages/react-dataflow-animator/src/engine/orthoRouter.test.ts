@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  deloop,
   routeOrthogonal,
   simplify,
   type RouterObstacle,
@@ -56,6 +57,32 @@ const hasDiagonal = (pts: { x: number; y: number }[]): boolean =>
       Math.abs(pts[i + 1].x - pts[i].x) > 0.6 &&
       Math.abs(pts[i + 1].y - pts[i].y) > 0.6
   );
+
+/** True if any two non-adjacent segments of the polyline properly cross — i.e.
+ *  the wire ties a loop / knot. */
+const selfCrosses = (pts: { x: number; y: number }[]): boolean => {
+  const o = (
+    p: { x: number; y: number },
+    q: { x: number; y: number },
+    r: { x: number; y: number }
+  ) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+  for (let i = 0; i < pts.length - 1; i++)
+    for (let j = i + 2; j < pts.length - 1; j++) {
+      if (i === 0 && j === pts.length - 2) continue; // shared endpoints of a closed ring
+      const a = pts[i],
+        b = pts[i + 1],
+        c = pts[j],
+        d = pts[j + 1];
+      if (
+        o(a, b, c) !== o(a, b, d) &&
+        o(c, d, a) !== o(c, d, b) &&
+        o(a, b, c) !== 0 &&
+        o(a, b, d) !== 0
+      )
+        return true;
+    }
+  return false;
+};
 
 const hitsBody = (
   pts: { x: number; y: number }[],
@@ -137,6 +164,63 @@ describe('orthoRouter', () => {
     expect(seg(0)).toBeGreaterThanOrEqual(13.5);
     expect(Math.abs(p[p.length - 1].y - p[p.length - 2].y)).toBeLessThan(0.6);
     expect(seg(p.length - 2)).toBeGreaterThanOrEqual(13.5);
+  });
+
+  it('deloop unties a self-crossing polyline into a clean jog', () => {
+    // The real knot A* tied between two close NAND gates (out east → next gate's
+    // lower input): out-right, down, back-LEFT, up, right — s1 (x=119.3) crosses
+    // s4 (y=64.2) at (119.3,64.2). deloop must splice it to a 3-corner jog.
+    const knot = [
+      { x: 102.4, y: 61.2 },
+      { x: 119.3, y: 61.2 },
+      { x: 119.3, y: 67.1 },
+      { x: 108, y: 67.1 },
+      { x: 108, y: 64.2 },
+      { x: 124.8, y: 64.2 },
+    ];
+    expect(selfCrosses(knot)).toBe(true); // the input really is a loop
+    const clean = deloop(knot);
+    expect(selfCrosses(clean)).toBe(false); // …and the output is not
+    expect(allOrthogonal(clean)).toBe(true);
+    expect(clean).toEqual([
+      { x: 102.4, y: 61.2 },
+      { x: 119.3, y: 61.2 },
+      { x: 119.3, y: 64.2 },
+      { x: 124.8, y: 64.2 },
+    ]);
+    // Endpoints are preserved exactly (the wire still meets both pins).
+    expect(clean[0]).toEqual(knot[0]);
+    expect(clean[clean.length - 1]).toEqual(knot[knot.length - 1]);
+  });
+
+  it('leaves a loop-free path untouched (deloop is idempotent there)', () => {
+    const jog = [
+      { x: 0, y: 0 },
+      { x: 20, y: 0 },
+      { x: 20, y: 10 },
+      { x: 40, y: 10 },
+    ];
+    expect(deloop(jog)).toEqual(jog);
+  });
+
+  it('routes a tight pin-to-pin gap loop-free end to end', () => {
+    // The router's own output must never self-cross (deloop runs inside it).
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 112, 100, 1, 0),
+        to: pin('b', 128, 104.32, -1, 0),
+      },
+    ];
+    const p = routeOrthogonal(
+      [
+        { id: 'a', x: 100, y: 100, w: 24, h: 24 },
+        { id: 'b', x: 140, y: 100, w: 24, h: 24 },
+      ],
+      wires
+    ).get('w')!;
+    expect(allOrthogonal(p)).toBe(true);
+    expect(selfCrosses(p)).toBe(false);
   });
 
   it('routes around a component that sits between the terminals', () => {
@@ -270,6 +354,78 @@ describe('orthoRouter', () => {
     expect(allOrthogonal(p)).toBe(true);
     // Label rect of m: x∈[178,222], y∈[86,100] (bottom+gap .. +labelH).
     const lab = { x0: 178, y0: 86, x1: 222, y1: 100 };
+    let overLabel = false;
+    for (let i = 0; i < p.length - 1; i++)
+      for (let t = 0; t <= 1; t += 0.02) {
+        const x = p[i].x + (p[i + 1].x - p[i].x) * t;
+        const y = p[i].y + (p[i + 1].y - p[i].y) * t;
+        if (
+          x > lab.x0 + 1 &&
+          x < lab.x1 - 1 &&
+          y > lab.y0 + 1 &&
+          y < lab.y1 - 1
+        )
+          overLabel = true;
+      }
+    expect(overLabel).toBe(false);
+  });
+
+  it("labelSide:'right' frees the space BELOW the body (label no longer there)", () => {
+    // Same setup as the below-label test, but the label is now on the RIGHT.
+    // The a→c line under `m` is therefore clear → the wire runs straight again.
+    const m: RouterObstacle = {
+      id: 'm',
+      x: 200,
+      y: 60,
+      w: 40,
+      h: 40,
+      labelW: 44,
+      labelH: 14,
+      labelSide: 'right',
+    };
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 120, 96, 1, 0),
+        to: pin('c', 280, 96, -1, 0),
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 100, 96), m, body('c', 300, 96)],
+      wires
+    );
+    const p = routes.get('w')!;
+    expect(allOrthogonal(p)).toBe(true);
+    expect(p).toHaveLength(2); // straight, no detour around a phantom below-label
+  });
+
+  it("labelSide:'right' places the label obstacle to the RIGHT of the body", () => {
+    // `m` sits left of a vertical a→c wire; its RIGHT label crosses that wire.
+    const m: RouterObstacle = {
+      id: 'm',
+      x: 60,
+      y: 200,
+      w: 40,
+      h: 40,
+      labelW: 44,
+      labelH: 14,
+      labelSide: 'right',
+    };
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 96, 120, 0, 1),
+        to: pin('c', 96, 280, 0, -1),
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 96, 100), m, body('c', 96, 300)],
+      wires
+    );
+    const p = routes.get('w')!;
+    expect(allOrthogonal(p)).toBe(true);
+    // Right label rect of m: x∈[86,130], y∈[193,207]; the wire must skirt it.
+    const lab = { x0: 86, y0: 193, x1: 130, y1: 207 };
     let overLabel = false;
     for (let i = 0; i < p.length - 1; i++)
       for (let t = 0; t <= 1; t += 0.02) {
@@ -459,6 +615,62 @@ describe('orthoRouter', () => {
     const p = routes.get('w')!;
     expect(allOctilinear(p)).toBe(true);
     expect(hasDiagonal(p)).toBe(true);
+  });
+
+  it('routes SCALE-INVARIANTLY: geometry ×k with scale:k gives the ×k route', () => {
+    // The same physical diagram rendered at a thumbnail vs full-screen must draw
+    // the SAME corners. A bending config (offset terminals) at the design size…
+    const wires: RouterWire[] = [
+      {
+        key: 'w',
+        from: pin('a', 120, 100, 1, 0),
+        to: pin('b', 280, 160, -1, 0),
+      },
+    ];
+    const base = routeOrthogonal(
+      [body('a', 100, 100), body('b', 300, 160)],
+      wires
+    ).get('w')!;
+
+    // …and the identical diagram measured 3× bigger, told scale:3, must produce
+    // exactly the 3× polyline — same number of corners, proportional coordinates.
+    const K = 3;
+    const bodyK = (id: string, x: number, y: number): RouterObstacle => ({
+      id,
+      x: x * K,
+      y: y * K,
+      w: 40 * K,
+      h: 40 * K,
+    });
+    const pinK = (
+      node: string,
+      x: number,
+      y: number,
+      nx: number,
+      ny: number
+    ): RouterWire['from'] => ({
+      node,
+      point: { x: x * K, y: y * K },
+      normal: { x: nx, y: ny },
+      hardNormal: true,
+    });
+    const scaled = routeOrthogonal(
+      [bodyK('a', 100, 100), bodyK('b', 300, 160)],
+      [
+        {
+          key: 'w',
+          from: pinK('a', 120, 100, 1, 0),
+          to: pinK('b', 280, 160, -1, 0),
+        },
+      ],
+      { scale: K }
+    ).get('w')!;
+
+    expect(scaled).toHaveLength(base.length);
+    for (let i = 0; i < base.length; i++) {
+      expect(scaled[i].x).toBeCloseTo(base[i].x * K, 4);
+      expect(scaled[i].y).toBeCloseTo(base[i].y * K, 4);
+    }
   });
 
   it('is identical to orthogonal routing when the flag is off/absent', () => {

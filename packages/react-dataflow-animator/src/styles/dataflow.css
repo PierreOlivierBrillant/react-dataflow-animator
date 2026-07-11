@@ -368,6 +368,26 @@
   border-radius: 4px;
 }
 
+/* Label AU CÔTÉ du visuel : pour un composant de circuit câblé en haut/bas (borne
+   verticale), le fil sortant occupe le dessous — le label irait le recouvrir. On le
+   déporte alors sur le côté extérieur (gauche/droite décidé par le Stage) en le
+   centrant verticalement sur le visuel. Le routeur modélise l'obstacle du même côté
+   (orthoRouter `labelSide`), donc rendu et évitement restent synchronisés. */
+.rdfa-node-label--right {
+  top: 50%;
+  left: 100%;
+  transform: translate(6px, -50%);
+  text-align: left;
+}
+
+.rdfa-node-label--left {
+  top: 50%;
+  left: auto;
+  right: 100%;
+  transform: translate(-6px, -50%);
+  text-align: right;
+}
+
 /* ---------- Nœuds textuels (simple_node / complex_node) ---------- */
 /* Boîte de texte qui remplace le pictogramme et reprend l'allure d'un paquet
    HTTP (en-tête + corps). La coloration suit le thème (variables --rdfa-code-*),

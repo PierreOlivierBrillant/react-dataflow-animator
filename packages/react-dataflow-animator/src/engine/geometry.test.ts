@@ -4,6 +4,7 @@ import {
   pathTip,
   pointOnSegment,
   visiblePath,
+  wireEndpoints,
   type Connection,
   type NodeGeom,
 } from './geometry';
@@ -623,5 +624,78 @@ describe('visiblePath', () => {
     expect(pts[1]).toEqual({ x: 100, y: 100 });
     expect(pts[2].x).toBeCloseTo(180, 5);
     expect(pts[2].y).toBeCloseTo(20, 5);
+  });
+});
+
+// ─── wireEndpoints: straighten a face-anchored pad into an offset pin ─────────
+// A logic gate's input terminals sit a third of the way up/down the body, so a
+// signal pad on the SAME row would jog to reach one. alignFaceToTerminal slides
+// the pad's face attachment onto the pin height, keeping the lead dead straight.
+describe('wireEndpoints — face-to-pin straightening', () => {
+  // 40×40 gate at (200,0); its `a` input is a west pin a third up (like a NAND).
+  const gate = mkNode('g', 200, 0);
+  const pinA = { x: 0, y: 0.32, nx: -1, ny: 0 };
+  // pinAttach: local y = (0.32 − 0.5)·40 = −7.2 → the pin sits at y ≈ −7.2.
+  const PIN_A_Y = -7.2;
+
+  it('a pad on the gate row slides onto the offset input → a straight lead', () => {
+    const pad = mkNode('s', 0, 0); // same row (y=0) as the gate centre
+    const { from, to } = wireEndpoints(pad, gate, 0, 0, undefined, undefined, {
+      kind: 'pin',
+      pin: pinA,
+      rotationDeg: 0,
+    });
+    expect(to.point.y).toBeCloseTo(PIN_A_Y, 4); // the fixed pin, unchanged
+    expect(from.point.y).toBeCloseTo(PIN_A_Y, 4); // the pad slid up to meet it
+    expect(from.point.y).toBeCloseTo(to.point.y, 4); // ⇒ dead straight
+    expect(from.point.x).toBeCloseTo(20, 4); // still on the pad's east edge
+  });
+
+  it('clamps the slide to the pad face so the attach never leaves the node', () => {
+    // A pin offset (17) beyond the 0.4·height (=16) face limit but within the
+    // 0.45·height (=18) same-row gate: straighten, but clamp to the edge.
+    const deepPin = { x: 0, y: -17 / 40 + 0.5, nx: -1, ny: 0 };
+    const pad = mkNode('s', 0, 0);
+    const { from } = wireEndpoints(pad, gate, 0, 0, undefined, undefined, {
+      kind: 'pin',
+      pin: deepPin,
+      rotationDeg: 0,
+    });
+    expect(from.point.y).toBeCloseTo(-16, 4); // clamped to 0.4·height, not −17
+  });
+
+  it('leaves a genuine far L untouched (pad on a different row)', () => {
+    const pad = mkNode('s', 0, 200); // a full gate-height+ away → not the row
+    const { from } = wireEndpoints(pad, gate, 0, 0, undefined, undefined, {
+      kind: 'pin',
+      pin: pinA,
+      rotationDeg: 0,
+    });
+    // dx=200 ≥ |dy|=200? equal → horizontal face still chosen; but the pin is far
+    // off-row, so no slide: the pad keeps its centred east attach.
+    expect(from.point.y).toBeCloseTo(200, 4);
+  });
+
+  it('slides in x for a vertical face meeting a top/bottom pin', () => {
+    // A north-facing pin offset in x (like a rotated terminal); the pad below
+    // slides horizontally onto it instead of doglegging.
+    const topNode = mkNode('t', 0, 0);
+    const northPin = { x: 0.3, y: 0, nx: 0, ny: -1 }; // local x → −8 px off centre
+    const pad = mkNode('s', 0, 200); // directly below → north/south facing
+    const { from, to } = wireEndpoints(
+      pad,
+      topNode,
+      0,
+      0,
+      undefined,
+      undefined,
+      {
+        kind: 'pin',
+        pin: northPin,
+        rotationDeg: 0,
+      }
+    );
+    expect(to.point.x).toBeCloseTo(-8, 4);
+    expect(from.point.x).toBeCloseTo(-8, 4); // slid in x ⇒ straight vertical
   });
 });

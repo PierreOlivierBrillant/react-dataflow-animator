@@ -139,6 +139,11 @@ faces — default `true`, see [§4](#4-routing-and-collision-prevention)), and, 
 upright) nor its layout box — arrow anchoring is computed on the unrotated box, so
 a rotated node connects exactly like a straight one. The orientation can be
 **animated** at runtime via the [`rotate` action](#5-animation-engine-and-actions).
+In a **`circuit`**, a component whose effective rotation is **vertical** (≈90°/270°,
+so its terminals point up/down and it is wired top and bottom) draws its label to a
+**side** — left near the left edge of the schematic, right otherwise — instead of
+below, so the label never sits on the outgoing vertical wire. The wire router models
+the label obstacle on that same side.
 
 **Colors** (`background_color`, `border_color`, `text_color`): change the background,
 border, and text of the node — fill/stroke of a shape, background/border of a

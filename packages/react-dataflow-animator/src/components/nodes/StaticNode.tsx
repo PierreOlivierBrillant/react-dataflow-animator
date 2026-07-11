@@ -40,6 +40,11 @@ export interface StaticNodeProps {
   opacity?: number;
   /** Clockwise rotation (deg) of the node visual. The label stays upright. */
   rotation?: number;
+  /** Side the label is drawn on. Default (undefined) = below the visual. A
+   *  circuit component wired top/bottom moves it to a side so the label no longer
+   *  sits on the outgoing vertical wire (decided by Stage; the router models the
+   *  obstacle on the same side). */
+  labelSide?: 'left' | 'right';
   /** Live contact state (0..1) for stateful component icons (`switch`,
    *  `push_button`), driven by the `toggle` action. Undefined = from `closed`. */
   closed?: number;
@@ -73,6 +78,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
     highlight,
     opacity,
     rotation,
+    labelSide,
     closed,
     colorOverride,
     iconOverride,
@@ -205,7 +211,14 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
         {(() => {
           const label = nodeLabel(object);
           return label ? (
-            <span className="rdfa-node-label">{label}</span>
+            <span
+              className={
+                'rdfa-node-label' +
+                (labelSide ? ` rdfa-node-label--${labelSide}` : '')
+              }
+            >
+              {label}
+            </span>
           ) : null;
         })()}
       </div>

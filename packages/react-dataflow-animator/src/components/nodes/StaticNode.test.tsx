@@ -177,6 +177,44 @@ describe('StaticNode — rotation', () => {
   });
 });
 
+describe('StaticNode — labelSide', () => {
+  const labelled: Node = { id: 'sw', type: 'switch', text: 'Switch' };
+
+  it('no labelSide: the label carries no side modifier (default below)', () => {
+    const { container } = renderNode(labelled);
+    const label = container.querySelector('.rdfa-node-label') as HTMLElement;
+    expect(label.className).toBe('rdfa-node-label');
+  });
+
+  it('labelSide="right" adds the right modifier class', () => {
+    const { container } = render(
+      <StaticNode
+        object={labelled}
+        placement={placement}
+        labelSide="right"
+        highlight={highlightCode}
+      />
+    );
+    expect(
+      container.querySelector('.rdfa-node-label--right')?.textContent
+    ).toBe('Switch');
+  });
+
+  it('labelSide="left" adds the left modifier class', () => {
+    const { container } = render(
+      <StaticNode
+        object={labelled}
+        placement={placement}
+        labelSide="left"
+        highlight={highlightCode}
+      />
+    );
+    expect(container.querySelector('.rdfa-node-label--left')?.textContent).toBe(
+      'Switch'
+    );
+  });
+});
+
 describe('StaticNode — couleurs (background_color / border_color)', () => {
   it('pose --rdfa-fill et --rdfa-stroke sur la racine du nœud', () => {
     const { container } = renderNode({

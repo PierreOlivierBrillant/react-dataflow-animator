@@ -440,6 +440,28 @@ export function Stage({
     return m;
   }, [layout]);
 
+  // Circuit label placement (single source of truth). A component wired top and
+  // bottom — its terminals point up/down, i.e. its effective STATIC rotation is
+  // vertical (≈90°/270°) — would have its default below-label sit on the outgoing
+  // bottom wire. Its label moves to the OUTER side (left near the left edge, right
+  // otherwise). Read by StaticNode (CSS side class), the wire router (obstacle on
+  // the same side) and the placement clamp (reserves the horizontal room instead
+  // of the bottom room). Based on the static rotation only — like the routes,
+  // it stays stable across resizes and animation frames.
+  const labelSideById = useMemo(() => {
+    const m = new Map<string, 'left' | 'right'>();
+    if (!isCircuit) return m;
+    for (const node of spec.nodes) {
+      const rot = node.rotation ?? autoRotationById.get(node.id);
+      if (rot == null) continue;
+      const r = ((rot % 180) + 180) % 180;
+      if (r <= 45 || r >= 135) continue; // horizontal terminals → label stays below
+      const cx = layout[node.id]?.cx ?? 0.5;
+      m.set(node.id, cx <= 0.5 ? 'left' : 'right');
+    }
+    return m;
+  }, [isCircuit, spec.nodes, autoRotationById, layout]);
+
   // Anchoring policy for an endpoint REFERENCE (`node` or `node:pin`). A round
   // node attaches radially on its outline; a `node:pin` on a component attaches
   // on that terminal (rotated by the node's static — or auto-layout — rotation).
@@ -664,6 +686,7 @@ export function Stage({
         h: g.height,
         labelW: g.labelW,
         labelH: g.labelH,
+        labelSide: labelSideById.get(id),
       })
     );
     const wires: RouterWire[] = [];
@@ -712,7 +735,14 @@ export function Stage({
       });
     });
     if (!wires.length) return routes;
-    return routeOrthogonal(obstacles, wires, { clearance: 6, laneTracks: 3 });
+    // `scale: k` normalizes the measured geometry to design space so the routes
+    // (fixed-px leads/costs) are identical at any player size — a thumbnail and a
+    // full-screen render draw the SAME corners. See RouteOptions.scale.
+    return routeOrthogonal(obstacles, wires, {
+      clearance: 6,
+      laneTracks: 3,
+      scale: k,
+    });
   }, [
     isCircuit,
     geometry,
@@ -723,6 +753,8 @@ export function Stage({
     layout,
     direction,
     aspect,
+    labelSideById,
+    k,
   ]);
   // Wire routes keyed by node pair, so a `flow` charge can ride the very route
   // its wire is drawn with (see buildFlowPath).
@@ -908,8 +940,16 @@ export function Stage({
   // overlaps, not spreading them out). In tree mode positions are
   // time-dependent (rotations), so placements follow the live layout.
   const basePlacements = useMemo(
-    () => computePlacements(layout, geometry, width, height),
-    [layout, geometry, width, height]
+    () =>
+      computePlacements(
+        layout,
+        geometry,
+        width,
+        height,
+        undefined,
+        labelSideById
+      ),
+    [layout, geometry, width, height, labelSideById]
   );
   const placements = isTree
     ? computePlacements(liveLayout, geometry, width, height)
@@ -1139,6 +1179,7 @@ export function Stage({
             highlight={highlight}
             opacity={nodeOpacity < 1 ? nodeOpacity : undefined}
             rotation={nodeRotation[o.id]}
+            labelSide={labelSideById.get(o.id)}
             closed={nodeClosed[o.id]}
             colorOverride={
               recoloredNodes.has(o.id) ? nodeColor[o.id] : undefined
