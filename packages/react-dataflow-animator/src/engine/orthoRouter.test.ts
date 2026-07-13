@@ -223,6 +223,33 @@ describe('orthoRouter', () => {
     expect(selfCrosses(p)).toBe(false);
   });
 
+  it('fans a net out from ONE source point (shared trunk, not N wires)', () => {
+    // A driver feeding two sinks at different heights: per-target straightening
+    // gives the two wires DIFFERENT source anchors (y=80 and y=120). Net-aware
+    // routing must unify them to one point (the mean, y=100) so the net leaves
+    // the driver once and branches — not two wires from two points.
+    const wires: RouterWire[] = [
+      {
+        key: 'w1',
+        from: pin('src', 120, 80, 1, 0),
+        to: pin('g1', 280, 80, -1, 0),
+      },
+      {
+        key: 'w2',
+        from: pin('src', 120, 120, 1, 0),
+        to: pin('g2', 280, 120, -1, 0),
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('src', 100, 100), body('g1', 300, 80), body('g2', 300, 120)],
+      wires
+    );
+    const p1 = routes.get('w1')!;
+    const p2 = routes.get('w2')!;
+    expect(p1[0]).toEqual(p2[0]); // same starting point ⇒ one trunk
+    expect(p1[0].y).toBeCloseTo(100, 5); // the unified anchor (mean of 80 & 120)
+  });
+
   it('routes around a component that sits between the terminals', () => {
     const mid = body('m', 200, 100);
     const wires: RouterWire[] = [

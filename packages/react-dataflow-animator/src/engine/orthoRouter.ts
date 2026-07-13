@@ -97,7 +97,7 @@ const DIAG_MIN = 3;
  *  wire bends as late as it can rather than fail; on a `diagonal` wire it is the
  *  straight stub kept before the 45° miter/elbow begins. A soft POINT endpoint
  *  (a junction/pad) is a branch point and has no lead. */
-const PIN_LEAD = 30;
+const PIN_LEAD = 15;
 /** Cost (per pixel of missing lead) charged when an ORTHOGONAL wire turns INSIDE
  *  a lead zone. Graduated, so A* pushes an unavoidable bend as far from the pin as
  *  the layout allows and always prefers the full lead where routes are otherwise
@@ -221,6 +221,32 @@ export function routeOrthogonal(
     });
     wires = wires.map((w) => ({ ...w, from: norm(w.from), to: norm(w.to) }));
   }
+
+  // Net-aware fan-out. Wires that leave the SAME driver (`from.node`) belong to
+  // one net (a signal pad or a gate output feeding several inputs). We give the
+  // net a SINGLE source anchor — the mean of its members' anchors, all on the
+  // driver's face — so it leaves from ONE point, and we route its wires
+  // consecutively; combined with the per-net lane rule below (same-net edges are
+  // free to reuse), later sinks ride the trunk the first one laid. The net thus
+  // draws as one trunk that BRANCHES, not N parallel wires from N points.
+  const byNet = new Map<string, RouterWire[]>();
+  for (const w of wires) {
+    const list = byNet.get(w.from.node);
+    if (list) list.push(w);
+    else byNet.set(w.from.node, [w]);
+  }
+  const ordered: RouterWire[] = [];
+  for (const group of byNet.values()) {
+    if (group.length < 2) {
+      ordered.push(...group);
+      continue;
+    }
+    const sx = group.reduce((s, w) => s + w.from.point.x, 0) / group.length;
+    const sy = group.reduce((s, w) => s + w.from.point.y, 0) / group.length;
+    for (const w of group)
+      ordered.push({ ...w, from: { ...w.from, point: { x: sx, y: sy } } });
+  }
+  wires = ordered;
 
   // Rects per component. `hard` BODY = a real component: always an obstacle,
   // even for the wire it connects to (so a wire can't cut through a node to
@@ -386,14 +412,17 @@ export function routeOrthogonal(
     return true;
   };
 
-  // Shared lane usage across wires: keyed by a segment's fixed line + span.
-  const usage = new Map<string, number>();
+  // Shared lane usage across wires: for each segment (fixed line + span) the set
+  // of NETS that run on it. Only a DIFFERENT net pays the lane penalty — wires of
+  // the same net share their trunk for free (see the net-aware grouping above).
+  const usage = new Map<string, Set<string>>();
   const edgeKey = (o: 'h' | 'v', fixed: number, a: number, b: number): string =>
     `${o}:${fixed}:${Math.min(a, b)}:${Math.max(a, b)}`;
 
   const results = new Map<string, Point[]>();
 
   for (const wire of wires) {
+    const wireNet = wire.from.node;
     const skip = new Set<string>([wire.from.node, wire.to.node]);
     // A POINT endpoint anchors at the node CENTRE (inside its body), so that
     // body must not block THIS wire; a PIN endpoint is on the border, so its
@@ -531,7 +560,10 @@ export function routeOrthogonal(
           orient === 'h' ? cur.i : cur.j,
           orient === 'h' ? ni : nj
         );
-        const lane = (usage.get(uk) ?? 0) * LANE_COST;
+        // Only wires of OTHER nets on this edge cost a lane; same-net trunk is free.
+        const on = usage.get(uk);
+        let lane = 0;
+        if (on) for (const n of on) if (n !== wireNet) lane += LANE_COST;
         const ng = cur.g + len + (turned ? TURN_COST : 0) + lane + leadCost;
         const nk = key(ni, nj, ddi, ddj);
         if (ng < (gScore.get(nk) ?? Infinity)) {
@@ -573,7 +605,9 @@ export function routeOrthogonal(
           orient === 'h' ? ai : aj,
           orient === 'h' ? bi2 : bj
         );
-        usage.set(uk, (usage.get(uk) ?? 0) + 1);
+        const set = usage.get(uk);
+        if (set) set.add(wireNet);
+        else usage.set(uk, new Set([wireNet]));
       }
     } else {
       // Unreachable on the grid: never draw a diagonal — fall back to a

@@ -2,13 +2,13 @@ import type { DataFlowSpec } from 'react-dataflow-animator';
 import type { Locale } from '../../i18n';
 import { buildNandCircuit } from './nandCircuitBuilder';
 
-// A FULL SUBTRACTOR built ONLY from NAND gates — eleven of them. It computes
-// A − B − Bin on three bits, into a Diff and a borrow-out Bout. The Diff is the
-// same double-XOR as the full adder; the borrow reuses the XOR's internal terms
-// (x3 already carries (A'·B)'):
-//   Bout = x3 NAND (xnor NAND Bin) = A'·B + Bin·(A XOR B)'
-// Wires are coloured by the bit they carry (green = 1) — trace the two borrow
-// sources combining.
+// A FULL SUBTRACTOR built ONLY from NAND gates — nine of them (the minimal
+// count). It computes A − B − Bin on three bits, into a Diff and a borrow-out
+// Bout. The Diff is the same double-XOR as the full adder; the borrow reuses two
+// signals the XOR network already produces — x3 = (A'·B)' and x7 = ((A XOR B)'·Bin)':
+//   Bout = x3 NAND x7 = A'·B + Bin·(A XOR B)'
+// so no extra inverter is needed. Wires are coloured by the bit they carry
+// (green = 1) — trace the two borrow sources combining.
 
 const strings = {
   en: {
@@ -18,7 +18,7 @@ const strings = {
     diff: 'Diff',
     bout: 'Bout',
     intro:
-      'A full subtractor computes A − B − Bin over three bits, into a Diff and a borrow-out. Eleven NAND gates; green wires carry a 1 — trace where the borrow comes from.',
+      'A full subtractor computes A − B − Bin over three bits, into a Diff and a borrow-out. Nine NAND gates; green wires carry a 1 — trace where the borrow comes from.',
     s000: '0 − 0 − 0 = 0. Diff 0, Bout 0.',
     s001: '0 − 0 − 1 → we borrow: Diff 1, Bout 1.',
     s010: '0 − 1 − 0 → we borrow: Diff 1, Bout 1.',
@@ -32,7 +32,7 @@ const strings = {
     diff: 'Diff',
     bout: 'Bout',
     intro:
-      'Un soustracteur complet calcule A − B − Bin sur trois bits, en une différence et un emprunt sortant. Onze portes NAND ; les fils verts portent un 1 — tracez d’où vient l’emprunt.',
+      'Un soustracteur complet calcule A − B − Bin sur trois bits, en une différence et un emprunt sortant. Neuf portes NAND ; les fils verts portent un 1 — tracez d’où vient l’emprunt.',
     s000: '0 − 0 − 0 = 0. Diff 0, Bout 0.',
     s001: '0 − 0 − 1 → on emprunte : Diff 1, Bout 1.',
     s010: '0 − 1 − 0 → on emprunte : Diff 1, Bout 1.',
@@ -56,11 +56,10 @@ export const fullSubtractorNand = (locale: Locale): DataFlowSpec => {
       { id: 'ab', a: 'x2', b: 'x3' }, // A XOR B
       { id: 'x5', a: 'ab', b: 'Bin' },
       { id: 'x6', a: 'ab', b: 'x5' },
-      { id: 'x7', a: 'x5', b: 'Bin' },
-      { id: 'nDiff', a: 'x6', b: 'x7' }, // (A XOR B) XOR Bin
-      { id: 'xnor', a: 'ab', b: 'ab' }, // (A XOR B)'
-      { id: 't2', a: 'xnor', b: 'Bin' },
-      { id: 'nBout', a: 'x3', b: 't2' }, // A'·B + Bin·(A XOR B)'
+      { id: 'x7', a: 'x5', b: 'Bin' }, // ((A XOR B)'·Bin)'
+      { id: 'nDiff', a: 'x6', b: 'x7' }, // (A XOR B) XOR Bin = Diff
+      // Borrow reuses x3 = (A'·B)' and x7 = ((A XOR B)'·Bin)' — no extra inverter.
+      { id: 'nBout', a: 'x3', b: 'x7' }, // A'·B + Bin·(A XOR B)'
     ],
     [
       { id: 'diffOut', from: 'nDiff', label: s.diff },

@@ -335,6 +335,49 @@ describe('computeLayout — graph', () => {
   });
 });
 
+describe('computeLayout — circuit (feed-forward DAG)', () => {
+  // A diamond: one gate fans out to a top and a bottom branch that re-merge.
+  const diamond: DataFlowSpec = {
+    direction: 'circuit',
+    nodes: [
+      { id: 'in', type: 'signal' },
+      { id: 'x1', type: 'nand_gate' },
+      { id: 'top', type: 'nand_gate' },
+      { id: 'bot', type: 'nand_gate' },
+      { id: 'out', type: 'signal' },
+    ],
+    connections: [
+      { from: 'in', to: 'x1' },
+      { from: 'x1', to: 'top' },
+      { from: 'x1', to: 'bot' },
+      { from: 'top', to: 'out' },
+      { from: 'bot', to: 'out' },
+    ],
+    packets: [],
+    timeline: [],
+  };
+
+  it('centres a fan-out / fan-in node between its two branches (median)', () => {
+    const layout = computeLayout(diamond);
+    const lo = Math.min(layout.top.cy, layout.bot.cy);
+    const hi = Math.max(layout.top.cy, layout.bot.cy);
+    const mid = (lo + hi) / 2;
+    expect(hi - lo).toBeGreaterThan(0.05); // the branches are spread apart
+    // The fan-out gate and the merge pad both sit on the branch midline instead
+    // of clinging to rank 0 — the balanced-schematic property the median gives.
+    expect(layout.x1.cy).toBeCloseTo(mid, 5);
+    expect(layout.out.cy).toBeCloseTo(mid, 5);
+  });
+
+  it('aligns each layer on one vertical rail (no x-stagger)', () => {
+    const layout = computeLayout(diamond);
+    expect(layout.top.cx).toBeCloseTo(layout.bot.cx, 6); // same column ⇒ same x
+    expect(layout.in.cx).toBeLessThan(layout.x1.cx); // layers march left→right
+    expect(layout.x1.cx).toBeLessThan(layout.top.cx);
+    expect(layout.top.cx).toBeLessThan(layout.out.cx);
+  });
+});
+
 describe('connectionAxis', () => {
   it('left-to-right: inter-lane → horizontal, even with steep slope', () => {
     // significant Δcx (different lanes) → horizontal, regardless of Δcy.

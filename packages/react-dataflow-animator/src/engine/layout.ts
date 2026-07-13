@@ -668,9 +668,11 @@ function isotonicSeparation(desired: number[], sep: number): number[] {
  * column by the barycenter of their neighbours to reduce crossings. Multiple
  * components (a gallery of independent gate cells) are then tiled in a grid.
  *
- * A small per-row x-stagger inside each column separates the vertical channels
- * of fan-out cross-wires (e.g. `A → AND` vs `B → XOR`) so they don't collapse
- * onto a single line.
+ * Each node's VERTICAL coordinate is pulled onto the MEDIAN of its neighbours
+ * (Sugiyama coordinate assignment), so a spine gate centres between the branches
+ * it fans out to and the diagram settles into the balanced top/middle/bottom
+ * bands of a hand-drawn schematic. Columns stay axis-aligned — one clean rail per
+ * layer — and the wire router (lane separation) keeps parallels apart.
  *
  * Returns `null` when the graph has no edges or a directed cycle (an electrical
  * loop is handled by {@link circuitAutoLayout}; anything else falls back to
@@ -808,17 +810,22 @@ function circuitDagLayout(
       for (const l of sweep) {
         const col = cols[l];
         const desired = col.map((id) => {
-          // Move ONLY leaves (a single graph neighbour: an output pad, a lone
-          // input) — snap them straight onto their driver. A leaf has just one
-          // wire, so this can neither cascade nor cross another edge, and it
-          // lands on an EXISTING slot, so hubs and their spacing are untouched.
-          // Multi-neighbour nodes keep their crossing-minimised rank; the global
-          // rank-band normalisation below then aligns them across columns.
-          if (undirected.get(id)!.size !== 1) return slot.get(id)!;
+          // Pull EVERY node onto the MEDIAN of its neighbours (in the sweep
+          // direction) — the classic Sugiyama coordinate assignment. A node thus
+          // centres between the things it fans out to / in from, so a spine gate
+          // sits halfway between its two branches (n1 between the top n2 and the
+          // bottom n3) instead of clinging to rank 0 — that is what recovers the
+          // balanced top/middle/bottom bands of a hand-drawn schematic. The
+          // median (not the mean) is robust to one far-off leaf, and it does not
+          // reorder the column, so `isotonicSeparation` below only enforces the
+          // minimum gap — no new crossing is introduced.
           const nb = (usePred ? pred : succ)
             .get(id)!
             .filter((n) => comp.get(n) === ci);
-          return nb.length === 1 ? slot.get(nb[0])! : slot.get(id)!;
+          if (nb.length === 0) return slot.get(id)!;
+          const s = nb.map((n) => slot.get(n)!).sort((a, b) => a - b);
+          const m = s.length;
+          return m % 2 ? s[(m - 1) / 2] : (s[m / 2 - 1] + s[m / 2]) / 2;
         });
         const placed = isotonicSeparation(desired, 1);
         col.forEach((id, i) => slot.set(id, placed[i]));
@@ -827,14 +834,13 @@ function circuitDagLayout(
     const svals = cnodes.map((id) => slot.get(id)!);
     const smin = Math.min(...svals);
     const smax = Math.max(...svals);
-    const stg = (x1 - x0) * 0.06;
     cols.forEach((col, l) => {
-      col.forEach((id, i) => {
-        const baseX =
-          cols.length > 1
-            ? x0 + (x1 - x0) * (l / (cols.length - 1))
-            : (x0 + x1) / 2;
-        const cx = baseX + (i - (col.length - 1) / 2) * stg;
+      // One clean vertical rail per layer: every node in a column shares its x.
+      const cx =
+        cols.length > 1
+          ? x0 + (x1 - x0) * (l / (cols.length - 1))
+          : (x0 + x1) / 2;
+      col.forEach((id) => {
         const cy =
           smax > smin
             ? y0 + (y1 - y0) * ((slot.get(id)! - smin) / (smax - smin))
