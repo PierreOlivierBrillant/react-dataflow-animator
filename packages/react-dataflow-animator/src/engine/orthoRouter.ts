@@ -86,6 +86,11 @@ export interface RouteOptions {
 
 const TURN_COST = 12;
 const LANE_COST = 40;
+/** Cost multiplier for an edge already on THIS net's trunk: < 1 rewards a
+ *  fan-out branch for staying on the shared trunk (splitting late) rather than
+ *  diverging early. Low enough to prefer sharing, not 0 (which would let a branch
+ *  ride the trunk past its target and double back). */
+const TRUNK_SHARE = 0.3;
 const EPS = 0.5;
 /** A miter shorter than this is pointless — keep the sharp corner instead. */
 const DIAG_MIN = 3;
@@ -560,11 +565,22 @@ export function routeOrthogonal(
           orient === 'h' ? cur.i : cur.j,
           orient === 'h' ? ni : nj
         );
-        // Only wires of OTHER nets on this edge cost a lane; same-net trunk is free.
+        // Wires of OTHER nets on this edge cost a lane. An edge THIS net already
+        // laid (its trunk) is not just free — it is DISCOUNTED (× TRUNK_SHARE), so
+        // a fan-out branch clings to the shared trunk and splits as LATE as it can
+        // (e.g. it rides Bin's vertical riser and peels off high up toward a
+        // right-hand gate) instead of diverging at the first corner — one fewer
+        // corner and one fewer crossing per branch.
         const on = usage.get(uk);
         let lane = 0;
-        if (on) for (const n of on) if (n !== wireNet) lane += LANE_COST;
-        const ng = cur.g + len + (turned ? TURN_COST : 0) + lane + leadCost;
+        let sameNet = false;
+        if (on)
+          for (const n of on) {
+            if (n === wireNet) sameNet = true;
+            else lane += LANE_COST;
+          }
+        const effLen = sameNet ? len * TRUNK_SHARE : len;
+        const ng = cur.g + effLen + (turned ? TURN_COST : 0) + lane + leadCost;
         const nk = key(ni, nj, ddi, ddj);
         if (ng < (gScore.get(nk) ?? Infinity)) {
           gScore.set(nk, ng);
