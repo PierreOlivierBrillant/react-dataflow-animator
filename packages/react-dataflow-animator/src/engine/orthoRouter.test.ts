@@ -84,6 +84,41 @@ const selfCrosses = (pts: { x: number; y: number }[]): boolean => {
   return false;
 };
 
+/** Number of PROPER interior crossings between the segments of two polylines
+ *  (shared endpoints / collinear touches excluded). */
+const crossCount = (
+  a: { x: number; y: number }[],
+  b: { x: number; y: number }[]
+): number => {
+  const o = (
+    p: { x: number; y: number },
+    q: { x: number; y: number },
+    r: { x: number; y: number }
+  ) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+  let n = 0;
+  for (let i = 0; i < a.length - 1; i++)
+    for (let j = 0; j < b.length - 1; j++) {
+      const p1 = a[i],
+        p2 = a[i + 1],
+        p3 = b[j],
+        p4 = b[j + 1];
+      const o1 = o(p1, p2, p3),
+        o2 = o(p1, p2, p4),
+        o3 = o(p3, p4, p1),
+        o4 = o(p3, p4, p2);
+      if (
+        o1 !== o2 &&
+        o3 !== o4 &&
+        o1 !== 0 &&
+        o2 !== 0 &&
+        o3 !== 0 &&
+        o4 !== 0
+      )
+        n++;
+    }
+  return n;
+};
+
 const hitsBody = (
   pts: { x: number; y: number }[],
   o: RouterObstacle
@@ -336,6 +371,33 @@ describe('orthoRouter', () => {
         )
           overlap = true;
     expect(overlap).toBe(false);
+  });
+
+  it('breaks an equal-length elbow tie toward FEWER crossings', () => {
+    // A fixed vertical wire F sits in the bottom-left corner region of an L that
+    // must join (0,0)→(60,60). The two elbows tie EXACTLY on length (120) and on
+    // turns (one): the horizontal-first flip (corner bottom-right) threads
+    // straight through F, the vertical-first flip (corner top-left) does not.
+    // With perpendicular crossings free the router picked arbitrarily — this is
+    // the generic form of the 2-crossing NAND elbow. The tiebreak must now pick
+    // the crossing-free flip: same wire, same length, one fewer crossing.
+    const soft = (node: string, x: number, y: number): RouterWire['from'] => ({
+      node,
+      point: { x, y },
+      normal: { x: 0, y: 0 },
+      hardNormal: false,
+    });
+    const wires: RouterWire[] = [
+      // F is laid first, so E (routed second) pays to cross it.
+      { key: 'f', from: soft('fSrc', 30, -20), to: soft('fDst', 30, 20) },
+      { key: 'e', from: soft('eSrc', 0, 0), to: soft('eDst', 60, 60) },
+    ];
+    const routes = routeOrthogonal([], wires);
+    const e = routes.get('e')!;
+    const f = routes.get('f')!;
+    expect(allOrthogonal(e)).toBe(true);
+    expect(crossCount(e, f)).toBe(0); // the flip that dodges F was chosen
+    expect(e[1].x).toBeCloseTo(0, 1); // its corner is top-left (vertical-first)
   });
 
   it('never crosses the TARGET body to reach a far-side pin', () => {
