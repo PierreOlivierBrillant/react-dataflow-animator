@@ -285,6 +285,40 @@ describe('orthoRouter', () => {
     expect(p1[0].y).toBeCloseTo(100, 5); // the unified anchor (mean of 80 & 120)
   });
 
+  it('co-locates a fan-out’s branch points into ONE shared T-junction', () => {
+    // A driver feeding a NEAR sink (up) and a FAR sink (down). Both branches ride
+    // the shared trunk (y=100) then peel off in opposite directions. Their turn
+    // points are free to differ at equal cost — the near branch turns at its own
+    // pin lead, the far branch could turn anywhere further along. Without the
+    // `fork` tiebreak A* picks those turns arbitrarily, leaving two offset risers;
+    // the tiebreak must snap the far branch's turn onto the near branch's, so the
+    // net splits at ONE junction (trunk in, one branch up, one down) — a clean T.
+    const wires: RouterWire[] = [
+      {
+        key: 'up',
+        from: pin('src', 120, 80, 1, 0),
+        to: pin('g1', 260, 60, -1, 0),
+      },
+      {
+        key: 'down',
+        from: pin('src', 120, 120, 1, 0),
+        to: pin('g2', 460, 140, -1, 0),
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('src', 100, 100), body('g1', 280, 60), body('g2', 480, 140)],
+      wires
+    );
+    const up = routes.get('up')!;
+    const down = routes.get('down')!;
+    // The branch vertex (first corner off the trunk) is the SAME point for both…
+    expect(up[1]).toEqual(down[1]);
+    expect(up[1].y).toBeCloseTo(100, 5); // …and sits ON the shared trunk…
+    // …then they diverge: one rises, one drops.
+    expect(up[2].y).toBeLessThan(100);
+    expect(down[2].y).toBeGreaterThan(100);
+  });
+
   it('routes around a component that sits between the terminals', () => {
     const mid = body('m', 200, 100);
     const wires: RouterWire[] = [

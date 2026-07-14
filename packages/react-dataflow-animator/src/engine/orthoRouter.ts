@@ -115,7 +115,7 @@ const LEAD_COST = 6;
 /**
  * The A* cost is LEXICOGRAPHIC, not a single sum, so wire crossings are minimised
  * WITHOUT ever paying for it in length or corners. Each explored state carries a
- * three-key cost {@link RouteCost} compared in this strict order:
+ * four-key cost {@link RouteCost} compared in this strict order:
  *
  *   1. `hard`  = length + turns ({@link TURN_COST}) + lane separation
  *                ({@link LANE_COST}, incl. the same-net trunk discount
@@ -124,6 +124,10 @@ const LEAD_COST = 6;
  *                is avoided here, above crossings.
  *   2. `cross` = number of perpendicular crossings with OTHER nets (§ below).
  *   3. `lead`  = {@link LEAD_COST} for turning inside a pin's lead zone.
+ *   4. `fork`  = number of corners that DON'T land on a junction a sibling of the
+ *                same net already turned at. Minimising it co-locates a fan-out's
+ *                branch points so a net splits at ONE shared T-junction instead of
+ *                slightly-offset stair-steps (§ below).
  *
  * Perpendicular crossings are otherwise invisible to lane separation (which only
  * penalises PARALLEL overlap), so an L / Z elbow whose two orientations tie on
@@ -132,19 +136,32 @@ const LEAD_COST = 6;
  * `lead` (but below `hard`) makes the router spend a shorter lead to remove a
  * crossing, yet NEVER a pixel of length or a corner. Greedy per wire (a later
  * wire avoids the ones already laid). A crossing is thus counted, not weighted —
- * there is no magic number to tune. */
+ * there is no magic number to tune.
+ *
+ * `fork` is the LOWEST tier, so co-locating splits is a pure tiebreak: when two
+ * branches of a net leave the shared trunk in opposite directions, A* picks —
+ * among routes ALREADY tied on shape, crossings and lead — the one whose corner
+ * sits exactly where the first branch turned. Two 4px-offset risers thus collapse
+ * into one clean T (trunk in, one branch up, one down), and the split lands as
+ * early as the shared trunk allows (no overshoot past the junction). It can never
+ * lengthen a wire, add a corner/crossing, or spend a lead to do so. */
 interface RouteCost {
   hard: number;
   cross: number;
   lead: number;
+  fork: number;
 }
-/** Strict lexicographic `a < b` over (hard, cross, lead). `hard` compares with a
- *  tiny tolerance so float noise in summed segment lengths does not mask a true
- *  tie — two same-length, same-turn orientations reach `cross` to be broken. */
+/** Strict lexicographic `a < b` over (hard, cross, lead, fork). `hard` compares
+ *  with a tiny tolerance so float noise in summed segment lengths does not mask a
+ *  true tie — two same-length, same-turn orientations reach the lower tiers. */
 function costLess(a: RouteCost, b: RouteCost): boolean {
   if (Math.abs(a.hard - b.hard) > 1e-6) return a.hard < b.hard;
   if (a.cross !== b.cross) return a.cross < b.cross;
-  return a.lead < b.lead - 1e-9;
+  // `lead` sums LEAD_COST × pixel distances, so it carries float noise: compare
+  // with a tolerance (like `hard`) so a true tie falls through to `fork`, not a
+  // sub-ULP difference. `fork` is an integer count — an exact compare is safe.
+  if (Math.abs(a.lead - b.lead) > 1e-9) return a.lead < b.lead;
+  return a.fork < b.fork;
 }
 
 /** Does the open segment a→b cross the OPEN rectangle interior? Liang–Barsky
@@ -470,6 +487,11 @@ export function routeOrthogonal(
   const vpass = new Map<string, Set<string>>();
   const vertKey = (i: number, j: number): string => `${i},${j}`;
 
+  // Per grid VERTEX, the nets that TURN (corner) there. A later branch of the SAME
+  // net that also turns here pays no `fork` (see {@link RouteCost}), so a fan-out's
+  // branch points snap onto one shared junction — a clean T instead of offset steps.
+  const turnAt = new Map<string, Set<string>>();
+
   const results = new Map<string, Point[]>();
 
   for (const wire of wires) {
@@ -563,10 +585,11 @@ export function routeOrthogonal(
       hard: g.hard + h(i, j),
       cross: g.cross,
       lead: g.lead,
+      fork: g.fork,
     });
 
     const startKey = key(si, sj, 0, 0);
-    const zero: RouteCost = { hard: 0, cross: 0, lead: 0 };
+    const zero: RouteCost = { hard: 0, cross: 0, lead: 0, fork: 0 };
     gScore.set(startKey, zero);
     came.set(startKey, null);
     open.push({ i: si, j: sj, di: 0, dj: 0, g: zero, f: withH(zero, si, sj) });
@@ -648,10 +671,19 @@ export function routeOrthogonal(
           const at = perp.get(vertKey(cur.i, cur.j));
           if (at) for (const n of at) if (n !== wireNet) crossCount++;
         }
+        // Turning AT `cur` costs one `fork` UNLESS a sibling of this net already
+        // turned here — so equal-shape branches snap their corners together into a
+        // shared T-junction (the lowest tier: never at the expense of hard/cross/lead).
+        let forkCost = 0;
+        if (turned) {
+          const sib = turnAt.get(vertKey(cur.i, cur.j));
+          if (!sib || !sib.has(wireNet)) forkCost = 1;
+        }
         const ng: RouteCost = {
           hard: cur.g.hard + effLen + (turned ? TURN_COST : 0) + lane,
           cross: cur.g.cross + crossCount,
           lead: cur.g.lead + leadCost,
+          fork: cur.g.fork + forkCost,
         };
         const nk = key(ni, nj, ddi, ddj);
         const prev = gScore.get(nk);
@@ -707,9 +739,15 @@ export function routeOrthogonal(
         const [ni2, nj2] = seq[m + 1];
         const straightH = pj === cj && cj === nj2;
         const straightV = pi === ci && ci === ni2;
-        if (!straightH && !straightV) continue; // a corner: no pass-through
-        const map = straightH ? hpass : vpass;
         const vk = vertKey(ci, cj);
+        if (!straightH && !straightV) {
+          // A corner: record it so a sibling branch can snap its own turn here.
+          const tset = turnAt.get(vk);
+          if (tset) tset.add(wireNet);
+          else turnAt.set(vk, new Set([wireNet]));
+          continue; // a corner is a turn, not a straight pass-through
+        }
+        const map = straightH ? hpass : vpass;
         const vset = map.get(vk);
         if (vset) vset.add(wireNet);
         else map.set(vk, new Set([wireNet]));
