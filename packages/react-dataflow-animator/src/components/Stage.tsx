@@ -39,6 +39,7 @@ import {
   treeEdges,
   treeEdgeStyle,
   type ConnectionAxis,
+  type LayoutMap,
 } from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
 import { computePlacements, computeContentLimits } from '../engine/placements';
@@ -221,6 +222,41 @@ function buildFlowPath(
  */
 const DESIGN_H = 495;
 
+/**
+ * Natural width:height aspect of a circuit layout, so it can be drawn in a
+ * fixed-aspect frame (letterboxed) instead of stretched to the container — the
+ * ONLY way routing stays identical at any size AND shape. It is simply the
+ * aspect of the NODE CLOUD (`xspan / yspan`), so the frame matches the drawing
+ * the layout already produced — a wide chain gets a wide frame, minimal margin.
+ * Clamped to a sane range; 1.6 by default (too few nodes / a degenerate span).
+ */
+function circuitFrameAspect(layout: LayoutMap): number {
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (const id in layout) {
+    xs.push(layout[id].cx);
+    ys.push(layout[id].cy);
+  }
+  if (xs.length < 2) return 1.6;
+  const xspan = Math.max(...xs) - Math.min(...xs);
+  const yspan = Math.max(...ys) - Math.min(...ys);
+  if (xspan < 1e-3 || yspan < 1e-3) return 1.6;
+  return Math.min(3.2, Math.max(1, xspan / yspan));
+}
+
+/** Largest box of the given aspect that fits in `w × h`, centred (letterbox).
+ *  `aspect <= 0` disables it (the content fills the container as before). */
+function letterbox(
+  w: number,
+  h: number,
+  aspect: number
+): { w: number; h: number; offX: number; offY: number } {
+  if (aspect <= 0 || w <= 0 || h <= 0) return { w, h, offX: 0, offY: 0 };
+  const fw = Math.min(w, h * aspect);
+  const fh = fw / aspect;
+  return { w: fw, h: fh, offX: (w - fw) / 2, offY: (h - fh) / 2 };
+}
+
 /** Minimum padding (px) between a contained element and its zone border. */
 const ZONE_PADDING = 20;
 /** Extra pixels reserved at the top of a zone that has a label, to
@@ -326,15 +362,46 @@ export function Stage({
     useStageGeometry(signature);
   const layout = useMemo(() => computeLayout(spec, { aspect }), [spec, aspect]);
 
+  // A `circuit` schematic is drawn in a FIXED-aspect frame centred in the stage
+  // (letterbox), not stretched to fill it — so it routes IDENTICALLY at any
+  // container size AND shape (only a uniform scale ever changes; the aspect that
+  // used to re-route the wires is gone). Everything below reasons in this frame:
+  // the scale, positions and the router all use `frame.{w,h}` instead of the raw
+  // stage size. Non-circuit diagrams keep filling the stage (frameAspect 0).
+  const isCircuitDir = (spec.direction ?? 'left-to-right') === 'circuit';
+  const frameAspect = useMemo(
+    () => (isCircuitDir ? circuitFrameAspect(layout) : 0),
+    [isCircuitDir, layout]
+  );
+  const frame = useMemo(
+    () => letterbox(width, height, frameAspect),
+    [width, height, frameAspect]
+  );
+  // Attachment-axis decisions (connectionAxis) must use the FRAME's aspect, not
+  // the container's — otherwise a signal pad would pick a different face at a
+  // different window shape and the wire would re-route. Fixed per demo.
+  const routeAspect = isCircuitDir ? frameAspect : aspect;
+
+  // The letterbox MOVES nodes (their POSITION, not their size) when the container
+  // reshapes: the frame's px size can be unchanged while the compression ratio
+  // (frame.w / stage-width) changes, so nodes slide. A ResizeObserver only catches
+  // SIZE changes, so without this the geometry would stay on the pre-letterbox
+  // positions and the router would route the wires there (detached from the framed
+  // nodes). Re-measure after the stage size (hence the placements) changes.
+  // Bounded by width/height/frameAspect → forceRemeasure can't re-trigger it.
+  useIsoLayoutEffect(() => {
+    if (frameAspect) forceRemeasure();
+  }, [width, height, frameAspect, forceRemeasure]);
+
   // EXACT proportionality: we reason in a "design space" of
-  // fixed height (DESIGN_H), with the same aspect ratio as the player. Everything (scale, panel
+  // fixed height (DESIGN_H), with the same aspect ratio as the frame. Everything (scale, panel
   // sizes, font ratios) is computed once there — thus constant for a given
-  // aspect ratio — then multiplied by k = actual_height / DESIGN_H. Sizes are
+  // aspect ratio — then multiplied by k = frame_height / DESIGN_H. Sizes are
   // therefore base × designScale × k (∝ k, thus proportional to the player size), positions
   // remain in %, and reduction ratios are identical at any size: a
   // small player is a strictly homogeneous reduction of a large one.
-  const k = height > 0 ? height / DESIGN_H : 1;
-  const designW = width > 0 && k > 0 ? width / k : 700;
+  const k = frame.h > 0 ? frame.h / DESIGN_H : 1;
+  const designW = frame.w > 0 && k > 0 ? frame.w / k : 700;
   // Junction dots claim no room: exclude them from the scale spacing so a corner
   // junction next to a component doesn't shrink the whole schematic.
   const compactNodeIds = useMemo(
@@ -495,11 +562,11 @@ export function Stage({
       computePortOffsets(
         lineConnections,
         layout,
-        aspect,
+        routeAspect,
         direction,
         fanOutNodes
       ),
-    [lineConnections, layout, aspect, direction, fanOutNodes]
+    [lineConnections, layout, routeAspect, direction, fanOutNodes]
   );
 
   // Connection attachment axis, derived from layout FLOW (see connectionAxis):
@@ -509,7 +576,9 @@ export function Stage({
   const axisFor = (fromRef: string, toRef: string) => {
     const p1 = layout[refNode(fromRef)];
     const p2 = layout[refNode(toRef)];
-    return p1 && p2 ? connectionAxis(p1, p2, direction, aspect) : undefined;
+    return p1 && p2
+      ? connectionAxis(p1, p2, direction, routeAspect)
+      : undefined;
   };
   // Port offsets do not apply to an endpoint that is already a precise point (a
   // component terminal, or a junction dot): zero the spread there.
@@ -700,7 +769,7 @@ export function Stage({
       const p1 = layout[refNode(link.from)];
       const p2 = layout[refNode(link.to)];
       const axis =
-        p1 && p2 ? connectionAxis(p1, p2, direction, aspect) : undefined;
+        p1 && p2 ? connectionAxis(p1, p2, direction, routeAspect) : undefined;
       const base = portOffsets[key] ?? { start: 0, end: 0 };
       const precise = (k?: string) => k === 'pin' || k === 'point';
       const ends = wireEndpoints(
@@ -752,7 +821,7 @@ export function Stage({
     portOffsets,
     layout,
     direction,
-    aspect,
+    routeAspect,
     labelSideById,
     k,
   ]);
@@ -951,9 +1020,27 @@ export function Stage({
       ),
     [layout, geometry, width, height, labelSideById]
   );
-  const placements = isTree
+  const basePlaced = isTree
     ? computePlacements(liveLayout, geometry, width, height)
     : basePlacements;
+  // Compress the (0..1) placements into the centred circuit frame: a node lands
+  // inside the letterboxed box, so nodes + wires scale uniformly and never
+  // stretch with the container. Identity when there is no frame (frameAspect 0).
+  const placements = useMemo(() => {
+    if (!frameAspect || frame.w <= 0 || width <= 0 || height <= 0)
+      return basePlaced;
+    const sx = frame.w / width;
+    const sy = frame.h / height;
+    const ox = frame.offX / width;
+    const oy = frame.offY / height;
+    const out: Record<string, { cx: number; cy: number }> = {};
+    for (const id in basePlaced)
+      out[id] = {
+        cx: ox + basePlaced[id].cx * sx,
+        cy: oy + basePlaced[id].cy * sy,
+      };
+    return out;
+  }, [basePlaced, frameAspect, frame, width, height]);
 
   // Max panel size per node so a set_content never overlaps
   // a neighbor (FIXED positions known in advance): beyond this, content shrinks.
