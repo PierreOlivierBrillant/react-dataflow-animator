@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   deloop,
   routeOrthogonal,
+  routeWithPinSwaps,
   simplify,
   type RouterObstacle,
   type RouterWire,
@@ -317,6 +318,59 @@ describe('orthoRouter', () => {
     // …then they diverge: one rises, one drops.
     expect(up[2].y).toBeLessThan(100);
     expect(down[2].y).toBeGreaterThan(100);
+  });
+
+  it('swaps a commutative gate’s inputs to remove a crossing', () => {
+    // Two sources feed a gate's stacked inputs in the CROSSED order: s1 (below)
+    // drives the TOP pin, s2 (above) the BOTTOM pin, so the two wires cross right
+    // at the gate. The gate is commutative, so routeWithPinSwaps may trade which
+    // wire lands on which pin; here the flip removes the crossing at no cost.
+    const gate: RouterObstacle = { id: 'g', x: 300, y: 100, w: 40, h: 60 };
+    const wires: RouterWire[] = [
+      {
+        key: 'wA',
+        from: pin('s1', 120, 130, 1, 0),
+        to: pin('g', 280, 90, -1, 0),
+      },
+      {
+        key: 'wB',
+        from: pin('s2', 120, 70, 1, 0),
+        to: pin('g', 280, 110, -1, 0),
+      },
+    ];
+    const obstacles = [body('s1', 100, 130), body('s2', 100, 70), gate];
+    const before = routeOrthogonal(obstacles, wires);
+    expect(crossCount(before.get('wA')!, before.get('wB')!)).toBe(1);
+    const after = routeWithPinSwaps(obstacles, wires, [['wA', 'wB']]);
+    expect(crossCount(after.get('wA')!, after.get('wB')!)).toBe(0);
+    // The keys are unchanged; only the target pins traded — wA now lands on the
+    // LOWER pin (y=110), wB on the UPPER (y=90).
+    expect(after.get('wA')!.at(-1)!.y).toBeCloseTo(110, 5);
+    expect(after.get('wB')!.at(-1)!.y).toBeCloseTo(90, 5);
+  });
+
+  it('leaves pins alone when no swap reduces crossings', () => {
+    // Same gate, but sources already in the natural order (s1 above → top pin, s2
+    // below → bottom pin): the wires don't cross. A swap could only ADD one, so
+    // the optimiser must keep the author's assignment untouched.
+    const gate: RouterObstacle = { id: 'g', x: 300, y: 100, w: 40, h: 60 };
+    const wires: RouterWire[] = [
+      {
+        key: 'wA',
+        from: pin('s1', 120, 70, 1, 0),
+        to: pin('g', 280, 90, -1, 0),
+      },
+      {
+        key: 'wB',
+        from: pin('s2', 120, 130, 1, 0),
+        to: pin('g', 280, 110, -1, 0),
+      },
+    ];
+    const obstacles = [body('s1', 100, 70), body('s2', 100, 130), gate];
+    const plain = routeOrthogonal(obstacles, wires);
+    const opt = routeWithPinSwaps(obstacles, wires, [['wA', 'wB']]);
+    expect(opt.get('wA')).toEqual(plain.get('wA')); // untouched
+    expect(opt.get('wB')).toEqual(plain.get('wB'));
   });
 
   it('routes around a component that sits between the terminals', () => {

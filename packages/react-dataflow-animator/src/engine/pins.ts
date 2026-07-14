@@ -141,6 +141,28 @@ export const COMPONENT_PINS: Partial<Record<NodeType, Record<string, PinDef>>> =
     },
   };
 
+/** The two INPUT terminals of a two-input logic gate, whose order is logically
+ *  irrelevant (`a AND b === b AND a`, likewise NAND/OR/NOR/XOR/XNOR). The router
+ *  may therefore swap which incoming wire takes the upper (`a`) vs lower (`b`) pin
+ *  to avoid a wire crossing, with no change to the circuit. A gate NOT listed here
+ *  (an op-amp's `+`/`-`, a transistor's terminals) keeps its author-given pins. */
+const COMMUTATIVE_INPUT_PINS: Partial<Record<NodeType, [string, string]>> = {
+  and_gate: ['a', 'b'],
+  or_gate: ['a', 'b'],
+  nand_gate: ['a', 'b'],
+  nor_gate: ['a', 'b'],
+  xor_gate: ['a', 'b'],
+  xnor_gate: ['a', 'b'],
+};
+
+/** The interchangeable input-pin pair of `type`, or `undefined` if its terminals
+ *  are order-sensitive. See {@link COMMUTATIVE_INPUT_PINS}. */
+export function commutativeInputPins(
+  type: NodeType
+): readonly [string, string] | undefined {
+  return COMMUTATIVE_INPUT_PINS[type];
+}
+
 /** A parsed endpoint reference: the node id and, optionally, a terminal name. */
 export interface EndpointRef {
   /** Bare node id (what geometry / layout are keyed by). */

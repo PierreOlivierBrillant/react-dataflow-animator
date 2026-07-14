@@ -59,11 +59,17 @@ import {
   type Point,
 } from '../engine/geometry';
 import {
-  routeOrthogonal,
+  routeWithPinSwaps,
+  type PinSwapGroup,
   type RouterObstacle,
   type RouterWire,
 } from '../engine/orthoRouter';
-import { parseRef, refNode, resolvePin } from '../engine/pins';
+import {
+  commutativeInputPins,
+  parseRef,
+  refNode,
+  resolvePin,
+} from '../engine/pins';
 import { useStageGeometry } from '../hooks/useStageGeometry';
 import { buildStageSignature } from './stageSignature';
 import { clipOpacity, contentCrossfade } from './clipOpacity';
@@ -758,12 +764,25 @@ export function Stage({
         labelSide: labelSideById.get(id),
       })
     );
+    const typeById = new Map(spec.nodes.map((n) => [n.id, n.type]));
+    // Per target node, the wire reaching each named pin and where it comes from —
+    // used below to spot a commutative gate whose two inputs could swap pins.
+    const inByNode = new Map<
+      string,
+      Map<string, { key: string; src: string }>
+    >();
     const wires: RouterWire[] = [];
     (spec.connections ?? []).forEach((link, i) => {
       const f = geometry[refNode(link.from)];
       const tg = geometry[refNode(link.to)];
       if (!f || !tg) return;
       const key = link.id ?? `${link.from}|${link.to}|${i}`;
+      const toRef = parseRef(link.to);
+      if (toRef.pin) {
+        const pins = inByNode.get(toRef.node) ?? new Map();
+        pins.set(toRef.pin, { key, src: refNode(link.from) });
+        inByNode.set(toRef.node, pins);
+      }
       const fromC = contourFor(link.from);
       const toC = contourFor(link.to);
       const p1 = layout[refNode(link.from)];
@@ -804,10 +823,24 @@ export function Stage({
       });
     });
     if (!wires.length) return routes;
+    // A commutative gate (`a AND b === b AND a`, likewise NAND/OR/…) whose two
+    // input wires come from different nets may swap which wire takes the upper vs
+    // lower pin, to let the router remove a crossing at the gate — see
+    // {@link routeWithPinSwaps}. Order-sensitive terminals (op-amp `+`/`-`) are
+    // excluded by {@link commutativeInputPins}.
+    const swapGroups: PinSwapGroup[] = [];
+    for (const [node, pins] of inByNode) {
+      const type = typeById.get(node);
+      const pair = type && commutativeInputPins(type);
+      if (!pair) continue;
+      const a = pins.get(pair[0]);
+      const b = pins.get(pair[1]);
+      if (a && b && a.src !== b.src) swapGroups.push([a.key, b.key]);
+    }
     // `scale: k` normalizes the measured geometry to design space so the routes
     // (fixed-px leads/costs) are identical at any player size — a thumbnail and a
     // full-screen render draw the SAME corners. See RouteOptions.scale.
-    return routeOrthogonal(obstacles, wires, {
+    return routeWithPinSwaps(obstacles, wires, swapGroups, {
       clearance: 6,
       laneTracks: 3,
       scale: k,
@@ -815,6 +848,7 @@ export function Stage({
   }, [
     isCircuit,
     geometry,
+    spec.nodes,
     spec.connections,
     spec.diagonal_wires,
     contourFor,

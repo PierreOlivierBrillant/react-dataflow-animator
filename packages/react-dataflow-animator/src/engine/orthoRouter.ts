@@ -796,6 +796,95 @@ export function routeOrthogonal(
   return results;
 }
 
+/** A pair of wire keys whose TARGET endpoints are interchangeable — the two input
+ *  pins of a commutative gate ({@link commutativeInputPins}). The optimiser may
+ *  swap which wire lands on which pin to remove a crossing, since the gate reads
+ *  the same either way. */
+export type PinSwapGroup = readonly [string, string];
+
+/** How many improvement sweeps {@link routeWithPinSwaps} makes over the groups.
+ *  Each accepted swap strictly lowers the crossing count (a bounded integer), so
+ *  the loop converges; this only caps the cost when swaps keep interacting. */
+const PIN_SWAP_PASSES = 4;
+
+/** Proper crossings between wires of DIFFERENT nets (same-net wires share a trunk,
+ *  not a crossing). Reuses {@link segCross} so it counts exactly what the eye sees. */
+function countInterNetCrossings(
+  routes: Map<string, Point[]>,
+  wires: RouterWire[]
+): number {
+  let n = 0;
+  for (let i = 0; i < wires.length; i++) {
+    const pi = routes.get(wires[i].key);
+    if (!pi) continue;
+    for (let j = i + 1; j < wires.length; j++) {
+      if (wires[i].from.node === wires[j].from.node) continue;
+      const pj = routes.get(wires[j].key);
+      if (!pj) continue;
+      for (let a = 0; a < pi.length - 1; a++)
+        for (let b = 0; b < pj.length - 1; b++)
+          if (segCross(pi[a], pi[a + 1], pj[b], pj[b + 1])) n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * {@link routeOrthogonal}, then greedily assign each commutative gate's two input
+ * pins to minimise wire crossings. A gate like `x3 NAND x7` reads the same as
+ * `x7 NAND x3`, so when the wire heading for the upper pin arrives BELOW the one
+ * heading for the lower pin (they cross right at the gate), swapping which wire
+ * takes which pin removes the crossing at no logical cost.
+ *
+ * We can't know the winning assignment before routing (it depends on how each
+ * wire actually approaches), so we route, count crossings, and for each swap group
+ * try the flip and re-route — keeping it only if the total STRICTLY drops. Greedy
+ * and deterministic; a swap never raises the count, and the length/corner budget
+ * is the router's own concern (the flip is just a different pair of endpoints).
+ * `swapGroups` empty ⇒ this is exactly `routeOrthogonal`.
+ */
+export function routeWithPinSwaps(
+  obstacles: RouterObstacle[],
+  wires: RouterWire[],
+  swapGroups: PinSwapGroup[],
+  opts: RouteOptions = {}
+): Map<string, Point[]> {
+  let current = wires;
+  let routes = routeOrthogonal(obstacles, current, opts);
+  if (!swapGroups.length) return routes;
+  const groups = swapGroups.filter(
+    ([a, b]) =>
+      current.some((w) => w.key === a) && current.some((w) => w.key === b)
+  );
+  let crossings = countInterNetCrossings(routes, current);
+  for (let pass = 0; pass < PIN_SWAP_PASSES && crossings > 0; pass++) {
+    let improved = false;
+    for (const [ka, kb] of groups) {
+      const wa = current.find((w) => w.key === ka);
+      const wb = current.find((w) => w.key === kb);
+      if (!wa || !wb) continue;
+      // Trade the two wires' target endpoints (their `to`), leaving keys intact.
+      const trial = current.map((w) =>
+        w.key === ka
+          ? { ...w, to: wb.to }
+          : w.key === kb
+            ? { ...w, to: wa.to }
+            : w
+      );
+      const trialRoutes = routeOrthogonal(obstacles, trial, opts);
+      const trialCross = countInterNetCrossings(trialRoutes, trial);
+      if (trialCross < crossings) {
+        current = trial;
+        routes = trialRoutes;
+        crossings = trialCross;
+        improved = true;
+      }
+    }
+    if (!improved) break;
+  }
+  return routes;
+}
+
 /** Removes duplicate and collinear interior points, so the polyline is the
  *  minimal set of corners (no invisible mid-vertices). Collinearity is the
  *  GENERAL case (perpendicular distance from the a–c line), so it also fuses two
