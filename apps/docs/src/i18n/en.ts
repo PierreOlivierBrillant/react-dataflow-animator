@@ -10,6 +10,9 @@ export const en: Messages = {
     toggleMenu: 'Toggle navigation',
     languageLabel: 'Language',
     toggleTheme: 'Toggle light/dark theme',
+    themeLight: 'Light',
+    themeSystem: 'System',
+    themeDark: 'Dark',
   },
   home: {
     pageTitle: 'Home',

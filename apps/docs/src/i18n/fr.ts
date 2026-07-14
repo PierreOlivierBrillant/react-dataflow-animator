@@ -17,6 +17,9 @@ export const fr = {
     toggleMenu: 'Ouvrir/fermer la navigation',
     languageLabel: 'Langue',
     toggleTheme: 'Basculer le thème clair/sombre',
+    themeLight: 'Clair',
+    themeSystem: 'Système',
+    themeDark: 'Sombre',
   },
   home: {
     pageTitle: 'Accueil',
