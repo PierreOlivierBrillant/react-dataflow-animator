@@ -376,6 +376,67 @@ describe('computeLayout — circuit (feed-forward DAG)', () => {
     expect(layout.x1.cx).toBeLessThan(layout.top.cx);
     expect(layout.top.cx).toBeLessThan(layout.out.cx);
   });
+
+  // The NAND full adder of the docs gallery (`demos/fullAdderNand.ts`): three input
+  // pads feeding nine gates. Its input column is the case least squares handles
+  // worst — A, B and Cin all want a rail between roughly the same two slots but must
+  // stay a slot apart, so the isotonic optimum parks all three BETWEEN the rails
+  // their wires aim at and not one lead out of six leaves straight.
+  const fullAdder: DataFlowSpec = {
+    direction: 'circuit',
+    nodes: [
+      { id: 'A', type: 'signal' },
+      { id: 'B', type: 'signal' },
+      { id: 'Cin', type: 'signal' },
+      ...['x1', 'x2', 'x3', 'ab', 'x5', 'x6', 'x7', 'nSum', 'nCout'].map(
+        (id) => ({ id, type: 'nand_gate' as const })
+      ),
+      { id: 'sumOut', type: 'signal' },
+      { id: 'coutOut', type: 'signal' },
+    ],
+    connections: [
+      ...(
+        [
+          ['x1', 'A', 'B'],
+          ['x2', 'A', 'x1:y'],
+          ['x3', 'x1:y', 'B'],
+          ['ab', 'x2:y', 'x3:y'],
+          ['x5', 'ab:y', 'Cin'],
+          ['x6', 'ab:y', 'x5:y'],
+          ['x7', 'x5:y', 'Cin'],
+          ['nSum', 'x6:y', 'x7:y'],
+          ['nCout', 'x5:y', 'x1:y'],
+        ] as const
+      ).flatMap(([g, a, b]) => [
+        { from: a, to: `${g}:a` },
+        { from: b, to: `${g}:b` },
+      ]),
+      { from: 'nSum:y', to: 'sumOut' },
+      { from: 'nCout:y', to: 'coutOut' },
+    ],
+    packets: [],
+    timeline: [],
+  };
+
+  it('snaps an input pad onto its gate rail rather than splitting the difference', () => {
+    const layout = computeLayout(fullAdder);
+    // A lands on x2's row and B on x1's and x3's, so those three leads are drawn
+    // dead straight — worth the length it adds to A's other wire.
+    expect(layout.A.cy).toBeCloseTo(layout.x2.cy, 5);
+    expect(layout.B.cy).toBeCloseTo(layout.x1.cy, 5);
+    expect(layout.B.cy).toBeCloseTo(layout.x3.cy, 5);
+    // The pads stay ordered and spread, never collapsed onto one rail.
+    expect(layout.A.cy).toBeLessThan(layout.B.cy);
+    expect(layout.B.cy).toBeLessThan(layout.Cin.cy);
+  });
+
+  it('never drags an interior gate off its median to win a rail', () => {
+    const layout = computeLayout(fullAdder);
+    // `ab` merges the two XOR halves and feeds the carry chain: it mediates, so it
+    // keeps the midline between its branches. Snapping it would buy one straight
+    // wire and pull the whole spine into a single band.
+    expect(layout.ab.cy).toBeCloseTo((layout.x2.cy + layout.x3.cy) / 2, 5);
+  });
 });
 
 describe('connectionAxis', () => {

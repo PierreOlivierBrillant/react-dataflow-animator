@@ -660,6 +660,125 @@ export function isotonicSeparation(desired: number[], sep: number): number[] {
   return out.map((v, k) => v + k * sep);
 }
 
+/** Two slots this close count as the SAME rail — the sweeps leave float dust. */
+const SLOT_EPS = 1e-6;
+
+/**
+ * How far {@link snapColumnsToRails} may drag a node from the position the median
+ * sweeps gave it, as a fraction of the minimum slot gap. Budgeted against that
+ * HOME position rather than per move: rounds compound, so a per-move cap would let
+ * a node walk a rail at a time and drag the whole spine into one band. Under half a
+ * gap a node cannot reach its neighbour's row, so the snap can only absorb
+ * least-squares residue — and it is the literal budget for "a straight wire is
+ * worth a slightly longer one": half a row, no more.
+ */
+const SNAP_REACH = 0.5;
+
+/**
+ * Snaps columns onto shared rails, trading least-squares error for STRAIGHT wires.
+ *
+ * The median sweeps minimise the sum of squared offsets, which spreads a column's
+ * residual over all its wires: each one ends up slightly off its neighbour's rail,
+ * so each gets a small dogleg and NONE is straight. A schematic reads the opposite
+ * way — a few dead-straight wires plus a few honest turns beat a haze of jogs — so
+ * a shift that removes corners is worth the wire length it adds, up to
+ * {@link SNAP_REACH}.
+ *
+ * Nodes already at the minimum gap form a RIGID block: the sweeps refused to pull
+ * them apart, so they can only move together. Each block is therefore shifted as a
+ * unit by the delta putting the MOST of its wires on their partner's rail, within
+ * the slack its column neighbours leave. Only a strictly better count moves a
+ * block, and ties keep the smaller move, so the balanced bands the sweeps found
+ * survive untouched.
+ *
+ * Only BOUNDARY blocks — every member wired on one side only, i.e. the I/O pads —
+ * are eligible. An interior gate's median is load-bearing: it is what holds the
+ * diagram's top/middle/bottom bands apart, and snapping it buys one straight wire
+ * by pulling the spine onto a neighbour's rail. Measured on the NAND demos that is
+ * a double loss — the bands collapse AND the corner count RISES, because a crowded
+ * rail is a wall the router has to detour around. A pad hangs off one wire and
+ * mediates nothing, so aligning it with its partner costs nothing.
+ *
+ * Alignment is judged in SLOT space (same slot ⇔ same row) and stays deliberately
+ * blind to where a wire meets its node: a gate's `a`/`b` terminals sit a third of
+ * the way up/down its body, and absorbing that offset is `geometry.ts`'s job
+ * (`alignFaceToTerminal` slides a pad's port onto the pin) — the layout only has
+ * to put the two nodes on one row for it to have something to slide onto.
+ */
+function snapColumnsToRails(
+  cols: string[][],
+  slot: Map<string, number>,
+  neighboursOf: (id: string) => string[],
+  isBoundary: (id: string) => boolean
+): void {
+  const at = (id: string): number => slot.get(id)!;
+  // The sweeps' answer: every snap is measured against THIS, never against the
+  // running position, so rounds cannot compound into a drift.
+  const home = new Map(slot);
+  // Blocks interlock across columns (snapping one opens a rail for the next), so
+  // sweep until nothing moves — a handful of rounds always reaches that here.
+  for (let round = 0; round < 8; round++) {
+    let moved = false;
+    for (const col of cols) {
+      let p = 0;
+      while (p < col.length) {
+        let q = p;
+        while (
+          q + 1 < col.length &&
+          at(col[q + 1]) - at(col[q]) <= 1 + SLOT_EPS
+        )
+          q++;
+        if (!col.slice(p, q + 1).every(isBoundary)) {
+          p = q + 1;
+          continue;
+        }
+        // Budget left to each member against its home, narrowed by the slack the
+        // free neighbours bracketing the block leave.
+        let lo = p > 0 ? at(col[p - 1]) + 1 - at(col[p]) : -Infinity;
+        let hi =
+          q + 1 < col.length ? at(col[q + 1]) - 1 - at(col[q]) : Infinity;
+        for (let i = p; i <= q; i++) {
+          const drift = at(col[i]) - home.get(col[i])!;
+          lo = Math.max(lo, -SNAP_REACH - drift);
+          hi = Math.min(hi, SNAP_REACH - drift);
+        }
+        const straight = (d: number): number => {
+          let n = 0;
+          for (let i = p; i <= q; i++)
+            for (const u of neighboursOf(col[i]))
+              if (Math.abs(at(col[i]) + d - at(u)) < SLOT_EPS) n++;
+          return n;
+        };
+        let bestN = straight(0);
+        let best: number[] = [0];
+        for (let i = p; i <= q; i++)
+          for (const u of neighboursOf(col[i])) {
+            const d = at(u) - at(col[i]);
+            if (d < lo - SLOT_EPS || d > hi + SLOT_EPS) continue;
+            if (best.some((b) => Math.abs(b - d) < SLOT_EPS)) continue;
+            const n = straight(d);
+            if (n > bestN) {
+              bestN = n;
+              best = [d];
+            } else if (n === bestN) best.push(d);
+          }
+        // A single unambiguous winner moves the block. A TIE means the block is
+        // pulled equally hard both ways — a fan-out gate sitting between the two
+        // branches it feeds — and picking a side would be a coin flip that trades
+        // the balanced midline for an arbitrary wire. Staying is the honest answer,
+        // so the median the sweeps found survives.
+        if (best.length === 1 && Math.abs(best[0]) > SLOT_EPS) {
+          const d = best[0];
+          for (let i = p; i <= q; i++) slot.set(col[i], at(col[i]) + d);
+          moved = true;
+        }
+        p = q + 1;
+      }
+    }
+    if (!moved) break;
+  }
+}
+
 /**
  * Layered left-to-right auto-layout for a `direction: 'circuit'` that is a
  * feed-forward network (a logic diagram: inputs → gates → outputs). Each
@@ -831,6 +950,14 @@ function circuitDagLayout(
         col.forEach((id, i) => slot.set(id, placed[i]));
       }
     }
+    const inComp = (n: string): boolean => comp.get(n) === ci;
+    snapColumnsToRails(
+      cols,
+      slot,
+      (id) => [...pred.get(id)!, ...succ.get(id)!].filter(inComp),
+      // An I/O pad: wired on one side only, so it mediates nothing.
+      (id) => !pred.get(id)!.some(inComp) || !succ.get(id)!.some(inComp)
+    );
     const svals = cnodes.map((id) => slot.get(id)!);
     const smin = Math.min(...svals);
     const smax = Math.max(...svals);

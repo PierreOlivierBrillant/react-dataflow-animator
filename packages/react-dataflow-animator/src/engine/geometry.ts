@@ -451,23 +451,39 @@ export function distributeFacePorts(
     out.set(wires[0].key, { x: edgeX, y: clampAim(wires[0].aim) });
     return out;
   }
-  // Order by clamped aim (partner order → wires never cross), then cluster: a wire
-  // within PORT_GAP of the previous one shares its port. A cluster's shared port is
-  // its members' mean aim.
   const order = wires
     .map((w, i) => ({ key: w.key, aim: clampAim(w.aim), i }))
     .sort((a, b) => a.aim - b.aim || a.i - b.i);
-  const clusters: { keys: string[]; sum: number }[] = [];
-  let prevAim = -Infinity;
-  for (const w of order) {
-    const last = clusters[clusters.length - 1];
-    if (last && w.aim - prevAim < PORT_GAP) {
-      last.keys.push(w.key);
-      last.sum += w.aim;
-    } else {
-      clusters.push({ keys: [w.key], sum: w.aim });
+  // Separation the placement below will actually impose. PORT_GAP is a wish: a pad
+  // shorter than it packs its ports tighter, and the cluster test MUST use the same
+  // number or it merges wires the placement would have separated for free.
+  const sep = (n: number): number =>
+    n > 1 ? Math.min(PORT_GAP, (hi - lo) / (n - 1)) : PORT_GAP;
+  // Cluster: two adjacent wires share a port when that costs LESS than separating
+  // them. Separating aims `d` apart pushes each out by `sep − d`; sharing pulls each
+  // in by `d`. So sharing wins exactly while `d < sep / 2` — the crossover, not a
+  // tuned threshold. Merging only ever widens `sep`, so re-clustering on the new
+  // count converges (monotonically) in a couple of rounds.
+  const clusterWithin = (limit: number): { keys: string[]; sum: number }[] => {
+    const acc: { keys: string[]; sum: number }[] = [];
+    let prevAim = -Infinity;
+    for (const w of order) {
+      const last = acc[acc.length - 1];
+      if (last && w.aim - prevAim < limit) {
+        last.keys.push(w.key);
+        last.sum += w.aim;
+      } else {
+        acc.push({ keys: [w.key], sum: w.aim });
+      }
+      prevAim = w.aim;
     }
-    prevAim = w.aim;
+    return acc;
+  };
+  let clusters = clusterWithin(sep(order.length) / 2);
+  while (clusters.length < order.length) {
+    const next = clusterWithin(sep(clusters.length) / 2);
+    if (next.length === clusters.length) break;
+    clusters = next;
   }
   const centres = clusters.map((c) => c.sum / c.keys.length);
   if (clusters.length === 1) {
@@ -475,11 +491,10 @@ export function distributeFacePorts(
     for (const k of clusters[0].keys) out.set(k, { x: edgeX, y: centres[0] });
     return out;
   }
-  // Distinct clusters: one port each, min-separated by PORT_GAP (isotonic = least
-  // displacement keeping order). The block is shifted back inside the face if
-  // separation pushed it past an edge, so no port ever leaves the pad.
-  const gap = Math.min(PORT_GAP, (hi - lo) / (clusters.length - 1));
-  const placed = isotonicSeparation(centres, gap);
+  // Distinct clusters: one port each, min-separated (isotonic = least displacement
+  // keeping order). The block is shifted back inside the face if separation pushed
+  // it past an edge, so no port ever leaves the pad.
+  const placed = isotonicSeparation(centres, sep(clusters.length));
   const shift =
     Math.max(0, lo - placed[0]) - Math.max(0, placed[placed.length - 1] - hi);
   clusters.forEach((c, k) => {
