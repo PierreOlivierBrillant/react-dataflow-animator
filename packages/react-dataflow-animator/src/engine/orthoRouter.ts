@@ -18,9 +18,9 @@ import type { Point } from './geometry';
  * are routed in order; each marks the grid edges it used, and later wires pay a
  * penalty to reuse a segment in the SAME orientation — so parallels spread onto
  * neighbouring tracks. A perpendicular crossing is allowed (the wires meet at a
- * right angle) but not free: it is the middle tier of the wire's LEXICOGRAPHIC
- * cost (see {@link RouteCost}), so a later wire dodges an earlier one wherever it
- * can do so at no cost in length or corners.
+ * right angle) but not free: it is priced at {@link CROSS_DETOUR} px of length
+ * inside the wire's `hard` cost (see {@link RouteCost}), so a later wire pays a
+ * SHORT detour to dodge an earlier one — but never a corner.
  *
  * A wire may opt into `diagonal` (octilinear, only 45 / 135 / 225 / 315°). It is
  * routed in two tiers, each collision-checked so a diagonal is never a
@@ -118,50 +118,73 @@ const PIN_LEAD = 15;
  *  ignores this.) */
 const LEAD_COST = 6;
 /**
- * The A* cost is LEXICOGRAPHIC, not a single sum, so wire crossings are minimised
- * WITHOUT ever paying for it in length or corners. Each explored state carries a
- * four-key cost {@link RouteCost} compared in this strict order:
+ * Detour BUDGET a wire may spend, in px of extra length, to remove ONE crossing
+ * with another net. Strictly below {@link TURN_COST}, which is the whole point:
+ * a crossing can buy a short dogleg around a body, but never a corner — the
+ * router still refuses to bend a wire to dodge a neighbour.
+ *
+ * Why a weight here and a strict tier for `lead`: a crossing must outrank the
+ * lead preference ({@link LEAD_COST} × distance, up to ~90) yet stay cheaper than
+ * a turn (12). No single scalar satisfies both, so `lead` keeps its own LOWER
+ * tier — where it is outranked by construction — and the crossing weight only has
+ * to fit under `TURN_COST`.
+ *
+ * The value trades two visual costs with no common unit, so it was measured, not
+ * reasoned: swept over the 11 circuit demos, the crossing total is flat at 11 up
+ * to 6, drops to 10 at 8 and stays there up to TURN_COST — 8 is the start of that
+ * plateau. It costs +0.27% total wire length and, as intended, not one corner.
+ * A gate body plus its label is ~6 px of detour to step around, which is why
+ * nothing moves below that.
+ */
+const CROSS_DETOUR = 8;
+/** How many rip-up & reroute sweeps {@link routeOrthogonal} makes over the wires.
+ *  Each accepted reroute strictly improves (crossings, length), so the loop
+ *  converges on its own and this only caps the cost when reroutes keep
+ *  interacting. Every circuit demo reaches its final routing in the FIRST sweep
+ *  (measured: 1 and 4 give byte-identical results); the extra sweeps are headroom
+ *  for a denser diagram, and cost one no-op sweep to confirm convergence. */
+const RIPUP_PASSES = 3;
+/**
+ * The A* cost is LEXICOGRAPHIC, not a single sum. Each explored state carries a
+ * three-key cost {@link RouteCost} compared in this strict order:
  *
  *   1. `hard`  = length + turns ({@link TURN_COST}) + lane separation
  *                ({@link LANE_COST}, incl. the same-net trunk discount
- *                {@link TRUNK_SHARE}). The route's SHAPE — never traded away to
- *                dodge a crossing, and a PARALLEL overlap (worse than a crossing)
- *                is avoided here, above crossings.
- *   2. `cross` = number of perpendicular crossings with OTHER nets (§ below).
- *   3. `lead`  = {@link LEAD_COST} for turning inside a pin's lead zone.
- *   4. `fork`  = number of corners that DON'T land on a junction a sibling of the
+ *                {@link TRUNK_SHARE}) + crossings ({@link CROSS_DETOUR}). The
+ *                route's SHAPE. A PARALLEL overlap (worse than a crossing) is
+ *                avoided here, above crossings.
+ *   2. `lead`  = {@link LEAD_COST} for turning inside a pin's lead zone.
+ *   3. `fork`  = number of corners that DON'T land on a junction a sibling of the
  *                same net already turned at. Minimising it co-locates a fan-out's
  *                branch points so a net splits at ONE shared T-junction instead of
  *                slightly-offset stair-steps (§ below).
  *
- * Perpendicular crossings are otherwise invisible to lane separation (which only
- * penalises PARALLEL overlap), so an L / Z elbow whose two orientations tie on
- * `hard` was picked arbitrarily — even when one flip threads through a neighbour
- * twice while the other keeps a slightly shorter lead. Ranking `cross` ABOVE
- * `lead` (but below `hard`) makes the router spend a shorter lead to remove a
- * crossing, yet NEVER a pixel of length or a corner. Greedy per wire (a later
- * wire avoids the ones already laid). A crossing is thus counted, not weighted —
- * there is no magic number to tune.
+ * Perpendicular crossings are invisible to lane separation (which only penalises
+ * PARALLEL overlap), so they are priced INTO `hard` at {@link CROSS_DETOUR} px
+ * each. Being a weight rather than its own tier is what lets a wire pay a short
+ * detour — stepping under a gate body instead of threading over it — to unthread
+ * itself; capping that weight below `TURN_COST` is what stops it from ever buying
+ * a corner. It also still breaks ties between two elbows that match on length and
+ * turns, which a strict tier did, and does so ABOVE `lead` by construction.
+ * Greedy per wire (a later wire avoids the ones already laid).
  *
  * `fork` is the LOWEST tier, so co-locating splits is a pure tiebreak: when two
  * branches of a net leave the shared trunk in opposite directions, A* picks —
- * among routes ALREADY tied on shape, crossings and lead — the one whose corner
- * sits exactly where the first branch turned. Two 4px-offset risers thus collapse
- * into one clean T (trunk in, one branch up, one down), and the split lands as
- * early as the shared trunk allows (no overshoot past the junction). It can never
- * lengthen a wire, add a corner/crossing, or spend a lead to do so. */
+ * among routes ALREADY tied on shape and lead — the one whose corner sits exactly
+ * where the first branch turned. Two 4px-offset risers thus collapse into one
+ * clean T (trunk in, one branch up, one down), and the split lands as early as the
+ * shared trunk allows (no overshoot past the junction). It can never lengthen a
+ * wire, add a corner/crossing, or spend a lead to do so. */
 interface RouteCost {
   hard: number;
-  cross: number;
   lead: number;
   fork: number;
 }
-/** Strict lexicographic `a < b` over (hard, cross, lead, fork). `hard` compares
- *  with a tiny tolerance so float noise in summed segment lengths does not mask a
- *  true tie — two same-length, same-turn orientations reach the lower tiers. */
+/** Strict lexicographic `a < b` over (hard, lead, fork). `hard` compares with a
+ *  tiny tolerance so float noise in summed segment lengths does not mask a true
+ *  tie — two same-length, same-turn orientations reach the lower tiers. */
 function costLess(a: RouteCost, b: RouteCost): boolean {
   if (Math.abs(a.hard - b.hard) > 1e-6) return a.hard < b.hard;
-  if (a.cross !== b.cross) return a.cross < b.cross;
   // `lead` sums LEAD_COST × pixel distances, so it carries float noise: compare
   // with a tolerance (like `hard`) so a true tie falls through to `fork`, not a
   // sub-ULP difference. `fork` is an integer count — an exact compare is safe.
@@ -482,30 +505,92 @@ export function routeOrthogonal(
     return true;
   };
 
-  // Shared lane usage across wires: for each segment (fixed line + span) the set
-  // of NETS that run on it. Only a DIFFERENT net pays the lane penalty — wires of
-  // the same net share their trunk for free (see the net-aware grouping above).
-  const usage = new Map<string, Set<string>>();
+  /**
+   * The shared grid occupancy the wires read from each other. Each map counts, per
+   * site, how many wires of a given NET occupy it — a COUNT, not a flag, because
+   * the rip-up pass below must be able to lift ONE wire off a site its net-mates
+   * still stand on (two branches of a fan-out routinely share a trunk edge).
+   * `occupy(…, +1)` lays a wire down, `occupy(…, -1)` picks it back up; a net drops
+   * out of a site exactly when its last wire leaves.
+   */
+  type Occupancy = Map<string, Map<string, number>>;
+  /** Per segment (fixed line + span), the nets running on it. Only a DIFFERENT net
+   *  pays the lane penalty — same-net wires share their trunk for free (see the
+   *  net-aware grouping above). */
+  const usage: Occupancy = new Map();
   const edgeKey = (o: 'h' | 'v', fixed: number, a: number, b: number): string =>
     `${o}:${fixed}:${Math.min(a, b)}:${Math.max(a, b)}`;
 
   // Per grid VERTEX, the nets that pass STRAIGHT through it horizontally / vertically
   // (a corner is neither — it is a turn, handled by the lane rule above). A candidate
-  // straight pass-through counts one crossing (the `cross` tier of {@link RouteCost})
-  // per OTHER net crossing it perpendicular here, so `hard`-tied elbows break toward
-  // the one with fewer crossings.
-  const hpass = new Map<string, Set<string>>();
-  const vpass = new Map<string, Set<string>>();
+  // straight pass-through costs {@link CROSS_DETOUR} per OTHER net crossing it
+  // perpendicular here, so a wire dodges a neighbour when a short detour suffices.
+  const hpass: Occupancy = new Map();
+  const vpass: Occupancy = new Map();
   const vertKey = (i: number, j: number): string => `${i},${j}`;
 
   // Per grid VERTEX, the nets that TURN (corner) there. A later branch of the SAME
   // net that also turns here pays no `fork` (see {@link RouteCost}), so a fan-out's
   // branch points snap onto one shared junction — a clean T instead of offset steps.
-  const turnAt = new Map<string, Set<string>>();
+  const turnAt: Occupancy = new Map();
+
+  /** Adds `d` (+1 lay down / −1 pick up) to `net`'s count at `site`, dropping the
+   *  entry when it reaches 0 so `has()` means "some wire of this net is here". */
+  const occupy = (m: Occupancy, site: string, net: string, d: number): void => {
+    let at = m.get(site);
+    if (!at) {
+      if (d < 0) return;
+      at = new Map();
+      m.set(site, at);
+    }
+    const n = (at.get(net) ?? 0) + d;
+    if (n > 0) at.set(net, n);
+    else at.delete(net);
+    if (!at.size) m.delete(site);
+  };
 
   const results = new Map<string, Point[]>();
+  /** Each wire's routed grid path, so it can be un-marked and re-routed. */
+  const paths = new Map<string, [number, number][]>();
 
-  for (const wire of wires) {
+  /** Lays a wire's grid path onto (`d` = +1) / lifts it off (`d` = −1) the shared
+   *  occupancy maps. Interior vertices only: an endpoint is a terminus (a T, not a
+   *  crossing), and a corner is a turn — recorded in `turnAt`, not as a pass-through. */
+  const markPath = (seq: [number, number][], net: string, d: 1 | -1): void => {
+    for (let m = 0; m < seq.length - 1; m++) {
+      const [ai, aj] = seq[m];
+      const [bi, bj] = seq[m + 1];
+      const orient: 'h' | 'v' = ai !== bi ? 'h' : 'v';
+      occupy(
+        usage,
+        edgeKey(
+          orient,
+          orient === 'h' ? aj : ai,
+          orient === 'h' ? ai : aj,
+          orient === 'h' ? bi : bj
+        ),
+        net,
+        d
+      );
+    }
+    for (let m = 1; m < seq.length - 1; m++) {
+      const [pi, pj] = seq[m - 1];
+      const [ci, cj] = seq[m];
+      const [ni, nj] = seq[m + 1];
+      const straightH = pj === cj && cj === nj;
+      const straightV = pi === ci && ci === ni;
+      const vk = vertKey(ci, cj);
+      if (!straightH && !straightV) occupy(turnAt, vk, net, d);
+      else occupy(straightH ? hpass : vpass, vk, net, d);
+    }
+  };
+
+  /** Routes ONE wire against the CURRENT occupancy (its own path must already be
+   *  lifted off). Returns the grid path — `null` when the goal is unreachable —
+   *  plus the polyline to render. */
+  const routeWire = (
+    wire: RouterWire
+  ): { seq: [number, number][] | null; poly: Point[] } => {
     const wireNet = wire.from.node;
     const skip = new Set<string>([wire.from.node, wire.to.node]);
     // A POINT endpoint anchors at the node CENTRE (inside its body), so that
@@ -551,10 +636,7 @@ export function routeOrthogonal(
         (a, b) => segClear(a, b, skip, bodySkip),
         PIN_LEAD
       );
-      if (elbow) {
-        results.set(wire.key, elbow);
-        continue;
-      }
+      if (elbow) return { seq: null, poly: elbow };
     }
 
     const si = indexOf(xs, wire.from.point.x);
@@ -576,8 +658,9 @@ export function routeOrthogonal(
 
     // A* over grid vertices. State = (i, j, incoming direction) so turns cost.
     // `g` is the LEXICOGRAPHIC cost so far (see {@link RouteCost}); the priority
-    // key `f` adds the length heuristic to `g.hard` only (`cross` / `lead` have no
-    // heuristic — admissible, since `h` under-estimates the `hard` tier alone).
+    // key `f` adds the length heuristic to `g.hard` only (`lead` has no heuristic
+    // — admissible, since `h` under-estimates the `hard` tier alone: every term
+    // `hard` adds on top of raw length is non-negative).
     const key = (i: number, j: number, di: number, dj: number): string =>
       `${i},${j},${di},${dj}`;
     const open: {
@@ -594,13 +677,12 @@ export function routeOrthogonal(
       Math.abs(xs[i] - xs[gi]) + Math.abs(ys[j] - ys[gj]);
     const withH = (g: RouteCost, i: number, j: number): RouteCost => ({
       hard: g.hard + h(i, j),
-      cross: g.cross,
       lead: g.lead,
       fork: g.fork,
     });
 
     const startKey = key(si, sj, 0, 0);
-    const zero: RouteCost = { hard: 0, cross: 0, lead: 0, fork: 0 };
+    const zero: RouteCost = { hard: 0, lead: 0, fork: 0 };
     gScore.set(startKey, zero);
     came.set(startKey, null);
     open.push({ i: si, j: sj, di: 0, dj: 0, g: zero, f: withH(zero, si, sj) });
@@ -666,21 +748,20 @@ export function routeOrthogonal(
         let lane = 0;
         let sameNet = false;
         if (on)
-          for (const n of on) {
+          for (const n of on.keys()) {
             if (n === wireNet) sameNet = true;
             else lane += LANE_COST;
           }
         const effLen = sameNet ? len * TRUNK_SHARE : len;
         // Going STRAIGHT through `cur` (no turn, not the first move) crosses any
-        // other net passing perpendicular through cur. Counted (not weighted): it
-        // lives in the `cross` tier, ranked below the route's `hard` shape and
-        // above the `lead` preference — so a crossing is removed only when length,
-        // turns and lanes are already tied, never by adding any of them.
+        // other net passing perpendicular through cur. Priced into `hard` at
+        // CROSS_DETOUR px each: a wire may spend that much extra length to dodge
+        // an earlier one, but — the weight being under TURN_COST — never a corner.
         let crossCount = 0;
         if (!turned && (cur.di || cur.dj)) {
           const perp = orient === 'h' ? vpass : hpass;
           const at = perp.get(vertKey(cur.i, cur.j));
-          if (at) for (const n of at) if (n !== wireNet) crossCount++;
+          if (at) for (const n of at.keys()) if (n !== wireNet) crossCount++;
         }
         // Turning AT `cur` costs one `fork` UNLESS a sibling of this net already
         // turned here — so equal-shape branches snap their corners together into a
@@ -691,8 +772,12 @@ export function routeOrthogonal(
           if (!sib || !sib.has(wireNet)) forkCost = 1;
         }
         const ng: RouteCost = {
-          hard: cur.g.hard + effLen + (turned ? TURN_COST : 0) + lane,
-          cross: cur.g.cross + crossCount,
+          hard:
+            cur.g.hard +
+            effLen +
+            (turned ? TURN_COST : 0) +
+            lane +
+            crossCount * CROSS_DETOUR,
           lead: cur.g.lead + leadCost,
           fork: cur.g.fork + forkCost,
         };
@@ -715,8 +800,9 @@ export function routeOrthogonal(
 
     // Reconstruct (fall back to a direct 2-corner L if unreachable).
     let poly: Point[];
+    let seq: [number, number][] | null = null;
     if (goalState) {
-      const seq: [number, number][] = [];
+      seq = [];
       let k: string | null = goalState;
       while (k) {
         const [i, j] = k.split(',').map(Number);
@@ -725,44 +811,6 @@ export function routeOrthogonal(
       }
       seq.reverse();
       poly = seq.map(([i, j]) => ({ x: xs[i], y: ys[j] }));
-      // Mark used edges for lane separation of later wires.
-      for (let m = 0; m < seq.length - 1; m++) {
-        const [ai, aj] = seq[m];
-        const [bi2, bj] = seq[m + 1];
-        const orient: 'h' | 'v' = ai !== bi2 ? 'h' : 'v';
-        const fixed = orient === 'h' ? aj : ai;
-        const uk = edgeKey(
-          orient,
-          fixed,
-          orient === 'h' ? ai : aj,
-          orient === 'h' ? bi2 : bj
-        );
-        const set = usage.get(uk);
-        if (set) set.add(wireNet);
-        else usage.set(uk, new Set([wireNet]));
-      }
-      // Record this net's straight pass-through vertices so later wires pay the
-      // crossing tiebreak. Interior vertices only — an endpoint (pin/pad) is a
-      // terminus (a T-junction, not a crossing) and a corner is a turn.
-      for (let m = 1; m < seq.length - 1; m++) {
-        const [pi, pj] = seq[m - 1];
-        const [ci, cj] = seq[m];
-        const [ni2, nj2] = seq[m + 1];
-        const straightH = pj === cj && cj === nj2;
-        const straightV = pi === ci && ci === ni2;
-        const vk = vertKey(ci, cj);
-        if (!straightH && !straightV) {
-          // A corner: record it so a sibling branch can snap its own turn here.
-          const tset = turnAt.get(vk);
-          if (tset) tset.add(wireNet);
-          else turnAt.set(vk, new Set([wireNet]));
-          continue; // a corner is a turn, not a straight pass-through
-        }
-        const map = straightH ? hpass : vpass;
-        const vset = map.get(vk);
-        if (vset) vset.add(wireNet);
-        else map.set(vk, new Set([wireNet]));
-      }
     } else {
       // Unreachable on the grid: never draw a diagonal — fall back to a
       // 2-corner orthogonal L that leaves the source along its normal.
@@ -778,18 +826,77 @@ export function routeOrthogonal(
       // Keep a straight lead only at a hard pin (a POINT endpoint may turn at once).
       const stubStart = wire.from.hardNormal ? PIN_LEAD : 0;
       const stubEnd = wire.to.hardNormal ? PIN_LEAD : 0;
-      results.set(
-        wire.key,
-        diagonalize(
+      return {
+        seq,
+        poly: diagonalize(
           simplified,
           (a, b) => segClear(a, b, skip, bodySkip),
           stubStart,
           stubEnd
-        )
-      );
-    } else {
-      results.set(wire.key, simplified);
+        ),
+      };
     }
+    return { seq, poly: simplified };
+  };
+
+  // First pass: lay every wire down in net order, each seeing the ones before it.
+  for (const wire of wires) {
+    const { seq, poly } = routeWire(wire);
+    results.set(wire.key, poly);
+    if (seq) {
+      paths.set(wire.key, seq);
+      markPath(seq, wire.from.node, 1);
+    }
+  }
+
+  // RIP-UP & REROUTE. The pass above is greedy in net order, so a wire only ever
+  // dodges the wires laid BEFORE it: the first net routed is blind to every net
+  // that follows and happily threads straight through where they will land. That
+  // is a routing-ORDER artefact, not a real optimum — a full adder's B net, routed
+  // second, drives its wire straight over the gates whose outputs come later.
+  // So: lift each wire back off the grid and re-route it now that ALL the others
+  // are down, and keep the result only if the WHOLE diagram improves.
+  //
+  // Acceptance is lexicographic (crossings, then total length) and measured on the
+  // finished polylines, not on the wire's own A* cost: the A* optimises that wire
+  // alone, so only the diagram-wide count can tell whether the length it spent
+  // actually bought anything. Both keys strictly decrease on every accepted move
+  // (the first a bounded integer), so the loop converges; RIPUP_PASSES only caps
+  // the work when reroutes keep interacting.
+  let crossings = countInterNetCrossings(results, wires);
+  let totalLen = totalLength(results, wires);
+  for (let pass = 0; pass < RIPUP_PASSES; pass++) {
+    let improved = false;
+    for (const wire of wires) {
+      const seq = paths.get(wire.key);
+      if (!seq) continue; // diagonal elbow / unreachable: not on the grid
+      const net = wire.from.node;
+      const prevPoly = results.get(wire.key)!;
+      markPath(seq, net, -1);
+      const retry = routeWire(wire);
+      if (!retry.seq) {
+        // No grid route without its own path down — put the old one back.
+        markPath(seq, net, 1);
+        continue;
+      }
+      results.set(wire.key, retry.poly);
+      const nowCross = countInterNetCrossings(results, wires);
+      const nowLen = totalLength(results, wires);
+      if (
+        nowCross < crossings ||
+        (nowCross === crossings && nowLen < totalLen - 1e-6)
+      ) {
+        paths.set(wire.key, retry.seq);
+        markPath(retry.seq, net, 1);
+        crossings = nowCross;
+        totalLen = nowLen;
+        improved = true;
+      } else {
+        results.set(wire.key, prevPoly);
+        markPath(seq, net, 1);
+      }
+    }
+    if (!improved) break;
   }
 
   // A routed wire must never cross itself: strip any loop the lead penalty may
@@ -817,6 +924,23 @@ export type PinSwapGroup = readonly [string, string];
  *  Each accepted swap strictly lowers the crossing count (a bounded integer), so
  *  the loop converges; this only caps the cost when swaps keep interacting. */
 const PIN_SWAP_PASSES = 4;
+
+/** Total Manhattan length of every routed wire — the rip-up pass's tiebreak, so a
+ *  detour that buys no crossing is handed back. */
+function totalLength(
+  routes: Map<string, Point[]>,
+  wires: RouterWire[]
+): number {
+  let total = 0;
+  for (const w of wires) {
+    const pts = routes.get(w.key);
+    if (!pts) continue;
+    for (let i = 0; i < pts.length - 1; i++)
+      total +=
+        Math.abs(pts[i + 1].x - pts[i].x) + Math.abs(pts[i + 1].y - pts[i].y);
+  }
+  return total;
+}
 
 /** Proper crossings between wires of DIFFERENT nets (same-net wires share a trunk,
  *  not a crossing). Reuses {@link segCross} so it counts exactly what the eye sees. */

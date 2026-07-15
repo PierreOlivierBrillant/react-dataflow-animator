@@ -85,6 +85,15 @@ const selfCrosses = (pts: { x: number; y: number }[]): boolean => {
   return false;
 };
 
+/** Manhattan length of a polyline (every segment is axis-aligned). */
+const pathLength = (pts: { x: number; y: number }[]): number => {
+  let total = 0;
+  for (let i = 0; i < pts.length - 1; i++)
+    total +=
+      Math.abs(pts[i + 1].x - pts[i].x) + Math.abs(pts[i + 1].y - pts[i].y);
+  return total;
+};
+
 /** Number of PROPER interior crossings between the segments of two polylines
  *  (shared endpoints / collinear touches excluded). */
 const crossCount = (
@@ -347,6 +356,90 @@ describe('orthoRouter', () => {
     // LOWER pin (y=110), wB on the UPPER (y=90).
     expect(after.get('wA')!.at(-1)!.y).toBeCloseTo(110, 5);
     expect(after.get('wB')!.at(-1)!.y).toBeCloseTo(90, 5);
+  });
+
+  // A wire routed EARLY dodges one laid LATER (rip-up & reroute). `src` sits level
+  // with `dst` and `mid` is exactly between them, so going over or under `mid` is
+  // the same length and the same 4 corners — a coin flip the router settles by
+  // taking the low road (asserted first, as the baseline the rip-up must overturn).
+  // Now give `mid` an output that drops away below: `src` is a whole net earlier in
+  // the routing order, so at the time it is laid that wire does not exist yet and
+  // the greedy pass has it thread straight through where the wire will land. Only
+  // a rip-up can see that — the low road is now the crossing one, so `src` must
+  // come back and take the high road. This is the full adder's B net in miniature.
+  const midDrops = (): {
+    obstacles: RouterObstacle[];
+    wires: RouterWire[];
+  } => ({
+    obstacles: [
+      body('src', 100, 140),
+      body('mid', 200, 140),
+      body('dst', 320, 140),
+      body('down', 320, 240),
+    ],
+    wires: [
+      {
+        key: 'w1',
+        from: pin('src', 120, 140, 1, 0),
+        to: pin('dst', 300, 140, -1, 0),
+      },
+      {
+        key: 'w2',
+        from: pin('mid', 220, 140, 1, 0),
+        to: pin('down', 300, 240, -1, 0),
+      },
+    ],
+  });
+
+  it('routes under the obstacle when nothing else is in the way', () => {
+    const { obstacles, wires } = midDrops();
+    const w1 = routeOrthogonal(obstacles, [wires[0]]).get('w1')!;
+    expect(w1.some((p) => p.y > 140)).toBe(true); // the low road
+    expect(w1.length - 2).toBe(4);
+  });
+
+  it('reroutes a wire laid EARLY to dodge one laid LATER, for free', () => {
+    const { obstacles, wires } = midDrops();
+    const routes = routeOrthogonal(obstacles, wires);
+    const w1 = routes.get('w1')!;
+    expect(crossCount(w1, routes.get('w2')!)).toBe(0);
+    // It flipped to the high road — above `mid`, clear of w2's descent…
+    expect(w1.every((p) => p.y <= 140)).toBe(true);
+    // …and the flip is FREE: the symmetric detour keeps both the corner count and
+    // the length of the baseline above. The crossing bought no length here.
+    expect(w1.length - 2).toBe(4);
+    expect(pathLength(w1)).toBeCloseTo(
+      pathLength(routeOrthogonal(obstacles, [wires[0]]).get('w1')!),
+      5
+    );
+  });
+
+  it('refuses a detour that costs more than the crossing budget', () => {
+    // Same geometry, except `mid` is a tall body: going over it is now a long climb
+    // (far beyond CROSS_DETOUR) while going under stays short. The wire must NOT
+    // buy the dodge at that price — a crossing is worth a few px, never a hike.
+    const obstacles: RouterObstacle[] = [
+      body('src', 100, 140),
+      { id: 'mid', x: 200, y: 60, w: 40, h: 200 },
+      body('dst', 320, 140),
+      body('down', 320, 240),
+    ];
+    const wires: RouterWire[] = [
+      {
+        key: 'w1',
+        from: pin('src', 120, 140, 1, 0),
+        to: pin('dst', 300, 140, -1, 0),
+      },
+      {
+        key: 'w2',
+        from: pin('mid', 220, 140, 1, 0),
+        to: pin('down', 300, 240, -1, 0),
+      },
+    ];
+    const routes = routeOrthogonal(obstacles, wires);
+    const w1 = routes.get('w1')!;
+    expect(w1.some((p) => p.y > 140)).toBe(true); // stayed on the short low road…
+    expect(crossCount(w1, routes.get('w2')!)).toBe(1); // …and ate the crossing
   });
 
   it('leaves pins alone when no swap reduces crossings', () => {
