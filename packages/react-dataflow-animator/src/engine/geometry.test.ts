@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   connection,
+  distributeFacePorts,
   pathTip,
   pointOnSegment,
   visiblePath,
@@ -697,5 +698,71 @@ describe('wireEndpoints — face-to-pin straightening', () => {
     );
     expect(to.point.x).toBeCloseTo(-8, 4);
     expect(from.point.x).toBeCloseTo(-8, 4); // slid in x ⇒ straight vertical
+  });
+});
+
+describe('distributeFacePorts', () => {
+  // A pad centred at (100,100), 20 wide → east face at x=110, west at x=90. The
+  // usable face is height × FACE_ALIGN_LIMIT (0.4) either side of the centre.
+  const pad = (height: number): NodeGeom => ({
+    id: 'pad',
+    x: 100,
+    y: 100,
+    width: 20,
+    height,
+  });
+
+  it('gives converging wires ONE shared port (no two stubs that merge)', () => {
+    // Both targets sit far below the pad, so both aims clamp to the same face edge.
+    // Distinct ports would be forced PORT_GAP apart — further than their targets —
+    // so each wire would jog straight back onto its neighbour's trunk. They must
+    // share a single port instead and fan out downstream.
+    const ports = distributeFacePorts(pad(20), 'east', [
+      { key: 'w1', aim: 400 },
+      { key: 'w2', aim: 400 },
+    ]);
+    expect(ports.get('w1')).toEqual(ports.get('w2'));
+    expect(ports.get('w1')!.x).toBeCloseTo(110, 5); // the east face
+  });
+
+  it('keeps a distinct port per genuinely separated target (the band)', () => {
+    // A tall pad whose two targets are far apart ON the face: each keeps its own
+    // port, ordered by target (so the wires never cross) and ≥ PORT_GAP apart.
+    const ports = distributeFacePorts(pad(100), 'east', [
+      { key: 'low', aim: 130 },
+      { key: 'high', aim: 70 },
+    ]);
+    const high = ports.get('high')!;
+    const low = ports.get('low')!;
+    expect(high.y).toBeLessThan(low.y); // target order ⇒ no crossing
+    expect(low.y - high.y).toBeGreaterThanOrEqual(12); // ≥ PORT_GAP
+  });
+
+  it('aims a lone wire straight at its partner', () => {
+    const ports = distributeFacePorts(pad(100), 'east', [
+      { key: 'w', aim: 118 },
+    ]);
+    expect(ports.get('w')).toEqual({ x: 110, y: 118 }); // in-face aim ⇒ dead straight
+  });
+
+  it('anchors a sink on the WEST face', () => {
+    const ports = distributeFacePorts(pad(100), 'west', [
+      { key: 'w', aim: 100 },
+    ]);
+    expect(ports.get('w')!.x).toBeCloseTo(90, 5);
+  });
+
+  it('never places a port outside the pad face', () => {
+    // Three targets all far above: they cluster onto one port, still on the face.
+    const ports = distributeFacePorts(pad(40), 'east', [
+      { key: 'a', aim: -500 },
+      { key: 'b', aim: -500 },
+      { key: 'c', aim: -500 },
+    ]);
+    for (const k of ['a', 'b', 'c']) {
+      const y = ports.get(k)!.y;
+      expect(y).toBeGreaterThanOrEqual(100 - 40 * 0.4 - 1e-6);
+      expect(y).toBeLessThanOrEqual(100 + 40 * 0.4 + 1e-6);
+    }
   });
 });

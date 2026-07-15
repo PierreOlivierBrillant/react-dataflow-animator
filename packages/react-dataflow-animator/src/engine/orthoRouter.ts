@@ -60,6 +60,11 @@ interface RouterEndpoint {
   point: Point;
   normal: Point;
   hardNormal: boolean;
+  /** This end is one of several PORTS already distributed along a node's face (a
+   *  signal I/O pad driving/receiving many wires): its point is final and MUST NOT
+   *  be merged into the net's mean anchor. A fixed pin (all branches share the one
+   *  terminal point) or a lone wire leaves this false and keeps the merge no-op. */
+  fanPort?: boolean;
 }
 
 export interface RouterWire {
@@ -296,7 +301,13 @@ export function routeOrthogonal(
   }
   const ordered: RouterWire[] = [];
   for (const group of byNet.values()) {
-    if (group.length < 2) {
+    // A distributed face fan-out (a signal pad's PORTS) keeps its per-wire anchors
+    // — they were already spread along the face upstream, so merging them would
+    // undo the distribution and re-create a single point. A fixed-pin fan-out
+    // instead has all branches on the ONE terminal, whose mean is that same point:
+    // merging is a no-op that also unifies the two per-target-straightened anchors
+    // of a plain node so the net leaves from one trunk.
+    if (group.length < 2 || group[0].from.fanPort) {
       ordered.push(...group);
       continue;
     }

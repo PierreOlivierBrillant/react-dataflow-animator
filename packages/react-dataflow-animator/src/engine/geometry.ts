@@ -6,6 +6,7 @@
 
 import type { PathShape } from '../types';
 import type { ConnectionAxis } from './layout';
+import { isotonicSeparation } from './layout';
 import type { PinDef } from './pins';
 import { shapeWaypoints } from './pathShapes';
 
@@ -409,6 +410,82 @@ function alignFaceToTerminal(
     );
     face.point = { x, y: face.point.y };
   }
+}
+
+/** Minimum gap (px) between two ports distributed on the same pad face, so the
+ *  fan-out reads as distinct terminals rather than one merged point. */
+const PORT_GAP = 12;
+
+/**
+ * Distributes a face-anchored circuit I/O pad's wires as spread-out PORTS along a
+ * single face, instead of merging them to one point or letting each wire pick a
+ * different (e.g. downward, behind a neighbour) face. Every driver leaves EAST,
+ * every sink enters WEST — so a system's wires all exit its right / enter its left
+ * (`side`), the outward normal being `(±1, 0)`.
+ *
+ * Wires whose aims (partner y, clamped to the face) sit within {@link PORT_GAP}
+ * are CLUSTERED onto a single shared port: distinct ports there would be forced
+ * further apart than their targets, so each wire would just jog back onto its
+ * neighbour's trunk — the "two stubs that merge into one" defect. One shared port
+ * lets the cluster leave from ONE point and fan out downstream (the net-aware
+ * trunk). Genuinely separated aims keep their own port, min-separated within the
+ * usable face — so N spread targets still read as a centred "flex" band. Returns
+ * the anchor point per wire key.
+ */
+export function distributeFacePorts(
+  pad: NodeGeom,
+  side: 'east' | 'west',
+  wires: { key: string; aim: number }[]
+): Map<string, Point> {
+  const edgeX = side === 'east' ? pad.x + pad.width / 2 : pad.x - pad.width / 2;
+  const out = new Map<string, Point>();
+  if (wires.length === 0) return out;
+  // Usable half-face: the flat middle of the edge (avoids the rounded corners).
+  const half = pad.height * FACE_ALIGN_LIMIT;
+  const lo = pad.y - half;
+  const hi = pad.y + half;
+  const clampAim = (a: number): number => Math.max(lo, Math.min(hi, a));
+  if (wires.length === 1) {
+    // A lone wire aims straight at its partner (clamped to the face), so an
+    // aligned terminal draws dead straight; centred when the partner is off-face.
+    out.set(wires[0].key, { x: edgeX, y: clampAim(wires[0].aim) });
+    return out;
+  }
+  // Order by clamped aim (partner order → wires never cross), then cluster: a wire
+  // within PORT_GAP of the previous one shares its port. A cluster's shared port is
+  // its members' mean aim.
+  const order = wires
+    .map((w, i) => ({ key: w.key, aim: clampAim(w.aim), i }))
+    .sort((a, b) => a.aim - b.aim || a.i - b.i);
+  const clusters: { keys: string[]; sum: number }[] = [];
+  let prevAim = -Infinity;
+  for (const w of order) {
+    const last = clusters[clusters.length - 1];
+    if (last && w.aim - prevAim < PORT_GAP) {
+      last.keys.push(w.key);
+      last.sum += w.aim;
+    } else {
+      clusters.push({ keys: [w.key], sum: w.aim });
+    }
+    prevAim = w.aim;
+  }
+  const centres = clusters.map((c) => c.sum / c.keys.length);
+  if (clusters.length === 1) {
+    // Everything converges — one shared port, the plain net-aware fan-out.
+    for (const k of clusters[0].keys) out.set(k, { x: edgeX, y: centres[0] });
+    return out;
+  }
+  // Distinct clusters: one port each, min-separated by PORT_GAP (isotonic = least
+  // displacement keeping order). The block is shifted back inside the face if
+  // separation pushed it past an edge, so no port ever leaves the pad.
+  const gap = Math.min(PORT_GAP, (hi - lo) / (clusters.length - 1));
+  const placed = isotonicSeparation(centres, gap);
+  const shift =
+    Math.max(0, lo - placed[0]) - Math.max(0, placed[placed.length - 1] - hi);
+  clusters.forEach((c, k) => {
+    for (const key of c.keys) out.set(key, { x: edgeX, y: placed[k] + shift });
+  });
+  return out;
 }
 
 /** Resolves the anchor for one endpoint from its (optional) contour policy. */

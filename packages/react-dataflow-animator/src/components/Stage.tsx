@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type {
   Action,
+  Connection as SpecConnection,
   DataFlowSpec,
   NodeType,
   Packet as PacketSpec,
@@ -49,6 +50,7 @@ import {
 } from '../engine/portOffsets';
 import {
   connection,
+  distributeFacePorts,
   nodeContour,
   pathTip,
   pointAtArc,
@@ -771,22 +773,42 @@ export function Stage({
       string,
       Map<string, { key: string; src: string }>
     >();
-    const wires: RouterWire[] = [];
+    // A face-anchored endpoint (a plain box: a signal I/O pad, no pin/point/round
+    // contour) is a SYSTEM terminal: its wires all leave its RIGHT face (driver)
+    // or enter its LEFT face (sink), never a top/bottom face that would dive
+    // behind a neighbour. Below, those endpoints are re-anchored as distributed
+    // face PORTS (see {@link distributeFacePorts}); here we only compute the raw
+    // endpoints and remember which ends are face-anchored + what they aim at.
+    const isFace = (c: NodeContour | undefined): boolean => c === undefined;
+    const raw: {
+      link: SpecConnection;
+      key: string;
+      fromNode: string;
+      toNode: string;
+      ends: ReturnType<typeof wireEndpoints>;
+      fromFace: boolean;
+      toFace: boolean;
+    }[] = [];
+    // key → distributed anchor for a face port (east = a driver's, west = a sink's).
+    const eastGroups = new Map<string, { key: string; aim: number }[]>();
+    const westGroups = new Map<string, { key: string; aim: number }[]>();
     (spec.connections ?? []).forEach((link, i) => {
-      const f = geometry[refNode(link.from)];
-      const tg = geometry[refNode(link.to)];
+      const fromNode = refNode(link.from);
+      const toNode = refNode(link.to);
+      const f = geometry[fromNode];
+      const tg = geometry[toNode];
       if (!f || !tg) return;
       const key = link.id ?? `${link.from}|${link.to}|${i}`;
       const toRef = parseRef(link.to);
       if (toRef.pin) {
         const pins = inByNode.get(toRef.node) ?? new Map();
-        pins.set(toRef.pin, { key, src: refNode(link.from) });
+        pins.set(toRef.pin, { key, src: fromNode });
         inByNode.set(toRef.node, pins);
       }
       const fromC = contourFor(link.from);
       const toC = contourFor(link.to);
-      const p1 = layout[refNode(link.from)];
-      const p2 = layout[refNode(link.to)];
+      const p1 = layout[fromNode];
+      const p2 = layout[toNode];
       const axis =
         p1 && p2 ? connectionAxis(p1, p2, direction, routeAspect) : undefined;
       const base = portOffsets[key] ?? { start: 0, end: 0 };
@@ -800,29 +822,58 @@ export function Stage({
         fromC,
         toC
       );
-      // hardNormal = the endpoint anchors on a BORDER with an enforced normal (a
-      // pin, or a cardinal face — e.g. a signal pad connects on its side). Only a
-      // POINT contour (a junction dot, centre-anchored) is soft: the wire may
-      // reach its centre, so its body must not block that wire.
-      // A per-connection `diagonal` overrides the circuit-wide `diagonal_wires`.
-      wires.push({
-        key,
-        from: {
-          node: refNode(link.from),
-          point: ends.from.point,
-          normal: ends.from.normal,
-          hardNormal: fromC?.kind !== 'point',
-        },
-        to: {
-          node: refNode(link.to),
-          point: ends.to.point,
-          normal: ends.to.normal,
-          hardNormal: toC?.kind !== 'point',
-        },
-        diagonal: link.diagonal ?? spec.diagonal_wires ?? false,
-      });
+      const fromFace = isFace(fromC);
+      const toFace = isFace(toC);
+      if (fromFace) {
+        const g = eastGroups.get(fromNode) ?? [];
+        g.push({ key, aim: ends.to.point.y });
+        eastGroups.set(fromNode, g);
+      }
+      if (toFace) {
+        const g = westGroups.get(toNode) ?? [];
+        g.push({ key, aim: ends.from.point.y });
+        westGroups.set(toNode, g);
+      }
+      raw.push({ link, key, fromNode, toNode, ends, fromFace, toFace });
     });
-    if (!wires.length) return routes;
+    if (!raw.length) return routes;
+    const eastPorts = new Map<string, Point>();
+    for (const [node, g] of eastGroups)
+      for (const [k, p] of distributeFacePorts(geometry[node], 'east', g))
+        eastPorts.set(k, p);
+    const westPorts = new Map<string, Point>();
+    for (const [node, g] of westGroups)
+      for (const [k, p] of distributeFacePorts(geometry[node], 'west', g))
+        westPorts.set(k, p);
+
+    const wires: RouterWire[] = raw.map(
+      ({ link, key, fromNode, toNode, ends, fromFace, toFace }) => {
+        const fromPort = fromFace ? eastPorts.get(key) : undefined;
+        const toPort = toFace ? westPorts.get(key) : undefined;
+        // hardNormal = the endpoint anchors on a BORDER with an enforced normal (a
+        // pin, a distributed face port, or a plain cardinal face). Only a POINT
+        // contour (a junction dot, centre-anchored) is soft: the wire may reach its
+        // centre, so its body must not block that wire.
+        // A per-connection `diagonal` overrides the circuit-wide `diagonal_wires`.
+        return {
+          key,
+          from: {
+            node: fromNode,
+            point: fromPort ?? ends.from.point,
+            normal: fromPort ? { x: 1, y: 0 } : ends.from.normal,
+            hardNormal: contourFor(link.from)?.kind !== 'point',
+            fanPort: fromFace,
+          },
+          to: {
+            node: toNode,
+            point: toPort ?? ends.to.point,
+            normal: toPort ? { x: -1, y: 0 } : ends.to.normal,
+            hardNormal: contourFor(link.to)?.kind !== 'point',
+          },
+          diagonal: link.diagonal ?? spec.diagonal_wires ?? false,
+        };
+      }
+    );
     // A commutative gate (`a AND b === b AND a`, likewise NAND/OR/…) whose two
     // input wires come from different nets may swap which wire takes the upper vs
     // lower pin, to let the router remove a crossing at the gate — see

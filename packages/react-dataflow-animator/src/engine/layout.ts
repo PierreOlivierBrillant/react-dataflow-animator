@@ -637,7 +637,7 @@ function circuitAutoLayout(
  * k·sep`, then re-adds the offsets — the exact optimum, so a column never
  * overlaps yet stays as aligned with its neighbours as the order permits.
  */
-function isotonicSeparation(desired: number[], sep: number): number[] {
+export function isotonicSeparation(desired: number[], sep: number): number[] {
   const d = desired.map((v, k) => v - k * sep);
   const blocks: { sum: number; count: number }[] = [];
   for (const x of d) {
