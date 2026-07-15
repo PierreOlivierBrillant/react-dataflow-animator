@@ -43,7 +43,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
   // Read the persisted preference once on mount. If nothing is stored,
   // default to "system" so returning visitors get OS-sync by default.
   const [preference, setPreference] = useState<Preference>(
-    () => getStoredPreference() ?? 'system',
+    () => getStoredPreference() ?? 'system'
   );
 
   // Apply a preference: resolve "system" to an actual mode, then push it
@@ -54,7 +54,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       storePreference(pref);
       setColorMode(pref === 'system' ? getSystemTheme() : pref);
     },
-    [setColorMode],
+    [setColorMode]
   );
 
   // On mount, apply the stored preference (handles "system" → actual
