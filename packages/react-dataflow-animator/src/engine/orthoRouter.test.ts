@@ -649,6 +649,59 @@ describe('orthoRouter', () => {
           );
   });
 
+  it('keeps two nets off two ADJACENT tracks a couple of px apart', () => {
+    // The `halfAdder` shape, and why the same-track rule was not enough: the grid
+    // lines come from the PINS, so two of them land wherever two components happen to
+    // sit. Here `a`'s port (y=140) and `g2`'s input pin (y=138) are 2px apart — two
+    // DISTINCT tracks, which a rule keyed on track identity never compares, yet one
+    // line to the eye. `wa` ran the width of the diagram 2px under `wb` and the pair
+    // read as a single wire from a's pad into g2.
+    const wires: RouterWire[] = [
+      // Crosses the diagram and drops to a far pin: free to leave its start track.
+      {
+        key: 'wa',
+        from: pin('a', 120, 140, 1, 0),
+        to: pin('g1', 280, 300, -1, 0),
+      },
+      // Rises from below onto the neighbouring track, 2px off wa's.
+      {
+        key: 'wb',
+        from: pin('b', 120, 400, 1, 0),
+        to: pin('g2', 280, 138, -1, 0),
+      },
+    ];
+    const routes = routeOrthogonal(
+      [
+        body('a', 100, 140),
+        body('b', 100, 400),
+        body('g1', 300, 300),
+        body('g2', 300, 138),
+      ],
+      wires
+    );
+    const pa = routes.get('wa')!;
+    const pb = routes.get('wb')!;
+    expect(allOrthogonal(pa)).toBe(true);
+    expect(allOrthogonal(pb)).toBe(true);
+    const hseg = (p: { x: number; y: number }[]) => {
+      const out: { y: number; x0: number; x1: number }[] = [];
+      for (let i = 0; i < p.length - 1; i++)
+        if (Math.abs(p[i].y - p[i + 1].y) < 0.5)
+          out.push({
+            y: p[i].y,
+            x0: Math.min(p[i].x, p[i + 1].x),
+            x1: Math.max(p[i].x, p[i + 1].x),
+          });
+      return out;
+    };
+    // No run of one may shadow a run of the other: closer than a stroke's width
+    // ACROSS and overlapping ALONG is the one shape that draws as a single line.
+    for (const s of hseg(pa))
+      for (const t of hseg(pb))
+        if (Math.abs(s.y - t.y) < 4)
+          expect(Math.min(s.x1, t.x1) - Math.max(s.x0, t.x0)).toBeLessThan(0.5);
+  });
+
   it('lets one net run straight THROUGH its own junction (not around it)', () => {
     // A rail `r → j → b`: two hops, one electrical net, meeting at the junction j.
     // They are collinear along y=200 BY DESIGN — that is the rail. The lane rule must

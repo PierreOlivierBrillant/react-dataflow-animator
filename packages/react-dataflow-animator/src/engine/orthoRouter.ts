@@ -10,15 +10,18 @@ import type { Point } from './geometry';
  *   • keep a straight lead ({@link PIN_LEAD} px) out of / into a hard connector
  *     before the first / last turn, so a wire never bends flush against a pin;
  *   • take as few corners as possible (a turn is penalised);
- *   • do NOT share a track with another net — two wires may only meet where they
- *     cross at a right angle (lane separation).
+ *   • do NOT run alongside another net close enough to read as one line — two wires
+ *     may only meet where they cross at a right angle (lane separation).
  *
  * It routes on a Hanan-style grid (lines through every pin and every obstacle
  * edge, plus intermediate lane tracks in the gaps) with an A* per wire. Wires
  * are routed in order; each marks the grid edges it used, and later wires pay a
  * penalty ({@link LANE_COST}) to come within `laneGap` px of another net ALONG a
- * track — so parallels spread onto neighbouring tracks, and two nets never queue up
- * end-to-end on one line where the eye would read them as a single broken wire.
+ * track and {@link LANE_FUSE} px ACROSS — so parallels spread onto neighbouring
+ * tracks, and two nets never queue up end-to-end on one line where the eye would
+ * read them as a single broken wire. The rule is a distance in PX, not a shared
+ * track: the grid lines come from the pins, so two of them land wherever two
+ * components happen to sit, and a pair of tracks 2px apart draws as one wire.
  * A perpendicular crossing is allowed (the wires meet at a right angle) but not
  * free: it is priced at {@link CROSS_DETOUR} px of length inside the wire's `hard`
  * cost (see {@link RouteCost}), so a later wire pays a SHORT detour to dodge an
@@ -98,6 +101,23 @@ export interface RouteOptions {
 
 const TURN_COST = 12;
 const LANE_COST = 40;
+/**
+ * Transverse distance (design px) under which two nets' parallel runs are ONE line
+ * to the eye, and so the width of the band {@link laneCost} charges across.
+ *
+ * Sized on the STROKE, because that is what makes the defect a defect: a wire is
+ * 2px wide (3.5px highlighted, `.rdfa-arrow-line`). Two wires 2px apart have their
+ * strokes touching — no background survives between them and they draw as one
+ * thick line, which is exactly what the same-track rule exists to prevent. At 4px
+ * a full stroke's worth of background separates them and they read as two.
+ *
+ * The cap matters as much as the floor: a gate's own two input pins sit ~9-11px
+ * apart, so their leads run side by side that close and CANNOT do otherwise —
+ * the pins are where they are. A band wide enough to reach them would charge
+ * every gate in the diagram for a shape it has no way to avoid, which is why this
+ * is deliberately far below `laneGap` (12) and not another use of it.
+ */
+const LANE_FUSE = 4;
 /** Cost multiplier for an edge already on THIS DRIVER's trunk: < 1 rewards a
  *  fan-out branch for staying on the shared trunk (splitting late) rather than
  *  diverging early. Low enough to prefer sharing, not 0 (which would let a branch
@@ -613,8 +633,8 @@ export function routeOrthogonal(
     driver: string
   ): boolean => usage.get(trackKey(o, fixed))?.get(driver)?.has(e) ?? false;
   /**
-   * {@link LANE_COST} per OTHER net whose nearest run on the SAME track comes within
-   * `laneGap` px of edge `e` — a true parallel overlap (negative gap) included.
+   * {@link LANE_COST} per OTHER net running within {@link LANE_FUSE} px ACROSS and
+   * `laneGap` px ALONG of edge `e` — a true parallel overlap (negative gap) included.
    *
    * PROXIMITY, not just overlap, is the rule, because a track is read as a whole: two
    * nets that share one track without touching still draw as a SINGLE line with an
@@ -625,9 +645,15 @@ export function routeOrthogonal(
    * fan-out branches can then share ONE riser (the `fork` tier below) instead of
    * splitting onto stubs a few px apart.
    *
-   * Reusing `laneGap` — the spacing {@link withLaneTracks} lays tracks out on — is
-   * what keeps the rule satisfiable: a wire pushed off a track lands on the very next
-   * one, which is by construction far enough away to be free.
+   * The neighbouring tracks are searched, not just this one, because the defect is a
+   * DISTANCE in px and the grid is only how we enumerate it. The Hanan lines come from
+   * the pins, so two of them land wherever two gates happen to sit — in `halfAdder`,
+   * `B → xor:b` and `A → and:a` ran 50px side by side 2px apart, one line to the eye,
+   * yet on two distinct tracks the same-track rule never compared. See {@link LANE_FUSE}.
+   *
+   * Reusing `laneGap` ALONG the track — the spacing {@link withLaneTracks} lays tracks
+   * out on — is what keeps the rule satisfiable: a wire pushed off a track lands on the
+   * very next one, which is by construction far enough away to be free.
    */
   const laneCost = (
     o: 'h' | 'v',
@@ -635,23 +661,42 @@ export function routeOrthogonal(
     e: number,
     net: string
   ): number => {
-    const byDriver = usage.get(trackKey(o, fixed));
-    if (!byDriver) return 0;
     const [a0, a1] = edgeSpan(o, e);
     // Per NET, not per driver: two branches of one fan-out crowding a track are the
     // SAME line, and charging them twice would price a shape the eye reads once.
     const charged = new Set<string>();
-    for (const [driver, edges] of byDriver) {
-      const other = netAt(driver);
-      if (other === net || charged.has(other)) continue;
-      for (const oe of edges.keys()) {
-        const [b0, b1] = edgeSpan(o, oe);
-        if (Math.max(a0, b0) - Math.min(a1, b1) < laneGap) {
-          charged.add(other);
-          break; // this net is already paid for; its other runs add nothing
+    // The axis the tracks of this orientation are spread along: a horizontal track is
+    // pinned at a `ys` line, a vertical one at an `xs` line.
+    const across = o === 'h' ? ys : xs;
+    const chargeTrack = (f: number): void => {
+      const byDriver = usage.get(trackKey(o, f));
+      if (!byDriver) return;
+      for (const [driver, edges] of byDriver) {
+        const other = netAt(driver);
+        if (other === net || charged.has(other)) continue;
+        for (const oe of edges.keys()) {
+          const [b0, b1] = edgeSpan(o, oe);
+          if (Math.max(a0, b0) - Math.min(a1, b1) < laneGap) {
+            charged.add(other);
+            break; // this net is already paid for; its other runs add nothing
+          }
         }
       }
-    }
+    };
+    // This track, then outward each way while the tracks are too close to tell apart.
+    chargeTrack(fixed);
+    for (
+      let f = fixed - 1;
+      f >= 0 && across[fixed] - across[f] < LANE_FUSE;
+      f--
+    )
+      chargeTrack(f);
+    for (
+      let f = fixed + 1;
+      f < across.length && across[f] - across[fixed] < LANE_FUSE;
+      f++
+    )
+      chargeTrack(f);
     return charged.size * LANE_COST;
   };
 
