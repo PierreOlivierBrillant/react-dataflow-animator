@@ -7,7 +7,7 @@ import type {
   PathShape,
   TreeSpec,
 } from '../types';
-import { refNode } from './pins';
+import { parseRef, refNode, resolvePin } from './pins';
 
 /**
  * Spatial layout engine: calculates the position of each static node
@@ -31,6 +31,13 @@ export interface NodePlacement {
    * takes precedence. Undefined otherwise.
    */
   rotation?: number;
+  /**
+   * Vertical nudge putting this component's TERMINAL — rather than its centre — on
+   * its neighbour's rail, as a signed fraction of the node's own HEIGHT (positive =
+   * down). Set ONLY by the circuit DAG auto-layout; see {@link assignPinNudges} for
+   * why the layout cannot express it in ratios itself. Undefined = no nudge.
+   */
+  pinNudge?: number;
 }
 
 export type LayoutMap = Record<string, NodePlacement>;
@@ -780,6 +787,91 @@ function snapColumnsToRails(
 }
 
 /**
+ * Largest nudge {@link assignPinNudges} may apply, as a fraction of the node's
+ * height. It covers every terminal offset the symbols actually declare (a gate's
+ * `a`/`b` at 0.18, a transistor's collector/emitter at 0.35), so no real wire is
+ * refused for want of reach. Two nodes on adjacent rails pulled TOWARDS each other
+ * therefore close at most 0.7 of a body, and `computeScale` leaves the rails about
+ * one body apart — so a nudge cannot make two symbols touch.
+ */
+const PIN_NUDGE_CAP = 0.35;
+
+/**
+ * Puts a component's TERMINAL on its driver's rail, instead of its centre.
+ *
+ * The sweeps and {@link snapColumnsToRails} align node CENTRES, and they succeed —
+ * yet a wire between two aligned components still jogs, because it attaches at a
+ * PIN, not at the centre: a gate's output leaves at mid-height (0.5) while its `a`
+ * input enters a third of the way up (0.32). The two are on one rail and the wire
+ * still spends two corners climbing the 0.18-of-a-body gap between them.
+ *
+ * For a pad→component wire `geometry.ts` absorbs this (`alignFaceToTerminal` slides
+ * the pad's port onto the pin). A component→component wire has a pin at BOTH ends,
+ * so nothing can: `wireEndpoints` hands it to the router, and the router cannot
+ * straighten a segment whose two endpoints are both fixed. The only remaining move
+ * is to shift the node — which is this function.
+ *
+ * The nudge is expressed as a fraction of the node's own HEIGHT because that is the
+ * only unit this module can honestly use: a pin offset is a fraction of the SYMBOL,
+ * whose pixel size comes from `computeScale` — which reads this layout, so asking
+ * for it here would be circular. `Stage` multiplies by the measured height once the
+ * symbols exist, exactly where the pad's port offset is already resolved.
+ *
+ * Only a wire whose ends already share a rail is considered: off-rail ends are a
+ * whole row apart, far beyond {@link PIN_NUDGE_CAP}, and are the router's business.
+ * Columns are visited left to right, so a node's drivers are always settled first
+ * (every edge climbs at least one layer) and a nudge propagates along a chain.
+ * Ties — a component pulled two ways by both its inputs — resolve to no move, the
+ * same answer `snapColumnsToRails` gives for the same reason: picking a side would
+ * trade a balanced position for an arbitrary wire.
+ */
+function assignPinNudges(
+  cols: string[][],
+  slot: Map<string, number>,
+  typeOf: (id: string) => Node['type'],
+  inEdges: Map<string, { from: string; fromPin?: string; toPin?: string }[]>
+): Map<string, number> {
+  const nudge = new Map<string, number>();
+  // A terminal's height, signed from the node's CENTRE (a PinDef's `y` runs from
+  // the top edge), so it composes directly with a nudge.
+  const offset = (id: string, pin: string | undefined): number | undefined => {
+    const def = resolvePin(typeOf(id), pin);
+    return def ? def.y - 0.5 : undefined;
+  };
+  for (const col of cols) {
+    for (const id of col) {
+      const wants: number[] = [];
+      for (const e of inEdges.get(id) ?? []) {
+        if (Math.abs(slot.get(e.from)! - slot.get(id)!) > SLOT_EPS) continue;
+        const src = offset(e.from, e.fromPin);
+        const dst = offset(id, e.toPin);
+        if (src === undefined || dst === undefined) continue;
+        // Same rail, so the wire is straight once both terminals sit at the same
+        // height: nudge(id) + dst == nudge(from) + src. Terminal offsets are
+        // fractions of each node's own body, and every component symbol renders at
+        // one size, so the two fractions are directly comparable.
+        const d = (nudge.get(e.from) ?? 0) + src - dst;
+        if (Math.abs(d) > SLOT_EPS && Math.abs(d) <= PIN_NUDGE_CAP)
+          wants.push(d);
+      }
+      if (!wants.length) continue;
+      // The move that straightens the most wires; a tie leaves the node alone.
+      let best = 0;
+      let bestN = 0;
+      for (const d of wants) {
+        const n = wants.filter((o) => Math.abs(o - d) < SLOT_EPS).length;
+        if (n > bestN) {
+          bestN = n;
+          best = d;
+        } else if (n === bestN && Math.abs(d - best) > SLOT_EPS) best = 0;
+      }
+      if (best !== 0) nudge.set(id, best);
+    }
+  }
+  return nudge;
+}
+
+/**
  * Layered left-to-right auto-layout for a `direction: 'circuit'` that is a
  * feed-forward network (a logic diagram: inputs → gates → outputs). Each
  * CONNECTED component is laid out on its own: nodes go in columns by their
@@ -804,22 +896,34 @@ function circuitDagLayout(
   const ids = nodes.map((n) => n.id);
   if (ids.length < 2) return null;
   const idSet = new Set(ids);
+  const typeById = new Map(nodes.map((n) => [n.id, n.type]));
+  const typeOf = (id: string): Node['type'] => typeById.get(id)!;
 
   const succ = new Map<string, string[]>();
   const pred = new Map<string, string[]>();
   const undirected = new Map<string, Set<string>>();
   const indeg = new Map<string, number>();
+  // Kept pin-resolved (unlike `pred`, which is keyed by bare node) for
+  // `assignPinNudges`: WHICH terminal a wire lands on is what it reasons about.
+  const inEdges = new Map<
+    string,
+    { from: string; fromPin?: string; toPin?: string }[]
+  >();
   for (const id of ids) {
     succ.set(id, []);
     pred.set(id, []);
     undirected.set(id, new Set());
     indeg.set(id, 0);
+    inEdges.set(id, []);
   }
   const seen = new Set<string>();
   for (const c of connections) {
-    const u = refNode(c.from);
-    const v = refNode(c.to);
+    const rf = parseRef(c.from);
+    const rt = parseRef(c.to);
+    const u = rf.node;
+    const v = rt.node;
     if (u === v || !idSet.has(u) || !idSet.has(v)) continue;
+    inEdges.get(v)!.push({ from: u, fromPin: rf.pin, toPin: rt.pin });
     undirected.get(u)!.add(v);
     undirected.get(v)!.add(u);
     const dk = `${u}->${v}`;
@@ -958,6 +1062,8 @@ function circuitDagLayout(
       // An I/O pad: wired on one side only, so it mediates nothing.
       (id) => !pred.get(id)!.some(inComp) || !succ.get(id)!.some(inComp)
     );
+    // Rails are final from here on: the sub-rail terminal correction can be read off.
+    const nudge = assignPinNudges(cols, slot, typeOf, inEdges);
     const svals = cnodes.map((id) => slot.get(id)!);
     const smin = Math.min(...svals);
     const smax = Math.max(...svals);
@@ -972,7 +1078,8 @@ function circuitDagLayout(
           smax > smin
             ? y0 + (y1 - y0) * ((slot.get(id)! - smin) / (smax - smin))
             : (y0 + y1) / 2;
-        map[id] = { cx, cy };
+        const pn = nudge.get(id);
+        map[id] = pn ? { cx, cy, pinNudge: pn } : { cx, cy };
       });
     });
   }

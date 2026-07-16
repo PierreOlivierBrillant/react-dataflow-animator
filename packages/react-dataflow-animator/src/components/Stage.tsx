@@ -1093,17 +1093,58 @@ export function Stage({
   // outside the canvas (the shrinking of panels via contentLimits avoids
   // overlaps, not spreading them out). In tree mode positions are
   // time-dependent (rotations), so placements follow the live layout.
+  // Resolve the layout's `pinNudge` — a fraction of the node's own height, the only
+  // unit it could express (see `assignPinNudges`) — now that the symbols are
+  // measured. It shifts a component so its TERMINAL, not its centre, lands on its
+  // driver's rail, which is what makes a component→component wire straight. Applied
+  // to `cy` in FRAME units (that is what the nudged wire is drawn in) and BEFORE
+  // computePlacements, so its clamp still keeps the node on canvas. Deliberately not
+  // fed back into `frameAspect` / `computeScale`: both read the raw layout, and a
+  // sub-body nudge must not be able to resize the frame that defines it.
+  const nudgedLayout = useMemo(() => {
+    const fh = frame.h > 0 ? frame.h : height;
+    if (!fh) return layout;
+    let any = false;
+    const out: LayoutMap = {};
+    for (const id in layout) {
+      const p = layout[id];
+      const h = geometry[id]?.height;
+      if (!p.pinNudge || !h) {
+        out[id] = p;
+        continue;
+      }
+      any = true;
+      out[id] = { ...p, cy: p.cy + (p.pinNudge * h) / fh };
+    }
+    return any ? out : layout;
+  }, [layout, geometry, frame.h, height]);
+  // A nudge MOVES nodes (their POSITION, not their size), and the height it resolves
+  // against only settles once the scale has converged — so the first measure feeds a
+  // TRANSIENT height into a position, and nothing would ever re-measure the corrected
+  // one: a ResizeObserver sees sizes, not displacements (the trap the letterbox hits
+  // above). The router would then anchor the wires on the pre-nudge rails. Re-measure
+  // whenever a resolved nudge changes; it is a pure function of the settled height,
+  // so this reaches a fixed point instead of oscillating.
+  const nudgeKey = useMemo(() => {
+    const parts: string[] = [];
+    for (const id in nudgedLayout)
+      if (layout[id]?.pinNudge) parts.push(`${id}:${nudgedLayout[id].cy}`);
+    return parts.join('|');
+  }, [nudgedLayout, layout]);
+  useIsoLayoutEffect(() => {
+    if (nudgeKey) forceRemeasure();
+  }, [nudgeKey, forceRemeasure]);
   const basePlacements = useMemo(
     () =>
       computePlacements(
-        layout,
+        nudgedLayout,
         geometry,
         width,
         height,
         undefined,
         labelSideById
       ),
-    [layout, geometry, width, height, labelSideById]
+    [nudgedLayout, geometry, width, height, labelSideById]
   );
   const basePlaced = isTree
     ? computePlacements(liveLayout, geometry, width, height)

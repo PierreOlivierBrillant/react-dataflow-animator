@@ -437,6 +437,53 @@ describe('computeLayout — circuit (feed-forward DAG)', () => {
     // wire and pull the whole spine into a single band.
     expect(layout.ab.cy).toBeCloseTo((layout.x2.cy + layout.x3.cy) / 2, 5);
   });
+
+  it('nudges a gate so its input PIN, not its centre, meets its driver rail', () => {
+    const layout = computeLayout(fullAdder);
+    // x1 drives x3's `a` from the same rail. A gate's output leaves at mid-height
+    // and `a` enters at 0.32, so aligned CENTRES still leave the wire a 0.18-body
+    // climb: x3 drops by exactly that, and the two share a rail to drop from.
+    expect(layout.x3.cy).toBeCloseTo(layout.x1.cy, 5);
+    expect(layout.x3.pinNudge).toBeCloseTo(0.5 - 0.32, 5);
+    // x5 → x7:a is the same shape one XOR later — the rule is general, not a patch.
+    expect(layout.x7.pinNudge).toBeCloseTo(0.5 - 0.32, 5);
+  });
+
+  it('leaves a gate alone when it is not on its driver rail', () => {
+    const layout = computeLayout(fullAdder);
+    // x2 takes x1's output on `b` but sits a row above it: the wire has to turn
+    // anyway, and a sub-body nudge cannot buy that back.
+    expect(layout.x2.cy).not.toBeCloseTo(layout.x1.cy, 5);
+    expect(layout.x2.pinNudge).toBeUndefined();
+    // A pad has no terminals; `alignFaceToTerminal` slides its port instead.
+    expect(layout.A.pinNudge).toBeUndefined();
+  });
+
+  it('leaves a gate alone when both inputs pull it the opposite way', () => {
+    // NOT(a NAND a): one driver feeds BOTH pins from the same rail, so `a` wants
+    // the gate down and `b` wants it up by as much. Neither wire can win; moving
+    // would trade a balanced gate for an arbitrary wire, so it stays put.
+    const layout = computeLayout({
+      direction: 'circuit',
+      nodes: [
+        { id: 'in', type: 'signal' },
+        { id: 'g', type: 'nand_gate' },
+        { id: 'inv', type: 'nand_gate' },
+        { id: 'out', type: 'signal' },
+      ],
+      connections: [
+        { from: 'in', to: 'g:a' },
+        { from: 'in', to: 'g:b' },
+        { from: 'g:y', to: 'inv:a' },
+        { from: 'g:y', to: 'inv:b' },
+        { from: 'inv:y', to: 'out' },
+      ],
+      packets: [],
+      timeline: [],
+    });
+    expect(layout.inv.cy).toBeCloseTo(layout.g.cy, 5);
+    expect(layout.inv.pinNudge).toBeUndefined();
+  });
 });
 
 describe('connectionAxis', () => {
