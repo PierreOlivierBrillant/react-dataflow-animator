@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   connection,
+  pathD,
   distributeFacePorts,
   pathTip,
   pointOnSegment,
@@ -764,5 +765,135 @@ describe('distributeFacePorts', () => {
       expect(y).toBeGreaterThanOrEqual(100 - 40 * 0.4 - 1e-6);
       expect(y).toBeLessThanOrEqual(100 + 40 * 0.4 + 1e-6);
     }
+  });
+});
+
+describe('pathD', () => {
+  /** The arc commands of a `d`, as [radius, sweep, endX, endY] tuples. */
+  const arcs = (
+    d: string
+  ): { r: number; sweep: number; x: number; y: number }[] =>
+    [...d.matchAll(/A([\d.-]+),[\d.-]+ 0 0 ([01]) ([\d.-]+),([\d.-]+)/g)].map(
+      (m) => ({
+        r: Number(m[1]),
+        sweep: Number(m[2]),
+        x: Number(m[3]),
+        y: Number(m[4]),
+      })
+    );
+
+  const flat = [
+    { x: 0, y: 50 },
+    { x: 100, y: 50 },
+  ];
+
+  it('is the plain polyline when nothing crosses', () => {
+    expect(pathD(flat)).toBe('M0,50L100,50');
+    // An empty hop list and a zero radius are the same no-op.
+    expect(pathD(flat, [], 5)).toBe('M0,50L100,50');
+    expect(pathD(flat, [{ x: 50, y: 50 }], 0)).toBe('M0,50L100,50');
+  });
+
+  it('cuts the segment either side of the hop and arches over it', () => {
+    const d = pathD(flat, [{ x: 50, y: 50 }], 5);
+    expect(d).toBe('M0,50L45,50A5,5 0 0 1 55,50L100,50');
+  });
+
+  it('arches to the same side whichever way the wire runs', () => {
+    // The bulge is read off the segment, not off its direction: a wire drawn
+    // right-to-left must not dip DOWN where its mirror image bulges up.
+    const rtl = pathD([...flat].reverse(), [{ x: 50, y: 50 }], 5);
+    // Reversed travel ⇒ reversed sweep, which lands the arc on the same side.
+    expect(arcs(rtl)).toEqual([{ r: 5, sweep: 0, x: 45, y: 50 }]);
+    const ltr = arcs(pathD(flat, [{ x: 50, y: 50 }], 5));
+    expect(ltr).toEqual([{ r: 5, sweep: 1, x: 55, y: 50 }]);
+  });
+
+  it('arches an upright segment to the same side both ways', () => {
+    const up = [
+      { x: 50, y: 0 },
+      { x: 50, y: 100 },
+    ];
+    const down = arcs(pathD(up, [{ x: 50, y: 50 }], 5));
+    const back = arcs(pathD([...up].reverse(), [{ x: 50, y: 50 }], 5));
+    expect(down[0].sweep).toBe(1); // downward: clockwise bulges right
+    expect(back[0].sweep).toBe(0); // upward: the opposite sweep, same side
+  });
+
+  it('draws the same bridges in a thumbnail as at full size', () => {
+    // Scale the points, the hops AND the radius by the same k, and the `d` must
+    // scale with them: a small player draws the same picture, smaller. A radius
+    // floor in absolute px would fail this — it deletes the bridges of a diagram
+    // that is itself smaller than the floor.
+    const K = 0.35; // a docs thumbnail, roughly
+    const at = (p: { x: number; y: number }) => ({ x: p.x * K, y: p.y * K });
+    const small = pathD(flat.map(at), [at({ x: 50, y: 50 })], 5 * K);
+    expect(arcs(small)).toHaveLength(1);
+    expect(arcs(small)[0].r).toBeCloseTo(5 * K, 2);
+  });
+
+  it('ignores a hop that is not on the path', () => {
+    expect(pathD(flat, [{ x: 50, y: 90 }], 5)).toBe('M0,50L100,50');
+    // Nor does an endpoint count: there is no room to arch there anyway.
+    expect(pathD(flat, [{ x: 0, y: 50 }], 5)).toBe('M0,50L100,50');
+  });
+
+  it('puts each hop on its own segment of a corner', () => {
+    const corner = [
+      { x: 0, y: 50 },
+      { x: 100, y: 50 },
+      { x: 100, y: 150 },
+    ];
+    const d = pathD(
+      corner,
+      [
+        { x: 50, y: 50 },
+        { x: 100, y: 100 },
+      ],
+      5
+    );
+    expect(arcs(d)).toEqual([
+      { r: 5, sweep: 1, x: 55, y: 50 },
+      { r: 5, sweep: 1, x: 100, y: 105 },
+    ]);
+  });
+
+  it('shrinks a bridge rather than overrunning the corner it sits by', () => {
+    // A crossing 3 px from the end has no room for a radius-5 arch: it gets a
+    // 3 px one instead of a path that folds back on itself.
+    const d = pathD(flat, [{ x: 97, y: 50 }], 5);
+    expect(arcs(d)).toEqual([{ r: 3, sweep: 1, x: 100, y: 50 }]);
+    // Closer still, and the bridge is dropped: the crossing draws flat.
+    expect(pathD(flat, [{ x: 99, y: 50 }], 5)).toBe('M0,50L100,50');
+  });
+
+  it('never lets two neighbouring bridges overlap', () => {
+    // Two crossings 8 px apart: back-to-back radius-5 arches would each swallow
+    // the other's start, so the second shrinks to the room the first left it and
+    // the two end up flush (…A ends at 55, the next starts at 55).
+    expect(
+      pathD(
+        flat,
+        [
+          { x: 50, y: 50 },
+          { x: 58, y: 50 },
+        ],
+        5
+      )
+    ).toBe('M0,50L45,50A5,5 0 0 1 55,50L55,50A3,3 0 0 1 61,50L100,50');
+    // Tighter than twice the minimum radius, and the second is dropped rather
+    // than drawn as a wart: one bridge, one flat crossing.
+    expect(
+      arcs(
+        pathD(
+          flat,
+          [
+            { x: 50, y: 50 },
+            { x: 56, y: 50 },
+          ],
+          5
+        )
+      )
+    ).toEqual([{ r: 5, sweep: 1, x: 55, y: 50 }]);
   });
 });

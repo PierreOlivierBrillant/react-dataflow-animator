@@ -888,3 +888,89 @@ export function visiblePath(conn: Connection, t: number): Point[] {
   }
   return result;
 }
+
+/** Fraction of the asked-for radius below which a squeezed hop is dropped and its
+ *  crossing drawn flat, as it was before hops: an arch this much smaller than its
+ *  neighbours reads as a wart, not as a deliberate bridge.
+ *
+ *  A FRACTION, not a pixel floor: the caller sizes `hopRadius` to the player, so a
+ *  floor in absolute px would be a second, contradictory opinion about scale — and
+ *  it silently deleted every bridge in a thumbnail, where the whole diagram is
+ *  smaller than the floor. Everything here is proportional to the radius, which
+ *  keeps {@link pathD} scale-invariant. */
+const HOP_MIN_FRAC = 0.4;
+
+/** A `d` coordinate: hundredths of a pixel, which no display can tell apart, and
+ *  keeps summed segment lengths from spelling a radius `2.999999999999993`. */
+const fmt = (v: number): string => String(Math.round(v * 100) / 100);
+
+/** `x,y` for a `d` command. */
+const xy = (p: Point): string => `${fmt(p.x)},${fmt(p.y)}`;
+
+/** The hops that sit ON segment p→q, as distances along it, ordered. A hop point
+ *  comes from the router in absolute coordinates, so it is matched back to its
+ *  segment geometrically — which also drops the hops of a part of the path that
+ *  `progress` has not drawn yet. */
+function hopsAlong(p: Point, q: Point, hops: Point[]): number[] {
+  const dx = q.x - p.x;
+  const dy = q.y - p.y;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-10) return [];
+  const out: number[] = [];
+  for (const h of hops) {
+    const t = ((h.x - p.x) * dx + (h.y - p.y) * dy) / len2;
+    if (t <= 0 || t >= 1) continue;
+    // Off the segment's line ⇒ this hop belongs to another segment of the path.
+    if (Math.hypot(p.x + t * dx - h.x, p.y + t * dy - h.y) > 0.5) continue;
+    out.push(t * Math.sqrt(len2));
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** `d` of one segment, arching over each of its hops (distances along p→q). */
+function segmentD(p: Point, q: Point, hops: number[], radius: number): string {
+  const len = Math.hypot(q.x - p.x, q.y - p.y);
+  if (!hops.length || len < 1e-10) return `L${xy(q)}`;
+  const u = { x: (q.x - p.x) / len, y: (q.y - p.y) / len };
+  // Every bridge bulges the same way — UP, or RIGHT on an upright segment —
+  // whichever way its wire happens to be travelling. Sweeping clockwise arches a
+  // rightward segment up and a downward one right; reversing the travel reverses
+  // the sweep, which lands the bulge on that same side again.
+  const sweep = (Math.abs(u.x) > 1e-9 ? u.x : u.y) > 0 ? 1 : 0;
+  const at = (d: number): string => xy({ x: p.x + u.x * d, y: p.y + u.y * d });
+  let out = '';
+  let drawn = 0; // distance along p→q already emitted
+  for (const c of hops) {
+    // Shrink the arc to the room left by the previous hop and by the far end, so
+    // a crossing next to a corner (or another crossing) bends the wire less
+    // rather than folding the path back over itself.
+    const r = Math.min(radius, c - drawn, len - c);
+    if (r < radius * HOP_MIN_FRAC) continue;
+    out += `L${at(c - r)}A${fmt(r)},${fmt(r)} 0 0 ${sweep} ${at(c + r)}`;
+    drawn = c + r;
+  }
+  return `${out}L${xy(q)}`;
+}
+
+/**
+ * SVG `d` of a polyline, bridging over every point of `hops` with a half-circle
+ * so a wire crossing another net reads as a crossing and not as a T-junction (see
+ * `wireHops`). No hops ⇒ plain `M`/`L`, i.e. exactly the polyline itself.
+ *
+ * `hopRadius` is in player px: the caller scales it, so a bridge keeps its
+ * proportion to the stroke at any player size. Scaling points, hops and radius
+ * together scales the `d` — this draws the same picture at any size.
+ */
+export function pathD(points: Point[], hops?: Point[], hopRadius = 0): string {
+  if (points.length === 0) return '';
+  const arch = hops?.length && hopRadius > 0;
+  let d = `M${xy(points[0])}`;
+  for (let i = 0; i < points.length - 1; i++)
+    d += segmentD(
+      points[i],
+      points[i + 1],
+      arch ? hopsAlong(points[i], points[i + 1], hops) : [],
+      hopRadius
+    );
+  return d;
+}

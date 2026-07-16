@@ -4,6 +4,7 @@ import {
   routeOrthogonal,
   routeWithPinSwaps,
   simplify,
+  wireHops,
   type RouterObstacle,
   type RouterWire,
 } from './orthoRouter';
@@ -1081,5 +1082,141 @@ describe('orthoRouter', () => {
     const absent = routeOrthogonal(obstacles, build()).get('w')!;
     expect(allOrthogonal(off)).toBe(true);
     expect(off).toEqual(absent); // an explicit false and an absent flag agree
+  });
+});
+
+describe('wireHops', () => {
+  /** A soft (junction) endpoint: the wire may reach its centre from any side. */
+  const dot = (node: string, x: number, y: number): RouterWire['from'] => ({
+    node,
+    point: { x, y },
+    normal: { x: 1, y: 0 },
+    hardNormal: false,
+  });
+
+  it('bridges the crossing wire, and only the flatter of the two', () => {
+    // A horizontal wire and a vertical one, of two different nets, meeting at a
+    // right angle in open space.
+    const wires: RouterWire[] = [
+      {
+        key: 'flat',
+        from: pin('a', 0, 50, 1, 0),
+        to: pin('b', 100, 50, -1, 0),
+      },
+      { key: 'up', from: pin('c', 50, 0, 0, 1), to: pin('d', 50, 100, 0, -1) },
+    ];
+    const routes = new Map([
+      [
+        'flat',
+        [
+          { x: 0, y: 50 },
+          { x: 100, y: 50 },
+        ],
+      ],
+      [
+        'up',
+        [
+          { x: 50, y: 0 },
+          { x: 50, y: 100 },
+        ],
+      ],
+    ]);
+    const hops = wireHops(routes, wires);
+    // The horizontal wire arches over the vertical one — the schematic
+    // convention — and the vertical one is left untouched, or the two bridges
+    // would cancel each other out.
+    expect(hops.get('flat')).toEqual([{ x: 50, y: 50 }]);
+    expect(hops.has('up')).toBe(false);
+  });
+
+  it('does not bridge a fan-out: a T-junction is a connection, not a crossing', () => {
+    // Both wires leave the SAME driver `a` — one electrical net. The branch
+    // leaves the trunk at a T; nothing here may be drawn as a hop, since that is
+    // exactly the distinction a bridge exists to make.
+    const wires: RouterWire[] = [
+      {
+        key: 'trunk',
+        from: pin('a', 0, 50, 1, 0),
+        to: pin('b', 100, 50, -1, 0),
+      },
+      {
+        key: 'branch',
+        from: pin('a', 0, 50, 1, 0),
+        to: pin('c', 50, 100, 0, -1),
+      },
+    ];
+    const routes = new Map([
+      [
+        'trunk',
+        [
+          { x: 0, y: 50 },
+          { x: 100, y: 50 },
+        ],
+      ],
+      [
+        'branch',
+        [
+          { x: 0, y: 50 },
+          { x: 50, y: 50 },
+          { x: 50, y: 100 },
+        ],
+      ],
+    ]);
+    expect(wireHops(routes, wires).size).toBe(0);
+  });
+
+  it('does not bridge two hops of one net meeting at a junction dot', () => {
+    // `jL → jR` then `jR → b`: one net drawn in two pieces (see electricalNets).
+    // The pieces touch at the dot — an endpoint, never a crossing.
+    const wires: RouterWire[] = [
+      { key: 'in', from: pin('a', 0, 50, 1, 0), to: dot('j', 50, 50) },
+      { key: 'out', from: dot('j', 50, 50), to: pin('b', 50, 100, 0, -1) },
+    ];
+    const routes = new Map([
+      [
+        'in',
+        [
+          { x: 0, y: 50 },
+          { x: 50, y: 50 },
+        ],
+      ],
+      [
+        'out',
+        [
+          { x: 50, y: 50 },
+          { x: 50, y: 100 },
+        ],
+      ],
+    ]);
+    expect(wireHops(routes, wires).size).toBe(0);
+  });
+
+  it('breaks a 45° tie on the key, not on routing order', () => {
+    // Two opposite diagonals: neither is flatter, so the tie-break decides. It
+    // must not depend on the order the wires arrive in.
+    const wires: RouterWire[] = [
+      { key: 'aa', from: pin('a', 0, 0, 1, 0), to: pin('b', 100, 100, -1, 0) },
+      { key: 'bb', from: pin('c', 100, 0, -1, 0), to: pin('d', 0, 100, 1, 0) },
+    ];
+    const routes = new Map([
+      [
+        'aa',
+        [
+          { x: 0, y: 0 },
+          { x: 100, y: 100 },
+        ],
+      ],
+      [
+        'bb',
+        [
+          { x: 100, y: 0 },
+          { x: 0, y: 100 },
+        ],
+      ],
+    ]);
+    const forward = wireHops(routes, wires);
+    const reversed = wireHops(routes, [wires[1], wires[0]]);
+    expect(forward.get('aa')).toEqual([{ x: 50, y: 50 }]);
+    expect([...reversed.keys()]).toEqual(['aa']);
   });
 });

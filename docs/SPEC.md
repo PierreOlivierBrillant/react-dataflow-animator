@@ -96,7 +96,13 @@ the container (pure CSS placement). See [`packages/react-dataflow-animator/src/e
   long L-shapes and staircases collapse into clean diagonal runs while
   already-straight (aligned) wires stay straight; a short perpendicular stub is
   kept at each pin, and a miter that would cross a body falls back to a right
-  angle. Override it per wire with **`Connection.diagonal`** (`true`/`false`). The
+  angle. Override it per wire with **`Connection.diagonal`** (`true`/`false`).
+  Where two wires of **different electrical nets** cross, one of them (the flatter
+  segment, so normally the horizontal one) arches over the other in a small
+  half-circle **bridge**, the way a schematic does: a wire that merely passes over
+  another cannot then be misread as connected to it. Wires of the **same** net are
+  never bridged — a fan-out T-junction stays flat, which is exactly what tells the
+  two apart. Bridges are automatic; no spec field turns them on. The
   current is animated with the
   [`flow` action](#5-animation-engine-and-actions) and switches actuated with
   [`toggle`](#5-animation-engine-and-actions).

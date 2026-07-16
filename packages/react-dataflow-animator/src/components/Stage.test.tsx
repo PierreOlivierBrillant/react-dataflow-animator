@@ -91,7 +91,7 @@ describe('Stage — rendu à t fixe', () => {
         highlight={highlightCode}
       />
     );
-    // The SVG container still exists; the polyline confirms ArrowLine is mounted.
+    // The SVG container still exists; the stroked path confirms ArrowLine is mounted.
     expect(container.querySelector('.rdfa-arrow-svg')).toBeTruthy();
     expect(container.querySelector('.rdfa-arrow-line')).toBeTruthy();
   });

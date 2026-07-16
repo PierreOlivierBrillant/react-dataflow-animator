@@ -5,6 +5,7 @@ import {
 } from '../../utils/animatable';
 import {
   connection,
+  pathD,
   pathTip,
   visiblePath,
   type Connection,
@@ -53,6 +54,13 @@ export interface ArrowLineProps {
    *  out all wires together so they avoid bodies and don't overlap. When given,
    *  it fully replaces the per-wire `connection()` routing. */
   route?: Point[];
+  /** Points of `route` where THIS wire steps over another net's wire, drawn as a
+   *  little bridge so a crossing cannot be misread as a T-junction (see
+   *  `wireHops`, which also decides which of the two wires hops). */
+  hops?: Point[];
+  /** Radius of those bridges, in player px (scaled by the caller, like the
+   *  stroke). */
+  hopRadius?: number;
 }
 
 const HEAD = 9;
@@ -90,6 +98,8 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
     fromContour,
     toContour,
     route,
+    hops,
+    hopRadius,
   }: ArrowLineProps) {
     const headStyle = arrow_head ?? 'forward';
     const renderForward = headStyle === 'forward' || headStyle === 'both';
@@ -147,7 +157,7 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
         y: startTip.y - HEAD * Math.sin(angStart),
       };
     }
-    const ptStr = ptsAdjusted.map((p) => `${p.x},${p.y}`).join(' ');
+    const d = pathD(ptsAdjusted, hops, hopRadius);
 
     // Text label position: anchor offset if the middle of the path falls
     // on an interleaved node, otherwise middle of the path.
@@ -165,7 +175,7 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
 
     return (
       <g style={gStyle}>
-        <polyline className={lineCls} data-style={style} points={ptStr} />
+        <path className={lineCls} data-style={style} d={d} />
         {renderForward && progress > 0.02 ? (
           <polygon className={headCls} points={headFwd} />
         ) : null}

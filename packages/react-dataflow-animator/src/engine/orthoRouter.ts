@@ -22,7 +22,9 @@ import type { Point } from './geometry';
  * A perpendicular crossing is allowed (the wires meet at a right angle) but not
  * free: it is priced at {@link CROSS_DETOUR} px of length inside the wire's `hard`
  * cost (see {@link RouteCost}), so a later wire pays a SHORT detour to dodge an
- * earlier one — but never a corner.
+ * earlier one — but never a corner. The crossings that survive are handed to the
+ * renderer by {@link wireHops}, which bridges one of the two wires over the other
+ * so it cannot be read as a T-junction.
  *
  * A wire may opt into `diagonal` (octilinear, only 45 / 135 / 225 / 315°). It is
  * routed in two tiers, each collision-checked so a diagonal is never a
@@ -1131,9 +1133,6 @@ function totalLength(
   return total;
 }
 
-/** Proper crossings between wires of DIFFERENT {@link electricalNets} (same-net wires
- *  share a trunk or meet at a junction — neither is a crossing). Reuses
- *  {@link segCross} so it counts exactly what the eye sees. */
 /** Split points of a fan-out that DON'T coincide with a sibling's — the count the
  *  rip-up pass must be able to see: A* can already find the co-located route (the
  *  `fork` tier), but acceptance on (crossings, length) alone throws it away, since
@@ -1165,12 +1164,25 @@ function countStaggeredSplits(
   return n;
 }
 
-function countInterNetCrossings(
+/** One routed segment, as handed to a crossing visitor. */
+type Seg = readonly [Point, Point];
+
+/**
+ * Visits every proper crossing between wires of DIFFERENT {@link electricalNets}
+ * (same-net wires share a trunk or meet at a junction — neither is a crossing).
+ * Reuses {@link segCross}, so it reports exactly what the eye sees.
+ *
+ * THE definition of "these two wires cross", shared by the router's own count and
+ * by {@link wireHops}: the bridge the renderer draws therefore appears on exactly
+ * the crossings the router priced ({@link CROSS_DETOUR}) and could not remove —
+ * never on a junction, which is what makes the two readable apart.
+ */
+function forEachInterNetCrossing(
   routes: Map<string, Point[]>,
   wires: RouterWire[],
-  nets: Map<string, string> = electricalNets(wires)
-): number {
-  let n = 0;
+  nets: Map<string, string>,
+  visit: (at: Point, a: RouterWire, sa: Seg, b: RouterWire, sb: Seg) => void
+): void {
   for (let i = 0; i < wires.length; i++) {
     const pi = routes.get(wires[i].key);
     if (!pi) continue;
@@ -1179,11 +1191,71 @@ function countInterNetCrossings(
       const pj = routes.get(wires[j].key);
       if (!pj) continue;
       for (let a = 0; a < pi.length - 1; a++)
-        for (let b = 0; b < pj.length - 1; b++)
-          if (segCross(pi[a], pi[a + 1], pj[b], pj[b + 1])) n++;
+        for (let b = 0; b < pj.length - 1; b++) {
+          const at = segCross(pi[a], pi[a + 1], pj[b], pj[b + 1]);
+          if (at)
+            visit(at, wires[i], [pi[a], pi[a + 1]], wires[j], [
+              pj[b],
+              pj[b + 1],
+            ]);
+        }
     }
   }
+}
+
+function countInterNetCrossings(
+  routes: Map<string, Point[]>,
+  wires: RouterWire[],
+  nets: Map<string, string> = electricalNets(wires)
+): number {
+  let n = 0;
+  forEachInterNetCrossing(routes, wires, nets, () => {
+    n++;
+  });
   return n;
+}
+
+/** How horizontal a segment is: 1 = flat, 0 = upright, √½ = a 45° diagonal. */
+function flatness([a, b]: Seg): number {
+  const dx = Math.abs(b.x - a.x);
+  const dy = Math.abs(b.y - a.y);
+  return dx / (Math.hypot(dx, dy) || 1);
+}
+
+/**
+ * Where each wire must draw a HOP — the little bridge that lifts it over another
+ * net's wire, so a crossing reads as a crossing and a T-junction reads as a
+ * connection. Wire key → the crossing points THAT wire steps over (in player px,
+ * like the routes); a wire absent from the map crosses nobody.
+ *
+ * Of the two wires only ONE hops, or the bridges would cancel out: the FLATTER
+ * segment does. On the orthogonal routes this is the schematic convention — the
+ * horizontal wire arches over the vertical one, always the same way round, so the
+ * eye learns the shape. A tie (two opposite 45° `diagonal` segments) breaks on the
+ * key, so the choice never depends on the order wires were routed in.
+ */
+export function wireHops(
+  routes: Map<string, Point[]>,
+  wires: RouterWire[],
+  nets: Map<string, string> = electricalNets(wires)
+): Map<string, Point[]> {
+  const hops = new Map<string, Point[]>();
+  forEachInterNetCrossing(routes, wires, nets, (at, a, sa, b, sb) => {
+    const fa = flatness(sa);
+    const fb = flatness(sb);
+    const key =
+      Math.abs(fa - fb) > 1e-6
+        ? fa > fb
+          ? a.key
+          : b.key
+        : a.key < b.key
+          ? a.key
+          : b.key;
+    const list = hops.get(key);
+    if (list) list.push(at);
+    else hops.set(key, [at]);
+  });
+  return hops;
 }
 
 /**

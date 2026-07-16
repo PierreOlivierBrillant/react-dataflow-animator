@@ -62,6 +62,7 @@ import {
 } from '../engine/geometry';
 import {
   routeWithPinSwaps,
+  wireHops,
   type PinSwapGroup,
   type RouterObstacle,
   type RouterWire,
@@ -229,6 +230,15 @@ function buildFlowPath(
  * proportional to the player size (see `scale` calculation in Stage).
  */
 const DESIGN_H = 495;
+
+/**
+ * Radius (design px) of the bridge a circuit wire arches over another net's wire
+ * — see `wireHops`. Scaled like the stroke it decorates, so the bump keeps its
+ * proportions at any player size. Big enough to read as a deliberate arch next to
+ * a 2 px stroke, and well under {@link PIN_LEAD}-scale spacing, so a bridge never
+ * reaches the corner or the neighbouring track it sits between.
+ */
+const HOP_RADIUS = 5;
 
 /**
  * Natural width:height aspect of a circuit layout, so it can be drawn in a
@@ -751,9 +761,12 @@ export function Stage({
   // router (strictly H/V, never through a component, parallels on separate
   // lanes). Keyed exactly like the render below. Circuit nodes don't move, so
   // this recomputes only on remeasure / spec change, not per animation frame.
-  const circuitRoutes = useMemo(() => {
+  // Hops (the bridges over another net's wire) come out of the same memo because
+  // only here are the wires — hence the electrical nets — known.
+  const { routes: circuitRoutes, hops: circuitHops } = useMemo(() => {
     const routes = new Map<string, Point[]>();
-    if (!isCircuit) return routes;
+    const empty = { routes, hops: new Map<string, Point[]>() };
+    if (!isCircuit) return empty;
     const obstacles: RouterObstacle[] = Object.entries(geometry).map(
       ([id, g]) => ({
         id,
@@ -836,7 +849,7 @@ export function Stage({
       }
       raw.push({ link, key, fromNode, toNode, ends, fromFace, toFace });
     });
-    if (!raw.length) return routes;
+    if (!raw.length) return empty;
     const eastPorts = new Map<string, Point>();
     for (const [node, g] of eastGroups)
       for (const [k, p] of distributeFacePorts(geometry[node], 'east', g))
@@ -891,11 +904,12 @@ export function Stage({
     // `scale: k` normalizes the measured geometry to design space so the routes
     // (fixed-px leads/costs) are identical at any player size — a thumbnail and a
     // full-screen render draw the SAME corners. See RouteOptions.scale.
-    return routeWithPinSwaps(obstacles, wires, swapGroups, {
+    const routed = routeWithPinSwaps(obstacles, wires, swapGroups, {
       clearance: 6,
       laneTracks: 3,
       scale: k,
     });
+    return { routes: routed, hops: wireHops(routed, wires) };
   }, [
     isCircuit,
     geometry,
@@ -1295,6 +1309,8 @@ export function Stage({
               fromContour={contourFor(link.from)}
               toContour={contourFor(link.to)}
               route={circuitRoutes.get(key)}
+              hops={circuitHops.get(key)}
+              hopRadius={HOP_RADIUS * scale}
             />
           );
         })}
