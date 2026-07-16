@@ -75,6 +75,7 @@ export const halfAdder = (locale: Locale): DataFlowSpec => {
   });
   return {
     direction: 'circuit',
+    diagonal_wires: true,
     // No coordinates: this is a connected feed-forward network, so the engine
     // auto-arranges it left-to-right (inputs → gates → outputs) in layers.
     nodes: [
