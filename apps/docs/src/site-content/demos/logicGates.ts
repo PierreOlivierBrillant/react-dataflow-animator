@@ -107,12 +107,10 @@ const strings = {
 export const logicGates = (locale: Locale): DataFlowSpec => {
   const s = strings[locale];
   const nodes: Node[] = GATES.flatMap((g) => [
-    { id: `${g.id}A`, type: 'signal', icon: '0' },
-    ...(g.inputs === 2
-      ? [{ id: `${g.id}B`, type: 'signal' as const, icon: '0' }]
-      : []),
+    { id: `${g.id}A`, type: 'signal' },
+    ...(g.inputs === 2 ? [{ id: `${g.id}B`, type: 'signal' as const }] : []),
     { id: g.id, type: g.type, text: g.name },
-    { id: `${g.id}Y`, type: 'signal', icon: '0' },
+    { id: `${g.id}Y`, type: 'signal' },
   ]);
   const connections: Connection[] = GATES.flatMap((g) => [
     { id: `${g.id}wa`, from: `${g.id}A`, to: `${g.id}:a`, color: LOW_WIRE },

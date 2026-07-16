@@ -67,13 +67,9 @@ export function buildNandCircuit(
     gateIds.has(name) ? `${name}:y` : name;
 
   const nodes: Node[] = [
-    ...inputs.map(
-      (i): Node => ({ id: i.id, type: 'signal', text: i.label, icon: '0' })
-    ),
+    ...inputs.map((i): Node => ({ id: i.id, type: 'signal', text: i.label })),
     ...gates.map((g): Node => ({ id: g.id, type: 'nand_gate', text: 'NAND' })),
-    ...outputs.map(
-      (o): Node => ({ id: o.id, type: 'signal', text: o.label, icon: '0' })
-    ),
+    ...outputs.map((o): Node => ({ id: o.id, type: 'signal', text: o.label })),
   ];
 
   // Wires carry an id (for set_color) and remember the NODE that drives them, so

@@ -79,12 +79,12 @@ export const halfAdder = (locale: Locale): DataFlowSpec => {
     // No coordinates: this is a connected feed-forward network, so the engine
     // auto-arranges it left-to-right (inputs → gates → outputs) in layers.
     nodes: [
-      { id: 'A', type: 'signal', text: s.a, icon: '0' },
-      { id: 'B', type: 'signal', text: s.b, icon: '0' },
+      { id: 'A', type: 'signal', text: s.a },
+      { id: 'B', type: 'signal', text: s.b },
       { id: 'xor', type: 'xor_gate', text: 'XOR' },
       { id: 'and', type: 'and_gate', text: 'AND' },
-      { id: 'sumOut', type: 'signal', text: s.sum, icon: '0' },
-      { id: 'carryOut', type: 'signal', text: s.carry, icon: '0' },
+      { id: 'sumOut', type: 'signal', text: s.sum },
+      { id: 'carryOut', type: 'signal', text: s.carry },
     ],
     connections: [
       // A and B each fan out to both gates.
