@@ -329,6 +329,50 @@ describe('orthoRouter', () => {
     expect(down[2].y).toBeGreaterThan(100);
   });
 
+  it('splits a fan-out at ONE point even when a branch extends the trunk', () => {
+    // The `fullAdderNand` shape, and the case the plain `fork` tier cannot fix. A
+    // driver feeds a sink STRAIGHT AHEAD — laying a trunk that runs PAST the branch
+    // point — plus one sink up and one down. `up` is routed first, with no sibling
+    // junction to aim at, so it turns at its own pin's lead (x=185); `down` then
+    // rides the discounted trunk further before dropping (x=194). Two risers 9px
+    // apart: one net drawn as if it split twice. Nothing in the per-wire A* can see
+    // it — the routes differ on `lead`, which outranks `fork` — so only the rip-up
+    // pass, re-routing `up` once `down` is down, can pull them onto one junction.
+    const wires: RouterWire[] = [
+      {
+        key: 'up',
+        from: pin('src', 120, 100, 1, 0),
+        to: pin('g1', 200, 40, -1, 0),
+      },
+      {
+        key: 'ahead',
+        from: pin('src', 120, 100, 1, 0),
+        to: pin('g0', 200, 100, -1, 0),
+      },
+      {
+        key: 'down',
+        from: pin('src', 120, 100, 1, 0),
+        to: pin('g2', 500, 220, -1, 0),
+      },
+    ];
+    const routes = routeOrthogonal(
+      [
+        body('src', 100, 100),
+        body('g0', 220, 100),
+        body('g1', 220, 40),
+        body('g2', 520, 220),
+      ],
+      wires
+    );
+    const up = routes.get('up')!;
+    const down = routes.get('down')!;
+    expect(routes.get('ahead')!).toHaveLength(2); // the trunk stays corner-free…
+    expect(up[1]).toEqual(down[1]); // …and both branches leave it at ONE vertex…
+    expect(up[1].y).toBeCloseTo(100, 5); // …which sits on the trunk…
+    expect(up[2].y).toBeLessThan(100); // …then they diverge: one rises…
+    expect(down[2].y).toBeGreaterThan(100); // …one drops.
+  });
+
   it('swaps a commutative gate’s inputs to remove a crossing', () => {
     // Two sources feed a gate's stacked inputs in the CROSSED order: s1 (below)
     // drives the TOP pin, s2 (above) the BOTTOM pin, so the two wires cross right

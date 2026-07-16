@@ -141,6 +141,27 @@ const LEAD_COST = 6;
  * nothing moves below that.
  */
 const CROSS_DETOUR = 8;
+/**
+ * Detour BUDGET a fan-out branch may spend, in px of extra length, to leave the
+ * shared trunk exactly where a SIBLING branch already left it — so the net splits
+ * at ONE T-junction instead of two stair-stepped ones a few px apart.
+ *
+ * Why a weight and not just the `fork` tier: the tier only breaks what `hard` and
+ * `lead` leave tied, and the two candidate branch points usually differ on `lead`
+ * (each branch turns at ITS OWN pin's lead boundary, and those sit a few px
+ * apart). A tier below `lead` can never trade that, however large. As a weight it
+ * outranks `lead` by construction — the same reason {@link CROSS_DETOUR} is a
+ * weight — and buys the shared T for a slightly later bend at one pin.
+ *
+ * Capped under {@link TURN_COST}, the invariant CROSS_DETOUR keeps too: co-locating
+ * may buy a longer ride down the trunk, never an extra corner. Measured over the 11
+ * circuit demos, 4 and 8 give the same routes; 8 keeps the margin under TURN_COST.
+ *
+ * It only bites together with the split key in the rip-up acceptance below: the
+ * FIRST branch of a net routes before its siblings exist and so cannot aim at a
+ * junction that is not there yet. See the rip-up comment.
+ */
+const FORK_DETOUR = 8;
 /** How many rip-up & reroute sweeps {@link routeOrthogonal} makes over the wires.
  *  Each accepted reroute strictly improves (crossings, length), so the loop
  *  converges on its own and this only caps the cost when reroutes keep
@@ -172,13 +193,20 @@ const RIPUP_PASSES = 3;
  * turns, which a strict tier did, and does so ABOVE `lead` by construction.
  * Greedy per wire (a later wire avoids the ones already laid).
  *
- * `fork` is the LOWEST tier, so co-locating splits is a pure tiebreak: when two
- * branches of a net leave the shared trunk in opposite directions, A* picks —
- * among routes ALREADY tied on shape and lead — the one whose corner sits exactly
- * where the first branch turned. Two 4px-offset risers thus collapse into one
- * clean T (trunk in, one branch up, one down), and the split lands as early as the
- * shared trunk allows (no overshoot past the junction). It can never lengthen a
- * wire, add a corner/crossing, or spend a lead to do so. */
+ * `fork` counts the corners that DON'T land where a sibling of the same DRIVER
+ * already turned, and is priced into `hard` at {@link FORK_DETOUR} — the tier is
+ * only what breaks the ties that weight leaves. A pure tier could not do the job:
+ * the two candidate branch points normally differ on `lead` (each branch wants to
+ * turn at its own pin's lead boundary, and those sit a few px apart), and no tier
+ * below `lead` can trade that. As a weight it outranks `lead`, so two offset risers
+ * collapse into one clean T — trunk in, one branch up, one down — for the price of
+ * one slightly later bend. Under `TURN_COST`, so never for the price of a corner.
+ *
+ * The weight alone is not enough, and the reason is ORDER, not cost: the first
+ * branch of a net is routed before its siblings exist, so there is no junction for
+ * it to aim at and it turns wherever its own lead says. Only the rip-up pass, which
+ * re-routes each wire once all the others are down, can put it on the shared T —
+ * see the split key in its acceptance test. */
 interface RouteCost {
   hard: number;
   lead: number;
@@ -858,9 +886,8 @@ export function routeOrthogonal(
             for (const n of at.keys()) if (netAt(n) !== wireNet) crossCount++;
         }
         // Turning AT `cur` costs one `fork` UNLESS a sibling from the same DRIVER
-        // already turned here — so equal-shape branches of one fan-out snap their
-        // corners together into a shared T-junction (the lowest tier: never at the
-        // expense of hard/cross/lead).
+        // already turned here — so the branches of one fan-out snap their corners
+        // together into a shared T-junction, worth FORK_DETOUR px of detour.
         let forkCost = 0;
         if (turned) {
           const sib = turnAt.get(vertKey(cur.i, cur.j));
@@ -872,7 +899,8 @@ export function routeOrthogonal(
             effLen +
             (turned ? TURN_COST : 0) +
             lane +
-            crossCount * CROSS_DETOUR,
+            crossCount * CROSS_DETOUR +
+            forkCost * FORK_DETOUR,
           lead: cur.g.lead + leadCost,
           fork: cur.g.fork + forkCost,
         };
@@ -952,13 +980,26 @@ export function routeOrthogonal(
   // So: lift each wire back off the grid and re-route it now that ALL the others
   // are down, and keep the result only if the WHOLE diagram improves.
   //
-  // Acceptance is lexicographic (crossings, then total length) and measured on the
-  // finished polylines, not on the wire's own A* cost: the A* optimises that wire
-  // alone, so only the diagram-wide count can tell whether the length it spent
-  // actually bought anything. Both keys strictly decrease on every accepted move
-  // (the first a bounded integer), so the loop converges; RIPUP_PASSES only caps
-  // the work when reroutes keep interacting.
+  // A fan-out's SPLIT POINT is the same kind of artefact, and needs this pass for
+  // the same reason: the first branch of a net is laid before its siblings exist,
+  // so it turns at its own pin's lead with no junction to aim at, and the siblings
+  // then branch a few px further along — one net, two stair-stepped T's. Only here,
+  // with every branch down, can that first wire be re-routed onto the shared T
+  // ({@link FORK_DETOUR} is what makes its A* want to).
+  //
+  // Acceptance is lexicographic (crossings, then staggered splits, then total
+  // length) and measured on the finished polylines, not on the wire's own A* cost:
+  // the A* optimises that wire alone, so only the diagram-wide counts can tell
+  // whether the length it spent actually bought anything. Splits rank under
+  // crossings — a shared T is never worth threading a wire through another net —
+  // and over length, which is exactly what the old two-key test got wrong: sliding
+  // a branch point along the trunk changes neither crossings nor length, so the
+  // co-located route it computed was always discarded as "no improvement". All
+  // three keys strictly decrease on every accepted move (the first two bounded
+  // integers), so the loop still converges; RIPUP_PASSES only caps the work when
+  // reroutes keep interacting.
   let crossings = countInterNetCrossings(results, wires, nets);
+  let split = countStaggeredSplits(results, wires);
   let totalLen = totalLength(results, wires);
   for (let pass = 0; pass < RIPUP_PASSES; pass++) {
     let improved = false;
@@ -976,14 +1017,19 @@ export function routeOrthogonal(
       }
       results.set(wire.key, retry.poly);
       const nowCross = countInterNetCrossings(results, wires, nets);
+      const nowSplit = countStaggeredSplits(results, wires);
       const nowLen = totalLength(results, wires);
       if (
         nowCross < crossings ||
-        (nowCross === crossings && nowLen < totalLen - 1e-6)
+        (nowCross === crossings && nowSplit < split) ||
+        (nowCross === crossings &&
+          nowSplit === split &&
+          nowLen < totalLen - 1e-6)
       ) {
         paths.set(wire.key, retry.seq);
         markPath(retry.seq, net, 1);
         crossings = nowCross;
+        split = nowSplit;
         totalLen = nowLen;
         improved = true;
       } else {
@@ -1088,6 +1134,37 @@ function totalLength(
 /** Proper crossings between wires of DIFFERENT {@link electricalNets} (same-net wires
  *  share a trunk or meet at a junction — neither is a crossing). Reuses
  *  {@link segCross} so it counts exactly what the eye sees. */
+/** Split points of a fan-out that DON'T coincide with a sibling's — the count the
+ *  rip-up pass must be able to see: A* can already find the co-located route (the
+ *  `fork` tier), but acceptance on (crossings, length) alone throws it away, since
+ *  sliding a branch point along the trunk changes neither. */
+function countStaggeredSplits(
+  routes: Map<string, Point[]>,
+  wires: RouterWire[]
+): number {
+  const byDriver = new Map<string, Point[]>();
+  for (const w of wires) {
+    const r = routes.get(w.key);
+    if (!r || r.length < 3) continue; // a straight branch has no split point
+    const l = byDriver.get(w.from.node);
+    if (l) l.push(r[1]);
+    else byDriver.set(w.from.node, [r[1]]);
+  }
+  let n = 0;
+  for (const [, pts] of byDriver) {
+    const uniq: Point[] = [];
+    for (const p of pts)
+      if (
+        !uniq.some(
+          (q) => Math.abs(q.x - p.x) < EPS && Math.abs(q.y - p.y) < EPS
+        )
+      )
+        uniq.push(p);
+    n += uniq.length - 1;
+  }
+  return n;
+}
+
 function countInterNetCrossings(
   routes: Map<string, Point[]>,
   wires: RouterWire[],
