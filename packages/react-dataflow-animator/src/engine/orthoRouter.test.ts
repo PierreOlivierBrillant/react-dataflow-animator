@@ -554,6 +554,86 @@ describe('orthoRouter', () => {
     expect(overlap).toBe(false);
   });
 
+  it('keeps two nets off ONE track, even where they would not overlap', () => {
+    // The `logicGates` shape: a gate's two input pads, one above and one below, both
+    // wanting to rise/fall on the pin's lead line. Their risers would not overlap —
+    // the pins are 8px apart — so an edge-by-edge lane rule saw nothing wrong and put
+    // BOTH on that line, drawing one continuous stroke from pad A to pad B: it reads
+    // as A and B shorted together. They must land on different tracks.
+    const wires: RouterWire[] = [
+      {
+        key: 'wa',
+        from: pin('a', 120, 40, 1, 0),
+        to: pin('g', 280, 96, -1, 0),
+      },
+      {
+        key: 'wb',
+        from: pin('b', 120, 160, 1, 0),
+        to: pin('g', 280, 104, -1, 0),
+      },
+    ];
+    const routes = routeOrthogonal(
+      [body('a', 100, 40), body('b', 100, 160), body('g', 300, 100)],
+      wires
+    );
+    const pa = routes.get('wa')!;
+    const pb = routes.get('wb')!;
+    expect(allOrthogonal(pa)).toBe(true);
+    expect(allOrthogonal(pb)).toBe(true);
+    const vseg = (p: { x: number; y: number }[]) => {
+      const out: { x: number; y0: number; y1: number }[] = [];
+      for (let i = 0; i < p.length - 1; i++)
+        if (Math.abs(p[i].x - p[i + 1].x) < 0.5)
+          out.push({
+            x: p[i].x,
+            y0: Math.min(p[i].y, p[i + 1].y),
+            y1: Math.max(p[i].y, p[i + 1].y),
+          });
+      return out;
+    };
+    // Both wires DO turn (they are not straight), and no riser of one shares a track
+    // with a riser of the other — whether by overlapping it or by queueing up nose to
+    // tail behind it.
+    expect(vseg(pa).length).toBeGreaterThan(0);
+    expect(vseg(pb).length).toBeGreaterThan(0);
+    for (const s of vseg(pa))
+      for (const t of vseg(pb))
+        if (Math.abs(s.x - t.x) < 0.5)
+          expect(Math.max(s.y0, t.y0) - Math.min(s.y1, t.y1)).toBeGreaterThan(
+            11
+          );
+  });
+
+  it('lets one net run straight THROUGH its own junction (not around it)', () => {
+    // A rail `r → j → b`: two hops, one electrical net, meeting at the junction j.
+    // They are collinear along y=200 BY DESIGN — that is the rail. The lane rule must
+    // read them as one net, or the second hop pays to dodge the first and the rail
+    // buckles into a staircase instead of leaving j straight.
+    const j = {
+      node: 'j',
+      point: { x: 100, y: 200 },
+      normal: { x: -1, y: 0 },
+      hardNormal: false,
+    };
+    const wires: RouterWire[] = [
+      { key: 'w1', from: pin('r', 280, 200, -1, 0), to: { ...j } },
+      { key: 'w2', from: { ...j }, to: pin('b', 80, 100, -1, 0) },
+    ];
+    const routes = routeOrthogonal(
+      [body('r', 300, 200), body('j', 100, 200), body('b', 100, 100)],
+      wires
+    );
+    const p2 = routes.get('w2')!;
+    expect(allOrthogonal(p2)).toBe(true);
+    // w2 leaves the junction along the rail (a horizontal first move), then climbs:
+    // a clean two-corner C, not a stair that steps off the rail first.
+    expect(p2[0].x).toBeCloseTo(100, 0);
+    expect(p2[0].y).toBeCloseTo(200, 0);
+    expect(Math.abs(p2[1].y - 200)).toBeLessThan(0.5);
+    expect(p2[1].x).toBeLessThan(100);
+    expect(p2.length).toBe(4);
+  });
+
   it('breaks an equal-length elbow tie toward FEWER crossings', () => {
     // A fixed vertical wire F sits in the bottom-left corner region of an L that
     // must join (0,0)→(60,60). The two elbows tie EXACTLY on length (120) and on

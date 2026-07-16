@@ -10,17 +10,19 @@ import type { Point } from './geometry';
  *   • keep a straight lead ({@link PIN_LEAD} px) out of / into a hard connector
  *     before the first / last turn, so a wire never bends flush against a pin;
  *   • take as few corners as possible (a turn is penalised);
- *   • do NOT run on top of a parallel wire — two wires may only meet where they
+ *   • do NOT share a track with another net — two wires may only meet where they
  *     cross at a right angle (lane separation).
  *
  * It routes on a Hanan-style grid (lines through every pin and every obstacle
  * edge, plus intermediate lane tracks in the gaps) with an A* per wire. Wires
  * are routed in order; each marks the grid edges it used, and later wires pay a
- * penalty to reuse a segment in the SAME orientation — so parallels spread onto
- * neighbouring tracks. A perpendicular crossing is allowed (the wires meet at a
- * right angle) but not free: it is priced at {@link CROSS_DETOUR} px of length
- * inside the wire's `hard` cost (see {@link RouteCost}), so a later wire pays a
- * SHORT detour to dodge an earlier one — but never a corner.
+ * penalty ({@link LANE_COST}) to come within `laneGap` px of another net ALONG a
+ * track — so parallels spread onto neighbouring tracks, and two nets never queue up
+ * end-to-end on one line where the eye would read them as a single broken wire.
+ * A perpendicular crossing is allowed (the wires meet at a right angle) but not
+ * free: it is priced at {@link CROSS_DETOUR} px of length inside the wire's `hard`
+ * cost (see {@link RouteCost}), so a later wire pays a SHORT detour to dodge an
+ * earlier one — but never a corner.
  *
  * A wire may opt into `diagonal` (octilinear, only 45 / 135 / 225 / 315°). It is
  * routed in two tiers, each collision-checked so a diagonal is never a
@@ -94,10 +96,12 @@ export interface RouteOptions {
 
 const TURN_COST = 12;
 const LANE_COST = 40;
-/** Cost multiplier for an edge already on THIS net's trunk: < 1 rewards a
+/** Cost multiplier for an edge already on THIS DRIVER's trunk: < 1 rewards a
  *  fan-out branch for staying on the shared trunk (splitting late) rather than
  *  diverging early. Low enough to prefer sharing, not 0 (which would let a branch
- *  ride the trunk past its target and double back). */
+ *  ride the trunk past its target and double back). Keyed on the driver and not the
+ *  {@link electricalNets} net, so two hops meeting at a junction never merge before
+ *  the dot that draws their connection. */
 const TRUNK_SHARE = 0.3;
 const EPS = 0.5;
 /** A miter shorter than this is pointless — keep the sharp corner instead. */
@@ -151,16 +155,16 @@ const RIPUP_PASSES = 3;
  *   1. `hard`  = length + turns ({@link TURN_COST}) + lane separation
  *                ({@link LANE_COST}, incl. the same-net trunk discount
  *                {@link TRUNK_SHARE}) + crossings ({@link CROSS_DETOUR}). The
- *                route's SHAPE. A PARALLEL overlap (worse than a crossing) is
- *                avoided here, above crossings.
+ *                route's SHAPE. SHARING A TRACK with another net (worse than a
+ *                crossing) is avoided here, above crossings.
  *   2. `lead`  = {@link LEAD_COST} for turning inside a pin's lead zone.
  *   3. `fork`  = number of corners that DON'T land on a junction a sibling of the
  *                same net already turned at. Minimising it co-locates a fan-out's
  *                branch points so a net splits at ONE shared T-junction instead of
  *                slightly-offset stair-steps (§ below).
  *
- * Perpendicular crossings are invisible to lane separation (which only penalises
- * PARALLEL overlap), so they are priced INTO `hard` at {@link CROSS_DETOUR} px
+ * Perpendicular crossings are invisible to lane separation (which only prices nets
+ * sharing a track), so they are priced INTO `hard` at {@link CROSS_DETOUR} px
  * each. Being a weight rather than its own tier is what lets a wire pay a short
  * detour — stepping under a gate body instead of threading over it — to unthread
  * itself; capping that weight below `TURN_COST` is what stops it from ever buying
@@ -341,6 +345,20 @@ export function routeOrthogonal(
   }
   wires = ordered;
 
+  // Two DIFFERENT groupings, and the difference matters — see {@link electricalNets}.
+  //   • DRIVER (`from.node`) — wires leaving the same terminal. They are one wire
+  //     that branches, so they share a trunk (× {@link TRUNK_SHARE}) and co-locate
+  //     their splits (`fork`).
+  //   • NET — the same circuit node, junction hops included. Nets must not share a
+  //     track and do not "cross" each other; but two hops of one net may NOT merge
+  //     early, because the junction DOT is where their connection is drawn.
+  // Every wire of a driver is in one net, so a driver maps to exactly one net.
+  const nets = electricalNets(wires);
+  const netOfDriver = new Map<string, string>();
+  for (const w of wires)
+    netOfDriver.set(w.from.node, nets.get(w.key) ?? w.from.node);
+  const netAt = (driver: string): string => netOfDriver.get(driver) ?? driver;
+
   // Rects per component. `hard` BODY = a real component: always an obstacle,
   // even for the wire it connects to (so a wire can't cut through a node to
   // reach a far-side pin); its clearance ring is skippable for own pins. A
@@ -514,12 +532,98 @@ export function routeOrthogonal(
    * out of a site exactly when its last wire leaves.
    */
   type Occupancy = Map<string, Map<string, number>>;
-  /** Per segment (fixed line + span), the nets running on it. Only a DIFFERENT net
-   *  pays the lane penalty — same-net wires share their trunk for free (see the
-   *  net-aware grouping above). */
-  const usage: Occupancy = new Map();
-  const edgeKey = (o: 'h' | 'v', fixed: number, a: number, b: number): string =>
-    `${o}:${fixed}:${Math.min(a, b)}:${Math.max(a, b)}`;
+  /**
+   * Lane occupancy, indexed per TRACK — a grid line plus an orientation (`v:12` is
+   * the vertical line at `xs[12]`). On each track, every DRIVER owns the unit EDGES
+   * its wires run on (an edge is named by its LOWER endpoint index). Keyed by driver
+   * because that is the finer of the two groupings: {@link onTrunk} needs it as-is,
+   * and {@link laneCost} folds it up to the net via `netAt`.
+   *
+   * Indexed per track rather than per edge so {@link laneCost} can ask the question
+   * that decides how the diagram READS — "is another net running anywhere near me
+   * along this track?" — instead of only "does another net use this exact edge?".
+   */
+  const usage = new Map<string, Map<string, Map<number, number>>>();
+  const trackKey = (o: 'h' | 'v', fixed: number): string => `${o}:${fixed}`;
+  /** The px span covered by unit edge `e` of a track of the given orientation. */
+  const edgeSpan = (o: 'h' | 'v', e: number): [number, number] =>
+    o === 'h' ? [xs[e], xs[e + 1]] : [ys[e], ys[e + 1]];
+  /** Lays `driver` onto (`d` = +1) / lifts it off (`d` = −1) edge `e` of a track. */
+  const occupyEdge = (
+    o: 'h' | 'v',
+    fixed: number,
+    e: number,
+    driver: string,
+    d: 1 | -1
+  ): void => {
+    const tk = trackKey(o, fixed);
+    let byDriver = usage.get(tk);
+    if (!byDriver) {
+      if (d < 0) return;
+      byDriver = new Map();
+      usage.set(tk, byDriver);
+    }
+    let edges = byDriver.get(driver);
+    if (!edges) {
+      if (d < 0) return;
+      edges = new Map();
+      byDriver.set(driver, edges);
+    }
+    const n = (edges.get(e) ?? 0) + d;
+    if (n > 0) edges.set(e, n);
+    else edges.delete(e);
+    if (!edges.size) byDriver.delete(driver);
+    if (!byDriver.size) usage.delete(tk);
+  };
+  /** Is a sibling wire of `driver` already on edge `e` — i.e. is this its own trunk? */
+  const onTrunk = (
+    o: 'h' | 'v',
+    fixed: number,
+    e: number,
+    driver: string
+  ): boolean => usage.get(trackKey(o, fixed))?.get(driver)?.has(e) ?? false;
+  /**
+   * {@link LANE_COST} per OTHER net whose nearest run on the SAME track comes within
+   * `laneGap` px of edge `e` — a true parallel overlap (negative gap) included.
+   *
+   * PROXIMITY, not just overlap, is the rule, because a track is read as a whole: two
+   * nets that share one track without touching still draw as a SINGLE line with an
+   * unexplained break in it, which misleads worse than an honest crossing (in
+   * `logicGates`, a gate's two input pads rose on one track ~10px apart and read as
+   * one wire — as if A and B were shorted). Charging their proximity moves the second
+   * net one track over, which also hands the first net its whole column back: its
+   * fan-out branches can then share ONE riser (the `fork` tier below) instead of
+   * splitting onto stubs a few px apart.
+   *
+   * Reusing `laneGap` — the spacing {@link withLaneTracks} lays tracks out on — is
+   * what keeps the rule satisfiable: a wire pushed off a track lands on the very next
+   * one, which is by construction far enough away to be free.
+   */
+  const laneCost = (
+    o: 'h' | 'v',
+    fixed: number,
+    e: number,
+    net: string
+  ): number => {
+    const byDriver = usage.get(trackKey(o, fixed));
+    if (!byDriver) return 0;
+    const [a0, a1] = edgeSpan(o, e);
+    // Per NET, not per driver: two branches of one fan-out crowding a track are the
+    // SAME line, and charging them twice would price a shape the eye reads once.
+    const charged = new Set<string>();
+    for (const [driver, edges] of byDriver) {
+      const other = netAt(driver);
+      if (other === net || charged.has(other)) continue;
+      for (const oe of edges.keys()) {
+        const [b0, b1] = edgeSpan(o, oe);
+        if (Math.max(a0, b0) - Math.min(a1, b1) < laneGap) {
+          charged.add(other);
+          break; // this net is already paid for; its other runs add nothing
+        }
+      }
+    }
+    return charged.size * LANE_COST;
+  };
 
   // Per grid VERTEX, the nets that pass STRAIGHT through it horizontally / vertically
   // (a corner is neither — it is a turn, handled by the lane rule above). A candidate
@@ -561,14 +665,10 @@ export function routeOrthogonal(
       const [ai, aj] = seq[m];
       const [bi, bj] = seq[m + 1];
       const orient: 'h' | 'v' = ai !== bi ? 'h' : 'v';
-      occupy(
-        usage,
-        edgeKey(
-          orient,
-          orient === 'h' ? aj : ai,
-          orient === 'h' ? ai : aj,
-          orient === 'h' ? bi : bj
-        ),
+      occupyEdge(
+        orient,
+        orient === 'h' ? aj : ai,
+        orient === 'h' ? Math.min(ai, bi) : Math.min(aj, bj),
         net,
         d
       );
@@ -591,7 +691,8 @@ export function routeOrthogonal(
   const routeWire = (
     wire: RouterWire
   ): { seq: [number, number][] | null; poly: Point[] } => {
-    const wireNet = wire.from.node;
+    const wireDriver = wire.from.node;
+    const wireNet = netAt(wireDriver);
     const skip = new Set<string>([wire.from.node, wire.to.node]);
     // A POINT endpoint anchors at the node CENTRE (inside its body), so that
     // body must not block THIS wire; a PIN endpoint is on the border, so its
@@ -732,26 +833,18 @@ export function routeOrthogonal(
         const leadCost = turned ? leadPenalty(xs[cur.i], ys[cur.j]) : 0;
         const orient: 'h' | 'v' = ddi !== 0 ? 'h' : 'v';
         const fixed = orient === 'h' ? nj : ni;
-        const uk = edgeKey(
-          orient,
-          fixed,
-          orient === 'h' ? cur.i : cur.j,
-          orient === 'h' ? ni : nj
-        );
-        // Wires of OTHER nets on this edge cost a lane. An edge THIS net already
-        // laid (its trunk) is not just free — it is DISCOUNTED (× TRUNK_SHARE), so
-        // a fan-out branch clings to the shared trunk and splits as LATE as it can
-        // (e.g. it rides Bin's vertical riser and peels off high up toward a
-        // right-hand gate) instead of diverging at the first corner — one fewer
-        // corner and one fewer crossing per branch.
-        const on = usage.get(uk);
-        let lane = 0;
-        let sameNet = false;
-        if (on)
-          for (const n of on.keys()) {
-            if (n === wireNet) sameNet = true;
-            else lane += LANE_COST;
-          }
+        const e = orient === 'h' ? Math.min(cur.i, ni) : Math.min(cur.j, nj);
+        // Another net running NEAR this edge along the same track costs a lane (see
+        // {@link laneCost}). The edge a SIBLING of this wire laid (its own driver's
+        // trunk) is not just free — it is DISCOUNTED (× TRUNK_SHARE), so a fan-out
+        // branch clings to the shared trunk and splits as LATE as it can (e.g. it
+        // rides Bin's vertical riser and peels off high up toward a right-hand gate)
+        // instead of diverging at the first corner — one fewer corner and one fewer
+        // crossing per branch. Keyed on the DRIVER, not the net: two hops of one net
+        // meeting at a junction must NOT merge before it, or the drawing shows them
+        // joining where there is no junction dot.
+        const sameNet = onTrunk(orient, fixed, e, wireDriver);
+        const lane = laneCost(orient, fixed, e, wireNet);
         const effLen = sameNet ? len * TRUNK_SHARE : len;
         // Going STRAIGHT through `cur` (no turn, not the first move) crosses any
         // other net passing perpendicular through cur. Priced into `hard` at
@@ -761,15 +854,17 @@ export function routeOrthogonal(
         if (!turned && (cur.di || cur.dj)) {
           const perp = orient === 'h' ? vpass : hpass;
           const at = perp.get(vertKey(cur.i, cur.j));
-          if (at) for (const n of at.keys()) if (n !== wireNet) crossCount++;
+          if (at)
+            for (const n of at.keys()) if (netAt(n) !== wireNet) crossCount++;
         }
-        // Turning AT `cur` costs one `fork` UNLESS a sibling of this net already
-        // turned here — so equal-shape branches snap their corners together into a
-        // shared T-junction (the lowest tier: never at the expense of hard/cross/lead).
+        // Turning AT `cur` costs one `fork` UNLESS a sibling from the same DRIVER
+        // already turned here — so equal-shape branches of one fan-out snap their
+        // corners together into a shared T-junction (the lowest tier: never at the
+        // expense of hard/cross/lead).
         let forkCost = 0;
         if (turned) {
           const sib = turnAt.get(vertKey(cur.i, cur.j));
-          if (!sib || !sib.has(wireNet)) forkCost = 1;
+          if (!sib || !sib.has(wireDriver)) forkCost = 1;
         }
         const ng: RouteCost = {
           hard:
@@ -863,7 +958,7 @@ export function routeOrthogonal(
   // actually bought anything. Both keys strictly decrease on every accepted move
   // (the first a bounded integer), so the loop converges; RIPUP_PASSES only caps
   // the work when reroutes keep interacting.
-  let crossings = countInterNetCrossings(results, wires);
+  let crossings = countInterNetCrossings(results, wires, nets);
   let totalLen = totalLength(results, wires);
   for (let pass = 0; pass < RIPUP_PASSES; pass++) {
     let improved = false;
@@ -880,7 +975,7 @@ export function routeOrthogonal(
         continue;
       }
       results.set(wire.key, retry.poly);
-      const nowCross = countInterNetCrossings(results, wires);
+      const nowCross = countInterNetCrossings(results, wires, nets);
       const nowLen = totalLength(results, wires);
       if (
         nowCross < crossings ||
@@ -925,6 +1020,54 @@ export type PinSwapGroup = readonly [string, string];
  *  the loop converges; this only caps the cost when swaps keep interacting. */
 const PIN_SWAP_PASSES = 4;
 
+/**
+ * Which ELECTRICAL net each wire belongs to, as a wire-key → net-id map.
+ *
+ * A wire's driver (`from.node`) is not its net. A JUNCTION — a `point` contour — is
+ * ONE node of the circuit, so the hops that tap it (`jBR → jBL`, then `jBL → batt:-`)
+ * are one net drawn in several pieces, not two neighbours to be kept apart. Every
+ * rule here that asks "is this someone ELSE's wire?" — lane separation, crossings,
+ * the shared-trunk discount, `fork` — has to read the net this way, or a rail pays to
+ * dodge ITSELF where it meets its own junction and a clean two-corner rail buckles
+ * into a staircase.
+ *
+ * Union-find over two relations: wires that share a driver (a fan-out leaves one
+ * terminal), and wires that tap the same junction (an end with a soft normal).
+ */
+function electricalNets(wires: RouterWire[]): Map<string, string> {
+  const parent = new Map<string, string>();
+  for (const w of wires) parent.set(w.key, w.key);
+  const find = (a: string): string => {
+    let root = a;
+    while (parent.get(root) !== root) root = parent.get(root)!;
+    while (parent.get(a) !== root) {
+      const next = parent.get(a)!;
+      parent.set(a, root);
+      a = next;
+    }
+    return root;
+  };
+  // Each site is a place wires become one net; the first wire seen there adopts the
+  // rest. `@n` (a junction tap) is kept distinct from `n` (a driver) so a node that
+  // is both cannot merge nets through the wrong relation.
+  const first = new Map<string, string>();
+  for (const w of wires) {
+    const sites = [w.from.node];
+    if (!w.from.hardNormal) sites.push(`@${w.from.node}`);
+    if (!w.to.hardNormal) sites.push(`@${w.to.node}`);
+    for (const site of sites) {
+      const prev = first.get(site);
+      if (prev === undefined) first.set(site, w.key);
+      else {
+        const a = find(prev);
+        const b = find(w.key);
+        if (a !== b) parent.set(a, b);
+      }
+    }
+  }
+  return new Map(wires.map((w) => [w.key, find(w.key)]));
+}
+
 /** Total Manhattan length of every routed wire — the rip-up pass's tiebreak, so a
  *  detour that buys no crossing is handed back. */
 function totalLength(
@@ -942,18 +1085,20 @@ function totalLength(
   return total;
 }
 
-/** Proper crossings between wires of DIFFERENT nets (same-net wires share a trunk,
- *  not a crossing). Reuses {@link segCross} so it counts exactly what the eye sees. */
+/** Proper crossings between wires of DIFFERENT {@link electricalNets} (same-net wires
+ *  share a trunk or meet at a junction — neither is a crossing). Reuses
+ *  {@link segCross} so it counts exactly what the eye sees. */
 function countInterNetCrossings(
   routes: Map<string, Point[]>,
-  wires: RouterWire[]
+  wires: RouterWire[],
+  nets: Map<string, string> = electricalNets(wires)
 ): number {
   let n = 0;
   for (let i = 0; i < wires.length; i++) {
     const pi = routes.get(wires[i].key);
     if (!pi) continue;
     for (let j = i + 1; j < wires.length; j++) {
-      if (wires[i].from.node === wires[j].from.node) continue;
+      if (nets.get(wires[i].key) === nets.get(wires[j].key)) continue;
       const pj = routes.get(wires[j].key);
       if (!pj) continue;
       for (let a = 0; a < pi.length - 1; a++)
