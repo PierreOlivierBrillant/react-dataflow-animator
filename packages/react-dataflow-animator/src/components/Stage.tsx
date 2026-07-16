@@ -51,7 +51,7 @@ import {
 } from '../engine/portOffsets';
 import {
   connection,
-  distributeFacePorts,
+  facePort,
   nodeContour,
   pathTip,
   pointAtArc,
@@ -790,9 +790,9 @@ export function Stage({
     // A face-anchored endpoint (a plain box: a signal I/O pad, no pin/point/round
     // contour) is a SYSTEM terminal: its wires all leave its RIGHT face (driver)
     // or enter its LEFT face (sink), never a top/bottom face that would dive
-    // behind a neighbour. Below, those endpoints are re-anchored as distributed
-    // face PORTS (see {@link distributeFacePorts}); here we only compute the raw
-    // endpoints and remember which ends are face-anchored + what they aim at.
+    // behind a neighbour. Below, those endpoints are re-anchored on the pad's one
+    // centred PORT (see {@link facePort}); here we only compute the raw endpoints
+    // and remember which ends are face-anchored.
     const isFace = (c: NodeContour | undefined): boolean => c === undefined;
     const raw: {
       link: SpecConnection;
@@ -803,9 +803,6 @@ export function Stage({
       fromFace: boolean;
       toFace: boolean;
     }[] = [];
-    // key → distributed anchor for a face port (east = a driver's, west = a sink's).
-    const eastGroups = new Map<string, { key: string; aim: number }[]>();
-    const westGroups = new Map<string, { key: string; aim: number }[]>();
     (spec.connections ?? []).forEach((link, i) => {
       const fromNode = refNode(link.from);
       const toNode = refNode(link.to);
@@ -836,38 +833,29 @@ export function Stage({
         fromC,
         toC
       );
-      const fromFace = isFace(fromC);
-      const toFace = isFace(toC);
-      if (fromFace) {
-        const g = eastGroups.get(fromNode) ?? [];
-        g.push({ key, aim: ends.to.point.y });
-        eastGroups.set(fromNode, g);
-      }
-      if (toFace) {
-        const g = westGroups.get(toNode) ?? [];
-        g.push({ key, aim: ends.from.point.y });
-        westGroups.set(toNode, g);
-      }
-      raw.push({ link, key, fromNode, toNode, ends, fromFace, toFace });
+      raw.push({
+        link,
+        key,
+        fromNode,
+        toNode,
+        ends,
+        fromFace: isFace(fromC),
+        toFace: isFace(toC),
+      });
     });
     if (!raw.length) return empty;
-    const eastPorts = new Map<string, Point>();
-    for (const [node, g] of eastGroups)
-      for (const [k, p] of distributeFacePorts(geometry[node], 'east', g))
-        eastPorts.set(k, p);
-    const westPorts = new Map<string, Point>();
-    for (const [node, g] of westGroups)
-      for (const [k, p] of distributeFacePorts(geometry[node], 'west', g))
-        westPorts.set(k, p);
 
     const wires: RouterWire[] = raw.map(
       ({ link, key, fromNode, toNode, ends, fromFace, toFace }) => {
-        const fromPort = fromFace ? eastPorts.get(key) : undefined;
-        const toPort = toFace ? westPorts.get(key) : undefined;
+        // Every wire of a pad shares its ONE centred port, and forks downstream.
+        const fromPort = fromFace
+          ? facePort(geometry[fromNode], 'east')
+          : undefined;
+        const toPort = toFace ? facePort(geometry[toNode], 'west') : undefined;
         // hardNormal = the endpoint anchors on a BORDER with an enforced normal (a
-        // pin, a distributed face port, or a plain cardinal face). Only a POINT
-        // contour (a junction dot, centre-anchored) is soft: the wire may reach its
-        // centre, so its body must not block that wire.
+        // pin, a face port, or a plain cardinal face). Only a POINT contour (a
+        // junction dot, centre-anchored) is soft: the wire may reach its centre, so
+        // its body must not block that wire.
         // A per-connection `diagonal` overrides the circuit-wide `diagonal_wires`.
         return {
           key,
@@ -1108,10 +1096,13 @@ export function Stage({
   // outside the canvas (the shrinking of panels via contentLimits avoids
   // overlaps, not spreading them out). In tree mode positions are
   // time-dependent (rotations), so placements follow the live layout.
-  // Resolve the layout's `pinNudge` — a fraction of the node's own height, the only
-  // unit it could express (see `assignPinNudges`) — now that the symbols are
-  // measured. It shifts a component so its TERMINAL, not its centre, lands on its
-  // driver's rail, which is what makes a component→component wire straight. Applied
+  // Resolve the layout's `pinNudge` — a fraction of a node's height, the only unit it
+  // could express (see `assignPinNudges`) — now that the symbols are measured. It
+  // shifts a node so its TERMINAL, not its centre, lands on its neighbour's rail,
+  // which is what makes the wire straight. The height it is a fraction of is the
+  // node's own, EXCEPT for a signal pad (`pinNudgeRef`), which cancels an offset
+  // declared by the gate it faces and is not that gate's size (see
+  // `assignPadNudges`). Applied
   // to `cy` in FRAME units (that is what the nudged wire is drawn in) and BEFORE
   // computePlacements, so its clamp still keeps the node on canvas. Deliberately not
   // fed back into `frameAspect` / `computeScale`: both read the raw layout, and a
@@ -1123,7 +1114,7 @@ export function Stage({
     const out: LayoutMap = {};
     for (const id in layout) {
       const p = layout[id];
-      const h = geometry[id]?.height;
+      const h = geometry[p.pinNudgeRef ?? id]?.height;
       if (!p.pinNudge || !h) {
         out[id] = p;
         continue;

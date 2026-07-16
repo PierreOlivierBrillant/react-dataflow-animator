@@ -6,7 +6,6 @@
 
 import type { PathShape } from '../types';
 import type { ConnectionAxis } from './layout';
-import { isotonicSeparation } from './layout';
 import type { PinDef } from './pins';
 import { shapeWaypoints } from './pathShapes';
 
@@ -338,8 +337,7 @@ function pinAttach(
  * centre) onto the axis of a nearby partner TERMINAL, so the wire runs straight
  * into it instead of slanting from the centre. Only applied when the offset is
  * small (under ~half the terminal node), so a genuine L corner (a far junction)
- * is left untouched. {@link alignFaceToTerminal} is the sibling for a pad that
- * anchors on a cardinal FACE (a signal I/O pad) rather than at its centre.
+ * is left untouched.
  */
 function alignPointToTerminal(
   point: ContourAnchor,
@@ -360,147 +358,28 @@ function alignPointToTerminal(
   }
 }
 
-/** Fraction of a node's half-face a face attachment may slide onto a pin before
- *  it is clamped, so the wire meets the FLAT part of the edge and never a rounded
- *  corner. 0.4 ⇒ up to 80% of the edge is usable. */
-const FACE_ALIGN_LIMIT = 0.4;
-
 /**
- * Slides a FACE-anchored endpoint (a signal I/O pad, or any plain node meeting a
- * cardinal face) ALONG its face so it lines up with a partner PIN — turning what
- * would be a small dogleg into a straight lead. A gate's input terminals sit a
- * third of the way up/down the body, so a signal on the SAME row as the gate
- * would otherwise jog to reach one; sliding the pad's attach onto the pin's
- * height keeps the wire dead straight. Only when the face opens along the SAME
- * axis as the pin (they face each other — a perpendicular face is a real corner)
- * and the pad centre is roughly on the pin's row/column; the slide is clamped to
- * the face extent so the attach never leaves the node.
- */
-function alignFaceToTerminal(
-  face: ContourAnchor,
-  faceNode: NodeGeom,
-  terminal: ContourAnchor,
-  terminalNode: NodeGeom
-): void {
-  const tn = terminal.normal;
-  const fn = face.normal;
-  const horizontal = Math.abs(tn.x) >= Math.abs(tn.y);
-  const faceHorizontal = Math.abs(fn.x) >= Math.abs(fn.y);
-  // A straight wire needs the face to open along the SAME axis as the pin; a
-  // perpendicular face is a genuine corner and is left alone.
-  if (horizontal !== faceHorizontal) return;
-  if (horizontal) {
-    // Vertical face (east/west) facing a left/right pin → slide in y onto it.
-    if (Math.abs(faceNode.y - terminal.point.y) >= terminalNode.height * 0.45)
-      return;
-    const lim = faceNode.height * FACE_ALIGN_LIMIT;
-    const y = Math.max(
-      faceNode.y - lim,
-      Math.min(faceNode.y + lim, terminal.point.y)
-    );
-    face.point = { x: face.point.x, y };
-  } else {
-    // Horizontal face (north/south) facing an up/down pin → slide in x onto it.
-    if (Math.abs(faceNode.x - terminal.point.x) >= terminalNode.width * 0.45)
-      return;
-    const lim = faceNode.width * FACE_ALIGN_LIMIT;
-    const x = Math.max(
-      faceNode.x - lim,
-      Math.min(faceNode.x + lim, terminal.point.x)
-    );
-    face.point = { x, y: face.point.y };
-  }
-}
-
-/** Minimum gap (px) between two ports distributed on the same pad face, so the
- *  fan-out reads as distinct terminals rather than one merged point. */
-const PORT_GAP = 12;
-
-/**
- * Distributes a face-anchored circuit I/O pad's wires as spread-out PORTS along a
- * single face, instead of merging them to one point or letting each wire pick a
- * different (e.g. downward, behind a neighbour) face. Every driver leaves EAST,
- * every sink enters WEST — so a system's wires all exit its right / enter its left
- * (`side`), the outward normal being `(±1, 0)`.
+ * The single PORT of a face-anchored circuit I/O pad (a `signal`): the midpoint of
+ * the face it presents to the schematic. A driver leaves EAST, a sink enters WEST
+ * (`side`), so a system's wires all exit its right / enter its left and never dive
+ * behind a neighbour; the outward normal is `(±1, 0)`.
  *
- * Wires whose aims (partner y, clamped to the face) sit within {@link PORT_GAP}
- * are CLUSTERED onto a single shared port: distinct ports there would be forced
- * further apart than their targets, so each wire would just jog back onto its
- * neighbour's trunk — the "two stubs that merge into one" defect. One shared port
- * lets the cluster leave from ONE point and fan out downstream (the net-aware
- * trunk). Genuinely separated aims keep their own port, min-separated within the
- * usable face — so N spread targets still read as a centred "flex" band. Returns
- * the anchor point per wire key.
+ * A pad is a CONNECTOR: it has one terminal, not a band of them. Every wire of its
+ * net therefore leaves this one point and branches downstream on the shared trunk
+ * (the router's `fanPort`) — a pad wired to three gates shows one lead that forks,
+ * the way a schematic is drawn by hand, rather than three stubs grazing its edge.
+ *
+ * The port is CENTRED, never slid towards whatever the pad happens to feed: the
+ * terminal belongs to the pad, so it must not drift with its wiring. A gate's input
+ * sits a third of the way up its body, so a same-row lead still has to climb that
+ * fraction of a body — that step is the ROUTER's to draw, and it costs one short
+ * jog. Sliding the port up to erase it is what this deliberately gives up: a pad
+ * feeding two gates can only ever line up with one of them, so the slide bought a
+ * straight wire for one net by mis-seating the terminal for every other.
  */
-export function distributeFacePorts(
-  pad: NodeGeom,
-  side: 'east' | 'west',
-  wires: { key: string; aim: number }[]
-): Map<string, Point> {
-  const edgeX = side === 'east' ? pad.x + pad.width / 2 : pad.x - pad.width / 2;
-  const out = new Map<string, Point>();
-  if (wires.length === 0) return out;
-  // Usable half-face: the flat middle of the edge (avoids the rounded corners).
-  const half = pad.height * FACE_ALIGN_LIMIT;
-  const lo = pad.y - half;
-  const hi = pad.y + half;
-  const clampAim = (a: number): number => Math.max(lo, Math.min(hi, a));
-  if (wires.length === 1) {
-    // A lone wire aims straight at its partner (clamped to the face), so an
-    // aligned terminal draws dead straight; centred when the partner is off-face.
-    out.set(wires[0].key, { x: edgeX, y: clampAim(wires[0].aim) });
-    return out;
-  }
-  const order = wires
-    .map((w, i) => ({ key: w.key, aim: clampAim(w.aim), i }))
-    .sort((a, b) => a.aim - b.aim || a.i - b.i);
-  // Separation the placement below will actually impose. PORT_GAP is a wish: a pad
-  // shorter than it packs its ports tighter, and the cluster test MUST use the same
-  // number or it merges wires the placement would have separated for free.
-  const sep = (n: number): number =>
-    n > 1 ? Math.min(PORT_GAP, (hi - lo) / (n - 1)) : PORT_GAP;
-  // Cluster: two adjacent wires share a port when that costs LESS than separating
-  // them. Separating aims `d` apart pushes each out by `sep − d`; sharing pulls each
-  // in by `d`. So sharing wins exactly while `d < sep / 2` — the crossover, not a
-  // tuned threshold. Merging only ever widens `sep`, so re-clustering on the new
-  // count converges (monotonically) in a couple of rounds.
-  const clusterWithin = (limit: number): { keys: string[]; sum: number }[] => {
-    const acc: { keys: string[]; sum: number }[] = [];
-    let prevAim = -Infinity;
-    for (const w of order) {
-      const last = acc[acc.length - 1];
-      if (last && w.aim - prevAim < limit) {
-        last.keys.push(w.key);
-        last.sum += w.aim;
-      } else {
-        acc.push({ keys: [w.key], sum: w.aim });
-      }
-      prevAim = w.aim;
-    }
-    return acc;
-  };
-  let clusters = clusterWithin(sep(order.length) / 2);
-  while (clusters.length < order.length) {
-    const next = clusterWithin(sep(clusters.length) / 2);
-    if (next.length === clusters.length) break;
-    clusters = next;
-  }
-  const centres = clusters.map((c) => c.sum / c.keys.length);
-  if (clusters.length === 1) {
-    // Everything converges — one shared port, the plain net-aware fan-out.
-    for (const k of clusters[0].keys) out.set(k, { x: edgeX, y: centres[0] });
-    return out;
-  }
-  // Distinct clusters: one port each, min-separated (isotonic = least displacement
-  // keeping order). The block is shifted back inside the face if separation pushed
-  // it past an edge, so no port ever leaves the pad.
-  const placed = isotonicSeparation(centres, sep(clusters.length));
-  const shift =
-    Math.max(0, lo - placed[0]) - Math.max(0, placed[placed.length - 1] - hi);
-  clusters.forEach((c, k) => {
-    for (const key of c.keys) out.set(key, { x: edgeX, y: placed[k] + shift });
-  });
-  return out;
+export function facePort(pad: NodeGeom, side: 'east' | 'west'): Point {
+  const halfW = pad.width / 2;
+  return { x: side === 'east' ? pad.x + halfW : pad.x - halfW, y: pad.y };
 }
 
 /** Resolves the anchor for one endpoint from its (optional) contour policy. */
@@ -579,25 +458,15 @@ export function wireEndpoints(
     startPortOffset
   );
   const toAnchor = endpointAnchor(to, toContour, toFace, cf, endPortOffset);
-  // Straighten an edge feeding a component PIN when the other end is flexible: a
-  // junction dot slides freely onto the pin's axis; a plain face-anchored pad (a
-  // signal I/O) slides ALONG its face. Either turns a small dogleg — e.g. a
-  // signal on the gate's row reaching an input a third of the way up — into a
-  // straight lead. A pin↔pin edge (both fixed) is left to the router.
-  const straighten = (
-    flex: ContourAnchor,
-    flexNode: NodeGeom,
-    flexContour: NodeContour | undefined,
-    pin: ContourAnchor,
-    pinNode: NodeGeom
-  ): void => {
-    if (flexContour?.kind === 'point') alignPointToTerminal(flex, pin, pinNode);
-    else if (!flexContour) alignFaceToTerminal(flex, flexNode, pin, pinNode);
-  };
-  if (toContour?.kind === 'pin')
-    straighten(fromAnchor, from, fromContour, toAnchor, to);
-  if (fromContour?.kind === 'pin')
-    straighten(toAnchor, to, toContour, fromAnchor, from);
+  // Straighten an edge feeding a component PIN when the other end is a junction
+  // dot: it is dimensionless, so it slides freely onto the pin's axis, turning a
+  // small dogleg into a straight lead. Anything else is left as anchored — a
+  // pin↔pin edge is fixed at both ends, and a face-anchored pad keeps its centred
+  // port (see {@link facePort}); both are the router's business.
+  if (toContour?.kind === 'pin' && fromContour?.kind === 'point')
+    alignPointToTerminal(fromAnchor, toAnchor, to);
+  if (fromContour?.kind === 'pin' && toContour?.kind === 'point')
+    alignPointToTerminal(toAnchor, fromAnchor, from);
   return { from: fromAnchor, to: toAnchor };
 }
 

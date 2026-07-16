@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   connection,
   pathD,
-  distributeFacePorts,
+  facePort,
   pathTip,
   pointOnSegment,
   visiblePath,
@@ -629,18 +629,18 @@ describe('visiblePath', () => {
   });
 });
 
-// ─── wireEndpoints: straighten a face-anchored pad into an offset pin ─────────
-// A logic gate's input terminals sit a third of the way up/down the body, so a
-// signal pad on the SAME row would jog to reach one. alignFaceToTerminal slides
-// the pad's face attachment onto the pin height, keeping the lead dead straight.
-describe('wireEndpoints — face-to-pin straightening', () => {
+// ─── wireEndpoints: what a pin may and may not drag onto itself ───────────────
+describe('wireEndpoints — anchoring against an offset pin', () => {
   // 40×40 gate at (200,0); its `a` input is a west pin a third up (like a NAND).
   const gate = mkNode('g', 200, 0);
   const pinA = { x: 0, y: 0.32, nx: -1, ny: 0 };
   // pinAttach: local y = (0.32 − 0.5)·40 = −7.2 → the pin sits at y ≈ −7.2.
   const PIN_A_Y = -7.2;
 
-  it('a pad on the gate row slides onto the offset input → a straight lead', () => {
+  it('a face-anchored pad keeps its CENTRED port, offset pin or not', () => {
+    // The pad is a connector: its terminal is its own, so it must not drift up
+    // onto whatever it feeds. Climbing the 0.18-of-a-body gap to the gate's input
+    // is the router's job (or `assignPinNudges`, which moves the node instead).
     const pad = mkNode('s', 0, 0); // same row (y=0) as the gate centre
     const { from, to } = wireEndpoints(pad, gate, 0, 0, undefined, undefined, {
       kind: 'pin',
@@ -648,63 +648,44 @@ describe('wireEndpoints — face-to-pin straightening', () => {
       rotationDeg: 0,
     });
     expect(to.point.y).toBeCloseTo(PIN_A_Y, 4); // the fixed pin, unchanged
-    expect(from.point.y).toBeCloseTo(PIN_A_Y, 4); // the pad slid up to meet it
-    expect(from.point.y).toBeCloseTo(to.point.y, 4); // ⇒ dead straight
-    expect(from.point.x).toBeCloseTo(20, 4); // still on the pad's east edge
+    expect(from.point.y).toBeCloseTo(0, 4); // the pad stayed centred
+    expect(from.point.x).toBeCloseTo(20, 4); // on the pad's east edge
   });
 
-  it('clamps the slide to the pad face so the attach never leaves the node', () => {
-    // A pin offset (17) beyond the 0.4·height (=16) face limit but within the
-    // 0.45·height (=18) same-row gate: straighten, but clamp to the edge.
-    const deepPin = { x: 0, y: -17 / 40 + 0.5, nx: -1, ny: 0 };
-    const pad = mkNode('s', 0, 0);
-    const { from } = wireEndpoints(pad, gate, 0, 0, undefined, undefined, {
-      kind: 'pin',
-      pin: deepPin,
-      rotationDeg: 0,
-    });
-    expect(from.point.y).toBeCloseTo(-16, 4); // clamped to 0.4·height, not −17
-  });
-
-  it('leaves a genuine far L untouched (pad on a different row)', () => {
-    const pad = mkNode('s', 0, 200); // a full gate-height+ away → not the row
-    const { from } = wireEndpoints(pad, gate, 0, 0, undefined, undefined, {
-      kind: 'pin',
-      pin: pinA,
-      rotationDeg: 0,
-    });
-    // dx=200 ≥ |dy|=200? equal → horizontal face still chosen; but the pin is far
-    // off-row, so no slide: the pad keeps its centred east attach.
-    expect(from.point.y).toBeCloseTo(200, 4);
-  });
-
-  it('slides in x for a vertical face meeting a top/bottom pin', () => {
-    // A north-facing pin offset in x (like a rotated terminal); the pad below
-    // slides horizontally onto it instead of doglegging.
-    const topNode = mkNode('t', 0, 0);
-    const northPin = { x: 0.3, y: 0, nx: 0, ny: -1 }; // local x → −8 px off centre
-    const pad = mkNode('s', 0, 200); // directly below → north/south facing
-    const { from, to } = wireEndpoints(
-      pad,
-      topNode,
+  it('a junction dot still slides onto the pin axis → a straight lead', () => {
+    // A dot is dimensionless: it has no face to be centred on, so meeting the pin
+    // costs it nothing and saves the wire two corners.
+    const dot = mkNode('j', 0, 0);
+    const { from } = wireEndpoints(
+      dot,
+      gate,
       0,
       0,
       undefined,
-      undefined,
-      {
-        kind: 'pin',
-        pin: northPin,
-        rotationDeg: 0,
-      }
+      { kind: 'point' },
+      { kind: 'pin', pin: pinA, rotationDeg: 0 }
     );
-    expect(to.point.x).toBeCloseTo(-8, 4);
-    expect(from.point.x).toBeCloseTo(-8, 4); // slid in x ⇒ straight vertical
+    expect(from.point.y).toBeCloseTo(PIN_A_Y, 4); // slid onto the pin's row
+    expect(from.point.x).toBeCloseTo(0, 4); // still its centre
+  });
+
+  it('leaves a far-off junction dot alone (a genuine L, not a dogleg)', () => {
+    const dot = mkNode('j', 0, 200); // a full gate-height+ off the pin's row
+    const { from } = wireEndpoints(
+      dot,
+      gate,
+      0,
+      0,
+      undefined,
+      { kind: 'point' },
+      { kind: 'pin', pin: pinA, rotationDeg: 0 }
+    );
+    expect(from.point.y).toBeCloseTo(200, 4);
   });
 });
 
-describe('distributeFacePorts', () => {
-  // A pad centred at (100,100), 20 wide → east face at x=110, west at x=90. The
-  // usable face is height × FACE_ALIGN_LIMIT (0.4) either side of the centre.
+describe('facePort', () => {
+  // A pad centred at (100,100), 20 wide → east face at x=110, west at x=90.
   const pad = (height: number): NodeGeom => ({
     id: 'pad',
     x: 100,
@@ -713,58 +694,18 @@ describe('distributeFacePorts', () => {
     height,
   });
 
-  it('gives converging wires ONE shared port (no two stubs that merge)', () => {
-    // Both targets sit far below the pad, so both aims clamp to the same face edge.
-    // Distinct ports would be forced PORT_GAP apart — further than their targets —
-    // so each wire would jog straight back onto its neighbour's trunk. They must
-    // share a single port instead and fan out downstream.
-    const ports = distributeFacePorts(pad(20), 'east', [
-      { key: 'w1', aim: 400 },
-      { key: 'w2', aim: 400 },
-    ]);
-    expect(ports.get('w1')).toEqual(ports.get('w2'));
-    expect(ports.get('w1')!.x).toBeCloseTo(110, 5); // the east face
+  it('centres a driver port on the east face', () => {
+    expect(facePort(pad(20), 'east')).toEqual({ x: 110, y: 100 });
   });
 
-  it('keeps a distinct port per genuinely separated target (the band)', () => {
-    // A tall pad whose two targets are far apart ON the face: each keeps its own
-    // port, ordered by target (so the wires never cross) and ≥ PORT_GAP apart.
-    const ports = distributeFacePorts(pad(100), 'east', [
-      { key: 'low', aim: 130 },
-      { key: 'high', aim: 70 },
-    ]);
-    const high = ports.get('high')!;
-    const low = ports.get('low')!;
-    expect(high.y).toBeLessThan(low.y); // target order ⇒ no crossing
-    expect(low.y - high.y).toBeGreaterThanOrEqual(12); // ≥ PORT_GAP
+  it('centres a sink port on the west face', () => {
+    expect(facePort(pad(20), 'west')).toEqual({ x: 90, y: 100 });
   });
 
-  it('aims a lone wire straight at its partner', () => {
-    const ports = distributeFacePorts(pad(100), 'east', [
-      { key: 'w', aim: 118 },
-    ]);
-    expect(ports.get('w')).toEqual({ x: 110, y: 118 }); // in-face aim ⇒ dead straight
-  });
-
-  it('anchors a sink on the WEST face', () => {
-    const ports = distributeFacePorts(pad(100), 'west', [
-      { key: 'w', aim: 100 },
-    ]);
-    expect(ports.get('w')!.x).toBeCloseTo(90, 5);
-  });
-
-  it('never places a port outside the pad face', () => {
-    // Three targets all far above: they cluster onto one port, still on the face.
-    const ports = distributeFacePorts(pad(40), 'east', [
-      { key: 'a', aim: -500 },
-      { key: 'b', aim: -500 },
-      { key: 'c', aim: -500 },
-    ]);
-    for (const k of ['a', 'b', 'c']) {
-      const y = ports.get(k)!.y;
-      expect(y).toBeGreaterThanOrEqual(100 - 40 * 0.4 - 1e-6);
-      expect(y).toBeLessThanOrEqual(100 + 40 * 0.4 + 1e-6);
-    }
+  it('stays centred however tall the pad', () => {
+    // The port is the midpoint of the face, not a slot within a usable band: a
+    // taller pad does not open room for the terminal to wander.
+    expect(facePort(pad(200), 'east')).toEqual({ x: 110, y: 100 });
   });
 });
 

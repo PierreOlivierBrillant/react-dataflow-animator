@@ -141,6 +141,16 @@ export const COMPONENT_PINS: Partial<Record<NodeType, Record<string, PinDef>>> =
     },
   };
 
+/**
+ * Whether `type` declares named terminals at all. A type that does NOT (a `signal`
+ * I/O pad, a plain box) has a single terminal centred on the face it presents — so
+ * callers must not read a missing {@link PinDef} as "unknown pin"; it is the absence
+ * of a pin MAP that says "this is a face-anchored pad".
+ */
+export function hasPins(type: NodeType): boolean {
+  return COMPONENT_PINS[type] !== undefined;
+}
+
 /** The two INPUT terminals of a two-input logic gate, whose order is logically
  *  irrelevant (`a AND b === b AND a`, likewise NAND/OR/NOR/XOR/XNOR). The router
  *  may therefore swap which incoming wire takes the upper (`a`) vs lower (`b`) pin

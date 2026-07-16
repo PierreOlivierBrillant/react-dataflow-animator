@@ -455,8 +455,49 @@ describe('computeLayout — circuit (feed-forward DAG)', () => {
     // anyway, and a sub-body nudge cannot buy that back.
     expect(layout.x2.cy).not.toBeCloseTo(layout.x1.cy, 5);
     expect(layout.x2.pinNudge).toBeUndefined();
-    // A pad has no terminals; `alignFaceToTerminal` slides its port instead.
-    expect(layout.A.pinNudge).toBeUndefined();
+  });
+
+  it('nudges a signal PAD onto the gate pin it faces on its rail', () => {
+    const layout = computeLayout(fullAdder);
+    // A pad's port is welded to its face centre, so the only way to straighten its
+    // lead into a gate's `a` (at 0.32) is to move the PAD itself.
+    expect(layout.A.cy).toBeCloseTo(layout.x2.cy, 5);
+    expect(layout.A.pinNudge).toBeCloseTo(0.32 - 0.5, 5);
+    // Resolved against the GATE's height, not the pad's: a pad is not a gate's size,
+    // so the offset it cancels only means anything against the body declaring it.
+    expect(layout.A.pinNudgeRef).toBe('x2');
+  });
+
+  it('nudges a pad whose two rail partners agree on the move', () => {
+    // B feeds `b` (0.68) on BOTH x1 and x3, and shares their rail: different
+    // partners, same requested move → the pad takes it and both leads draw straight.
+    const layout = computeLayout(fullAdder);
+    expect(layout.B.cy).toBeCloseTo(layout.x1.cy, 5);
+    expect(layout.B.pinNudge).toBeCloseTo(0.68 - 0.5, 5);
+  });
+
+  it('leaves a pad centred when its rail partners pull it opposite ways', () => {
+    // One pad drives `a` (up) and `b` (down) of the SAME gate on its rail: no move
+    // can straighten both, so the pad stays put rather than favour one wire.
+    const layout = computeLayout({
+      direction: 'circuit',
+      nodes: [
+        { id: 'in', type: 'signal' },
+        { id: 'g', type: 'nand_gate' },
+        { id: 'out', type: 'signal' },
+      ],
+      connections: [
+        { from: 'in', to: 'g:a' },
+        { from: 'in', to: 'g:b' },
+        { from: 'g:y', to: 'out' },
+      ],
+      packets: [],
+      timeline: [],
+    });
+    expect(layout.in.cy).toBeCloseTo(layout.g.cy, 5);
+    expect(layout.in.pinNudge).toBeUndefined();
+    // The gate's output pin IS centred, so the sink pad needs no nudge at all.
+    expect(layout.out.pinNudge).toBeUndefined();
   });
 
   it('leaves a gate alone when both inputs pull it the opposite way', () => {

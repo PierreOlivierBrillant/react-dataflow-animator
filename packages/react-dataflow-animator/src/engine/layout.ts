@@ -7,7 +7,7 @@ import type {
   PathShape,
   TreeSpec,
 } from '../types';
-import { parseRef, refNode, resolvePin } from './pins';
+import { hasPins, parseRef, refNode, resolvePin } from './pins';
 
 /**
  * Spatial layout engine: calculates the position of each static node
@@ -32,12 +32,21 @@ export interface NodePlacement {
    */
   rotation?: number;
   /**
-   * Vertical nudge putting this component's TERMINAL — rather than its centre — on
-   * its neighbour's rail, as a signed fraction of the node's own HEIGHT (positive =
-   * down). Set ONLY by the circuit DAG auto-layout; see {@link assignPinNudges} for
-   * why the layout cannot express it in ratios itself. Undefined = no nudge.
+   * Vertical nudge putting this node's TERMINAL — rather than its centre — on its
+   * neighbour's rail, as a signed fraction of a node's HEIGHT (positive = down). Set
+   * by the circuit auto-layouts; see {@link assignPinNudges} for why the layout
+   * cannot express it in ratios itself. Undefined = no nudge.
    */
   pinNudge?: number;
+  /**
+   * Which node's height {@link pinNudge} is a fraction OF. Undefined = this node's
+   * own (the component case: two symbols render at the same size, so the pin offset
+   * being cancelled is directly comparable). A signal PAD instead cancels an offset
+   * declared by the GATE it faces, and a pad is not the size of a gate — so its
+   * nudge only means anything against the partner's body. See
+   * {@link assignPadNudges}.
+   */
+  pinNudgeRef?: string;
 }
 
 export type LayoutMap = Record<string, NodePlacement>;
@@ -646,7 +655,7 @@ function circuitAutoLayout(
  * k·sep`, then re-adds the offsets — the exact optimum, so a column never
  * overlaps yet stays as aligned with its neighbours as the order permits.
  */
-export function isotonicSeparation(desired: number[], sep: number): number[] {
+function isotonicSeparation(desired: number[], sep: number): number[] {
   const d = desired.map((v, k) => v - k * sep);
   const blocks: { sum: number; count: number }[] = [];
   for (const x of d) {
@@ -871,6 +880,63 @@ function assignPinNudges(
     }
   }
   return nudge;
+}
+
+/**
+ * Puts a signal PAD's centred port on the terminal it faces, by moving the PAD.
+ *
+ * A pad's port is pinned to the midpoint of its face (`facePort` in `geometry.ts`)
+ * so the terminal reads as the pad's own. It therefore CANNOT slide up onto a gate's
+ * off-centre input (`a`/`b` at y 0.32/0.68), and the lead would spend two bends
+ * climbing that fraction of a body. The only move left is to shift the pad itself —
+ * which keeps the port centred AND the wire straight.
+ *
+ * Runs on the finished map, so it serves both circuit layouts: the DAG one (rails
+ * from slots) and the author-placed one (rails from `y`). Only a wire whose ends
+ * already share a rail is considered — an off-rail partner is a genuine L, not a
+ * dogleg. A pad facing two terminals at different heights on its rail cannot line up
+ * with both, so it stays put (the tie rule of {@link assignPinNudges}).
+ *
+ * The nudge is a fraction of the PARTNER's height ({@link NodePlacement.pinNudgeRef}),
+ * not the pad's: a pad does not render at a gate's size, so the offset it cancels is
+ * only meaningful against the body that declares it. It composes with a partner
+ * already nudged by {@link assignPinNudges} — both are fractions of that same body.
+ */
+function assignPadNudges(
+  map: LayoutMap,
+  nodes: Node[],
+  connections: Connection[]
+): void {
+  const typeById = new Map(nodes.map((n) => [n.id, n.type]));
+  for (const n of nodes) {
+    // A pad = a node with no named terminals; its one port is its face centre.
+    if (hasPins(n.type) || !map[n.id]) continue;
+    const wants: { d: number; ref: string }[] = [];
+    for (const c of connections) {
+      const rf = parseRef(c.from);
+      const rt = parseRef(c.to);
+      const partner = rf.node === n.id ? rt : rt.node === n.id ? rf : undefined;
+      if (!partner || partner.node === n.id) continue;
+      const pm = map[partner.node];
+      const pt = typeById.get(partner.node);
+      // Same rail only: the nudge closes a sub-body gap, never a row.
+      if (!pm || !pt || Math.abs(pm.cy - map[n.id].cy) > SLOT_EPS) continue;
+      const def = resolvePin(pt, partner.pin);
+      if (!def) continue;
+      wants.push({ d: (pm.pinNudge ?? 0) + (def.y - 0.5), ref: partner.node });
+    }
+    const usable = wants.filter((w) => Math.abs(w.d) <= PIN_NUDGE_CAP);
+    if (!usable.length) continue;
+    // Every wire on the rail must ask for the SAME move, else the answer would be
+    // arbitrary — leave the pad centred and let the router draw the steps. Two
+    // different partners may agree (a pad feeding `b` on two gates): every component
+    // symbol renders at one size, so their offsets are directly comparable and
+    // either body resolves the fraction.
+    const [first] = usable;
+    if (Math.abs(first.d) <= SLOT_EPS) continue;
+    if (usable.some((w) => Math.abs(w.d - first.d) > SLOT_EPS)) continue;
+    map[n.id] = { ...map[n.id], pinNudge: first.d, pinNudgeRef: first.ref };
+  }
 }
 
 /**
@@ -1291,14 +1357,16 @@ export function computeLayout(
     // No coordinates + a single loop → auto rectangle; otherwise the author
     // places the components with x / y.
     const hasCoords = nodes.some((n) => n.x !== undefined || n.y !== undefined);
-    if (!hasCoords) {
-      // A single loop → rectangle; a connected feed-forward network → layered.
-      const auto =
-        circuitAutoLayout(nodes, spec.connections ?? []) ??
-        circuitDagLayout(nodes, spec.connections ?? []);
-      if (auto) return auto;
-    }
-    return circuitLayout(nodes);
+    const auto = hasCoords
+      ? null
+      : // A single loop → rectangle; a connected feed-forward network → layered.
+        (circuitAutoLayout(nodes, spec.connections ?? []) ??
+        circuitDagLayout(nodes, spec.connections ?? []));
+    const map = auto ?? circuitLayout(nodes);
+    // Last: a pad's port is fixed at its face centre, so only moving the PAD can
+    // straighten its lead into an off-centre gate pin — whichever layout placed it.
+    assignPadNudges(map, nodes, spec.connections ?? []);
+    return map;
   }
   if (direction === 'circular') {
     return circularLayout(nodes, options.aspect ?? 1.6);
