@@ -13,6 +13,7 @@ const sidebars = {
         'concepts/decor',
         'concepts/layout',
         'concepts/timeline',
+        'concepts/math',
       ],
     },
     {

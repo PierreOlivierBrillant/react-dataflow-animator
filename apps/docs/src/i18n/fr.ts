@@ -183,6 +183,11 @@ export const fr = {
         desc: ' — comment les actions se chaînent et persistent.',
       },
       {
+        to: '/docs/concepts/math',
+        label: 'Notation mathématique',
+        desc: ' — du LaTeX inline entre $…$ dans les libellés.',
+      },
+      {
         to: '/docs/reference/actions',
         label: "Types d'actions",
         desc: ' — move, arrow, parallel, loading, set_content, comment, highlight, set_visible, wait.',

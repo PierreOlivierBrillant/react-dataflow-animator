@@ -549,6 +549,48 @@
   min-height: calc(92px * var(--rdfa-scale, 1));
 }
 
+/* ---------- Inline LaTeX ($…$) ---------- */
+/* Cross-cutting: any prose field (node label, shape text, zone label, comment)
+   can hold a math span. The SVG path (connection labels) is styled inline by
+   the renderer instead — CSS `vertical-align` has no effect on a <tspan>. */
+
+/* Scripts must NOT grow the line box: a label is positioned against the node's
+   visual, so a taller line would push it off-centre and drag the arrow anchor
+   with it. `line-height: 0` + relative offset is the normalize.css recipe —
+   the default `vertical-align: sub` would do exactly what we're avoiding. */
+.rdfa-tex sub,
+.rdfa-tex sup {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.rdfa-tex sub {
+  bottom: -0.25em;
+}
+
+.rdfa-tex sup {
+  top: -0.4em;
+}
+
+/* Variables are italic — the LaTeX convention that tells `$B_{in}$` apart from
+   a word. Set explicitly: `.rdfa-shape-text` renders in a mono font whose
+   italic the UA would not apply to <i> on its own. */
+.rdfa-tex-var {
+  font-style: italic;
+}
+
+/* \overline — the logic complement (Ā). */
+.rdfa-tex-over {
+  text-decoration: overline;
+}
+
+.rdfa-tex-space {
+  display: inline-block;
+  width: 0;
+}
+
 /* ---------- Surlignage (action highlight) ---------- */
 .rdfa-node--highlight .rdfa-node-icon,
 .rdfa-node--highlight .rdfa-shape {

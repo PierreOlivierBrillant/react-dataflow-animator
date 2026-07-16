@@ -12,9 +12,9 @@ const strings = {
   en: {
     a: 'A',
     b: 'B',
-    cin: 'Cin',
+    cin: '$C_{in}$',
     sum: 'Sum',
-    cout: 'Cout',
+    cout: '$C_{out}$',
     intro:
       'A full adder sums three bits — A, B and a carry-in — into a Sum and a carry-out. Nine NAND gates; green wires carry a 1, so you can follow the carry through the network.',
     s000: '0 + 0 + 0 = 0. Sum 0, Cout 0.',
@@ -26,9 +26,9 @@ const strings = {
   fr: {
     a: 'A',
     b: 'B',
-    cin: 'Cin',
+    cin: '$C_{in}$',
     sum: 'Somme',
-    cout: 'Cout',
+    cout: '$C_{out}$',
     intro:
       'Un additionneur complet somme trois bits — A, B et une retenue entrante — en une Somme et une retenue sortante. Neuf portes NAND ; les fils verts portent un 1, pour suivre la retenue à travers le réseau.',
     s000: '0 + 0 + 0 = 0. Somme 0, Cout 0.',

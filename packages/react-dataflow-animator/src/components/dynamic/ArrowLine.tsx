@@ -3,6 +3,7 @@ import {
   defineAnimatable,
   type AnimatableComponent,
 } from '../../utils/animatable';
+import { richTextSvg } from '../../tex/RichText';
 import {
   connection,
   pathD,
@@ -190,7 +191,7 @@ export const ArrowLine: AnimatableComponent<ArrowLineProps> = defineAnimatable(
             textAnchor="middle"
             opacity={progress}
           >
-            {text}
+            {richTextSvg(text)}
           </text>
         ) : null}
       </g>

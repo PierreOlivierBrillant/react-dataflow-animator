@@ -87,7 +87,7 @@
         },
         "text": {
           "type": "string",
-          "description": "Label displayed below the node.",
+          "description": "Label displayed below the node. Supports inline LaTeX between `$…$` — `\"$B_{in}$\"` renders B with an \"in\" subscript (see the \"Math notation\" page).",
           "examples": [
             "Web server"
           ]
@@ -184,7 +184,7 @@
         },
         "body": {
           "type": "string",
-          "description": "Text displayed IN the node, as opposed to `text` which remains the label below the node. For `simple_node` / `complex_node`: panel body (line breaks respected, colored according to `language` if provided). For geometric shapes (`square` … `star`): short centered text in the shape (keep it brief so it doesn't overflow).",
+          "description": "Text displayed IN the node, as opposed to `text` which remains the label below the node. For `simple_node` / `complex_node`: panel body (line breaks respected, colored according to `language` if provided). For geometric shapes (`square` … `star`): short centered text in the shape (keep it brief so it doesn't overflow), which supports inline LaTeX between `$…$` (see the \"Math notation\" page). A panel body does NOT: `$` is a legitimate character there, and the text goes through syntax highlighting.",
           "examples": [
             "Worker"
           ]
@@ -499,7 +499,7 @@
         },
         "text": {
           "type": "string",
-          "description": "Optional median label drawn on the edge.",
+          "description": "Optional median label drawn on the edge. Supports inline LaTeX between `$…$` (see the \"Math notation\" page).",
           "examples": [
             "L"
           ]
@@ -770,7 +770,7 @@
         },
         "text": {
           "type": "string",
-          "description": "Optional median text.",
+          "description": "Optional median text. Supports inline LaTeX between `$…$` (see the \"Math notation\" page).",
           "examples": [
             "HTTPS"
           ]
@@ -814,7 +814,7 @@
         },
         "label": {
           "type": "string",
-          "description": "Label displayed at the top left of the zone."
+          "description": "Label displayed at the top left of the zone. Supports inline LaTeX between `$…$` (see the \"Math notation\" page)."
         }
       },
       "required": [
@@ -1007,7 +1007,7 @@
         },
         "text": {
           "type": "string",
-          "description": "Label displayed in the middle of the arrow."
+          "description": "Label displayed in the middle of the arrow. Supports inline LaTeX between `$…$` (see the \"Math notation\" page)."
         },
         "style": {
           "$ref": "#/definitions/LineStyle",
@@ -1286,6 +1286,7 @@
         },
         "text": {
           "type": "string",
+          "description": "Supports inline LaTeX between `$…$` (see the \"Math notation\" page).",
           "examples": [
             "Le serveur valide le token"
           ]

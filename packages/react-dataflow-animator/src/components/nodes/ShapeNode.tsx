@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Node } from '../../types';
 import type { ShapeType } from './nodeKinds';
+import { richText } from '../../tex/RichText';
 
 /**
  * Geometric nodes: an SVG-drawn shape that can contain a short
@@ -53,7 +54,7 @@ export function ShapeNode({ object }: { object: Node }): ReactNode {
         {shapeGeometry(type)}
       </svg>
       {object.body ? (
-        <span className="rdfa-shape-text">{object.body}</span>
+        <span className="rdfa-shape-text">{richText(object.body)}</span>
       ) : null}
     </div>
   );

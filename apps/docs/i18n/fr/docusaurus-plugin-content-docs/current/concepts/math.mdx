@@ -1,0 +1,104 @@
+---
+title: Notation mathématique
+slug: /concepts/math
+---
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import { subscriptExample, unitsExample, mathExample } from './_math/examples';
+
+Tous les champs de **prose** d'une spec acceptent du LaTeX inline entre `$…$` —
+les mêmes délimiteurs que le markdown de GitHub. Écrire `"$B_{in}$"` rend un B
+avec « in » en indice : un schéma de circuit peut donc être étiqueté comme dans un
+manuel.
+
+Rien n'est téléchargé pour autant : chaque commande supportée se résout en un
+caractère, dans la police du thème.
+
+```ts
+nodes: [
+  { id: 'bin', type: 'signal', text: '$B_{in}$' },
+  { id: 'out', type: 'signal', text: '$\\overline{A}$' },
+],
+```
+
+<DataFlowPlayer
+  spec={subscriptExample}
+  theme="auto"
+  controls={false}
+  height={260}
+/>
+
+:::warning Le piège de l'antislash dans une spec `.ts` / `.js`
+Dans une chaîne JavaScript, `'\overline'` devient silencieusement `'overline'` :
+une séquence d'échappement inconnue perd son antislash, et votre barre disparaît.
+**Doublez-le** : `'$\\overline{A}$'`. Idem dans un fichier JSON :
+`"$\\overline{A}$"`. Les indices ne sont pas concernés (`'$B_{in}$'` n'a pas
+d'antislash).
+:::
+
+## Hors des `$`, rien ne change
+
+Le texte en dehors d'un segment math reste **littéral**. Un libellé existant garde
+son sens : `snake_case` n'est pas un indice, et `Total : 5$` n'est pas un segment
+à moitié ouvert. Pour écrire un dollar à côté de math, échappez-le : `\$`.
+
+## Où ça fonctionne
+
+Partout où vous écrivez de la prose :
+
+- les libellés de nœuds — `text`, `value`, `unit` ;
+- le `body` d'une **forme géométrique** (`square` … `star`) ;
+- les libellés de zones (`label`) ;
+- les libellés de connexions et d'arêtes d'arbre (`text`) ;
+- le `text` des actions [`comment`](../reference/actions.mdx#comment) et
+  [`arrow`](../reference/actions.mdx#arrow).
+
+Cela ne s'applique **pas** au `header` / `body` d'un panneau textuel
+(`simple_node`, `complex_node`) ni d'un paquet : ces zones passent par la
+coloration syntaxique, où `$` est un caractère de code légitime — une variable PHP
+s'y transformerait en math.
+
+## Syntaxe supportée
+
+| Syntaxe                                        | Rendu                                  |
+| ---------------------------------------------- | -------------------------------------- |
+| `_x` · `_{…}`                                  | indice — `$B_{in}$`                    |
+| `^x` · `^{…}`                                  | exposant — `$n^2$`                     |
+| `{…}`                                          | groupe de plusieurs atomes             |
+| `\overline{…}`                                 | barre — le complément `$\overline{A}$` |
+| `\text{…}` · `\mathrm{…}`                      | texte droit dans le math               |
+| `\alpha`…`\omega` · `\Gamma`…`\Omega`          | lettres grecques                       |
+| `\cdot` `\times` `\pm` `\leq` `\neq` `\approx` | opérateurs et relations                |
+| `\to` `\rightarrow` `\Rightarrow`              | flèches                                |
+| `\land` `\lor` `\neg` `\oplus`                 | logique                                |
+| `\,` `\;` `\quad` `\!`                         | espacements                            |
+
+Conformément à LaTeX, les lettres sont rendues en _italique_ — ce sont des
+variables — tandis que chiffres, opérateurs et grec majuscule restent droits.
+C'est ce qui fait lire `10 kΩ` comme une unité plutôt que comme un produit de
+variables :
+
+<DataFlowPlayer
+  spec={unitsExample}
+  theme="auto"
+  controls={false}
+  height={260}
+/>
+
+## Non supporté
+
+`\frac`, les matrices et le math « display » `$$…$$` sont volontairement hors
+périmètre : un libellé de schéma tient sur une ligne, et une construction qui en
+exige deux casserait la mise en page qui l'accueille. Un `$$` est laissé en texte
+littéral plutôt que supprimé en silence.
+
+Exposants, grec et relations fonctionnent aussi dans les commentaires :
+
+<DataFlowPlayer
+  spec={mathExample}
+  theme="auto"
+  controls={false}
+  autoPlay
+  loop
+  height={280}
+/>

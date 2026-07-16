@@ -8,6 +8,8 @@ import react from '@vitejs/plugin-react';
 // vite + @vitejs/plugin-react are already devDeps of the package.
 export default defineConfig({
   root: import.meta.dirname,
-  server: { open: false, port: 5199 },
+  // PORT lets a second harness run alongside one already holding 5199 (two
+  // sessions, or a side-by-side before/after comparison of a routing change).
+  server: { open: false, port: Number(process.env.PORT) || 5199 },
   plugins: [react()],
 });

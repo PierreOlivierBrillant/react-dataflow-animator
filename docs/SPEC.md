@@ -369,7 +369,61 @@ API reference generated from the JSON Schema). Built via
 `npm run build:docs` and deployed on GitHub Pages by
 `.github/workflows/ci-cd.yml`.
 
-## 8. Implementation notes and evolutions
+## 8. Math notation in prose fields (inline LaTeX)
+
+Every **prose** field of a spec accepts a LaTeX subset between `$…$`, the same
+delimiters GitHub markdown uses — `"$B_{in}$"` renders B with an "in" subscript.
+Implemented in [`packages/react-dataflow-animator/src/tex/`](../packages/react-dataflow-animator/src/tex/),
+with no external dependency: each command resolves to a literal character, so no
+math font is downloaded.
+
+**Where it applies**: `Node.text`, `Node.value`, `Node.unit`, `Node.body` (geometric
+shapes only), `Zone.label`, `Connection.text`, `TreeEdgeStyle.text`, and the `text`
+of the `comment` and `arrow` actions.
+
+**Where it does NOT**: the `header`/`body` of a panel (`simple_node`,
+`complex_node`) and of packets. Those go through syntax highlighting, where `$` is
+a legitimate code character (PHP variables, shell) — math there would fight the
+highlighter.
+
+**Grammar.** Outside the `$`, text is **literal**: no existing label changes
+meaning, so `snake_case` keeps its underscore. Inside:
+
+| Syntax                               | Result                             |
+| ------------------------------------ | ---------------------------------- |
+| `_x`, `_{…}`                         | subscript                          |
+| `^x`, `^{…}`                         | superscript                        |
+| `{…}`                                | group                              |
+| `\overline{…}`                       | overbar — the logic complement (Ā) |
+| `\text{…}`, `\mathrm{…}`             | upright text                       |
+| `\alpha`…`\omega`, `\Gamma`…`\Omega` | Greek letters                      |
+| `\cdot`, `\times`, `\leq`, `\to`…    | operators, relations, arrows       |
+| `\,` `\;` `\quad` `\!`               | spacing                            |
+
+**Styling** follows LaTeX: latin letters and lowercase Greek are variables and
+render _italic_; digits, operators and uppercase Greek stay upright — which is what
+keeps `10 kΩ` reading as a unit rather than a product of variables.
+
+**Escaping**: `\$` is a literal dollar. An unpaired `$` stays literal too, so a
+label mentioning a price is never swallowed by a half-open span.
+
+**Not supported**, deliberately: `\frac`, matrices, and `$$…$$` display math. A
+label on a diagram is one line tall; a construct needing two would break the
+layout it sits in rather than serve it. `$$` is left literal instead of being
+silently dropped.
+
+**Two renderers, one AST.** Prose reaches the screen through both HTML (node
+labels) and SVG (connection labels), and SVG has no `<sub>`. The SVG renderer
+therefore flattens the tree into sibling `<tspan>`s with an explicit cumulative
+`dy` — see the header comment of `tex/RichText.tsx` for why a naive recursion
+fails there.
+
+**Authoring trap (JS/TS specs)**: in a JavaScript string, `'\overline'` silently
+becomes `'overline'` — an unrecognized escape drops its backslash. Any command
+must be written `'\\overline{A}'` (or the string be a raw `String.raw`). In JSON
+files, likewise `"\\overline{A}"`.
+
+## 9. Implementation notes and evolutions
 
 - **Textual** nodes `simple_node` / `complex_node`: text box (`body`, plus
   `header` for `complex_node`) instead of a pictogram, optional highlighting via

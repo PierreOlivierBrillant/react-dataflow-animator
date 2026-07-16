@@ -14,9 +14,9 @@ const strings = {
   en: {
     a: 'A',
     b: 'B',
-    bin: 'Bin',
+    bin: '$B_{in}$',
     diff: 'Diff',
-    bout: 'Bout',
+    bout: '$B_{out}$',
     intro:
       'A full subtractor computes A − B − Bin over three bits, into a Diff and a borrow-out. Nine NAND gates; green wires carry a 1 — trace where the borrow comes from.',
     s000: '0 − 0 − 0 = 0. Diff 0, Bout 0.',
@@ -28,9 +28,9 @@ const strings = {
   fr: {
     a: 'A',
     b: 'B',
-    bin: 'Bin',
+    bin: '$B_{in}$',
     diff: 'Diff',
-    bout: 'Bout',
+    bout: '$B_{out}$',
     intro:
       'Un soustracteur complet calcule A − B − Bin sur trois bits, en une différence et un emprunt sortant. Neuf portes NAND ; les fils verts portent un 1 — tracez d’où vient l’emprunt.',
     s000: '0 − 0 − 0 = 0. Diff 0, Bout 0.',

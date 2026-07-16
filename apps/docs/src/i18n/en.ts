@@ -173,6 +173,11 @@ export const en: Messages = {
         desc: ' — how actions chain and persist.',
       },
       {
+        to: '/docs/concepts/math',
+        label: 'Math notation',
+        desc: ' — inline LaTeX between $…$ in labels.',
+      },
+      {
         to: '/docs/reference/actions',
         label: 'Action types',
         desc: ' — move, arrow, parallel, loading, set_content, comment, highlight, set_visible, wait.',

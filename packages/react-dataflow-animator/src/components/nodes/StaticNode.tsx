@@ -10,6 +10,7 @@ import { NodeView } from './NodeView';
 import { isPanelNode, isShapeType } from './nodeKinds';
 import { nodeTint, type ColorOverride } from './nodeColors';
 import { getSubIcon } from './subIcons';
+import { richText } from '../../tex/RichText';
 
 /**
  * Text under the node: its `text`, its `value` (+`unit`), or both joined —
@@ -217,7 +218,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
                 (labelSide ? ` rdfa-node-label--${labelSide}` : '')
               }
             >
-              {label}
+              {richText(label)}
             </span>
           ) : null;
         })()}

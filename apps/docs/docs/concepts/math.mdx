@@ -1,0 +1,99 @@
+---
+title: Math notation
+slug: /concepts/math
+---
+
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import { subscriptExample, unitsExample, mathExample } from './_math/examples';
+
+Every **prose** field of a spec accepts inline LaTeX between `$…$` — the same
+delimiters as GitHub markdown. Writing `"$B_{in}$"` renders a B with an "in"
+subscript, so a circuit diagram can be labelled the way a textbook labels it.
+
+Nothing is downloaded to make this work: the supported commands each resolve to a
+plain character, using the theme's own font.
+
+```ts
+nodes: [
+  { id: 'bin', type: 'signal', text: '$B_{in}$' },
+  { id: 'out', type: 'signal', text: '$\\overline{A}$' },
+],
+```
+
+<DataFlowPlayer
+  spec={subscriptExample}
+  theme="auto"
+  controls={false}
+  height={260}
+/>
+
+:::warning The backslash trap in a `.ts` / `.js` spec
+In a JavaScript string, `'\overline'` silently becomes `'overline'` — an
+unrecognized escape sequence loses its backslash, and your overbar just
+disappears. **Double it**: `'$\\overline{A}$'`. Same in a JSON file:
+`"$\\overline{A}$"`. Subscripts are unaffected (`'$B_{in}$'` has no backslash).
+:::
+
+## Outside the `$`, nothing changes
+
+Text outside a math span stays **literal**. An existing label keeps its meaning:
+`snake_case` is not a subscript, and `Total: 5$` is not a half-open span. To write
+a dollar next to math, escape it: `\$`.
+
+## Where it works
+
+Anywhere you write prose:
+
+- node labels — `text`, `value`, `unit`;
+- the `body` of a **geometric shape** (`square` … `star`);
+- zone labels (`label`);
+- connection and tree-edge labels (`text`);
+- the `text` of the [`comment`](../reference/actions.mdx#comment) and
+  [`arrow`](../reference/actions.mdx#arrow) actions.
+
+It does **not** apply to the `header` / `body` of a text panel (`simple_node`,
+`complex_node`) or of a packet. Those go through syntax highlighting, where `$` is
+a legitimate code character — a PHP variable would turn into math.
+
+## Supported syntax
+
+| Syntax                                         | Renders                                   |
+| ---------------------------------------------- | ----------------------------------------- |
+| `_x` · `_{…}`                                  | subscript — `$B_{in}$`                    |
+| `^x` · `^{…}`                                  | superscript — `$n^2$`                     |
+| `{…}`                                          | group several atoms                       |
+| `\overline{…}`                                 | overbar — the complement `$\overline{A}$` |
+| `\text{…}` · `\mathrm{…}`                      | upright text inside math                  |
+| `\alpha`…`\omega` · `\Gamma`…`\Omega`          | Greek letters                             |
+| `\cdot` `\times` `\pm` `\leq` `\neq` `\approx` | operators and relations                   |
+| `\to` `\rightarrow` `\Rightarrow`              | arrows                                    |
+| `\land` `\lor` `\neg` `\oplus`                 | logic                                     |
+| `\,` `\;` `\quad` `\!`                         | spacing                                   |
+
+Following LaTeX, letters render _italic_ — they are variables — while digits,
+operators and uppercase Greek stay upright. That is what keeps `10 kΩ` reading as
+a unit instead of a product of variables:
+
+<DataFlowPlayer
+  spec={unitsExample}
+  theme="auto"
+  controls={false}
+  height={260}
+/>
+
+## Not supported
+
+`\frac`, matrices and `$$…$$` display math are deliberately out of scope: a label
+on a diagram is one line tall, and a construct that needs two would break the
+layout it sits in. A `$$` is left as literal text rather than silently dropped.
+
+Superscripts, Greek and relations work in comments too:
+
+<DataFlowPlayer
+  spec={mathExample}
+  theme="auto"
+  controls={false}
+  autoPlay
+  loop
+  height={280}
+/>

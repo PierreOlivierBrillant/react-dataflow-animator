@@ -1,6 +1,7 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 import { clamp } from '../engine/timeline';
 import type { NodeGeom } from '../engine/geometry';
+import { richText } from '../tex/RichText';
 
 export const CommentBubble = memo(function CommentBubble({
   node,
@@ -47,7 +48,7 @@ export const CommentBubble = memo(function CommentBubble({
           visibility: size.w === 0 || size.h === 0 ? 'hidden' : 'visible',
         }}
       >
-        {text}
+        {richText(text)}
       </div>
     );
   }

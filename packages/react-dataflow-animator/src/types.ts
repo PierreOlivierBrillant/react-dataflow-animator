@@ -193,7 +193,9 @@ export interface Node {
    */
   type: NodeType;
   /**
-   * Label displayed below the node.
+   * Label displayed below the node. Supports inline LaTeX between `$…$` —
+   * `"$B_{in}$"` renders B with an "in" subscript (see the "Math notation"
+   * page).
    * @example "Web server"
    */
   text?: string;
@@ -309,7 +311,9 @@ export interface Node {
    * the node. For `simple_node` / `complex_node`: panel body (line breaks
    * respected, colored according to `language` if provided). For geometric
    * shapes (`square` … `star`): short centered text in the shape (keep it
-   * brief so it doesn't overflow).
+   * brief so it doesn't overflow), which supports inline LaTeX between `$…$`
+   * (see the "Math notation" page). A panel body does NOT: `$` is a legitimate
+   * character there, and the text goes through syntax highlighting.
    * @example "Worker"
    */
   body?: string;
@@ -370,7 +374,8 @@ export interface Zone {
   contains: string[];
   /** CSS color of the border and semi-transparent background. */
   color?: string;
-  /** Label displayed at the top left of the zone. */
+  /** Label displayed at the top left of the zone. Supports inline LaTeX
+   *  between `$…$` (see the "Math notation" page). */
   label?: string;
 }
 
@@ -402,7 +407,8 @@ export interface TreeEdgeStyle {
   /** Arrow head. Default (tree): 'none' — parent→child links carry no head. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   /**
-   * Optional median label drawn on the edge.
+   * Optional median label drawn on the edge. Supports inline LaTeX between
+   * `$…$` (see the "Math notation" page).
    * @example "L"
    */
   text?: string;
@@ -477,7 +483,8 @@ export interface Connection {
   /** Arrow head. Default: 'forward'. */
   arrow_head?: 'forward' | 'backward' | 'both' | 'none';
   /**
-   * Optional median text.
+   * Optional median text. Supports inline LaTeX between `$…$` (see the
+   * "Math notation" page).
    * @example "HTTPS"
    */
   text?: string;
@@ -678,7 +685,8 @@ interface ArrowAction extends ActionBase {
   from: string;
   /** Arrival node ID of the arrow. */
   to: string;
-  /** Label displayed in the middle of the arrow. */
+  /** Label displayed in the middle of the arrow. Supports inline LaTeX
+   *  between `$…$` (see the "Math notation" page). */
   text?: string;
   /** Line style: solid, dotted, dashed or animated. Default: 'solid'. */
   style?: LineStyle;
@@ -712,7 +720,8 @@ interface CommentAction extends ActionBase {
   type: 'comment';
   /** ID of the node near which to display the comment. Omitted = omniscient comment (top of the stage). */
   object?: string;
-  /** @example "Le serveur valide le token" */
+  /** Supports inline LaTeX between `$…$` (see the "Math notation" page).
+   *  @example "Le serveur valide le token" */
   text: string;
 }
 

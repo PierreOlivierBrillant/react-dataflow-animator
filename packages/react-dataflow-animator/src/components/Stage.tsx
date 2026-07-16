@@ -17,6 +17,7 @@ import type {
   ObjectContent,
   Zone,
 } from '../types';
+import { richText } from '../tex/RichText';
 import {
   evaluate,
   easeInOutCubic,
@@ -1447,7 +1448,7 @@ export function Stage({
               } as CSSProperties
             }
           >
-            {zone.label}
+            {richText(zone.label)}
           </span>
         );
       })}
