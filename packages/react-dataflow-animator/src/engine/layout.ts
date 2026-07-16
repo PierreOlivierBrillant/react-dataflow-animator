@@ -466,7 +466,9 @@ function graphAutoLayout(nodes: Node[], connections: Connection[]): LayoutMap {
   const edges: Array<[string, string]> = [];
   for (const c of connections) {
     if (c.from === c.to || !idSet.has(c.from) || !idSet.has(c.to)) continue;
-    const key = c.from < c.to ? `${c.from} ${c.to}` : `${c.to} ${c.from}`;
+    // NUL separates the pair: no node id can contain one, so the composite key
+    // cannot collide (a printable separator would fuse "a b" with "a" + "b").
+    const key = c.from < c.to ? `${c.from}\0${c.to}` : `${c.to}\0${c.from}`;
     if (seen.has(key)) continue;
     seen.add(key);
     edges.push([c.from, c.to]);
