@@ -43,7 +43,8 @@ export function DataFlowPlayer({
   loop = false,
   controls = true,
   exportable = false,
-  theme = 'auto',
+  theme = 'default',
+  mode = 'auto',
   density = 'comfortable',
   debug = false,
   speed = 1,
@@ -115,6 +116,7 @@ export function DataFlowPlayer({
       ref={rootRef}
       className={`rdfa-player${className ? ` ${className}` : ''}`}
       data-theme={theme}
+      data-mode={mode}
       style={{ height: heightValue, ...style }}
       tabIndex={controls ? 0 : undefined}
       onKeyDown={controls ? handleKeyDown : undefined}

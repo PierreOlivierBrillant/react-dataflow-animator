@@ -31,6 +31,8 @@ export type {
   ContentType,
   Highlighter,
   HighlightLanguage,
+  PlayerTheme,
+  PlayerMode,
   // Backward-compatible aliases (removed in v2)
   StaticObject,
   StaticObjectType,

@@ -36,7 +36,7 @@ export function IntroDoc() {
       <p>{intro.overviewOutro}</p>
 
       <DataFlowPlayer
-        theme="auto"
+        mode="auto"
         spec={getSpec(demosById.clientServer, locale)}
       />
 

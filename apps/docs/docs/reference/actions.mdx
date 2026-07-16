@@ -41,7 +41,7 @@ Moves a dynamic object from `from` to `to`.
 Produces two breakpoints: appearance and arrival. By default, the object
 disappears at the end of its animation.
 
-<DataFlowPlayer spec={moveExample} theme="auto" height={300} />
+<DataFlowPlayer spec={moveExample} mode="auto" height={300} />
 
 ## `arrow`
 
@@ -62,7 +62,7 @@ Draws an animated arrow between two nodes (progressive drawing).
 For **permanent** arrows (decor displayed right from the initialization),
 use the `connections` root array instead.
 
-<DataFlowPlayer spec={arrowExample} theme="auto" height={300} />
+<DataFlowPlayer spec={arrowExample} mode="auto" height={300} />
 
 ## `parallel`
 
@@ -82,7 +82,7 @@ The `wait_for` and `keep_until` inside a `parallel` continue to
 work normally. Here a `move` and an `arrow` of different types start at the
 same instant.
 
-<DataFlowPlayer spec={parallelExample} theme="auto" height={320} />
+<DataFlowPlayer spec={parallelExample} mode="auto" height={320} />
 
 ## `loading`
 
@@ -92,7 +92,7 @@ Displays a loading spinner on a target node (simulates processing).
 { type: 'loading', object: 'db', duration: 900 }
 ```
 
-<DataFlowPlayer spec={loadingExample} theme="auto" height={300} />
+<DataFlowPlayer spec={loadingExample} mode="auto" height={300} />
 
 ## `set_content`
 
@@ -169,7 +169,7 @@ the wrapping object.
 
 The three modes, side by side (`code`, `text`, then `table`):
 
-<DataFlowPlayer spec={setContentExample} theme="auto" height={340} />
+<DataFlowPlayer spec={setContentExample} mode="auto" height={340} />
 
 ## `comment`
 
@@ -195,7 +195,7 @@ is not attached to any specific component.
 Below, an omniscient comment (top of the scene) followed by two bubbles
 attached to nodes:
 
-<DataFlowPlayer spec={commentExample} theme="auto" height={320} />
+<DataFlowPlayer spec={commentExample} mode="auto" height={320} />
 
 ## `set_visible`
 
@@ -209,7 +209,7 @@ a contrary `set_visible`).
 { type: 'set_visible', object: 'cache', visible: true }
 ```
 
-<DataFlowPlayer spec={setVisibleExample} theme="auto" height={300} />
+<DataFlowPlayer spec={setVisibleExample} mode="auto" height={300} />
 
 ## `set_color`
 
@@ -235,7 +235,7 @@ This is the core operation for algorithm visualizations that recolor nodes — f
 instance the red/black recoloring of a red-black tree. Below, a node inserted
 "red" is recolored to "black":
 
-<DataFlowPlayer spec={setColorExample} theme="auto" height={300} />
+<DataFlowPlayer spec={setColorExample} mode="auto" height={300} />
 
 `set_color` also recolors a **permanent [connection](../concepts/decor.mdx)**:
 pass the connection's `id` as `object` and a single `color` (the three node
@@ -247,7 +247,7 @@ followed:
 { type: 'set_color', object: 'edge', color: 'seagreen', duration: 500 }
 ```
 
-<DataFlowPlayer spec={connectionRecolorExample} theme="auto" height={300} />
+<DataFlowPlayer spec={connectionRecolorExample} mode="auto" height={300} />
 
 ## `set_icon`
 
@@ -266,7 +266,7 @@ legible on the node itself — a Dijkstra node's tentative distance (∞ → 7 �
 an A\* node's `f = g + h` — rather than only in a comment. Below, a node's badge
 walks from ∞ down to its final value:
 
-<DataFlowPlayer spec={setIconExample} theme="auto" height={300} />
+<DataFlowPlayer spec={setIconExample} mode="auto" height={300} />
 
 ## `rotate`
 
@@ -299,7 +299,7 @@ clockwise, negative counter-clockwise): the node turns at a constant speed
 
 If both `to` and `spin` are given, `spin` wins.
 
-<DataFlowPlayer spec={rotateExample} theme="auto" height={300} />
+<DataFlowPlayer spec={rotateExample} mode="auto" height={300} />
 
 ## `rotate_subtree`
 
@@ -323,7 +323,7 @@ previous one left), which is how AVL **double rotations** are expressed — an
 `LR` case is a left rotation on the child followed by a right rotation on the
 grandparent. Below, a single left rotation rebalances a right-leaning chain:
 
-<DataFlowPlayer spec={rotateSubtreeExample} theme="auto" height={320} />
+<DataFlowPlayer spec={rotateSubtreeExample} mode="auto" height={320} />
 
 ## `highlight`
 
@@ -337,7 +337,7 @@ identified by their `id`.
 Here the halo pulses first on the `db` node, then on the permanent
 connection `link`:
 
-<DataFlowPlayer spec={highlightExample} theme="auto" height={300} />
+<DataFlowPlayer spec={highlightExample} mode="auto" height={300} />
 
 To emphasize a connection from the start (no timeline action), use its static
 [`highlighted`](../concepts/decor.mdx#highlighted--permanent-emphasis) field

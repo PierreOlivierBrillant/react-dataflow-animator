@@ -3,6 +3,11 @@ title: Composants et API JavaScript
 slug: /reference/components
 ---
 
+import { DataFlowPlayer } from 'react-dataflow-animator';
+import { themeExample } from './_components/themes';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 Cette page couvre la **surface JavaScript/TypeScript** du package : le composant
 `<DataFlowPlayer>` et ses props, l'enregistrement d'icônes, et la coloration
 syntaxique. Pour la forme de la spécification JSON (`spec`), voir la
@@ -27,7 +32,8 @@ Seule la prop `spec` est requise.
 | `autoPlay`   | `boolean`                                  | `false`         | Démarre la lecture automatiquement.                               |
 | `loop`       | `boolean`                                  | `false`         | Rejoue en boucle à la fin.                                        |
 | `speed`      | `number`                                   | `1`             | Vitesse de lecture (`1` = normal).                                |
-| `theme`      | `'light' \| 'dark' \| 'auto'`              | `'auto'`        | Thème visuel.                                                     |
+| `theme`      | `PlayerTheme`                              | `'default'`     | Palette visuelle ([voir plus bas](#themes)).                      |
+| `mode`       | `'light' \| 'dark' \| 'auto'`              | `'auto'`        | Variante de `theme` à afficher.                                   |
 | `density`    | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Densité visuelle (taille des éléments / espacement).              |
 | `debug`      | `boolean`                                  | `false`         | Overlay d'inspection de la timeline interne.                      |
 | `highlight`  | `Highlighter`                              | Prism           | Coloration syntaxique personnalisée (cf. plus bas).               |
@@ -54,6 +60,137 @@ const spec = useMemo(() => ({ nodes: [...], timeline: [...] }), []);
 
 Pour le rendu SSR / le placeholder d'hydratation et l'intégration Next.js /
 Docusaurus, voir [Installation](../installation.mdx).
+
+## Thèmes {#themes}
+
+L'apparence du lecteur relève de **deux choix indépendants** :
+
+- `theme` — la **palette** (`default`, `dots`, `blueprint`, `pcb`, `chalk`,
+  `terminal`, `paper`, `neon`) ;
+- `mode` — la **variante** de cette palette à afficher (`light`, `dark`, `auto`).
+
+Chaque thème possède une variante claire et une variante sombre : changer un axe
+n'impose donc jamais l'autre. `mode="auto"` (la valeur par défaut) suit le site
+hôte dès qu'un ancêtre porte `data-theme="light|dark"` (la convention
+Docusaurus), et la préférence système sinon — la résolution est purement CSS,
+donc compatible SSR et sans JavaScript.
+
+```tsx
+// Un tableau noir qui suit quand même la préférence claire/sombre du lecteur.
+<DataFlowPlayer spec={spec} theme="chalk" mode="auto" />
+
+// Un circuit imprimé figé sur sa variante sombre, quoi que fasse l'hôte.
+<DataFlowPlayer spec={spec} theme="pcb" mode="dark" />
+```
+
+:::warning Migration depuis la v1
+
+En v1, `theme` **était** l'axe clair/sombre. Il désigne désormais la palette, et
+le choix clair/sombre est passé sur `mode`. Renommez la prop à chaque appel :
+
+```tsx
+// v1
+<DataFlowPlayer spec={spec} theme="auto" />
+<DataFlowPlayer spec={spec} theme="dark" />
+
+// v2
+<DataFlowPlayer spec={spec} mode="auto" />   // ou omettez-la : 'auto' est la valeur par défaut
+<DataFlowPlayer spec={spec} mode="dark" />
+```
+
+`theme="light" | "dark" | "auto"` est maintenant une erreur de type :
+TypeScript signale donc lui-même chaque appel. Si vous stylez le lecteur
+vous-même, notez que l'élément racine porte `data-theme` (palette) **et**
+`data-mode`, et que les trois variables `--rdfa-packet-*` inutilisées ont été
+supprimées.
+
+:::
+
+<Tabs
+  defaultValue="default"
+  values={[
+    { label: 'default', value: 'default' },
+    { label: 'dots', value: 'dots' },
+    { label: 'blueprint', value: 'blueprint' },
+    { label: 'pcb', value: 'pcb' },
+    { label: 'chalk', value: 'chalk' },
+    { label: 'terminal', value: 'terminal' },
+    { label: 'paper', value: 'paper' },
+    { label: 'neon', value: 'neon' },
+  ]}
+>
+  <TabItem value="default">
+    <DataFlowPlayer
+      spec={themeExample}
+      theme="default"
+      mode="auto"
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="dots">
+    <DataFlowPlayer spec={themeExample} theme="dots" mode="auto" height={300} />
+  </TabItem>
+  <TabItem value="blueprint">
+    <DataFlowPlayer
+      spec={themeExample}
+      theme="blueprint"
+      mode="auto"
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="pcb">
+    <DataFlowPlayer spec={themeExample} theme="pcb" mode="auto" height={300} />
+  </TabItem>
+  <TabItem value="chalk">
+    <DataFlowPlayer
+      spec={themeExample}
+      theme="chalk"
+      mode="auto"
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="terminal">
+    <DataFlowPlayer
+      spec={themeExample}
+      theme="terminal"
+      mode="auto"
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="paper">
+    <DataFlowPlayer
+      spec={themeExample}
+      theme="paper"
+      mode="auto"
+      height={300}
+    />
+  </TabItem>
+  <TabItem value="neon">
+    <DataFlowPlayer spec={themeExample} theme="neon" mode="auto" height={300} />
+  </TabItem>
+</Tabs>
+
+Basculez l'interrupteur clair/sombre de ce site pour voir l'autre variante du
+thème sélectionné — les lecteurs ci-dessus sont tous en `mode="auto"`.
+
+:::note `pcb` et schémas électriques
+
+Avec `direction: 'circuit'`, les fils sont teintés **par leur net** (le signal
+qui les pilote), ce qui prime volontairement sur la couleur de flèche de la
+palette : cette couleur porte du sens. Le thème `pcb` habille malgré tout la
+carte, les composants et les libellés autour.
+
+:::
+
+Chaque palette est un jeu de variables CSS `--rdfa-*` scopées sous
+`.rdfa-player`. Pour en ajuster une, surchargez les variables sur votre propre
+conteneur plutôt que de forker la feuille de style :
+
+```css
+.my-diagram .rdfa-player {
+  --rdfa-accent: light-dark(#b91c1c, #f87171);
+}
+```
 
 ## Exporter la spec (`exportable`)
 

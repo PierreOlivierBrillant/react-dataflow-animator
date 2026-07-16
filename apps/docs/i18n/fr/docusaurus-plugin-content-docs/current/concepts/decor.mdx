@@ -51,7 +51,7 @@ toléré pour `solid`) :
   <TabItem value="solid">
     <DataFlowPlayer
       spec={lineStyleExample('solid')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={260}
     />
@@ -59,7 +59,7 @@ toléré pour `solid`) :
   <TabItem value="dotted">
     <DataFlowPlayer
       spec={lineStyleExample('dotted')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={260}
     />
@@ -67,7 +67,7 @@ toléré pour `solid`) :
   <TabItem value="dashed">
     <DataFlowPlayer
       spec={lineStyleExample('dashed')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={260}
     />
@@ -75,7 +75,7 @@ toléré pour `solid`) :
   <TabItem value="animated">
     <DataFlowPlayer
       spec={lineStyleExample('animated')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={260}
     />
@@ -103,7 +103,7 @@ valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
   <TabItem value="bezier">
     <DataFlowPlayer
       spec={pathShapeExample('bezier')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={300}
     />
@@ -111,7 +111,7 @@ valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
   <TabItem value="simplebezier">
     <DataFlowPlayer
       spec={pathShapeExample('simplebezier')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={300}
     />
@@ -119,7 +119,7 @@ valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
   <TabItem value="straight">
     <DataFlowPlayer
       spec={pathShapeExample('straight')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={300}
     />
@@ -127,7 +127,7 @@ valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
   <TabItem value="step">
     <DataFlowPlayer
       spec={pathShapeExample('step')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={300}
     />
@@ -135,7 +135,7 @@ valeurs, partagées avec l'action `arrow` (`bezier` par défaut) :
   <TabItem value="smoothstep">
     <DataFlowPlayer
       spec={pathShapeExample('smoothstep')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={300}
     />
@@ -162,7 +162,7 @@ défaut.
 
 <DataFlowPlayer
   spec={arrowHeadExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={420}
 />
@@ -207,7 +207,7 @@ timeline, mais statique (affichée dès le départ). Elle prime sur `color`.
 
 <DataFlowPlayer
   spec={connectionColorExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={300}
 />
@@ -226,12 +226,7 @@ zones: [
 ],
 ```
 
-<DataFlowPlayer
-  spec={zonesExample}
-  theme="auto"
-  controls={false}
-  height={340}
-/>
+<DataFlowPlayer spec={zonesExample} mode="auto" controls={false} height={340} />
 
 | Champ      | Rôle                                                              |
 | ---------- | ----------------------------------------------------------------- |
@@ -254,7 +249,7 @@ zones: [
 
 <DataFlowPlayer
   spec={nestedZonesExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={340}
 />

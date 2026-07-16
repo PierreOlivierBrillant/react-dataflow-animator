@@ -130,7 +130,7 @@ export function HeroSection() {
           <div className="absolute inset-0 rounded-2xl pointer-events-none bg-[radial-gradient(ellipse_at_50%_50%,rgba(124,58,237,0.18)_0%,transparent_70%)] blur-2xl scale-110" />
           <div className="relative rounded-2xl overflow-hidden bg-surface border border-slate-900/[0.08] dark:border-white/[0.07] shadow-[0_25px_50px_rgba(0,0,0,0.12)] dark:shadow-[0_25px_50px_rgba(0,0,0,0.5)]">
             <DataFlowPlayer
-              theme="auto"
+              mode="auto"
               spec={getSpec(demosById.clientServer, locale)}
               autoPlay
               loop

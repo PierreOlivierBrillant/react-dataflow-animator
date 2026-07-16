@@ -41,7 +41,7 @@ Déplace un objet dynamique de `from` vers `to`.
 Produit deux points d'arrêt : apparition et arrivée. Par défaut, l'objet
 disparaît à la fin de son animation.
 
-<DataFlowPlayer spec={moveExample} theme="auto" height={300} />
+<DataFlowPlayer spec={moveExample} mode="auto" height={300} />
 
 ## `arrow`
 
@@ -62,7 +62,7 @@ Trace une flèche animée entre deux nœuds (dessin progressif).
 Pour des flèches **permanentes** (décor affiché dès l'initialisation),
 utilisez plutôt le tableau racine `connections`.
 
-<DataFlowPlayer spec={arrowExample} theme="auto" height={300} />
+<DataFlowPlayer spec={arrowExample} mode="auto" height={300} />
 
 ## `parallel`
 
@@ -82,7 +82,7 @@ Les `wait_for` et `keep_until` à l'intérieur d'un `parallel` continuent de
 fonctionner normalement. Ici, un `move` et un `arrow` de types différents
 démarrent au même instant.
 
-<DataFlowPlayer spec={parallelExample} theme="auto" height={320} />
+<DataFlowPlayer spec={parallelExample} mode="auto" height={320} />
 
 ## `loading`
 
@@ -92,7 +92,7 @@ Affiche un spinner de chargement sur un nœud cible (simule un traitement).
 { type: 'loading', object: 'db', duration: 900 }
 ```
 
-<DataFlowPlayer spec={loadingExample} theme="auto" height={300} />
+<DataFlowPlayer spec={loadingExample} mode="auto" height={300} />
 
 ## `set_content`
 
@@ -169,7 +169,7 @@ Mode `table` :
 
 Les trois modes, côte à côte (`code`, `text`, puis `table`) :
 
-<DataFlowPlayer spec={setContentExample} theme="auto" height={340} />
+<DataFlowPlayer spec={setContentExample} mode="auto" height={340} />
 
 ## `comment`
 
@@ -195,7 +195,7 @@ ne se rattache à aucun composant précis.
 Ci-dessous, un commentaire omniscient (en haut de la scène) suivi de deux
 bulles attachées à des nœuds :
 
-<DataFlowPlayer spec={commentExample} theme="auto" height={320} />
+<DataFlowPlayer spec={commentExample} mode="auto" height={320} />
 
 ## `set_visible`
 
@@ -211,7 +211,7 @@ un `set_visible` contraire).
 Voir [Nœuds → `visible`](../concepts/nodes.mdx#visible--visibilité-initiale)
 pour l'usage combiné avec la visibilité initiale.
 
-<DataFlowPlayer spec={setVisibleExample} theme="auto" height={300} />
+<DataFlowPlayer spec={setVisibleExample} mode="auto" height={300} />
 
 ## `set_color`
 
@@ -239,7 +239,7 @@ C'est l'opération centrale des visualisations d'algorithmes qui recolorent des
 nœuds — par exemple la recoloration rouge/noir d'un arbre rouge-noir. Ci-dessous,
 un nœud inséré « rouge » est recoloré en « noir » :
 
-<DataFlowPlayer spec={setColorExample} theme="auto" height={300} />
+<DataFlowPlayer spec={setColorExample} mode="auto" height={300} />
 
 `set_color` recolore aussi une **[connexion](../concepts/decor.mdx) permanente** :
 passez l'`id` de la connexion comme `object` et un unique `color` (les trois
@@ -251,7 +251,7 @@ graphe vient d'emprunter :
 { type: 'set_color', object: 'edge', color: 'seagreen', duration: 500 }
 ```
 
-<DataFlowPlayer spec={connectionRecolorExample} theme="auto" height={300} />
+<DataFlowPlayer spec={connectionRecolorExample} mode="auto" height={300} />
 
 ## `set_icon`
 
@@ -272,7 +272,7 @@ Dijkstra (∞ → 7 → 5), le `f = g + h` d'un nœud A\* — plutôt que seulem
 commentaire. Ci-dessous, le badge d'un nœud descend de ∞ jusqu'à sa valeur
 finale :
 
-<DataFlowPlayer spec={setIconExample} theme="auto" height={300} />
+<DataFlowPlayer spec={setIconExample} mode="auto" height={300} />
 
 ## `rotate`
 
@@ -307,7 +307,7 @@ horaire, négatif = sens anti-horaire) : le nœud tourne à vitesse constante
 
 Si `to` et `spin` sont fournis ensemble, `spin` l'emporte.
 
-<DataFlowPlayer spec={rotateExample} theme="auto" height={300} />
+<DataFlowPlayer spec={rotateExample} mode="auto" height={300} />
 
 ## `rotate_subtree`
 
@@ -333,7 +333,7 @@ AVL — un cas `LR` est une rotation gauche sur l'enfant suivie d'une rotation
 droite sur le grand-parent. Ci-dessous, une seule rotation gauche rééquilibre une
 chaîne penchée à droite :
 
-<DataFlowPlayer spec={rotateSubtreeExample} theme="auto" height={320} />
+<DataFlowPlayer spec={rotateSubtreeExample} mode="auto" height={320} />
 
 ## `highlight`
 
@@ -347,7 +347,7 @@ identifiés par leur `id`.
 Ici, le halo pulse d'abord sur le nœud `db`, puis sur la connexion
 permanente `link` :
 
-<DataFlowPlayer spec={highlightExample} theme="auto" height={300} />
+<DataFlowPlayer spec={highlightExample} mode="auto" height={300} />
 
 Pour mettre en avant une connexion dès le départ (sans action de timeline),
 utilisez plutôt son champ statique

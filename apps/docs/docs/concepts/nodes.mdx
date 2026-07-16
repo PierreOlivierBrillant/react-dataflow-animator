@@ -26,7 +26,7 @@ The `type` field chooses the appearance. Ten types display a **pictogram**:
 
 <DataFlowPlayer
   spec={nodeTypesExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={460}
   density="compact"
@@ -66,7 +66,7 @@ for [`content`](#content--initial-content) (`javascript`, `json`, `sql`, `http`.
 
 <DataFlowPlayer
   spec={textNodesExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={320}
 />
@@ -109,7 +109,7 @@ Eight types draw a **shape** rather than a pictogram: `square`, `diamond`,
 
 <DataFlowPlayer
   spec={shapesExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={460}
   density="compact"
@@ -193,7 +193,7 @@ Each field accepts a **predefined color** (any CSS name: `tomato`,
 
 <DataFlowPlayer
   spec={colorsExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={320}
 />
@@ -257,12 +257,7 @@ accepted, in this resolution order:
 2. an icon **registered** by you via `registerSubIcon`;
 3. otherwise, **free text** displayed in a pill (truncated to 4 characters).
 
-<DataFlowPlayer
-  spec={iconsExample}
-  theme="auto"
-  controls={false}
-  height={320}
-/>
+<DataFlowPlayer spec={iconsExample} mode="auto" controls={false} height={320} />
 
 ```ts
 { id: 'spa',  type: 'laptop',   text: 'react',    icon: 'react' },   // known tech
@@ -313,7 +308,7 @@ to **hide it initially** and reveal it later with the
 [`set_visible`](../reference/actions.mdx#set_visible) action — useful for showing
 the addition of a component (cache, replica...) as the narrative progresses.
 
-<DataFlowPlayer spec={revealExample} theme="auto" height={320} />
+<DataFlowPlayer spec={revealExample} mode="auto" height={320} />
 
 ```ts
 nodes: [
@@ -336,7 +331,7 @@ The orientation can be **animated** at runtime with the
 [`rotate`](../reference/actions.mdx#rotate) action, which moves the node toward an
 absolute target angle. Successive rotations chain from the current angle.
 
-<DataFlowPlayer spec={rotationExample} theme="auto" height={320} />
+<DataFlowPlayer spec={rotationExample} mode="auto" height={320} />
 
 ```ts
 nodes: [

@@ -45,7 +45,7 @@ draws an electrical schematic:
   <TabItem value="left-to-right">
     <DataFlowPlayer
       spec={orientationExample('left-to-right')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
       density="spacious"
@@ -54,7 +54,7 @@ draws an electrical schematic:
   <TabItem value="right-to-left">
     <DataFlowPlayer
       spec={orientationExample('right-to-left')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
       density="spacious"
@@ -63,7 +63,7 @@ draws an electrical schematic:
   <TabItem value="top-to-bottom">
     <DataFlowPlayer
       spec={orientationExample('top-to-bottom')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
       density="spacious"
@@ -72,7 +72,7 @@ draws an electrical schematic:
   <TabItem value="bottom-to-top">
     <DataFlowPlayer
       spec={orientationExample('bottom-to-top')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -80,7 +80,7 @@ draws an electrical schematic:
   <TabItem value="circular">
     <DataFlowPlayer
       spec={circularExample}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -164,7 +164,7 @@ want to tell the links apart.
   <TabItem value="merged">
     <DataFlowPlayer
       spec={mergeEdgesExample(true)}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -172,7 +172,7 @@ want to tell the links apart.
   <TabItem value="fanned">
     <DataFlowPlayer
       spec={mergeEdgesExample(false)}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -226,7 +226,7 @@ node with a fixed number of terminals. `ports: 'direct'` restores the default
   <TabItem value="direct">
     <DataFlowPlayer
       spec={portsExample('direct')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -234,7 +234,7 @@ node with a fixed number of terminals. `ports: 'direct'` restores the default
   <TabItem value="four">
     <DataFlowPlayer
       spec={portsExample(4)}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -289,7 +289,7 @@ ignored — only the `main` node structures the layout.
 ```
 
 <DataFlowPlayer
-  theme="auto"
+  mode="auto"
   controls={false}
   height={500}
   spec={circularHubExample}
@@ -326,7 +326,7 @@ truth for both positions and edges.
 }
 ```
 
-<DataFlowPlayer theme="auto" controls={false} height={460} spec={treeExample} />
+<DataFlowPlayer mode="auto" controls={false} height={460} spec={treeExample} />
 
 Because the structure lives in one place, it can be **restructured at runtime**:
 the [`rotate_subtree`](../reference/actions.mdx#rotate_subtree) action performs a
@@ -405,12 +405,7 @@ spanning tree.
 }
 ```
 
-<DataFlowPlayer
-  theme="auto"
-  controls={false}
-  height={460}
-  spec={graphExample}
-/>
+<DataFlowPlayer mode="auto" controls={false} height={460} spec={graphExample} />
 
 ### Pinning a node
 
@@ -462,7 +457,7 @@ diagram in three ways, and the engine adapts on all three:
   `0`..`1`), like a hand-authored `graph`; use `junction` dots for the corners.
 
 <DataFlowPlayer
-  theme="auto"
+  mode="auto"
   autoPlay
   loop
   controls={false}

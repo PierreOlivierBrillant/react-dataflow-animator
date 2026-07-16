@@ -16,7 +16,7 @@ import { useLocale, useTranslation } from '../i18n';
 function DemoPlayer({ demoId }: { demoId: string }) {
   const locale = useLocale();
   return (
-    <DataFlowPlayer theme="auto" spec={getSpec(demosById[demoId], locale)} />
+    <DataFlowPlayer mode="auto" spec={getSpec(demosById[demoId], locale)} />
   );
 }
 
@@ -151,7 +151,7 @@ function PropDemo({ spec, note }: { spec: DataFlowSpec; note?: string }) {
           autoPlay={animated}
           loop={animated}
           height={height}
-          theme="auto"
+          mode="auto"
         />
       </InView>
       {note ? (
@@ -324,10 +324,7 @@ function PropsTable({ node, defName }: { node: SchemaNode; defName: string }) {
                 {renderInlineMarkdown(row.node.description ?? '')}
                 {enumValues ? (
                   isNodeType ? (
-                    <div
-                      className="rdfa-player api-node-enum"
-                      data-theme="auto"
-                    >
+                    <div className="rdfa-player api-node-enum" data-mode="auto">
                       {enumValues.map((v) => (
                         <div className="api-node-enum-item" key={v}>
                           <div className="api-node-enum-visual">

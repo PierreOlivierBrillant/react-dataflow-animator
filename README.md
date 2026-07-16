@@ -82,19 +82,20 @@ and SSR trivial.
 
 ## Main props of `<DataFlowPlayer>`
 
-| Prop         | Type                                       | Default         | Description                                               |
-| ------------ | ------------------------------------------ | --------------- | --------------------------------------------------------- |
-| `spec`       | `DataFlowSpec`                             | —               | The specification to animate.                             |
-| `height`     | `number \| string`                         | `420`           | Height of the stage.                                      |
-| `autoPlay`   | `boolean`                                  | `false`         | Starts playback automatically.                            |
-| `loop`       | `boolean`                                  | `false`         | Replays on loop at the end.                               |
-| `controls`   | `boolean`                                  | `true`          | Displays the controls bar.                                |
-| `exportable` | `boolean`                                  | `false`         | Button opening the JSON spec (copy / download).           |
-| `theme`      | `'light' \| 'dark' \| 'auto'`              | `'auto'`        | Follows `prefers-color-scheme` and parent `[data-theme]`. |
-| `density`    | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Visual scale.                                             |
-| `speed`      | `number`                                   | `1`             | Playback speed.                                           |
-| `highlight`  | `Highlighter`                              | Prism           | Override syntax highlighting.                             |
-| `debug`      | `boolean`                                  | `false`         | Timeline debugging overlay.                               |
+| Prop         | Type                                       | Default         | Description                                                                            |
+| ------------ | ------------------------------------------ | --------------- | -------------------------------------------------------------------------------------- |
+| `spec`       | `DataFlowSpec`                             | —               | The specification to animate.                                                          |
+| `height`     | `number \| string`                         | `420`           | Height of the stage.                                                                   |
+| `autoPlay`   | `boolean`                                  | `false`         | Starts playback automatically.                                                         |
+| `loop`       | `boolean`                                  | `false`         | Replays on loop at the end.                                                            |
+| `controls`   | `boolean`                                  | `true`          | Displays the controls bar.                                                             |
+| `exportable` | `boolean`                                  | `false`         | Button opening the JSON spec (copy / download).                                        |
+| `theme`      | `PlayerTheme`                              | `'default'`     | Palette: `default`, `dots`, `blueprint`, `pcb`, `chalk`, `terminal`, `paper`, `neon`.  |
+| `mode`       | `'light' \| 'dark' \| 'auto'`              | `'auto'`        | Variant of `theme`. `auto` follows `prefers-color-scheme` and a parent `[data-theme]`. |
+| `density`    | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Visual scale.                                                                          |
+| `speed`      | `number`                                   | `1`             | Playback speed.                                                                        |
+| `highlight`  | `Highlighter`                              | Prism           | Override syntax highlighting.                                                          |
+| `debug`      | `boolean`                                  | `false`         | Timeline debugging overlay.                                                            |
 
 ## Extensibility
 

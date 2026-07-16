@@ -13,7 +13,9 @@ const DEMOS = [
 
 for (const demo of DEMOS) {
   test(`contact sheet — ${demo}`, async ({ page }) => {
-    await page.goto(`/?demo=${demo}&theme=light`);
+    // Goldens are shot on the default palette in light mode: this suite guards
+    // layout regressions, not the palettes.
+    await page.goto(`/?demo=${demo}&mode=light&theme=default`);
 
     // The contact sheet is mounted...
     await page.waitForSelector('.filmstrip .frame');

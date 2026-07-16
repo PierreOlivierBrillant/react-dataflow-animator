@@ -1,6 +1,6 @@
 {
   "name": "react-dataflow-animator",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Composant React qui compile une spécification JSON en une animation déterministe et navigable de flux de données (client/serveur/SQL…).",
   "type": "module",
   "license": "MIT",

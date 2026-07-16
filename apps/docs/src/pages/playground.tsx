@@ -5,6 +5,7 @@ import {
   DataFlowPlayer,
   type DataFlowSpec,
   type DataFlowPlayerProps,
+  type PlayerTheme,
   dataFlowSchema,
 } from 'react-dataflow-animator';
 import { demos, demosById, getSpec, pickLocale } from '../site-content/demos';
@@ -99,6 +100,9 @@ function PlaygroundContent() {
   const monacoRef = useRef<Monaco | null>(null);
   const [density, setDensity] =
     useState<NonNullable<DataFlowPlayerProps['density']>>('comfortable');
+  // Palette only: the light/dark variant is the `mode` axis, and the preview
+  // leaves it on 'auto' so it follows the site's own theme toggle.
+  const [theme, setTheme] = useState<PlayerTheme>('default');
 
   // Resizing state
   const [leftWidth, setLeftWidth] = useState(44);
@@ -200,6 +204,17 @@ function PlaygroundContent() {
   const monoSize =
     density === 'compact' ? 11 : density === 'spacious' ? 14 : 13;
 
+  const themeOptions: { value: PlayerTheme; label: string }[] = [
+    { value: 'default', label: t.playground.themeDefault },
+    { value: 'dots', label: t.playground.themeDots },
+    { value: 'blueprint', label: t.playground.themeBlueprint },
+    { value: 'pcb', label: t.playground.themePcb },
+    { value: 'chalk', label: t.playground.themeChalk },
+    { value: 'terminal', label: t.playground.themeTerminal },
+    { value: 'paper', label: t.playground.themePaper },
+    { value: 'neon', label: t.playground.themeNeon },
+  ];
+
   // Structured, localized index of every example, embedded in the static HTML
   // so the Algolia crawler can emit one search record per example (deep-linked
   // to ?demo=<id>) instead of a single opaque "Playground" record. The crawler
@@ -296,6 +311,27 @@ function PlaygroundContent() {
                   {t.playground.densityComfortable}
                 </option>
                 <option value="spacious">{t.playground.densitySpacious}</option>
+              </select>
+              <ChevronDown
+                size={11}
+                className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30"
+              />
+            </div>
+
+            {/* Theme (palette). The light/dark variant follows the site toggle. */}
+            <div className="relative">
+              <select
+                value={theme}
+                aria-label={t.playground.theme}
+                title={t.playground.themeHint}
+                onChange={(e) => setTheme(e.target.value as PlayerTheme)}
+                className="appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs cursor-pointer outline-none bg-slate-900/[0.04] dark:bg-white/[.04] border border-slate-900/[0.08] dark:border-white/[.08] text-slate-600 dark:text-white/45 font-sans"
+              >
+                {themeOptions.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
               </select>
               <ChevronDown
                 size={11}
@@ -409,16 +445,20 @@ function PlaygroundContent() {
           className="flex flex-col flex-1 overflow-hidden bg-surface-alt relative"
           style={{ pointerEvents: isResizing ? 'none' : 'auto' }}
         >
-          <div className="flex-1 overflow-hidden relative bg-[radial-gradient(ellipse_at_center,rgba(124,58,237,0.07)_0%,transparent_70%)]">
+          {/* The player paints its own themed background (board green, chalk
+              slate, CRT black…), so it must NOT be forced transparent here —
+              otherwise every palette would look like the default one. */}
+          <div className="flex-1 overflow-hidden relative">
             {spec ? (
               <DataFlowPlayer
                 spec={spec}
-                theme="auto"
+                theme={theme}
+                mode="auto"
                 controls={true}
                 exportable={true}
                 density={density}
                 height="100%"
-                className="w-full h-full rounded-none border-x-0 border-t-0 bg-transparent border-none"
+                className="w-full h-full rounded-none border-x-0 border-t-0 border-none"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">

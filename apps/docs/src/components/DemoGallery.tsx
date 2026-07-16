@@ -64,7 +64,7 @@ function DemoThumbnail({ spec }: { spec: DataFlowSpec }) {
         <DataFlowPlayer
           key={visible ? 'play' : 'idle'}
           spec={spec}
-          theme="auto"
+          mode="auto"
           controls={false}
           autoPlay={visible}
           loop
@@ -194,7 +194,7 @@ function DemoModal({ demo, onClose }: { demo: Demo; onClose: () => void }) {
           <DataFlowPlayer
             key={demo.id}
             spec={getSpec(demo, locale)}
-            theme="auto"
+            mode="auto"
             controls
             autoPlay
             loop

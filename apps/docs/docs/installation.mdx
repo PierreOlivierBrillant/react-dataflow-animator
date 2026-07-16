@@ -50,7 +50,7 @@ Import the CSS once in `src/css/custom.css` then use the component in any MDX fi
 ```mdx title="docs/my-article.mdx"
 import { DataFlowPlayer } from 'react-dataflow-animator';
 
-<DataFlowPlayer spec={spec} theme="auto" />
+<DataFlowPlayer spec={spec} mode="auto" />
 ```
 
 The `auto` theme (default) follows `prefers-color-scheme` AND a `[data-theme]` ancestor (Docusaurus convention), so the component automatically syncs with the host's theme toggle.

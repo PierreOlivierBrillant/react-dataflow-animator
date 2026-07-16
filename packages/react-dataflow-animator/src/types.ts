@@ -1020,6 +1020,33 @@ export interface DataFlowSpec {
 /** Syntax highlighting function: source code -> HTML. */
 export type Highlighter = (code: string, language: string) => string;
 
+/**
+ * Visual palette of the player. Every theme ships **both** a light and a dark
+ * variant; {@link DataFlowPlayerProps.mode} picks which one is shown, so the
+ * palette and the light/dark question stay two independent choices.
+ *
+ * - `default` — neutral slate & blue.
+ * - `dots` — neutral canvas with a dotted grid (design-tool look).
+ * - `blueprint` — cyan on Prussian blue over a drafting grid.
+ * - `pcb` — solder mask and gold traces; pairs with `direction: 'circuit'`.
+ * - `chalk` — blackboard and chalk (light variant: whiteboard and markers).
+ * - `terminal` — phosphor CRT with scanlines (light variant: amber on cream).
+ * - `paper` — ink on graph paper (dark variant: the black notebook).
+ * - `neon` — saturated magenta/cyan with a halo.
+ */
+export type PlayerTheme =
+  | 'default'
+  | 'dots'
+  | 'blueprint'
+  | 'pcb'
+  | 'chalk'
+  | 'terminal'
+  | 'paper'
+  | 'neon';
+
+/** Which variant of a {@link PlayerTheme} to display. */
+export type PlayerMode = 'light' | 'dark' | 'auto';
+
 export interface DataFlowPlayerProps {
   /** The specification to animate. */
   spec: DataFlowSpec;
@@ -1042,8 +1069,14 @@ export interface DataFlowPlayerProps {
    * Default: false.
    */
   exportable?: boolean;
-  /** Visual theme. Default: 'auto'. */
-  theme?: 'light' | 'dark' | 'auto';
+  /** Visual palette; each one has a light and a dark variant. Default: 'default'. */
+  theme?: PlayerTheme;
+  /**
+   * Which variant of `theme` to display. `'auto'` follows the host site when an
+   * ancestor carries `data-theme="light|dark"` (the Docusaurus convention), and
+   * the OS preference otherwise. Default: 'auto'.
+   */
+  mode?: PlayerMode;
   /**
    * Visual density: adjusts the size of elements relative to the available
    * space. 'compact' = smaller/airier, 'spacious' = larger.

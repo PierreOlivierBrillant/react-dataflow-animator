@@ -4,36 +4,46 @@
  * dans la page hôte (Docusaurus & co.). Le thème passe par des variables CSS.
  */
 
+/* ---------- Theme layer ----------
+   Two independent axes, mirroring the props:
+     `data-theme` = the palette   (default, pcb, chalk, dots…)
+     `data-mode`  = light | dark | auto
+
+   The mode is resolved ONCE, below, into `color-scheme`; every palette then
+   declares both of its variants inline with light-dark(). That is what keeps a
+   palette a single source of truth: adding one is adding ONE block, instead of
+   editing four mode-specific copies that have to be kept in sync by hand. */
+
 .rdfa-player {
-  --rdfa-bg: #f8fafc;
-  --rdfa-surface: #ffffff;
-  --rdfa-border: #e2e8f0;
-  --rdfa-text: #0f172a;
-  --rdfa-muted: #64748b;
-  --rdfa-accent: #2563eb;
-  --rdfa-node-bg: #ffffff;
-  --rdfa-node-stroke: #334155;
-  --rdfa-arrow: #475569;
-  --rdfa-packet-http: #2563eb;
-  --rdfa-packet-sql: #7c3aed;
-  --rdfa-packet-sql-response: #059669;
+  /* Default palette — also the fallback for `data-theme="default"` and for any
+     element that borrows the class purely to inherit the tokens (the docs site
+     does this to style a non-player container). */
+  --rdfa-bg: light-dark(#f8fafc, #0b1120);
+  --rdfa-surface: light-dark(#ffffff, #111827);
+  --rdfa-border: light-dark(#e2e8f0, #1f2937);
+  --rdfa-text: light-dark(#0f172a, #e5e7eb);
+  --rdfa-muted: light-dark(#64748b, #94a3b8);
+  --rdfa-accent: light-dark(#2563eb, #60a5fa);
+  --rdfa-node-bg: light-dark(#ffffff, #1e293b);
+  --rdfa-node-stroke: light-dark(#334155, #cbd5e1);
+  --rdfa-arrow: light-dark(#475569, #94a3b8);
+  --rdfa-window-bg: light-dark(#e2e8f0, #334155);
   --rdfa-terminal-bg: #1e293b;
   --rdfa-terminal-text: #e2e8f0;
-  --rdfa-window-bg: #e2e8f0;
   --rdfa-radius: 10px;
   --rdfa-font:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --rdfa-mono: ui-monospace, 'SFMono-Regular', 'Menlo', 'Consolas', monospace;
 
-  /* Prism colors (Light) */
-  --rdfa-code-comment: #64748b;
-  --rdfa-code-punct: #334155;
-  --rdfa-code-prop: #c026d3;
-  --rdfa-code-str: #16a34a;
-  --rdfa-code-op: #d97706;
-  --rdfa-code-kw: #2563eb;
-  --rdfa-code-func: #7c3aed;
-  --rdfa-code-var: #ea580c;
+  /* Prism colors */
+  --rdfa-code-comment: light-dark(#64748b, #94a3b8);
+  --rdfa-code-punct: light-dark(#334155, #cbd5e1);
+  --rdfa-code-prop: light-dark(#c026d3, #f472b6);
+  --rdfa-code-str: light-dark(#16a34a, #86efac);
+  --rdfa-code-op: light-dark(#d97706, #fcd34d);
+  --rdfa-code-kw: light-dark(#2563eb, #93c5fd);
+  --rdfa-code-func: light-dark(#7c3aed, #c4b5fd);
+  --rdfa-code-var: light-dark(#ea580c, #fdba74);
 
   position: relative;
   display: flex;
@@ -54,81 +64,212 @@
   box-sizing: border-box;
 }
 
-/* Thème sombre : explicite (theme="dark"), OU theme="auto" sous un ancêtre
-   `[data-theme='dark']` — c'est la convention de Docusaurus, donc le lecteur
-   suit automatiquement le toggle de thème du site hôte. */
-.rdfa-player[data-theme='dark'],
-[data-theme='dark'] .rdfa-player[data-theme='auto'] {
-  --rdfa-bg: #0b1120;
-  --rdfa-surface: #111827;
-  --rdfa-border: #1f2937;
-  --rdfa-text: #e5e7eb;
-  --rdfa-muted: #94a3b8;
-  --rdfa-accent: #60a5fa;
-  --rdfa-node-bg: #1e293b;
-  --rdfa-node-stroke: #cbd5e1;
-  --rdfa-arrow: #94a3b8;
-  --rdfa-window-bg: #334155;
+/* ---------- Mode resolution ----------
+   The single place that knows about light/dark. `color-scheme` inherits, so
+   every light-dark() below — tokens, gradients, patterns — resolves from it. */
 
-  /* Prism colors (Dark) */
-  --rdfa-code-comment: #94a3b8;
-  --rdfa-code-punct: #cbd5e1;
-  --rdfa-code-prop: #f472b6;
-  --rdfa-code-str: #86efac;
-  --rdfa-code-op: #fcd34d;
-  --rdfa-code-kw: #93c5fd;
-  --rdfa-code-func: #c4b5fd;
-  --rdfa-code-var: #fdba74;
+.rdfa-player[data-mode='light'] {
+  color-scheme: light;
 }
 
-/* theme="auto" sans hôte thématisé : on suit la préférence système. */
-@media (prefers-color-scheme: dark) {
-  .rdfa-player[data-theme='auto'] {
-    --rdfa-bg: #0b1120;
-    --rdfa-surface: #111827;
-    --rdfa-border: #1f2937;
-    --rdfa-text: #e5e7eb;
-    --rdfa-muted: #94a3b8;
-    --rdfa-accent: #60a5fa;
-    --rdfa-node-bg: #1e293b;
-    --rdfa-node-stroke: #cbd5e1;
-    --rdfa-arrow: #94a3b8;
-    --rdfa-window-bg: #334155;
-
-    /* Prism colors (Dark) */
-    --rdfa-code-comment: #94a3b8;
-    --rdfa-code-punct: #cbd5e1;
-    --rdfa-code-prop: #f472b6;
-    --rdfa-code-str: #86efac;
-    --rdfa-code-op: #fcd34d;
-    --rdfa-code-kw: #93c5fd;
-    --rdfa-code-func: #c4b5fd;
-    --rdfa-code-var: #fdba74;
-  }
+.rdfa-player[data-mode='dark'] {
+  color-scheme: dark;
 }
 
-/* Hôte explicitement clair (Docusaurus) : on force le clair même si l'OS est sombre. */
-[data-theme='light'] .rdfa-player[data-theme='auto'] {
-  --rdfa-bg: #f8fafc;
-  --rdfa-surface: #ffffff;
-  --rdfa-border: #e2e8f0;
-  --rdfa-text: #0f172a;
-  --rdfa-muted: #64748b;
-  --rdfa-accent: #2563eb;
-  --rdfa-node-bg: #ffffff;
-  --rdfa-node-stroke: #334155;
-  --rdfa-arrow: #475569;
-  --rdfa-window-bg: #e2e8f0;
+/* `auto`: the `light dark` pair follows the OS preference on its own, so no
+   `prefers-color-scheme` media query is needed. */
+.rdfa-player[data-mode='auto'] {
+  color-scheme: light dark;
+}
 
-  /* Prism colors (Light) */
-  --rdfa-code-comment: #64748b;
-  --rdfa-code-punct: #334155;
-  --rdfa-code-prop: #c026d3;
-  --rdfa-code-str: #16a34a;
-  --rdfa-code-op: #d97706;
-  --rdfa-code-kw: #2563eb;
-  --rdfa-code-func: #7c3aed;
-  --rdfa-code-var: #ea580c;
+/* A themed host overrides the OS for `auto`: `[data-theme]` on an ANCESTOR is
+   the Docusaurus convention, so the player follows the host site's own toggle
+   rather than the machine. Anything else than these two values (i.e. one of our
+   own palette names on the player itself) leaves `auto` on the OS. */
+[data-theme='light'] .rdfa-player[data-mode='auto'] {
+  color-scheme: light;
+}
+
+[data-theme='dark'] .rdfa-player[data-mode='auto'] {
+  color-scheme: dark;
+}
+
+/* ---------- Palettes ----------
+   `default` is the base block above. Each palette below overrides only what it
+   actually changes; anything it leaves out falls back to the default.
+
+   A canvas texture must stay BELOW the diagram's own strokes in contrast: it is
+   paper, not content. Hence the low alphas — a grid that reads as strongly as a
+   wire competes with it, and the drawing loses. */
+
+/* Dots — neutral canvas, dotted grid. The design-tool look (Figma, Excalidraw). */
+.rdfa-player[data-theme='dots'] {
+  --rdfa-bg: light-dark(#fbfbfd, #0a0a0f);
+  --rdfa-surface: light-dark(#ffffff, #16161f);
+  --rdfa-border: light-dark(#e4e4ed, #26262f);
+  --rdfa-text: light-dark(#18181b, #e4e4e7);
+  --rdfa-muted: light-dark(#71717a, #a1a1aa);
+  --rdfa-accent: light-dark(#7c3aed, #a78bfa);
+  --rdfa-node-bg: light-dark(#ffffff, #1c1c26);
+  --rdfa-node-stroke: light-dark(#3f3f46, #d4d4d8);
+  --rdfa-arrow: light-dark(#52525b, #a1a1aa);
+  --rdfa-window-bg: light-dark(#e4e4ed, #2e2e3a);
+  --rdfa-grid: light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.11));
+  --rdfa-pattern: radial-gradient(
+    circle at 1px 1px,
+    var(--rdfa-grid) 1px,
+    transparent 0
+  );
+  --rdfa-pattern-size: 20px 20px;
+}
+
+/* Blueprint — cyan on Prussian blue, drafting grid. The light variant is the
+   reversed "whiteprint" rather than a washed-out blueprint. */
+.rdfa-player[data-theme='blueprint'] {
+  --rdfa-bg: light-dark(#eaf1fa, #0a2543);
+  --rdfa-surface: light-dark(#f7fafd, #0e3157);
+  --rdfa-border: light-dark(#b7cbe4, #1d4d80);
+  --rdfa-text: light-dark(#0f3562, #d6e8fb);
+  --rdfa-muted: light-dark(#5a7fae, #7ba7d4);
+  --rdfa-accent: light-dark(#0369a1, #38bdf8);
+  --rdfa-node-bg: light-dark(#f7fafd, #103964);
+  --rdfa-node-stroke: light-dark(#1e5a9c, #8dc3ef);
+  --rdfa-arrow: light-dark(#2b6cb0, #6aa9dc);
+  --rdfa-window-bg: light-dark(#cddef0, #16436f);
+  --rdfa-radius: 6px;
+  --rdfa-grid: light-dark(rgba(30, 90, 156, 0.09), rgba(125, 190, 255, 0.08));
+  --rdfa-pattern:
+    linear-gradient(to right, var(--rdfa-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rdfa-grid) 1px, transparent 1px);
+  --rdfa-pattern-size: 24px 24px, 24px 24px;
+}
+
+/* PCB — solder mask + gold traces. Pairs with `direction: 'circuit'`, where the
+   per-net wire colouring takes over --rdfa-arrow anyway. */
+.rdfa-player[data-theme='pcb'] {
+  --rdfa-bg: light-dark(#dfeae2, #052e1c);
+  --rdfa-surface: light-dark(#eff5f1, #0a3d26);
+  --rdfa-border: light-dark(#a9c4b3, #14603c);
+  --rdfa-text: light-dark(#123324, #d8f0e2);
+  --rdfa-muted: light-dark(#4e7360, #6fae8c);
+  --rdfa-accent: light-dark(#b45309, #ffd24a);
+  --rdfa-node-bg: light-dark(#eff5f1, #0b4a2e);
+  --rdfa-node-stroke: light-dark(#1c5c3c, #86e0ad);
+  --rdfa-arrow: light-dark(#a16207, #d4af37);
+  --rdfa-window-bg: light-dark(#c8dcd0, #0f5133);
+  --rdfa-terminal-bg: #04150d;
+  --rdfa-terminal-text: #d8f0e2;
+  --rdfa-radius: 4px;
+  --rdfa-grid: light-dark(rgba(28, 92, 60, 0.06), rgba(134, 224, 173, 0.05));
+  --rdfa-pattern:
+    linear-gradient(to right, var(--rdfa-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rdfa-grid) 1px, transparent 1px);
+  --rdfa-pattern-size: 16px 16px, 16px 16px;
+}
+
+/* Chalk — blackboard and chalk; the light variant is its everyday counterpart,
+   a whiteboard with markers. Handwriting is a system-font stack on purpose: the
+   stylesheet must stay self-contained, so it never fetches a webfont. */
+.rdfa-player[data-theme='chalk'] {
+  --rdfa-bg: light-dark(#f7f7f4, #1c2b24);
+  --rdfa-surface: light-dark(#ffffff, #24352c);
+  --rdfa-border: light-dark(#d8d8d0, #3d5145);
+  --rdfa-text: light-dark(#2b2b2b, #eef0e6);
+  --rdfa-muted: light-dark(#7a7a72, #9fb2a5);
+  --rdfa-accent: light-dark(#d64545, #ffe08a);
+  --rdfa-node-bg: light-dark(#ffffff, #24352c);
+  --rdfa-node-stroke: light-dark(#3a3a38, #e6ead9);
+  --rdfa-arrow: light-dark(#4a4a46, #cfd8c4);
+  --rdfa-window-bg: light-dark(#e6e6e0, #33473b);
+  --rdfa-radius: 12px;
+  --rdfa-font:
+    'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', 'Bradley Hand', cursive;
+  /* Chalk dust: an off-centre haze, not a repeating tile. Hoisted into its own
+     variable like every other pattern colour — a literal light-dark() inside a
+     gradient is a value the CSS minifier cannot parse, and it drops it. */
+  --rdfa-dust: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
+  --rdfa-pattern: radial-gradient(
+    ellipse 70% 55% at 30% 25%,
+    var(--rdfa-dust),
+    transparent 70%
+  );
+  --rdfa-pattern-size: 100% 100%;
+}
+
+/* Terminal — phosphor CRT with scanlines; the light variant is the amber-on-
+   cream paper terminal. Monospace throughout. */
+.rdfa-player[data-theme='terminal'] {
+  --rdfa-bg: light-dark(#f2efe4, #030705);
+  --rdfa-surface: light-dark(#faf8f1, #08160d);
+  --rdfa-border: light-dark(#d6cfba, #1a3a24);
+  --rdfa-text: light-dark(#3b2a12, #7dffa0);
+  --rdfa-muted: light-dark(#8a7550, #3f9c5f);
+  --rdfa-accent: light-dark(#b45309, #33ff66);
+  --rdfa-node-bg: light-dark(#faf8f1, #08160d);
+  --rdfa-node-stroke: light-dark(#5c4420, #4ee87f);
+  --rdfa-arrow: light-dark(#7a5c2e, #35b85c);
+  --rdfa-window-bg: light-dark(#e3ddc9, #0e2415);
+  --rdfa-terminal-bg: light-dark(#2b1f0c, #030705);
+  --rdfa-terminal-text: light-dark(#f2efe4, #7dffa0);
+  --rdfa-radius: 2px;
+  --rdfa-font: var(--rdfa-mono);
+  --rdfa-scanline: light-dark(rgba(90, 60, 10, 0.04), rgba(0, 0, 0, 0.35));
+  --rdfa-pattern: repeating-linear-gradient(
+    to bottom,
+    var(--rdfa-scanline) 0 1px,
+    transparent 1px 3px
+  );
+  --rdfa-pattern-size: 100% 3px;
+}
+
+/* Paper — ink on graph paper; the dark variant is the black notebook. */
+.rdfa-player[data-theme='paper'] {
+  --rdfa-bg: light-dark(#fbfaf3, #14130f);
+  --rdfa-surface: light-dark(#fffef9, #1c1b16);
+  --rdfa-border: light-dark(#ddd8c4, #35332a);
+  --rdfa-text: light-dark(#2b3a52, #eae6d8);
+  --rdfa-muted: light-dark(#7a8496, #9a9483);
+  --rdfa-accent: light-dark(#1e6fd9, #6ea8fe);
+  --rdfa-node-bg: light-dark(#fffef9, #1c1b16);
+  --rdfa-node-stroke: light-dark(#3d5573, #cfc9b6);
+  --rdfa-arrow: light-dark(#566b8c, #a8a294);
+  --rdfa-window-bg: light-dark(#ece7d5, #2a2820);
+  --rdfa-grid: light-dark(rgba(60, 90, 140, 0.07), rgba(255, 255, 255, 0.045));
+  --rdfa-grid-strong: light-dark(
+    rgba(60, 90, 140, 0.12),
+    rgba(255, 255, 255, 0.075)
+  );
+  /* Fine ruling every 8px, a heavier one every 40px — squared-paper cadence. */
+  --rdfa-pattern:
+    linear-gradient(to right, var(--rdfa-grid-strong) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rdfa-grid-strong) 1px, transparent 1px),
+    linear-gradient(to right, var(--rdfa-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rdfa-grid) 1px, transparent 1px);
+  --rdfa-pattern-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+}
+
+/* Neon — saturated magenta/cyan with a halo. */
+.rdfa-player[data-theme='neon'] {
+  --rdfa-bg: light-dark(#f6f2ff, #0a0514);
+  --rdfa-surface: light-dark(#fffdff, #140a24);
+  --rdfa-border: light-dark(#e0d4f7, #35205c);
+  --rdfa-text: light-dark(#2a0a4a, #f0e6ff);
+  --rdfa-muted: light-dark(#7c5aa8, #a78bcf);
+  --rdfa-accent: light-dark(#d100c8, #ff2fd0);
+  --rdfa-node-bg: light-dark(#fffdff, #180d2c);
+  --rdfa-node-stroke: light-dark(#6b21a8, #22d3ee);
+  --rdfa-arrow: light-dark(#a21caf, #b14dff);
+  --rdfa-window-bg: light-dark(#e9dcfb, #241040);
+  --rdfa-terminal-bg: #140a24;
+  --rdfa-terminal-text: #f0e6ff;
+  --rdfa-radius: 12px;
+  --rdfa-glow: light-dark(rgba(209, 0, 200, 0.07), rgba(255, 47, 208, 0.13));
+  --rdfa-pattern: radial-gradient(
+    ellipse 80% 60% at 50% 45%,
+    var(--rdfa-glow),
+    transparent 70%
+  );
+  --rdfa-pattern-size: 100% 100%;
 }
 
 .rdfa-player:focus-visible {
@@ -148,6 +289,10 @@
   width: 100%;
   min-height: 0;
   overflow: hidden;
+  /* Palette-supplied canvas texture (dotted grid, scanlines…). It sits on the
+     stage rather than the player so it never runs under the controls bar. */
+  background-image: var(--rdfa-pattern, none);
+  background-size: var(--rdfa-pattern-size, auto);
   /* Le texte des panneaux/commentaires suit l'échelle globale (comme les icônes) :
      petit dans un petit canevas, grand en plein écran. Pour le CODE, le CodeBlock
      réduit ensuite la police si besoin pour tenir sans retour à la ligne. */

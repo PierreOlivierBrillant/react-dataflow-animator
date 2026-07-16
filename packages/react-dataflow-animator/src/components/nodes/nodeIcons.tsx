@@ -12,10 +12,22 @@ import type { NodeType } from '../../types';
  * drawn from a `closed` fraction so the `toggle` action can animate the lever.
  */
 
+/**
+ * Bodies are OPAQUE, like {@link ShapeNode}'s (`.rdfa-shape-bg` fills with the
+ * same token). Left hollow, a pictogram lets whatever is behind it — notably a
+ * palette's canvas texture (grid, dots, scanlines) — run straight through the
+ * glyph and compete with its own strokes.
+ *
+ * Inherited by children, so a path that is a pure stroke with no interior (a
+ * coil, a lead, an arc) must opt out with its own `fill="none"`: an open path
+ * fills as if closed, which would paint a blob over its neighbours.
+ */
+const BODY_FILL = 'var(--rdfa-fill, var(--rdfa-node-bg, #fff))';
+
 const svg = (children: ReactNode): ReactNode => (
   <svg
     viewBox="0 0 24 24"
-    fill="none"
+    fill={BODY_FILL}
     stroke="currentColor"
     strokeWidth={1.6}
     strokeLinecap="round"
@@ -86,8 +98,10 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
     <>
       <circle cx="9" cy="8" r="3" />
       <path d="M3 19c0-3 2.6-5 6-5s6 2 6 5" />
-      <path d="M16 6.7a3 3 0 0 1 0 5.6" />
-      <path d="M17 14.2c2.3.5 4 2.3 4 4.8" />
+      {/* The second person is suggested by two bare arcs, with no body of their
+          own to fill — they would read as blobs beside the first. */}
+      <path d="M16 6.7a3 3 0 0 1 0 5.6" fill="none" />
+      <path d="M17 14.2c2.3.5 4 2.3 4 4.8" fill="none" />
     </>
   ),
   cloud: svg(<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />),
@@ -131,7 +145,8 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
       <path d="M0 12h5M19 12h5" />
       <rect x="5" y="8" width="14" height="8" />
       <path d="M12 0v4" />
-      <path d="M9 7l3 3 3-3" />
+      {/* Wiper arrowhead: outlined, and it overhangs the body. */}
+      <path d="M9 7l3 3 3-3" fill="none" />
     </>
   ),
   capacitor: svg(
@@ -144,13 +159,15 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
     <>
       <path d="M0 12h10M15 12h9" />
       <path d="M10 6v12" />
-      <path d="M18 6a9 9 0 0 0 0 12" />
+      {/* Curved plate: a stroke, not a body. */}
+      <path d="M18 6a9 9 0 0 0 0 12" fill="none" />
       <path d="M5 5h3M6.5 3.5v3" />
     </>
   ),
   inductor: svg(
     <>
-      <path d="M0 12h3q2-6 4 0t4 0t4 0t4 0h3" />
+      {/* A coil is a bare stroke: filling it would web the humps shut. */}
+      <path d="M0 12h3q2-6 4 0t4 0t4 0t4 0h3" fill="none" />
     </>
   ),
   fuse: svg(
@@ -284,8 +301,9 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
   transformer: svg(
     <>
       <path d="M0 5h5M0 19h5M19 5h5M19 19h5" />
-      <path d="M5 5q-4 2.3 0 4.6t0 4.6t0 4.6" />
-      <path d="M19 5q4 2.3 0 4.6t0 4.6t0 4.6" />
+      {/* Bare-stroke coils, as in `inductor`. */}
+      <path d="M5 5q-4 2.3 0 4.6t0 4.6t0 4.6" fill="none" />
+      <path d="M19 5q4 2.3 0 4.6t0 4.6t0 4.6" fill="none" />
       <path d="M11 5v14M13 5v14" />
     </>
   ),
@@ -334,14 +352,17 @@ const icons: Partial<Record<NodeType, ReactNode>> = {
     <>
       <path d="M0 8h6M0 16h6M21 12h3" />
       <path d="M6 4q4 8 0 16q10-1 15-8q-5-7-15-8z" />
-      <path d="M3 4q4 8 0 16" />
+      {/* The XOR's second arc sits OUTSIDE the body, over the input leads:
+          filled, it would blank them out. */}
+      <path d="M3 4q4 8 0 16" fill="none" />
     </>
   ),
   xnor_gate: svg(
     <>
       <path d="M0 8h6M0 16h6M23 12h1" />
       <path d="M6 4q4 8 0 15q10-1 14-7q-4-6-14-8z" />
-      <path d="M3 4q4 8 0 15" />
+      {/* Second arc over the leads — see `xor_gate`. */}
+      <path d="M3 4q4 8 0 15" fill="none" />
       <circle cx="21.5" cy="12" r="1.8" />
     </>
   ),

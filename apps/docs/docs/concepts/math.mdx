@@ -22,7 +22,7 @@ nodes: [
 
 <DataFlowPlayer
   spec={subscriptExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={260}
 />
@@ -74,12 +74,7 @@ Following LaTeX, letters render _italic_ — they are variables — while digits
 operators and uppercase Greek stay upright. That is what keeps `10 kΩ` reading as
 a unit instead of a product of variables:
 
-<DataFlowPlayer
-  spec={unitsExample}
-  theme="auto"
-  controls={false}
-  height={260}
-/>
+<DataFlowPlayer spec={unitsExample} mode="auto" controls={false} height={260} />
 
 ## Not supported
 
@@ -91,7 +86,7 @@ Superscripts, Greek and relations work in comments too:
 
 <DataFlowPlayer
   spec={mathExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   autoPlay
   loop

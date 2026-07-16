@@ -83,7 +83,7 @@ export function DemoShowcase() {
 
             <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-surface border border-slate-900/[0.08] dark:border-white/[0.07]">
               <DataFlowPlayer
-                theme="auto"
+                mode="auto"
                 spec={getSpec(active, locale)}
                 autoPlay
                 loop

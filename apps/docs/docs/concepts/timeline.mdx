@@ -24,7 +24,7 @@ the appearance of the next one.
 In the example below, the **five** root actions form five steps:
 use "Previous" / "Next" to step forward.
 
-<DataFlowPlayer spec={stepsExample} theme="auto" height={340} />
+<DataFlowPlayer spec={stepsExample} mode="auto" height={340} />
 
 ```ts
 timeline: [
@@ -82,7 +82,7 @@ Wraps multiple actions executed at the **same time**:
 Here, a gateway broadcasts three requests to its services: the three packets
 depart **simultaneously**.
 
-<DataFlowPlayer spec={fanOutExample(false)} theme="auto" height={340} />
+<DataFlowPlayer spec={fanOutExample(false)} mode="auto" height={340} />
 
 ### Custom durations
 
@@ -156,7 +156,7 @@ actions within a `parallel`** ("cascade" effect):
 The same `fan-out` as above, but with an increasing `delay_ms`: the packets
 stagger instead of departing as a block.
 
-<DataFlowPlayer spec={fanOutExample(true)} theme="auto" height={340} />
+<DataFlowPlayer spec={fanOutExample(true)} mode="auto" height={340} />
 
 Applied to an entire `parallel`, it delays the whole group.
 

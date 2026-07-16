@@ -29,11 +29,13 @@ lerp) against the same curve passed through `easeInOutCubic`.
 
 ```bash
 npm run harness -w react-dataflow-animator
-# → http://localhost:5199/?demo=spa&theme=light
+# → http://localhost:5199/?demo=spa&mode=light
 ```
 
-URL parameters: `?demo=<id>` (see the navigation bar for the list) and
-`?theme=light|dark`.
+URL parameters: `?demo=<id>` (see the navigation bar for the list),
+`?mode=light|dark` and `?theme=<palette>` (`default` | `dots` | `blueprint` |
+`pcb` | `chalk` | `terminal` | `paper` | `neon` — the same two axes as the
+player's props, so a palette can be eyeballed on any demo).
 
 The harness imports `Stage`, `clipOpacity`, `easeInOutCubic` **from `src`**
 (they are not public): a single source of truth, no duplication to

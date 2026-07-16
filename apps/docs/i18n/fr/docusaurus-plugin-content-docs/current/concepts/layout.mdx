@@ -46,7 +46,7 @@ place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire,
   <TabItem value="left-to-right">
     <DataFlowPlayer
       spec={orientationExample('left-to-right')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
       density="spacious"
@@ -55,7 +55,7 @@ place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire,
   <TabItem value="right-to-left">
     <DataFlowPlayer
       spec={orientationExample('right-to-left')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
       density="spacious"
@@ -64,7 +64,7 @@ place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire,
   <TabItem value="top-to-bottom">
     <DataFlowPlayer
       spec={orientationExample('top-to-bottom')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
       density="spacious"
@@ -73,7 +73,7 @@ place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire,
   <TabItem value="bottom-to-top">
     <DataFlowPlayer
       spec={orientationExample('bottom-to-top')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -81,7 +81,7 @@ place sur un cercle, [`tree`](#mode-arbre) dispose un arbre binaire,
   <TabItem value="circular">
     <DataFlowPlayer
       spec={circularExample}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -165,7 +165,7 @@ même côté et que vous voulez distinguer les liens.
   <TabItem value="merged">
     <DataFlowPlayer
       spec={mergeEdgesExample(true)}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -173,7 +173,7 @@ même côté et que vous voulez distinguer les liens.
   <TabItem value="fanned">
     <DataFlowPlayer
       spec={mergeEdgesExample(false)}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -229,7 +229,7 @@ rétablit le défaut (une infinité de points, c.-à-d. le chemin le plus direct
   <TabItem value="direct">
     <DataFlowPlayer
       spec={portsExample('direct')}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -237,7 +237,7 @@ rétablit le défaut (une infinité de points, c.-à-d. le chemin le plus direct
   <TabItem value="four">
     <DataFlowPlayer
       spec={portsExample(4)}
-      theme="auto"
+      mode="auto"
       controls={false}
       height={500}
     />
@@ -292,7 +292,7 @@ ignorés — c'est le seul nœud `main` qui structure la disposition.
 ```
 
 <DataFlowPlayer
-  theme="auto"
+  mode="auto"
   controls={false}
   height={500}
   spec={circularHubExample}
@@ -329,7 +329,7 @@ unique de vérité pour les positions comme pour les arêtes.
 }
 ```
 
-<DataFlowPlayer theme="auto" controls={false} height={460} spec={treeExample} />
+<DataFlowPlayer mode="auto" controls={false} height={460} spec={treeExample} />
 
 Comme la structure tient en un seul endroit, elle peut être **restructurée à
 l'exécution** : l'action [`rotate_subtree`](../reference/actions.mdx#rotate_subtree)
@@ -411,12 +411,7 @@ allumer un chemin ou un arbre couvrant.
 }
 ```
 
-<DataFlowPlayer
-  theme="auto"
-  controls={false}
-  height={460}
-  spec={graphExample}
-/>
+<DataFlowPlayer mode="auto" controls={false} height={460} spec={graphExample} />
 
 ### Épingler un nœud
 
@@ -470,7 +465,7 @@ flux sur trois points, et le moteur s'adapte sur les trois :
   main ; on utilise des points de `junction` pour les coins.
 
 <DataFlowPlayer
-  theme="auto"
+  mode="auto"
   autoPlay
   loop
   controls={false}

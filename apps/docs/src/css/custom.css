@@ -344,7 +344,7 @@ footer__link-item > svg {
 }
 
 /* Aperçus des types de nœud, INLINE dans la cellule `type` du tableau Node.
-   Le conteneur porte `.rdfa-player` (+ data-theme="auto") uniquement pour hériter
+   Le conteneur porte `.rdfa-player` (+ data-mode="auto") uniquement pour hériter
    des variables --rdfa-* du package — on neutralise donc sa « boîte » (bordure,
    fond, largeur, flex colonne) pour ne garder que le rôle de fournisseur de
    thème, qui suit le clair/sombre de Docusaurus. */

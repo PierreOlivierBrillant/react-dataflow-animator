@@ -26,7 +26,7 @@ Le champ `type` choisit l'apparence. Dix types affichent un **pictogramme** :
 
 <DataFlowPlayer
   spec={nodeTypesExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={460}
   density="compact"
@@ -66,7 +66,7 @@ pour [`content`](#content--contenu-initial) (`javascript`, `json`, `sql`, `http`
 
 <DataFlowPlayer
   spec={textNodesExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={320}
 />
@@ -109,7 +109,7 @@ Huit types dessinent une **forme** plutôt qu'un pictogramme : `square`, `diamon
 
 <DataFlowPlayer
   spec={shapesExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={460}
   density="compact"
@@ -197,7 +197,7 @@ Chaque champ accepte une **couleur prédéfinie** (n'importe quel nom CSS : `tom
 
 <DataFlowPlayer
   spec={colorsExample}
-  theme="auto"
+  mode="auto"
   controls={false}
   height={320}
 />
@@ -261,12 +261,7 @@ acceptées, dans cet ordre de résolution :
 2. une icône **enregistrée** par vous via `registerSubIcon` ;
 3. à défaut, un **texte libre** affiché en pastille (tronqué à 4 caractères).
 
-<DataFlowPlayer
-  spec={iconsExample}
-  theme="auto"
-  controls={false}
-  height={320}
-/>
+<DataFlowPlayer spec={iconsExample} mode="auto" controls={false} height={320} />
 
 ```ts
 { id: 'spa',  type: 'laptop',   text: 'react',    icon: 'react' },   // techno connue
@@ -317,7 +312,7 @@ pour le **masquer au départ** et le révéler plus tard avec l'action
 [`set_visible`](../reference/actions.mdx#set_visible) — utile pour montrer
 l'ajout d'un composant (cache, réplica…) au fil de la narration.
 
-<DataFlowPlayer spec={revealExample} theme="auto" height={320} />
+<DataFlowPlayer spec={revealExample} mode="auto" height={320} />
 
 ```ts
 nodes: [
@@ -340,7 +335,7 @@ L'orientation peut être **animée** à l'exécution avec l'action
 [`rotate`](../reference/actions.mdx#rotate), qui amène le nœud vers un angle cible
 absolu. Les rotations successives s'enchaînent depuis l'angle courant.
 
-<DataFlowPlayer spec={rotationExample} theme="auto" height={320} />
+<DataFlowPlayer spec={rotationExample} mode="auto" height={320} />
 
 ```ts
 nodes: [

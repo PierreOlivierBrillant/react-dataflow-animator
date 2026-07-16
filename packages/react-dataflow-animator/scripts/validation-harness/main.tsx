@@ -31,7 +31,7 @@ import {
 } from '../../src/components/clipOpacity';
 import { Stage } from '../../src/components/Stage';
 import { highlightCode } from '../../src/highlight/highlight';
-import type { DataFlowSpec } from '../../src/types';
+import type { DataFlowSpec, PlayerTheme } from '../../src/types';
 import {
   demosById,
   getSpec,
@@ -41,7 +41,22 @@ import './harness.css';
 
 const params = new URLSearchParams(window.location.search);
 const demoId = params.get('demo') ?? 'spa';
-const theme = params.get('theme') === 'dark' ? 'dark' : 'light';
+// `mode` = light/dark, `theme` = palette — same two axes as the player props.
+const mode = params.get('mode') === 'dark' ? 'dark' : 'light';
+const THEMES = [
+  'default',
+  'dots',
+  'blueprint',
+  'pcb',
+  'chalk',
+  'terminal',
+  'paper',
+  'neon',
+] as const satisfies readonly PlayerTheme[];
+const isTheme = (v: string | null): v is PlayerTheme =>
+  (THEMES as readonly string[]).includes(v ?? '');
+const themeParam = params.get('theme');
+const theme: PlayerTheme = isTheme(themeParam) ? themeParam : 'default';
 const locale = params.get('locale') === 'fr' ? 'fr' : 'en';
 
 // demosById maps id → Demo (gallery metadata). `Demo.spec` may be a localized
@@ -190,6 +205,7 @@ function Filmstrip({
           <div
             className="rdfa-player"
             data-theme={theme}
+            data-mode={mode}
             style={{ height: 280, width: 440 }}
           >
             <Stage
@@ -266,6 +282,7 @@ function LiveProbe({
       <div
         className="rdfa-player"
         data-theme={theme}
+        data-mode={mode}
         style={{ height: 380, width: 560 }}
       >
         <Stage
@@ -308,7 +325,9 @@ function App() {
   };
 
   return (
-    <main className="harness" data-theme={theme}>
+    // `data-theme` here emulates a themed HOST (the Docusaurus convention), so
+    // it carries the light/dark mode — not one of the player's palette names.
+    <main className="harness" data-theme={mode}>
       <header className="harness-bar">
         <h1>
           {demoId}{' '}
@@ -323,7 +342,7 @@ function App() {
             .map((id) => (
               <a
                 key={id}
-                href={`?demo=${id}&theme=${theme}`}
+                href={`?demo=${id}&mode=${mode}&theme=${theme}`}
                 aria-current={id === demoId}
               >
                 {id}

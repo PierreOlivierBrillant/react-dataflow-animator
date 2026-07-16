@@ -464,8 +464,13 @@ clamp(0, (0.62 − l) × 1000, 1) 0 0)` (black/white according to luminance). `-
 - A missing reference (missing required field, unknown `wait_for` id...) produces a
   **non-blocking warning** (visible with `debug`) rather than a crash.
 - Syntax highlighting: **Prism** (dependency), replaceable via the `highlight` prop.
-- **Scoped** styles under `.rdfa-` + CSS variables (light/dark themes, `theme` prop).
-- **`auto` theme (default)**: follows `prefers-color-scheme` AND a `[data-theme]` ancestor
-  (Docusaurus convention) → syncs with the host's theme toggle.
+- **Scoped** styles under `.rdfa-` + CSS variables. Two independent axes: the
+  `theme` prop picks a **palette** (`default`, `dots`, `blueprint`, `pcb`,
+  `chalk`, `terminal`, `paper`, `neon`), the `mode` prop picks its **light or
+  dark variant**. Each palette declares both variants once, via `light-dark()`.
+- **`auto` mode (default)**: the mode is resolved into `color-scheme` in CSS
+  only (SSR-safe, no JS) — it follows a `[data-theme]` ancestor (Docusaurus
+  convention) → syncs with the host's theme toggle, and `prefers-color-scheme`
+  otherwise.
 - Moving objects (packets) are rendered **in the foreground** (above
   `set_content` panels). `set_content` appears/disappears with a **fade**.
