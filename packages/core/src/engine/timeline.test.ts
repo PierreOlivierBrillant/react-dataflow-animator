@@ -23,6 +23,7 @@ const timeline: Timeline = {
       fromId: 'a',
       toId: 'b',
       style: 'solid',
+      path: 'straight',
     },
     {
       id: 'm',

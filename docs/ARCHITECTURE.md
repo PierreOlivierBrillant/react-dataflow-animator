@@ -131,9 +131,14 @@ Everything starts from the root via npm workspaces:
 
 ```bash
 npm run build       # full build (lib then site)
-npm run build:lib   # only the npm package
+npm run build:lib   # core isolated typecheck, then the npm package
 npm run build:docs  # only the site
 ```
+
+`build:lib` first runs `tsc` on `packages/core` with its OWN tsconfig: core
+sources are otherwise only typechecked as part of the react package's program
+(vitest does not typecheck), whose compiler options differ — errors valid only
+under core's stricter standalone view would stay invisible.
 
 The package build (`packages/react-dataflow-animator`'s `build` script):
 
@@ -208,6 +213,8 @@ at the root fan out to both workspaces.
 
 ## Deployment
 
-`.github/workflows/ci-cd.yml` lints + tests on every push / PR, then
-builds and deploys the Docusaurus site on GitHub Pages on the `main` branch.
-The npm publication of the lib remains manual.
+`.github/workflows/ci-cd.yml` runs schema freshness, Prettier, ESLint, knip,
+unit + integration tests and the library build (which typechecks core in
+isolation) on every push / PR, then builds and deploys the Docusaurus site on
+GitHub Pages on the `main` branch. The npm publication of the lib remains
+manual.

@@ -130,7 +130,7 @@ Monorepo root:
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `npm run dev`           | Builds the lib then starts Docusaurus site in watch                                                                    |
 | `npm run build`         | Full build (lib + site)                                                                                                |
-| `npm run build:lib`     | Lib package build only                                                                                                 |
+| `npm run build:lib`     | Core isolated typecheck, then lib package build                                                                        |
 | `npm run build:docs`    | Site build only                                                                                                        |
 | `npm run lint`          | ESLint on all workspaces that expose it                                                                                |
 | `npm run format:check`  | Checks Prettier formatting                                                                                             |
@@ -145,6 +145,7 @@ Package (`packages/core/`, private, source-only — no `build`/`dev` script, it 
 | Script                    | Effect                                   |
 | ------------------------- | ---------------------------------------- |
 | `npm run lint`            | ESLint on src/                           |
+| `npm run typecheck`       | Isolated tsc typecheck (core's tsconfig) |
 | `npm test`                | Unit vitest tests                        |
 | `npm run test:coverage`   | Tests + coverage                         |
 | `npm run generate:schema` | types.ts → schema.generated.json         |

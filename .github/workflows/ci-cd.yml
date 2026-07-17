@@ -42,11 +42,19 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Run knip (dead code)
+        run: npm run deadcode
+
       - name: Run Tests
         run: npm run test:coverage
 
       - name: Run Integration Tests
         run: npm run test:integration -w react-dataflow-animator
+
+      # Also typechecks core in isolation (own tsconfig), which the deploy-only
+      # full build would otherwise be the first to catch — on main, too late.
+      - name: Build library
+        run: npm run build:lib
 
   build-and-deploy:
     name: Build and Deploy to GitHub Pages

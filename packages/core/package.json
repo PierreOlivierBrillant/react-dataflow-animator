@@ -21,6 +21,7 @@
     "generate:schema": "node scripts/generate-schema.mjs",
     "check:schema": "node scripts/check-schema-is-fresh.mjs",
     "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
@@ -32,6 +33,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^10.3.0",
     "ts-json-schema-generator": "^2.9.0",
+    "typescript": "~6.0.2",
     "vitest": "^3.2.4"
   }
 }

@@ -1,7 +1,12 @@
 {
   "compilerOptions": {
     "target": "es2023",
-    "lib": ["ES2023"],
+    // DOM types are intentionally available: core ships browser-facing helpers
+    // (export/json.ts) and will host the framework-agnostic DOM renderer. The
+    // actual constraints — SSR-safety (no DOM access at import time) and the
+    // "never import react" rule — are behavioral/import rules (see CLAUDE.md),
+    // not something the `lib` option can enforce.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "types": [],
