@@ -15,7 +15,7 @@ const source = join(
   '..',
   '..',
   'packages',
-  'react-dataflow-animator',
+  'core',
   'src',
   'schema.generated.json'
 );

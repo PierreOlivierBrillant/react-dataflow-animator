@@ -6,6 +6,15 @@ const watchMode = process.argv.includes('--watch');
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // The core is a source-only workspace: resolve its subpaths to source so
+      // Vite INLINES it into the bundle (it is not in rollupOptions.external).
+      '@react-dataflow-animator/core': fileURLToPath(
+        new URL('../core/src', import.meta.url)
+      ),
+    },
+  },
   build: {
     lib: {
       entry: fileURLToPath(new URL('./src/index.ts', import.meta.url)),
@@ -20,8 +29,10 @@ export default defineConfig({
     // A CSS-only pattern (which Vite processes before Rollup, so it is otherwise
     // missed) would silently stop watching every `.ts`/`.tsx` in the graph — a
     // lib source edit would then never rebuild `dist/`, and the docs site (which
-    // imports the built lib) would serve a stale bundle. `src/**/*` covers both.
-    watch: watchMode ? { include: ['src/**/*'] } : null,
+    // imports the built lib) would serve a stale bundle. The core is inlined from
+    // `../core/src`, so it must be watched too — `include` is NOT additive, list
+    // both patterns explicitly.
+    watch: watchMode ? { include: ['src/**/*', '../core/src/**/*'] } : null,
     rollupOptions: {
       external: (id: string) =>
         /^(react|react-dom|react-icons|prismjs)(\/|$)/.test(id),

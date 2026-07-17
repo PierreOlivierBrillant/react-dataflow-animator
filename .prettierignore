@@ -4,5 +4,5 @@ build
 .docusaurus
 coverage
 package-lock.json
-packages/react-dataflow-animator/src/schema.generated.json
+packages/core/src/schema.generated.json
 apps/docs/static/schema.json

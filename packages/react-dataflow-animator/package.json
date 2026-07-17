@@ -40,10 +40,8 @@
     "**/*.css"
   ],
   "scripts": {
-    "generate:schema": "node scripts/generate-schema.mjs",
-    "check:schema": "node scripts/check-schema-is-fresh.mjs",
-    "build": "npm run generate:schema && tsc -b tsconfig.app.json tsconfig.node.json && vite build && tsc -p tsconfig.dts.json",
-    "postbuild": "cp src/schema.generated.json dist/schema.json",
+    "build": "rm -rf dist && node ../core/scripts/generate-schema.mjs && tsc -b tsconfig.app.json tsconfig.node.json && vite build && rollup -c rollup.dts.config.mjs",
+    "postbuild": "cp ../core/src/schema.generated.json dist/schema.json",
     "dev": "vite build --watch",
     "lint": "eslint src",
     "preview": "vite preview",
@@ -66,6 +64,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
+    "@react-dataflow-animator/core": "*",
     "@testing-library/react": "^16.3.0",
     "@types/node": "^24.12.3",
     "@types/prismjs": "^1.26.5",
@@ -80,7 +79,8 @@
     "jsdom": "^26.1.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "ts-json-schema-generator": "^2.9.0",
+    "rollup": "^4.61.1",
+    "rollup-plugin-dts": "^6.4.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
