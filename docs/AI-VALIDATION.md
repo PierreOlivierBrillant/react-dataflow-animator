@@ -37,11 +37,11 @@ URL parameters: `?demo=<id>` (see the navigation bar for the list),
 `pcb` | `chalk` | `terminal` | `paper` | `neon` — the same two axes as the
 player's props, so a palette can be eyeballed on any demo).
 
-The harness imports `Stage`, `clipOpacity`, `easeInOutCubic` **from `src`**
-(they are not public): a single source of truth, no duplication to
-resync. The DOM measurement is real → we also see the **re-layout** of a
-`set_content` (font refit, ResizeObserver), not just the movement
-"intended" by the engine.
+The harness imports `Stage` from the package's own `src`, and `compile`,
+`clipOpacity`/`contentCrossfade` from `@react-dataflow-animator/core` (none of
+them public): a single source of truth, no duplication to resync. The DOM
+measurement is real → we also see the **re-layout** of a `set_content` (font
+refit, ResizeObserver), not just the movement "intended" by the engine.
 
 ### How an AI consumes it
 

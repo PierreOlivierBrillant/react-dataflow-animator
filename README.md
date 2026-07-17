@@ -129,6 +129,9 @@ The project is an npm workspaces monorepo:
 
 ```text
 packages/
+  core/                      framework-agnostic core (private, not published): spec
+                             types, JSON Schema, the pure engine, TeX/highlight, JSON
+                             export — inlined into the published bundle, no React dependency
   react-dataflow-animator/   the package published on npm
 apps/
   docs/                      Docusaurus site (demos, playground, API doc)

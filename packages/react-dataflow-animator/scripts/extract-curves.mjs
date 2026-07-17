@@ -20,6 +20,7 @@ import { parseArgs } from 'node:util';
 const { values } = parseArgs({
   options: {
     demo: { type: 'string', default: 'spa' },
+    locale: { type: 'string', default: 'en' },
     json: { type: 'boolean', default: false },
   },
 });
@@ -36,6 +37,13 @@ try {
   process.exit(1);
 }
 
+// Demo modules are resolved the same way `getSpec` (used by the Vite harness,
+// scripts/validation-harness/main.tsx) does: a demo export may be a plain
+// DataFlowSpec, or a localized builder `(locale) => DataFlowSpec`. We import
+// the leaf demo file directly (rather than the `demos.ts` barrel) because
+// plain `node` — unlike Vite's bundler resolution — cannot resolve the
+// barrel's extension-less relative imports (`./demos/signalr`); the leaf
+// files only carry `import type`, which is erased and needs no resolution.
 const demoUrl = new URL(
   `../../../apps/docs/src/site-content/demos/${values.demo}.ts`,
   import.meta.url
@@ -43,10 +51,15 @@ const demoUrl = new URL(
 let spec;
 try {
   const mod = await import(demoUrl.href);
-  spec = mod[values.demo] ?? mod.default ?? Object.values(mod)[0];
+  const exported = mod[values.demo] ?? mod.default;
+  spec = typeof exported === 'function' ? exported(values.locale) : exported;
 } catch (err) {
   console.error(`Demo not found: ${values.demo} (${demoUrl.pathname})`);
   console.error(String(err?.message ?? err));
+  process.exit(1);
+}
+if (!spec) {
+  console.error(`Demo module has no usable export: ${values.demo} (${demoUrl.pathname})`);
   process.exit(1);
 }
 

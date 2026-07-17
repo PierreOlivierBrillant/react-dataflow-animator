@@ -10,7 +10,10 @@ The engine is a pure function `evaluate(timeline, t)`: no DOM, no real clock, ba
 The repository is an **npm workspaces monorepo**:
 
 ```text
-packages/react-dataflow-animator/   the published npm package
+packages/core/                      framework-agnostic core (private, source-only): spec
+                                     types, JSON Schema, the pure engine, TeX/highlight,
+                                     JSON export — inlined into the published bundle
+packages/react-dataflow-animator/   the published npm package (React binding over core)
 apps/docs/                          Docusaurus site (demos, playground, API docs)
 docs/                               SPEC.md, ARCHITECTURE.md (internal references)
 ```
@@ -25,7 +28,7 @@ Read these files before any non-trivial modification:
 - [`docs/AI-VALIDATION.md`](./docs/AI-VALIDATION.md) — how to get rendering (clarity/smoothness) validated by an AI via the deterministic harness and Playwright visual regression.
 - [`docs/SEARCH.md`](./docs/SEARCH.md) — Algolia DocSearch indexing model (how playground examples are indexed; crawler `recordExtractor` reference).
 - [`apps/docs/docs/`](./apps/docs/docs/) — MDX user documentation (concepts, references).
-- [`packages/react-dataflow-animator/src/types.ts`](./packages/react-dataflow-animator/src/types.ts) and [`schema.ts`](./packages/react-dataflow-animator/src/schema.ts) — exact shape of the spec.
+- [`packages/core/src/types.ts`](./packages/core/src/types.ts) and [`schema.ts`](./packages/core/src/schema.ts) — exact shape of the spec (source of truth; `packages/react-dataflow-animator/src/types.ts` and `schema.ts` are thin re-exports kept for a stable public import path).
 
 ## Hard rules before every commit
 
@@ -53,6 +56,12 @@ npm run check:schema
 
 - **English for code and technical docs.** ALL code comments (`//`, `/* */`, JSDoc) and ALL internal documentation — `README.md`, `docs/*.md`, this `CLAUDE.md` file, commit messages — must be written in English. Never introduce new comments or new docs in French. **Exception (do not confuse):** the _user-facing_ content of the `apps/docs` site remains bilingual EN/FR via native i18n (see the "Internationalization" section below) — the French half (`src/i18n/fr.ts`, `i18n/fr/**`, the `fr:` of demo specs) is NOT code to "switch to English", it is the intentional translation.
 - **Strict TypeScript.** No `any`. If you need an `as unknown as X`, write a comment explaining why.
+- **`packages/core` must never import `react`**, not even in `import type`. It is the framework-agnostic
+  layer, consumed by the React package via a source alias and inlined into its bundle — a React import
+  there would leak into every downstream consumer regardless of framework. Precedent: `nodeColors`'s
+  `nodeTint` returns `Record<string, string>` rather than `React.CSSProperties`; the React package casts
+  at the call site instead. If a helper needs a React-specific type, it belongs in
+  `packages/react-dataflow-animator/src`, not in core.
 - **No breaking changes** on the public API (`packages/react-dataflow-animator/src/index.ts`) without changing the major version and documenting it.
 - **Tests first** for uncovered areas you are going to refactor.
 - **Comments**: describe the _why_, not the _what_. The code is enough to say what it does. A comment explaining an avoided pitfall (e.g. Babel loose mode in Docusaurus) is precious; a comment that paraphrases the next line is not.
@@ -117,18 +126,29 @@ Pitfalls already encountered in this repo — check them when you touch the affe
 
 Monorepo root:
 
-| Script                  | Effect                                              |
-| ----------------------- | --------------------------------------------------- |
-| `npm run dev`           | Builds the lib then starts Docusaurus site in watch |
-| `npm run build`         | Full build (lib + site)                             |
-| `npm run build:lib`     | Lib package build only                              |
-| `npm run build:docs`    | Site build only                                     |
-| `npm run lint`          | ESLint on all workspaces that expose it             |
-| `npm run format:check`  | Checks Prettier formatting                          |
-| `npm run format:write`  | Applies Prettier                                    |
-| `npm test`              | vitest lib tests                                    |
-| `npm run test:coverage` | Tests + coverage thresholds                         |
-| `npm run deadcode`      | knip — dead code detection                          |
+| Script                  | Effect                                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`           | Builds the lib then starts Docusaurus site in watch                                                                    |
+| `npm run build`         | Full build (lib + site)                                                                                                |
+| `npm run build:lib`     | Lib package build only                                                                                                 |
+| `npm run build:docs`    | Site build only                                                                                                        |
+| `npm run lint`          | ESLint on all workspaces that expose it                                                                                |
+| `npm run format:check`  | Checks Prettier formatting                                                                                             |
+| `npm run format:write`  | Applies Prettier                                                                                                       |
+| `npm test`              | vitest tests of `@react-dataflow-animator/core` and of `react-dataflow-animator` (each has its own coverage threshold) |
+| `npm run test:coverage` | Same, with coverage thresholds                                                                                         |
+| `npm run deadcode`      | knip — dead code detection                                                                                             |
+| `npm run check:schema`  | Verifies core's generated JSON Schema is fresh                                                                         |
+
+Package (`packages/core/`, private, source-only — no `build`/`dev` script, it is never bundled on its own):
+
+| Script                    | Effect                                   |
+| ------------------------- | ---------------------------------------- |
+| `npm run lint`            | ESLint on src/                           |
+| `npm test`                | Unit vitest tests                        |
+| `npm run test:coverage`   | Tests + coverage                         |
+| `npm run generate:schema` | types.ts → schema.generated.json         |
+| `npm run check:schema`    | CI guard: schema.generated.json is fresh |
 
 Package (`packages/react-dataflow-animator/`):
 
