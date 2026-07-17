@@ -5,7 +5,10 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { GeometryMap, NodeGeom } from '../engine/geometry';
+import type {
+  GeometryMap,
+  NodeGeom,
+} from '@react-dataflow-animator/core/engine/geometry';
 
 /**
  * Measures the actual position of the nodes (BoundingClientRect) relative to the Stage,

@@ -4,7 +4,7 @@ import {
   parseRichText,
   type RichSegment,
   type TexNode,
-} from './parse';
+} from '@react-dataflow-animator/core/tex/parse';
 
 /**
  * The two renderers for the `$…$` subset — HTML and SVG — over the one AST from

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { clamp } from '../engine/timeline';
+import { clamp } from '@react-dataflow-animator/core/engine/timeline';
 
 // Tab sent to background → rAF frozen → dt can be several minutes
 // on return. Without ceiling, t would jump to the end (or to an arbitrary position

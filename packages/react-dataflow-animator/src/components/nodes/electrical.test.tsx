@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { StaticNode } from './StaticNode';
 import { NodeView } from './NodeView';
-import { highlightCode } from '../../highlight/highlight';
+import { highlightCode } from '@react-dataflow-animator/core/highlight/highlight';
 import type { Node } from '../../types';
 
 afterEach(cleanup);

@@ -21,6 +21,12 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true
   },
-  "include": ["src"],
+  // `../core/src/**/*.d.ts`: ambient module declarations (e.g. the Prism
+  // components typing) live in the core workspace now. `include` only
+  // resolves the ROOT file set for the program — files pulled in transitively
+  // via `paths` are added too, but a loose ambient `.d.ts` with no import is
+  // never reached that way, so it must be listed explicitly (same reasoning
+  // as vite.config.ts's `watch.include`, which isn't additive either).
+  "include": ["src", "../core/src/**/*.d.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

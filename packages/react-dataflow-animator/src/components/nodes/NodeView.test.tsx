@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { NodeView } from './NodeView';
-import { isPanelNode } from './nodeKinds';
+import { isPanelNode } from '@react-dataflow-animator/core/render/nodeKinds';
 
 afterEach(cleanup);
 

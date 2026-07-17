@@ -1,5 +1,4 @@
-import type { CSSProperties } from 'react';
-import type { Node } from '../../types';
+import type { Node } from '../types';
 
 /**
  * Runtime recolor override (the `set_color` action). Each channel, when present,
@@ -35,8 +34,14 @@ export interface ColorOverride {
  * An optional `override` (from an active `set_color`) takes precedence over the
  * static colors per channel; derivations then run on the effective values, so
  * the border/ink follow a recolored background.
+ *
+ * Returns a plain string-keyed record (not React's `CSSProperties`): this
+ * module is framework-agnostic. Callers spread it into their own style object.
  */
-export function nodeTint(node: Node, override?: ColorOverride): CSSProperties {
+export function nodeTint(
+  node: Node,
+  override?: ColorOverride
+): Record<string, string> {
   const bg = override?.background_color ?? node.background_color;
   const border = override?.border_color ?? node.border_color;
   const text = override?.text_color ?? node.text_color;
@@ -46,7 +51,7 @@ export function nodeTint(node: Node, override?: ColorOverride): CSSProperties {
   if (stroke) style['--rdfa-stroke'] = stroke;
   const ink = text ?? (bg ? contrastingInk() : undefined);
   if (ink) style['--rdfa-ink'] = ink;
-  return style as CSSProperties;
+  return style;
 }
 
 /** Default coordinated border: the background darkened by ~32% (looks good). */

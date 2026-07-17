@@ -1,5 +1,8 @@
 import { memo } from 'react';
-import { stepIndexAt, type Timeline } from '../engine/timeline';
+import {
+  stepIndexAt,
+  type Timeline,
+} from '@react-dataflow-animator/core/engine/timeline';
 
 export const DebugOverlay = memo(function DebugOverlay({
   timeline,

@@ -34,7 +34,7 @@ import {
   type SetVisibleClip,
   type Timeline,
   type ToggleClip,
-} from '../engine/timeline';
+} from '@react-dataflow-animator/core/engine/timeline';
 import {
   computeLayout,
   connectionAxis,
@@ -42,13 +42,19 @@ import {
   treeEdgeStyle,
   type ConnectionAxis,
   type LayoutMap,
-} from '../engine/layout';
-import { computeScale, type Density } from '../engine/scale';
-import { computePlacements, computeContentLimits } from '../engine/placements';
+} from '@react-dataflow-animator/core/engine/layout';
+import {
+  computeScale,
+  type Density,
+} from '@react-dataflow-animator/core/engine/scale';
+import {
+  computePlacements,
+  computeContentLimits,
+} from '@react-dataflow-animator/core/engine/placements';
 import {
   collectArrowConnections,
   computePortOffsets,
-} from '../engine/portOffsets';
+} from '@react-dataflow-animator/core/engine/portOffsets';
 import {
   connection,
   facePort,
@@ -60,25 +66,28 @@ import {
   type NodeContour,
   type NodeGeom,
   type Point,
-} from '../engine/geometry';
+} from '@react-dataflow-animator/core/engine/geometry';
 import {
   routeWithPinSwaps,
   wireHops,
   type PinSwapGroup,
   type RouterObstacle,
   type RouterWire,
-} from '../engine/orthoRouter';
+} from '@react-dataflow-animator/core/engine/orthoRouter';
 import {
   commutativeInputPins,
   parseRef,
   refNode,
   resolvePin,
-} from '../engine/pins';
+} from '@react-dataflow-animator/core/engine/pins';
 import { useStageGeometry } from '../hooks/useStageGeometry';
-import { buildStageSignature } from './stageSignature';
-import { clipOpacity, contentCrossfade } from './clipOpacity';
+import { buildStageSignature } from '@react-dataflow-animator/core/render/stageSignature';
+import {
+  clipOpacity,
+  contentCrossfade,
+} from '@react-dataflow-animator/core/render/clipOpacity';
 import { StaticNode } from './nodes/StaticNode';
-import type { ColorOverride } from './nodes/nodeColors';
+import type { ColorOverride } from '@react-dataflow-animator/core/render/nodeColors';
 import { ArrowLine } from './dynamic/ArrowLine';
 import { Packet } from './dynamic/Packet';
 import { CommentBubble } from './CommentBubble';

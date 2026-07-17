@@ -4,9 +4,9 @@ import {
 } from '../../utils/animatable';
 import type { Packet as PacketSpec, Highlighter } from '../../types';
 import { NodePanel } from '../nodes/NodePanel';
-import { isPanelNode } from '../nodes/nodeKinds';
+import { isPanelNode } from '@react-dataflow-animator/core/render/nodeKinds';
 import { getSubIcon } from '../nodes/subIcons';
-import { escapeHtml } from '../../highlight/highlight';
+import { escapeHtml } from '@react-dataflow-animator/core/highlight/highlight';
 
 /** Moving packet. Positioned absolutely at the current point of the path. */
 export interface PacketProps {

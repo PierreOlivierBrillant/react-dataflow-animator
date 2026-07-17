@@ -4,11 +4,17 @@ import {
   type AnimatableComponent,
 } from '../../utils/animatable';
 import type { Highlighter, ObjectContent, Node } from '../../types';
-import type { NodePlacement } from '../../engine/layout';
+import type { NodePlacement } from '@react-dataflow-animator/core/engine/layout';
 import { ContentPanel } from '../dynamic/ContentPanel';
 import { NodeView } from './NodeView';
-import { isPanelNode, isShapeType } from './nodeKinds';
-import { nodeTint, type ColorOverride } from './nodeColors';
+import {
+  isPanelNode,
+  isShapeType,
+} from '@react-dataflow-animator/core/render/nodeKinds';
+import {
+  nodeTint,
+  type ColorOverride,
+} from '@react-dataflow-animator/core/render/nodeColors';
 import { getSubIcon } from './subIcons';
 import { richText } from '../../tex/RichText';
 

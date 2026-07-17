@@ -2,7 +2,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { ShapeNode } from './ShapeNode';
-import { SHAPE_TYPES, isShapeType } from './nodeKinds';
+import {
+  SHAPE_TYPES,
+  isShapeType,
+} from '@react-dataflow-animator/core/render/nodeKinds';
 
 afterEach(cleanup);
 

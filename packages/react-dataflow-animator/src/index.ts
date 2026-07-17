@@ -54,18 +54,21 @@ export { NodeView } from './components/nodes/NodeView';
 export type { NodeViewProps } from './components/nodes/NodeView';
 
 // Default syntax highlighting (reusable / replaceable).
-export { highlightCode, escapeHtml } from './highlight/highlight';
+export {
+  highlightCode,
+  escapeHtml,
+} from '@react-dataflow-animator/core/highlight/highlight';
 
 // Engine (advanced API: timeline compilation and evaluation).
-export { compile } from './engine/compiler';
-export type { CompileResult } from './engine/compiler';
+export { compile } from '@react-dataflow-animator/core/engine/compiler';
+export type { CompileResult } from '@react-dataflow-animator/core/engine/compiler';
 export {
   evaluate,
   stepIndexAt,
   nextStop,
   prevStop,
   EMPTY_TIMELINE,
-} from './engine/timeline';
+} from '@react-dataflow-animator/core/engine/timeline';
 export type {
   Timeline,
   Clip,
@@ -81,9 +84,15 @@ export type {
   SetVisibleClip,
   SetColorClip,
   ReflowClip,
-} from './engine/timeline';
-export { computeLayout } from './engine/layout';
-export type { LayoutMap, NodePlacement } from './engine/layout';
-export type { GeometryMap, NodeGeom } from './engine/geometry';
+} from '@react-dataflow-animator/core/engine/timeline';
+export { computeLayout } from '@react-dataflow-animator/core/engine/layout';
+export type {
+  LayoutMap,
+  NodePlacement,
+} from '@react-dataflow-animator/core/engine/layout';
+export type {
+  GeometryMap,
+  NodeGeom,
+} from '@react-dataflow-animator/core/engine/geometry';
 export { useClock } from './hooks/useClock';
 export type { Clock } from './hooks/useClock';

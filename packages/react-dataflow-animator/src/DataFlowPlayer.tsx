@@ -8,14 +8,21 @@ import {
 } from 'react';
 import './styles/dataflow.css';
 import type { DataFlowPlayerProps } from './types';
-import { compile } from './engine/compiler';
-import { nextStop, prevStop } from './engine/timeline';
+import { compile } from '@react-dataflow-animator/core/engine/compiler';
+import {
+  nextStop,
+  prevStop,
+} from '@react-dataflow-animator/core/engine/timeline';
 import { useClock } from './hooks/useClock';
-import { highlightCode } from './highlight/highlight';
+import { highlightCode } from '@react-dataflow-animator/core/highlight/highlight';
 import { Stage } from './components/Stage';
 import { Controls } from './components/Controls';
 import { JsonDialog } from './components/JsonDialog';
-import { copyText, downloadJson, serializeSpec } from './export/json';
+import {
+  copyText,
+  downloadJson,
+  serializeSpec,
+} from '@react-dataflow-animator/core/export/json';
 
 const emptySubscribe = () => () => {};
 const returnTrue = () => true;

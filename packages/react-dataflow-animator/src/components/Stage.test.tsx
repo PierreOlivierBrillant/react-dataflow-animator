@@ -2,8 +2,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { Stage } from './Stage';
-import { compile } from '../engine/compiler';
-import { highlightCode } from '../highlight/highlight';
+import { compile } from '@react-dataflow-animator/core/engine/compiler';
+import { highlightCode } from '@react-dataflow-animator/core/highlight/highlight';
 import type { DataFlowSpec } from '../types';
 
 afterEach(cleanup);

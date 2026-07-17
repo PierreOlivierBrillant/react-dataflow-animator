@@ -1,6 +1,11 @@
 import type { MouseEvent, ReactNode } from 'react';
 import type { Clock } from '../hooks/useClock';
-import { clamp, nextStop, prevStop, type Timeline } from '../engine/timeline';
+import {
+  clamp,
+  nextStop,
+  prevStop,
+  type Timeline,
+} from '@react-dataflow-animator/core/engine/timeline';
 
 export interface ControlsProps {
   clock: Clock;

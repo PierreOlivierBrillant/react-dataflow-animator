@@ -13,8 +13,8 @@ import {
   type NodeContour,
   type NodeGeom,
   type Point,
-} from '../../engine/geometry';
-import type { ConnectionAxis } from '../../engine/layout';
+} from '@react-dataflow-animator/core/engine/geometry';
+import type { ConnectionAxis } from '@react-dataflow-animator/core/engine/layout';
 import type { LineStyle, PathShape } from '../../types';
 
 /**

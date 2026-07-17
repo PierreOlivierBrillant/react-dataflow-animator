@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 import type { Highlighter, Node } from '../../types';
-import { escapeHtml } from '../../highlight/highlight';
+import { escapeHtml } from '@react-dataflow-animator/core/highlight/highlight';
 import { getNodeIcon } from './nodeIcons';
 import { getSubIcon } from './subIcons';
 import { NodePanel } from './NodePanel';
 import { ShapeNode } from './ShapeNode';
-import { isPanelNode, isShapeType } from './nodeKinds';
+import {
+  isPanelNode,
+  isShapeType,
+} from '@react-dataflow-animator/core/render/nodeKinds';
 
 export interface NodeViewProps {
   /** The node to represent. Only `type` — and, for panels,

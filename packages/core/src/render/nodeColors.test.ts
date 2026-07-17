@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { nodeTint } from './nodeColors';
-import type { Node } from '../../types';
+import type { Node } from '../types';
 
 const node = (extra: Partial<Node>): Node => ({
   id: 'n',

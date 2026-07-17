@@ -23,14 +23,17 @@
  */
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { compile } from '../../src/engine/compiler';
-import type { Clip, Timeline } from '../../src/engine/timeline';
+import { compile } from '@react-dataflow-animator/core/engine/compiler';
+import type {
+  Clip,
+  Timeline,
+} from '@react-dataflow-animator/core/engine/timeline';
 import {
   clipOpacity,
   contentCrossfade,
-} from '../../src/components/clipOpacity';
+} from '@react-dataflow-animator/core/render/clipOpacity';
 import { Stage } from '../../src/components/Stage';
-import { highlightCode } from '../../src/highlight/highlight';
+import { highlightCode } from '@react-dataflow-animator/core/highlight/highlight';
 import type { DataFlowSpec, PlayerTheme } from '../../src/types';
 import {
   demosById,

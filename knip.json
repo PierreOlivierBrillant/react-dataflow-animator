@@ -13,7 +13,8 @@
         "scripts/*.mjs",
         "rollup.dts.config.mjs"
       ],
-      "project": ["src/**/*.ts", "src/**/*.tsx", "scripts/*.mjs"]
+      "project": ["src/**/*.ts", "src/**/*.tsx", "scripts/*.mjs"],
+      "ignoreDependencies": ["prismjs"]
     },
     "apps/docs": {
       "entry": [
@@ -27,8 +28,7 @@
   },
   "ignore": [
     "eslint.config.js",
-    "packages/react-dataflow-animator/src/css.d.ts",
-    "packages/react-dataflow-animator/src/highlight/prism-ambient.d.ts"
+    "packages/react-dataflow-animator/src/css.d.ts"
   ],
   "ignoreDependencies": [
     "@docusaurus/theme-common",

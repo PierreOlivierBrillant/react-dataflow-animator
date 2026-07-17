@@ -1,4 +1,4 @@
-import type { NodeType } from '../../types';
+import type { NodeType } from '../types';
 
 /**
  * Node families by appearance — predicates shared by rendering (`NodeView`,

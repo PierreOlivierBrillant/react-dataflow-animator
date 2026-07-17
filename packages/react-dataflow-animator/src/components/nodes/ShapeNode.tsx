@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Node } from '../../types';
-import type { ShapeType } from './nodeKinds';
+import type { ShapeType } from '@react-dataflow-animator/core/render/nodeKinds';
 import { richText } from '../../tex/RichText';
 
 /**

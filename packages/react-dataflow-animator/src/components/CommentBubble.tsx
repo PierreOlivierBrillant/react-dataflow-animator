@@ -1,6 +1,6 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
-import { clamp } from '../engine/timeline';
-import type { NodeGeom } from '../engine/geometry';
+import { clamp } from '@react-dataflow-animator/core/engine/timeline';
+import type { NodeGeom } from '@react-dataflow-animator/core/engine/geometry';
 import { richText } from '../tex/RichText';
 
 export const CommentBubble = memo(function CommentBubble({
