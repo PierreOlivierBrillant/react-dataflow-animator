@@ -164,6 +164,9 @@ Package (`packages/react-dataflow-animator/`):
 | `npm run harness`          | Visual validation harness (Vite, :5199)     |
 | `npm run curves`           | Headless structural pass (`--demo <id>`)    |
 | `npm run test:visual`      | Playwright visual regression (goldens)      |
+| `npm run harness:selftest` | A/B gate calibration — must be 0.00%        |
+| `npm run harness:compare`  | A/B pixel diff, React vs vanilla renderer   |
+| `npm run harness:bench`    | Perf baseline of the player (per-frame)     |
 
 ## Workflows to avoid
 

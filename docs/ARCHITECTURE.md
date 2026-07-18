@@ -72,6 +72,9 @@ packages/
       highlight/                      Prism wrapper (replaceable)
       export/
         json.ts                       serialize / copy / download the spec JSON
+      dom/
+        mount.ts                      framework-agnostic DOM renderer entry point
+                                       (documented placeholder — see docs/AI-VALIDATION.md)
     scripts/
       generate-schema.mjs             types.ts → schema.generated.json (ts-json-schema-generator)
       check-schema-is-fresh.mjs       CI guard: schema.generated.json is committed & fresh

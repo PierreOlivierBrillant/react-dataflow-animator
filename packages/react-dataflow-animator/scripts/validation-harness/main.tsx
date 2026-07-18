@@ -21,7 +21,7 @@
  * `compile`, `Stage`) imported from `src`: a single source of truth, no
  * duplication to manually resync.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { compile } from '@react-dataflow-animator/core/engine/compiler';
 import type {
@@ -32,7 +32,9 @@ import {
   clipOpacity,
   contentCrossfade,
 } from '@react-dataflow-animator/core/render/clipOpacity';
+import { mountVanillaStage } from '@react-dataflow-animator/core/dom/mount';
 import { Stage } from '../../src/components/Stage';
+import { useClock } from '../../src/hooks/useClock';
 import { highlightCode } from '@react-dataflow-animator/core/highlight/highlight';
 import type { DataFlowSpec, PlayerTheme } from '../../src/types';
 import {
@@ -68,6 +70,215 @@ const locale = params.get('locale') === 'fr' ? 'fr' : 'en';
 const catalog = demosById;
 const demo = catalog[demoId];
 const spec: DataFlowSpec | undefined = demo ? getSpec(demo, locale) : undefined;
+
+// ─── A/B mode (?ab=1) ──────────────────────────────────────────────────────
+// Side-by-side, fixed-size, frozen-`t` comparison of the React `Stage` against
+// the framework-agnostic DOM renderer being built in
+// `@react-dataflow-animator/core/dom/mount` — see docs/AI-VALIDATION.md and
+// scripts/validation-harness/compare.ab.spec.ts (the pixel-diff gate that
+// drives this page).
+const isAB = params.has('ab');
+// `panelB=react` mounts a SECOND, independent React `Stage` instead of the
+// vanilla renderer: two mounts of the identical spec/t, used by
+// selftest.ab.spec.ts to calibrate the gate itself (0.00% expected) before
+// it's trusted to judge the real (React vs. vanilla) diff.
+const panelBMode: 'vanilla' | 'react' =
+  params.get('panelB') === 'react' ? 'react' : 'vanilla';
+
+/**
+ * Resolves the single frozen instant the A/B page renders at, in priority
+ * order: an explicit `?probeT=<ms>`, an explicit `?probePct=<0..1>` (fraction
+ * of the compiled timeline duration — lets the compare grid ask for "25%"
+ * without first having to look up each demo's duration), or the midpoint of
+ * the timeline as a representative, non-trivial default frame.
+ */
+function resolveFrozenT(durationMs: number): number {
+  const probeTParam = params.get('probeT');
+  if (probeTParam != null) return Number(probeTParam);
+  const probePctParam = params.get('probePct');
+  if (probePctParam != null) {
+    const pct = Math.min(1, Math.max(0, Number(probePctParam)));
+    return durationMs * pct;
+  }
+  return durationMs * 0.5;
+}
+
+// ─── Perf bench mode (?bench=1) ────────────────────────────────────────────
+// A minimal page — one `Stage`, no filmstrip/curves chrome — driven by the
+// SAME `useClock` hook `DataFlowPlayer` uses (autoPlay + loop), so the
+// measured cadence is the real player's, not a reimplementation of it. See
+// scripts/bench-perf.mjs and docs/AI-VALIDATION.md.
+const isBench = params.has('bench');
+const benchFrames = Number(params.get('frames') ?? '300');
+const BENCH_PANEL = { width: 640, height: 420 };
+
+function BenchApp() {
+  if (!spec) {
+    return (
+      <div className="harness-error">
+        Unknown demo: <code>{demoId}</code>. Available demos:{' '}
+        {Object.keys(catalog).sort().join(', ')}
+      </div>
+    );
+  }
+  const { timeline } = compile(spec);
+  const clock = useClock({
+    durationMs: timeline.durationMs,
+    autoPlay: true,
+    loop: true,
+  });
+
+  // A SEPARATE, passive rAF loop just measures the wall-clock gap between
+  // successive frames; `useClock`'s own rAF loop (started by `autoPlay`)
+  // is what actually advances `t` and re-renders `Stage` below. Both
+  // callbacks are scheduled in the same browser animation-frame batch, so
+  // the gap this loop measures still reflects the real per-frame cost
+  // (React re-render + DOM commit + layout/paint) the player pays.
+  useEffect(() => {
+    const samples: number[] = [];
+    let last: number | null = null;
+    let raf = 0;
+    const sample = (now: number) => {
+      if (last != null) samples.push(now - last);
+      last = now;
+      if (samples.length >= benchFrames) {
+        (window as unknown as { __BENCH__: unknown }).__BENCH__ = {
+          demo: demoId,
+          frames: samples.length,
+          samples,
+          done: true,
+        };
+        return;
+      }
+      raf = requestAnimationFrame(sample);
+    };
+    raf = requestAnimationFrame(sample);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div
+      className="rdfa-player"
+      data-theme={theme}
+      data-mode={mode}
+      style={{ width: BENCH_PANEL.width, height: BENCH_PANEL.height }}
+    >
+      <Stage
+        spec={spec}
+        timeline={timeline}
+        t={clock.t}
+        highlight={highlightCode}
+        density="comfortable"
+      />
+    </div>
+  );
+}
+
+const AB_PANEL = { width: 480, height: 320 };
+
+/** Mounts the framework-agnostic placeholder inside a flex slot sized like `.rdfa-stage`. */
+function VanillaPanel({ spec, t }: { spec: DataFlowSpec; t: number }) {
+  const slotRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const container = slotRef.current;
+    if (!container) return;
+    const handle = mountVanillaStage(container, spec, t);
+    return () => handle.destroy();
+  }, [spec, t]);
+  return <div ref={slotRef} style={{ flex: '1 1 auto', minHeight: 0 }} />;
+}
+
+function ABPanel({
+  label,
+  panelId,
+  children,
+}: {
+  label: string;
+  panelId: 'a' | 'b';
+  children: ReactNode;
+}) {
+  return (
+    <section className="ab-panel" data-ab-panel={panelId}>
+      <h2>{label}</h2>
+      <div
+        className="rdfa-player"
+        data-theme={theme}
+        data-mode={mode}
+        style={{ width: AB_PANEL.width, height: AB_PANEL.height }}
+      >
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function ABApp() {
+  if (!spec) {
+    return (
+      <div className="harness-error">
+        Unknown demo: <code>{demoId}</code>. Available demos:{' '}
+        {Object.keys(catalog).sort().join(', ')}
+      </div>
+    );
+  }
+  const { timeline } = compile(spec);
+  const t = resolveFrozenT(timeline.durationMs);
+
+  // Same inline-during-render publication style as `__VALIDATION__` below:
+  // a plain diagnostic global, read by compare.ab.spec.ts / selftest.ab.spec.ts
+  // via `page.evaluate`.
+  (window as unknown as { __AB__: unknown }).__AB__ = {
+    demo: demoId,
+    t,
+    durationMs: timeline.durationMs,
+    panelB: panelBMode,
+    ready: true,
+  };
+
+  return (
+    <main className="harness ab-harness" data-theme={mode}>
+      <header className="harness-bar">
+        <h1>
+          A/B — {demoId}{' '}
+          <span>
+            · t={Math.round(t)}ms · panel B = {panelBMode}
+          </span>
+        </h1>
+      </header>
+      <div className="ab-grid">
+        <ABPanel label="A — React (Stage.tsx)" panelId="a">
+          <Stage
+            spec={spec}
+            timeline={timeline}
+            t={t}
+            highlight={highlightCode}
+            density="comfortable"
+          />
+        </ABPanel>
+        <ABPanel
+          label={
+            panelBMode === 'react'
+              ? 'B — React (self-test mount)'
+              : 'B — Vanilla DOM (@react-dataflow-animator/core)'
+          }
+          panelId="b"
+        >
+          {panelBMode === 'react' ? (
+            <Stage
+              spec={spec}
+              timeline={timeline}
+              t={t}
+              highlight={highlightCode}
+              density="comfortable"
+            />
+          ) : (
+            <VanillaPanel spec={spec} t={t} />
+          )}
+        </ABPanel>
+      </div>
+    </main>
+  );
+}
 
 // ─── Fluidity curve sampling ────────────────────────────────
 
@@ -391,4 +602,6 @@ function App() {
 // No StrictMode: it double-invokes effects, which disrupts the precise
 // iconGeom capture → forceRemeasure sequence of set_content. We remain faithful to
 // the real render (Docusaurus doesn't wrap the player in StrictMode).
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  isBench ? <BenchApp /> : isAB ? <ABApp /> : <App />
+);

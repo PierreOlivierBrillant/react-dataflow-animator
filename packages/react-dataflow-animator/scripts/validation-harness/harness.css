@@ -223,3 +223,20 @@ body {
   padding: 40px;
   font-size: 16px;
 }
+
+/* ---------- A/B mode (?ab=1) ---------- */
+
+.ab-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.ab-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.ab-panel h2 {
+  margin: 0 0 8px;
+}

@@ -36,3 +36,7 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
+
+# A/B compare/self-test scratch results (compare.ab.spec.ts, selftest.ab.spec.ts):
+# written by tests, read + printed by globalTeardown, one run at a time.
+**/scripts/validation-harness/.ab-results/

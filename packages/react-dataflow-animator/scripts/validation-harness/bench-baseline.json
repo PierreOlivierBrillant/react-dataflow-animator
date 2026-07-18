@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-07-17T22:48:25.973Z",
+  "renderer": "react",
+  "framesRequested": 300,
+  "demos": {
+    "circuit": {
+      "frames": 300,
+      "frameMs": {
+        "mean": 16.611,
+        "median": 16.7,
+        "p95": 16.8,
+        "min": 0.082,
+        "max": 16.8
+      },
+      "cdp": {
+        "scriptDurationMs": 633.3,
+        "layoutDurationMs": 13.6,
+        "recalcStyleDurationMs": 21.43,
+        "taskDurationMs": 793.61
+      }
+    },
+    "clientServer": {
+      "frames": 300,
+      "frameMs": {
+        "mean": 16.61,
+        "median": 16.7,
+        "p95": 16.8,
+        "min": 0,
+        "max": 16.8
+      },
+      "cdp": {
+        "scriptDurationMs": 693.95,
+        "layoutDurationMs": 25.55,
+        "recalcStyleDurationMs": 28.07,
+        "taskDurationMs": 908.63
+      }
+    }
+  }
+}

@@ -1,17 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { RISK_DEMOS } from './riskDemos';
 
-// Demos covering risk areas: set_content (spa, messageQueue), dense
-// move (clientServer), parallel composition (microservices), tight layout
-// case (collision). Extending the list = one more golden, nothing else.
-const DEMOS = [
-  'spa',
-  'clientServer',
-  'messageQueue',
-  'microservices',
-  'collision',
-];
-
-for (const demo of DEMOS) {
+for (const demo of RISK_DEMOS) {
   test(`contact sheet — ${demo}`, async ({ page }) => {
     // Goldens are shot on the default palette in light mode: this suite guards
     // layout regressions, not the palettes.
