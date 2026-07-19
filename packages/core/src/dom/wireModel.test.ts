@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildFlowPath,
   collectEndpointRefs,
   connectionKey,
   contourResolver,
   createWireContext,
   labelSideMap,
   routeCircuit,
+  routesByNodePair,
 } from './wireModel';
 import { computeLayout } from '../engine/layout';
 import {
@@ -280,5 +282,159 @@ describe('routeCircuit', () => {
 
     // A map is always returned, whether or not this topology crosses.
     expect(hops).toBeInstanceOf(Map);
+  });
+});
+
+describe('routesByNodePair', () => {
+  it('re-keys the router output by node pair, pins stripped', () => {
+    const route = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ];
+    const routes = new Map([
+      [connectionKey(circuitSpec.connections![0], 0), route],
+    ]);
+
+    expect(routesByNodePair(circuitSpec, routes).get('a|g')).toBe(route);
+  });
+
+  it('skips a connection the router did not route', () => {
+    expect(routesByNodePair(circuitSpec, new Map()).size).toBe(0);
+  });
+});
+
+describe('buildFlowPath', () => {
+  const geometry: GeometryMap = {
+    a: { id: 'a', x: 0, y: 0, width: 10, height: 10 },
+    b: { id: 'b', x: 100, y: 0, width: 10, height: 10 },
+    c: { id: 'c', x: 100, y: 100, width: 10, height: 10 },
+  };
+  const noContour = () => undefined;
+  const noAxis = () => undefined;
+
+  it('routes a segment on its own when no wire route exists', () => {
+    const pts = buildFlowPath(
+      ['a', 'b'],
+      geometry,
+      noContour,
+      noAxis,
+      [],
+      new Map()
+    );
+
+    expect(pts.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('rides the drawn wire route when one exists', () => {
+    const wire = [
+      { x: 5, y: 0 },
+      { x: 50, y: 0 },
+      { x: 95, y: 0 },
+    ];
+    const pts = buildFlowPath(
+      ['a', 'b'],
+      geometry,
+      noContour,
+      noAxis,
+      [],
+      new Map([['a|b', wire]])
+    );
+
+    expect(pts).toEqual(wire);
+  });
+
+  it('reuses a reversed wire route backwards', () => {
+    const wire = [
+      { x: 95, y: 0 },
+      { x: 5, y: 0 },
+    ];
+    const pts = buildFlowPath(
+      ['a', 'b'],
+      geometry,
+      noContour,
+      noAxis,
+      [],
+      new Map([['b|a', wire]])
+    );
+
+    expect(pts).toEqual([...wire].reverse());
+  });
+
+  it('chains contiguous segments without duplicating the shared point', () => {
+    const seg1 = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+    ];
+    const seg2 = [
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+    ];
+    const pts = buildFlowPath(
+      ['a', 'b', 'c'],
+      geometry,
+      noContour,
+      noAxis,
+      [],
+      new Map([
+        ['a|b', seg1],
+        ['b|c', seg2],
+      ])
+    );
+
+    expect(pts).toEqual([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+    ]);
+  });
+
+  it('bridges a corner junction through the node centre', () => {
+    // seg1 ends on one face of `b`, seg2 leaves another: the charge must turn
+    // the corner via b's centre instead of cutting across it.
+    const seg1 = [
+      { x: 0, y: 0 },
+      { x: 92, y: 0 },
+    ];
+    const seg2 = [
+      { x: 100, y: 8 },
+      { x: 100, y: 100 },
+    ];
+    const pts = buildFlowPath(
+      ['a', 'b', 'c'],
+      geometry,
+      noContour,
+      noAxis,
+      [],
+      new Map([
+        ['a|b', seg1],
+        ['b|c', seg2],
+      ])
+    );
+
+    expect(pts).toEqual([seg1[0], seg1[1], { x: 100, y: 0 }, seg2[0], seg2[1]]);
+  });
+
+  it('skips segments whose endpoints are not measured', () => {
+    const pts = buildFlowPath(
+      ['ghost', 'a', 'b'],
+      geometry,
+      noContour,
+      noAxis,
+      [],
+      new Map([
+        [
+          'a|b',
+          [
+            { x: 0, y: 0 },
+            { x: 100, y: 0 },
+          ],
+        ],
+      ])
+    );
+
+    expect(pts).toEqual([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+    ]);
   });
 });

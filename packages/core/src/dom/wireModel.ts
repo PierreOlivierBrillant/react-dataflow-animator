@@ -9,11 +9,13 @@ import {
   type LayoutMap,
 } from '../engine/layout';
 import {
+  connection,
   facePort,
   nodeContour,
   wireEndpoints,
   type GeometryMap,
   type NodeContour,
+  type NodeGeom,
   type Point,
 } from '../engine/geometry';
 import {
@@ -183,6 +185,90 @@ export function createWireContext(
 export interface CircuitRouting {
   routes: Map<string, Point[]>;
   hops: Map<string, Point[]>;
+}
+
+/**
+ * Wire routes keyed by node pair, so a `flow` charge can ride the very route
+ * its wire is drawn with (see {@link buildFlowPath}).
+ *
+ * Origin: `Stage.tsx` `routeByNodePair`.
+ */
+export function routesByNodePair(
+  spec: DataFlowSpec,
+  routes: Map<string, Point[]>
+): Map<string, Point[]> {
+  const m = new Map<string, Point[]>();
+  (spec.connections ?? []).forEach((link, i) => {
+    const r = routes.get(connectionKey(link, i));
+    if (r) m.set(`${refNode(link.from)}|${refNode(link.to)}`, r);
+  });
+  return m;
+}
+
+/**
+ * Concatenates the wire segments of a `flow` route into a single polyline the
+ * charge dots ride. Consecutive refs (`node` / `node:pin`) are joined by the
+ * SAME `connection()` geometry the wires use (orthogonal `step`, terminal
+ * anchoring), so the current follows the drawn path exactly. Segments whose
+ * endpoints aren't measured yet are skipped.
+ *
+ * Origin: `Stage.tsx` `buildFlowPath`.
+ */
+export function buildFlowPath(
+  route: string[],
+  geometry: GeometryMap,
+  contourFor: (ref: string) => NodeContour | undefined,
+  axisFor: (a: string, b: string) => ConnectionAxis | undefined,
+  obstacles: NodeGeom[],
+  routeByNodePair: Map<string, Point[]>
+): Point[] {
+  const pts: Point[] = [];
+  let prevEnd: Point | null = null;
+  for (let i = 0; i < route.length - 1; i++) {
+    const a = route[i];
+    const b = route[i + 1];
+    const gf = geometry[refNode(a)];
+    const gt = geometry[refNode(b)];
+    if (!gf || !gt) {
+      prevEnd = null;
+      continue;
+    }
+    // Prefer the SAME orthogonal route the wire is drawn with (circuit
+    // schematics), so the charge rides the drawn wire exactly; else route the
+    // segment on its own. A reversed pair reuses the wire route backwards.
+    const fwd = routeByNodePair.get(`${refNode(a)}|${refNode(b)}`);
+    const rev = routeByNodePair.get(`${refNode(b)}|${refNode(a)}`);
+    let seg: Point[];
+    if (fwd) seg = fwd;
+    else if (rev) seg = [...rev].reverse();
+    else {
+      const conn = connection(
+        gf,
+        gt,
+        obstacles,
+        0,
+        0,
+        'step',
+        axisFor(a, b),
+        contourFor(a),
+        contourFor(b)
+      );
+      seg = [conn.start, ...(conn.waypoints ?? []), conn.end];
+    }
+    if (prevEnd === null) {
+      pts.push(...seg);
+    } else if (Math.hypot(seg[0].x - prevEnd.x, seg[0].y - prevEnd.y) > 1) {
+      // The previous segment ended on one face of node `a` and this one leaves
+      // another (a corner junction): bridge through the node CENTRE so the
+      // charge turns the corner along the wires instead of cutting across it. A
+      // shared terminal (same pin) coincides, so no bridge is inserted there.
+      pts.push({ x: gf.x, y: gf.y }, ...seg);
+    } else {
+      pts.push(...seg.slice(1));
+    }
+    prevEnd = seg[seg.length - 1];
+  }
+  return pts;
 }
 
 /**

@@ -1,15 +1,25 @@
-import type { DataFlowSpec } from '../types';
+import type { DataFlowSpec, Packet } from '../types';
 import { compile } from '../engine/compiler';
-import { evaluate } from '../engine/timeline';
+import {
+  clamp,
+  easeInOutCubic,
+  evaluate,
+  type ArrowClip,
+  type FlowClip,
+  type MoveClip,
+} from '../engine/timeline';
 import { computeLayout, type LayoutMap } from '../engine/layout';
 import {
   collectArrowConnections,
   computePortOffsets,
 } from '../engine/portOffsets';
+import { connection, pathTip, pointAtArc } from '../engine/geometry';
 import { refNode } from '../engine/pins';
 import { highlightCode } from '../highlight/highlight';
+import { clipOpacity } from '../render/clipOpacity';
 import { h, s, setStyle } from './el';
 import { buildArrowElement } from './arrowElement';
+import { buildPacketElement } from './packetElement';
 import { netColorMap } from './netColors';
 import { HOP_RADIUS } from './stageConstants';
 import {
@@ -19,10 +29,12 @@ import {
   zoneKey,
 } from './zones';
 import {
+  buildFlowPath,
   connectionKey,
   createWireContext,
   labelSideMap,
   routeCircuit,
+  routesByNodePair,
 } from './wireModel';
 import {
   createGeometryTracker,
@@ -79,12 +91,13 @@ interface SettledFrame {
  * producing the same `.rdfa-*` markup, styled by the same `dataflow.css`,
  * without any framework runtime.
  *
- * PHASE 2.2 SCOPE — the STATIC SUBSTRATE at a frozen `t`: zones, static nodes
- * (panels, shapes, pictograms, labels, tints) and the baseline connections.
- * The time-varying overlays — packets, arrow clips, flow charges, `set_content`
- * panels and comment bubbles — arrive in steps 2.3/2.4. Their absence is a real
- * difference from the React `Stage`, tracked cell by cell in the compare
- * ratchet (`compare-ratchet.json`) rather than hidden.
+ * PHASE 2.3 SCOPE — the static substrate (zones, static nodes, baseline
+ * connections; step 2.2) plus the DYNAMIC CLIPS at a frozen `t`: packets
+ * (`move`), progressive arrows (`arrow`) and flow charges (`flow`). The two
+ * remaining time-varying layers — `set_content` panels and comment bubbles —
+ * arrive in step 2.4. Their absence is a real difference from the React
+ * `Stage`, tracked cell by cell in the compare ratchet
+ * (`compare-ratchet.json`) rather than hidden.
  */
 export function mountVanillaStage(
   container: HTMLElement,
@@ -98,8 +111,8 @@ export function mountVanillaStage(
 
   // The two overlay layers are created EMPTY, up front, at their React document
   // positions. `.rdfa-zone` elements all share z-index 0 and `.rdfa-node`
-  // elements all share 3, so ties break on source order — getting the skeleton
-  // right now means steps 2.3/2.4 can fill these in without re-deciding it.
+  // elements all share 3, so ties break on source order — the geometry-
+  // dependent rebuild below fills them in without re-deciding the z-order.
   const arrowSvg = s('svg', { class: 'rdfa-arrow-svg' });
   const overlay = h('div', { class: 'rdfa-overlay' });
   root.appendChild(arrowSvg);
@@ -133,6 +146,13 @@ export function mountVanillaStage(
   });
 
   const state = computeNodeStateAtT(spec, active, initialAutoRotation);
+
+  // Shared by the port-offset computation and the `move`/`arrow` clip key
+  // fallback below — one collection, as in `Stage`.
+  const lineConnections = collectArrowConnections(spec);
+  const packetById = new Map<string, Packet>(
+    spec.packets.map((p) => [p.id, p])
+  );
 
   const nodeEls = new Map<string, HTMLElement>();
   const zoneEls: HTMLElement[] = [];
@@ -215,14 +235,16 @@ export function mountVanillaStage(
   /**
    * Builds the layers that DEPEND on settled geometry but cannot influence it.
    *
-   * Both live in absolutely-positioned layers (`.rdfa-arrow-svg` is `inset: 0`,
-   * `.rdfa-zone` is positioned), so they cannot change what `measure()` reads
-   * about the nodes. Building them once, after the loop, is therefore
-   * equivalent to rebuilding them every pass — and React itself renders `null`
-   * for the zones on its first pass, before any geometry exists.
+   * All of them live in absolutely-positioned layers (`.rdfa-arrow-svg` and
+   * `.rdfa-overlay` are `inset: 0`, `.rdfa-zone` is positioned), so they cannot
+   * change what `measure()` reads about the nodes. Building them once, after
+   * the loop, is therefore equivalent to rebuilding them every pass — and React
+   * itself renders `null` for the zones on its first pass, before any geometry
+   * exists.
    */
   const buildGeometryDependentLayers = (): void => {
     arrowSvg.replaceChildren();
+    overlay.replaceChildren();
     for (const el of zoneEls) el.remove();
     zoneEls.length = 0;
 
@@ -248,7 +270,7 @@ export function mountVanillaStage(
 
     // ─── Connections ────────────────────────────────────────────────────────
     const portOffsets = computePortOffsets(
-      collectArrowConnections(spec),
+      lineConnections,
       layout,
       model.routeAspect,
       spec.direction ?? 'left-to-right',
@@ -302,6 +324,125 @@ export function mountVanillaStage(
         })
       );
     });
+
+    // ─── Arrow clips ────────────────────────────────────────────────────────
+    // Progressive arrows drawn by an `arrow` action — after the baseline
+    // connections, matching React's document order inside the SVG.
+    for (const a of active) {
+      if (a.clip.kind !== 'arrow') continue;
+      const clip = a.clip as ArrowClip;
+      const f = geometry[refNode(clip.fromId)];
+      const tg = geometry[refNode(clip.toId)];
+      if (!f || !tg) continue;
+      // An arrow between two connected nodes shares the connection's port
+      // spread, so the animated line lands exactly on the static one.
+      let lineKey = clip.id;
+      if (!portOffsets[lineKey]) {
+        const matchingLine = lineConnections.find(
+          (c) => c.from === refNode(clip.fromId) && c.to === refNode(clip.toId)
+        );
+        if (matchingLine) lineKey = matchingLine.key;
+      }
+      const ports = ctx.portsFor(lineKey, clip.fromId, clip.toId);
+      arrowSvg.appendChild(
+        buildArrowElement({
+          from: f,
+          to: tg,
+          startPortOffset: ports.start,
+          endPortOffset: ports.end,
+          style: clip.style,
+          path: clip.path,
+          arrow_head: clip.arrow_head,
+          text: clip.text,
+          progress: a.progress,
+          obstacles,
+          axis: ctx.axisFor(clip.fromId, clip.toId),
+          fromContour: ctx.contourFor(clip.fromId),
+          toContour: ctx.contourFor(clip.toId),
+        })
+      );
+    }
+
+    // ─── Flow charges ───────────────────────────────────────────────────────
+    // Electric current: charge dots riding the wire route(s).
+    const routeByNodePair = routesByNodePair(spec, circuit.routes);
+    for (const a of active) {
+      if (a.clip.kind !== 'flow') continue;
+      const clip = a.clip as FlowClip;
+      const pathPts = buildFlowPath(
+        clip.route,
+        geometry,
+        ctx.contourFor,
+        ctx.axisFor,
+        obstacles,
+        routeByNodePair
+      );
+      if (pathPts.length < 2) continue;
+      const lapMs = Math.max(1, clip.endMs - clip.animStartMs);
+      const raw = (t - clip.animStartMs) / lapMs;
+      const phase = clip.reverse ? -raw : raw;
+      const r = 3.4 * model.scale;
+      const g = s('g');
+      for (let j = 0; j < clip.count; j++) {
+        let u = phase + j / clip.count;
+        u = clip.loop ? ((u % 1) + 1) % 1 : clamp(u, 0, 1);
+        const p = pointAtArc(pathPts, u);
+        const dot = s('circle', {
+          class: 'rdfa-flow-charge',
+          cx: String(p.x),
+          cy: String(p.y),
+          r: String(r),
+        });
+        if (clip.color) setStyle(dot, { '--rdfa-flow': clip.color });
+        g.appendChild(dot);
+      }
+      arrowSvg.appendChild(g);
+    }
+
+    // ─── Packets (move clips) ───────────────────────────────────────────────
+    // Front layer: a packet rides the SAME `connection()` path an arrow
+    // between the two nodes would draw, at the eased progress of its clip —
+    // the engine's `evaluate` already resolved which clips are live at `t`.
+    for (const a of active) {
+      if (a.clip.kind !== 'move') continue;
+      const clip = a.clip as MoveClip;
+      const f = geometry[refNode(clip.fromId)];
+      const tg = geometry[refNode(clip.toId)];
+      const obj = packetById.get(clip.objectId);
+      if (!f || !tg || !obj) continue;
+      // Same key fallback as the arrow clips: a move along an existing
+      // connection adopts its port spread.
+      let moveKey = clip.id;
+      if (!portOffsets[moveKey]) {
+        const matchingLine = lineConnections.find(
+          (c) => c.from === refNode(clip.fromId) && c.to === refNode(clip.toId)
+        );
+        if (matchingLine) moveKey = matchingLine.key;
+      }
+      const movePorts = ctx.portsFor(moveKey, clip.fromId, clip.toId);
+      const conn = connection(
+        f,
+        tg,
+        obstacles,
+        movePorts.start,
+        movePorts.end,
+        undefined,
+        ctx.axisFor(clip.fromId, clip.toId),
+        ctx.contourFor(clip.fromId),
+        ctx.contourFor(clip.toId)
+      );
+      const pt = pathTip(conn, easeInOutCubic(a.progress));
+      const opacity = clipOpacity(clip, t);
+      overlay.appendChild(
+        buildPacketElement(obj, {
+          x: pt.x,
+          y: pt.y,
+          opacity,
+          scale: 0.8 + 0.2 * opacity,
+          highlight,
+        })
+      );
+    }
   };
 
   let outcome = run();

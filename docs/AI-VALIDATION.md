@@ -153,10 +153,13 @@ duration) × 2 themes (50 cells), diffs panel A against panel B with
 var, default 0.1%). It is deliberately NOT wired into the root `npm run` check
 sequence or CI yet.
 
-Panel B renders the **static substrate**: zones, static nodes (panels, shapes,
-pictograms, labels, tints) and the baseline connections. The time-varying
-overlays — packets, arrow clips, flow charges, `set_content` panels, comment
-bubbles — land in steps 2.3/2.4, so some cells legitimately differ today.
+Panel B renders the **static substrate** — zones, static nodes (panels, shapes,
+pictograms, labels, tints), the baseline connections (step 2.2) — plus the
+**dynamic clips** at the frozen `t`: packets (`move`), progressive arrows
+(`arrow`) and flow charges (`flow`), landed in step 2.3 with every affected
+cell at 0.0000%. The two remaining time-varying layers — `set_content` panels
+and comment bubbles — land in step 2.4, so the cells they touch legitimately
+differ today.
 
 #### The ratchet
 

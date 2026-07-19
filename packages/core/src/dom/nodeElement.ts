@@ -102,8 +102,12 @@ function buildShape(object: Node): HTMLElement {
   return h('div', { class: `rdfa-shape rdfa-shape--${type}` }, children);
 }
 
-/** Port of `NodePanel`. */
-function buildPanel(object: PanelContent, highlight: Highlighter): HTMLElement {
+/** Port of `NodePanel`. Also the body of a panel-kind packet (`PanelPacket`
+ *  reuses `NodePanel` on the React side, so `buildPacketElement` reuses this). */
+export function buildPanel(
+  object: PanelContent,
+  highlight: Highlighter
+): HTMLElement {
   const isComplex = object.type === 'complex_node';
   const { header, body, language } = object;
 

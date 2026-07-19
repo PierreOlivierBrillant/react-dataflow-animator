@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountVanillaStage } from './mount';
+import { compile } from '../engine/compiler';
 import type { DataFlowSpec } from '../types';
 
 /**
@@ -99,6 +100,103 @@ describe('mountVanillaStage — structure', () => {
     expect(node?.querySelector('.rdfa-node-visual')).not.toBeNull();
     expect(node?.querySelector('.rdfa-node-icon svg')).not.toBeNull();
     expect(node?.querySelector('.rdfa-node-label')?.textContent).toBe('A');
+  });
+});
+
+describe('mountVanillaStage — dynamic clips', () => {
+  // Two sequential steps: the move owns [0, ~1000), the arrow the step after.
+  // Probing inside each step proves a clip is drawn while live and NOT drawn
+  // outside its window — the scrubbability the React overlay gets from
+  // `evaluate` alone.
+  const dynamic: Partial<DataFlowSpec> = {
+    packets: [
+      {
+        id: 'p',
+        kind: 'http_packet',
+        packet_content: { header: 'GET /' },
+      },
+    ],
+    timeline: [
+      {
+        type: 'move',
+        id: 'm1',
+        object: 'p',
+        from: 'a',
+        to: 'b',
+        duration: 1000,
+      },
+      { type: 'arrow', id: 'a1', from: 'a', to: 'b', duration: 600 },
+    ],
+  };
+
+  it('renders a live move clip as a packet in the overlay', () => {
+    const { container } = mount(dynamic, 500);
+    const packet = container.querySelector(
+      '.rdfa-overlay .rdfa-packet.rdfa-packet-http_packet'
+    );
+
+    expect(packet).not.toBeNull();
+    expect(packet?.querySelector('.rdfa-packet-header')?.textContent).toBe(
+      'GET /'
+    );
+  });
+
+  it('draws a live arrow clip in the SVG, after the baseline connections', () => {
+    // Probe the middle of the arrow clip's own window (read off the compiled
+    // timeline — steps carry holds, so a guessed instant would be brittle).
+    // The move's step is over by then: one <g> for the connection, one for the
+    // arrow clip, and no packet left in the overlay.
+    const { timeline } = compile({ ...spec, ...dynamic });
+    const arrow = timeline.clips.find((c) => c.kind === 'arrow')!;
+    const { container } = mount(dynamic, (arrow.animStartMs + arrow.endMs) / 2);
+
+    expect(container.querySelectorAll('.rdfa-arrow-svg > g')).toHaveLength(2);
+    expect(container.querySelector('.rdfa-overlay .rdfa-packet')).toBeNull();
+  });
+
+  it('ignores a move clip whose packet id is unknown', () => {
+    const { container } = mount(
+      {
+        ...dynamic,
+        timeline: [
+          {
+            type: 'move',
+            id: 'm1',
+            object: 'ghost',
+            from: 'a',
+            to: 'b',
+            duration: 1000,
+          },
+        ],
+      },
+      500
+    );
+
+    expect(container.querySelector('.rdfa-overlay .rdfa-packet')).toBeNull();
+  });
+
+  it('renders a live flow clip as charge dots riding the route', () => {
+    const { container } = mount(
+      {
+        timeline: [
+          {
+            type: 'flow',
+            id: 'f1',
+            route: ['a', 'b'],
+            duration: 1000,
+            color: '#ff0000',
+          },
+        ],
+      },
+      500
+    );
+    const dots = container.querySelectorAll<SVGCircleElement>(
+      '.rdfa-arrow-svg .rdfa-flow-charge'
+    );
+
+    // ~one charge per segment, floored at two (the compiler's default count).
+    expect(dots).toHaveLength(2);
+    expect(dots[0].style.getPropertyValue('--rdfa-flow')).toBe('#ff0000');
   });
 });
 
