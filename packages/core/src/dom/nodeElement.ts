@@ -1,24 +1,37 @@
-import type { Highlighter, Node } from '../types';
+import type { Highlighter, Node, ObjectContent } from '../types';
 import { isPanelNode, isShapeType, type ShapeType } from '../render/nodeKinds';
 import { nodeTint, type ColorOverride } from '../render/nodeColors';
-import { h, pct, s, setStyle, type Child } from './el';
+import type { ContentLimit } from '../engine/placements';
+import { h, pct, px, s, setStyle, type Child } from './el';
+import { buildContentPanel, type CodeFitTarget } from './contentElement';
 import { renderNodeIcon } from './icons/nodeIcons';
 import { renderSubIcon } from './icons/subIcons';
 import { appendRichText } from './richtext';
 
 /**
  * Static node markup — the port of `StaticNode` + `NodeView` + `NodePanel` +
- * `ShapeNode`.
+ * `ShapeNode` + `ContentPanel`.
  *
- * Scope note for phase 2.2: `set_content` panels (`ContentPanel`) are NOT built
- * here. A node whose content is active therefore renders its pictogram, which is
- * a real difference from the React `Stage` — the cells where that happens are
- * listed in the compare ratchet, not worked around.
+ * A node carrying content (initial `node.content` or an active `set_content`)
+ * replaces its whole visual with the panel — no pictogram, no corner badge — and
+ * GROWS to fit it. That growth is why the panel is built here, inside the node,
+ * rather than in an overlay: the convergence loop has to measure it.
  */
 
 export interface NodeElementOptions {
   /** Placement at build time; rewritten each convergence pass. */
   placement: { cx: number; cy: number };
+  /** Effective content: an active `set_content`, else the node's own. */
+  content?: ObjectContent;
+  /** Content opacity — the `set_content` crossfade. Defaults to 1. */
+  contentOpacity?: number;
+  /** Revealed fraction [0..1] during a `set_content` transition. The reveal runs
+   *  TOP-DOWN via `clip-path`, which does NOT change the layout box — so the
+   *  measurement always sees the full panel and never feeds back on itself. */
+  reveal?: number;
+  /** Per-node panel ceiling, so a panel shrinks rather than covering a
+   *  neighbour. Rewritten each pass (it scales with the player). */
+  contentLimit?: ContentLimit;
   /** Runtime badge override (`set_icon`); `''` clears it. */
   iconOverride?: string;
   /** Live contact state (0..1) for `switch` / `push_button`. */
@@ -32,6 +45,12 @@ export interface NodeElementOptions {
   labelSide?: 'left' | 'right';
   colorOverride?: ColorOverride;
   highlight: Highlighter;
+}
+
+export interface NodeElementResult {
+  el: HTMLElement;
+  /** Present when the node hosts a `code` panel — the font-fit loop's target. */
+  codeFit?: CodeFitTarget;
 }
 
 /**
@@ -175,10 +194,11 @@ function buildVisualBody(
 export function buildNodeElement(
   object: Node,
   options: NodeElementOptions
-): HTMLElement {
+): NodeElementResult {
   // Runtime set_icon wins over the static badge; '' clears it (nullish
   // coalescing keeps '' distinct from "no override").
   const effIcon = options.iconOverride ?? object.icon;
+  const content = options.content;
   const isPanel = isPanelNode(object.type);
   const isShape = isShapeType(object.type);
   // A `signal` I/O pad shows its value IN the pad (not as a corner badge).
@@ -187,26 +207,44 @@ export function buildNodeElement(
     ? (options.colorOverride?.background_color ?? object.background_color)
     : undefined;
 
+  // Content SUPPRESSES every kind modifier: the panel replaces the visual, so
+  // `--panel` / `--shape` / `--signal` / `--tinted` would style something that
+  // is no longer drawn.
   const cls =
     'rdfa-node' +
-    (isPanel ? ' rdfa-node--panel' : '') +
-    (isShape ? ' rdfa-node--shape' : '') +
-    (isSignal ? ' rdfa-node--signal' : '') +
-    (tinted ? ' rdfa-node--tinted' : '') +
+    (content ? ' rdfa-node--content' : '') +
+    (!content && isPanel ? ' rdfa-node--panel' : '') +
+    (!content && isShape ? ' rdfa-node--shape' : '') +
+    (!content && isSignal ? ' rdfa-node--signal' : '') +
+    (!content && tinted ? ' rdfa-node--tinted' : '') +
     (options.highlighted ? ' rdfa-node--highlight' : '');
 
+  const panel = content
+    ? buildContentPanel(content, options.highlight)
+    : undefined;
   const visual = h('span', { class: 'rdfa-node-visual' }, [
-    buildVisualBody(object, options, effIcon, isSignal),
+    panel ? panel.el : buildVisualBody(object, options, effIcon, isSignal),
   ]);
   // Rotation lives on the VISUAL, never on `.rdfa-node`: the label must stay
-  // upright, and the layout box arrows anchor to must not change.
-  if (options.rotation != null && options.rotation !== 0)
-    setStyle(visual, { transform: `rotate(${options.rotation}deg)` });
+  // upright, and the layout box arrows anchor to must not change. The reveal's
+  // `clip-path` shares the same element — again without touching the box.
+  const contentOpacity = options.contentOpacity ?? 1;
+  const reveal = options.reveal;
+  setStyle(visual, {
+    ...(content ? { opacity: String(contentOpacity) } : {}),
+    ...(content && reveal != null && reveal < 1
+      ? { 'clip-path': `inset(0 0 ${((1 - reveal) * 100).toFixed(2)}% 0)` }
+      : {}),
+    ...(options.rotation != null && options.rotation !== 0
+      ? { transform: `rotate(${options.rotation}deg)` }
+      : {}),
+  });
 
   // Unique corner badge: the subicon (tech) and the loading ring share the same
   // positioned container, so they always remain concentric. A signal pad shows
-  // its value inside instead, so it carries no corner badge.
-  if (!isSignal && (effIcon || options.loading)) {
+  // its value inside instead, so it carries no corner badge. A content panel
+  // carries none either — it replaced the visual outright.
+  if (!content && !isSignal && (effIcon || options.loading)) {
     const badge = h('span', { class: 'rdfa-node-badge' });
     if (effIcon)
       badge.appendChild(
@@ -245,6 +283,8 @@ export function buildNodeElement(
         : undefined,
     ...nodeTint(object, options.colorOverride),
   });
+  if (content && options.contentLimit)
+    applyContentLimit(el, options.contentLimit);
 
   const label = nodeLabel(object);
   if (label) {
@@ -257,7 +297,7 @@ export function buildNodeElement(
     el.appendChild(labelEl);
   }
 
-  return el;
+  return { el, codeFit: panel?.codeFit };
 }
 
 /** Writes a node's measured placement. Called once per convergence pass. */
@@ -266,4 +306,16 @@ export function applyNodePlacement(
   placement: { cx: number; cy: number }
 ): void {
   setStyle(el, { left: pct(placement.cx), top: pct(placement.cy) });
+}
+
+/**
+ * Writes the per-node panel ceilings. Called once per convergence pass, because
+ * they scale with the measured player — the panel a node may occupy shrinks as
+ * the player does.
+ */
+export function applyContentLimit(el: HTMLElement, limit: ContentLimit): void {
+  setStyle(el, {
+    '--rdfa-content-maxw': px(limit.maxW),
+    '--rdfa-content-maxh': px(limit.maxH),
+  });
 }

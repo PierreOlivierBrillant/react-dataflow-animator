@@ -1,15 +1,21 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it } from 'vitest';
-import { applyNodePlacement, buildNodeElement } from './nodeElement';
+import {
+  applyContentLimit,
+  applyNodePlacement,
+  buildNodeElement,
+} from './nodeElement';
 import { escapeHtml } from '../highlight/highlight';
 import type { Node } from '../types';
 
+/** Unwraps to the element: most assertions here do not care about the code-fit
+ *  handle that comes with a `code` content panel. */
 const build = (node: Node, options = {}) =>
   buildNodeElement(node, {
     placement: { cx: 0.25, cy: 0.5 },
     highlight: escapeHtml,
     ...options,
-  });
+  }).el;
 
 describe('buildNodeElement — root', () => {
   it('carries the id and the placement as percentages', () => {
@@ -171,7 +177,7 @@ describe('buildNodeElement — body dispatch', () => {
   });
 
   it('routes a panel through the highlighter when a language is set', () => {
-    const el = buildNodeElement(
+    const { el } = buildNodeElement(
       { id: 'a', type: 'simple_node', body: 'a<b', language: 'sql' },
       {
         placement: { cx: 0, cy: 0 },
@@ -307,6 +313,100 @@ describe('buildNodeElement — label', () => {
   });
 });
 
+describe('buildNodeElement — content panel', () => {
+  const content = { type: 'text' as const, value: 'hi' };
+
+  it('replaces the visual with the panel and drops the pictogram and badge', () => {
+    const el = build(
+      { id: 'a', type: 'server', icon: 'react' },
+      { content, loading: true }
+    );
+
+    expect(el.querySelector('.rdfa-content')).not.toBeNull();
+    expect(el.querySelector('.rdfa-node-icon')).toBeNull();
+    // The panel replaced the visual outright, so there is nothing to badge.
+    expect(el.querySelector('.rdfa-node-badge')).toBeNull();
+  });
+
+  it('SUPPRESSES every kind modifier while content is shown', () => {
+    const el = build(
+      { id: 'a', type: 'simple_node', body: 'b', background_color: '#f00' },
+      { content, highlighted: true }
+    );
+
+    // `--content` wins; `--panel` and `--tinted` would style a visual that is
+    // no longer drawn. `--highlight` is orthogonal and survives.
+    expect(el.className).toBe(
+      'rdfa-node rdfa-node--content rdfa-node--highlight'
+    );
+  });
+
+  it('keeps the kind modifiers when the node has no content', () => {
+    const el = build({
+      id: 'a',
+      type: 'simple_node',
+      body: 'b',
+      background_color: '#f00',
+    });
+
+    expect(el.className).toBe('rdfa-node rdfa-node--panel rdfa-node--tinted');
+  });
+
+  it('carries the crossfade opacity and the top-down reveal on the visual', () => {
+    const el = build(
+      { id: 'a', type: 'server' },
+      { content, contentOpacity: 0.4, reveal: 0.4 }
+    );
+    const visual = el.querySelector<HTMLElement>('.rdfa-node-visual');
+
+    expect(visual?.style.opacity).toBe('0.4');
+    // clip-path, not height: the box the ResizeObserver measures stays whole.
+    expect(visual?.style.clipPath).toBe('inset(0 0 60.00% 0)');
+  });
+
+  it('omits the clip-path once the reveal is complete', () => {
+    const el = build({ id: 'a', type: 'server' }, { content, reveal: 1 });
+
+    expect(
+      el.querySelector<HTMLElement>('.rdfa-node-visual')?.style.clipPath
+    ).toBe('');
+  });
+
+  it('writes the per-node ceilings only when content is shown', () => {
+    const withContent = build(
+      { id: 'a', type: 'server' },
+      { content, contentLimit: { maxW: 200, maxH: 120 } }
+    );
+    const without = build(
+      { id: 'a', type: 'server' },
+      { contentLimit: { maxW: 200, maxH: 120 } }
+    );
+
+    expect(withContent.style.getPropertyValue('--rdfa-content-maxw')).toBe(
+      '200px'
+    );
+    expect(withContent.style.getPropertyValue('--rdfa-content-maxh')).toBe(
+      '120px'
+    );
+    expect(without.style.getPropertyValue('--rdfa-content-maxw')).toBe('');
+  });
+
+  it('exposes a code-fit handle for a code panel only', () => {
+    const opts = { placement: { cx: 0, cy: 0 }, highlight: escapeHtml };
+    const code = buildNodeElement(
+      { id: 'a', type: 'server' },
+      { ...opts, content: { type: 'code', value: 'x', language: 'sql' } }
+    );
+    const text = buildNodeElement(
+      { id: 'a', type: 'server' },
+      { ...opts, content }
+    );
+
+    expect(code.codeFit).toBeDefined();
+    expect(text.codeFit).toBeUndefined();
+  });
+});
+
 describe('applyNodePlacement', () => {
   it('rewrites left/top without touching anything else', () => {
     const el = build({ id: 'a', type: 'server' }, { opacity: 0.5 });
@@ -315,5 +415,18 @@ describe('applyNodePlacement', () => {
     expect(el.style.left).toBe('75%');
     expect(el.style.top).toBe('10%');
     expect(el.style.opacity).toBe('0.5');
+  });
+});
+
+describe('applyContentLimit', () => {
+  it('rewrites the ceilings each pass, as the player rescales', () => {
+    const el = build(
+      { id: 'a', type: 'server' },
+      { content: { type: 'text' as const, value: 'hi' } }
+    );
+    applyContentLimit(el, { maxW: 64, maxH: 48 });
+
+    expect(el.style.getPropertyValue('--rdfa-content-maxw')).toBe('64px');
+    expect(el.style.getPropertyValue('--rdfa-content-maxh')).toBe('48px');
   });
 });

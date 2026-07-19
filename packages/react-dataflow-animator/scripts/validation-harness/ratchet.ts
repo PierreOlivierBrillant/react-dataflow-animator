@@ -21,6 +21,23 @@ import type { AbResultRow } from './abResults';
  * leave the entry behind, and quietly keep that cell exempt forever.
  */
 
+/**
+ * Pixel-diff ratio above which a cell counts as differing — 0.01%.
+ *
+ * Lives here, next to the ratchet, because the spec and the teardown BOTH need
+ * it and each used to carry its own default. They drifted the moment one was
+ * lowered: the grid asserted at 0.01% while the summary line still announced
+ * 0.10%.
+ *
+ * The value is not a tolerance budget. The self-test pins the harness's own
+ * noise floor at exactly 0.00%, and every cell of the grid currently measures
+ * exactly 0.0000%, so this is only a guard against measurement dust — anything
+ * above zero is a real difference in what the two renderers drew.
+ */
+export const COMPARE_THRESHOLD = Number(
+  process.env.COMPARE_THRESHOLD ?? '0.0001'
+);
+
 interface RatchetFile {
   cells: Record<string, string>;
 }

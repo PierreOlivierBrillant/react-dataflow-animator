@@ -5,39 +5,16 @@
     "fails the run when a listed cell starts passing, so a feature that lands is",
     "forced to delete its entries. See docs/AI-VALIDATION.md.",
     "",
-    "Every entry below is a layer the vanilla renderer does not draw YET. The",
-    "reasons are not guesses: each was derived by diffing the `.rdfa-*` element",
-    "inventory of the two panels, so the listed cause is the ONLY structural",
-    "difference present in that cell.",
+    "EMPTY as of step 2.4, and that is the point. Every rendering layer at a frozen",
+    "`t` now exists in the vanilla renderer, and the whole 50-cell grid measures",
+    "EXACTLY 0.0000% — not 'under threshold', bit-identical screenshots. The",
+    "self-test independently pins the measurement's own noise floor at exactly",
+    "0.00%, so there is no headroom left to hide in: any non-zero cell is a real",
+    "difference in what the two renderers drew.",
     "",
-    "Watch `spa · 100% · light` (0.1055%) — it sits just over the 0.1% threshold",
-    "while its `dark` twin (0.0840%) passes, with the identical cause. It is the",
-    "entry most likely to flip on an unrelated rendering nudge."
+    "Which is why COMPARE_THRESHOLD now defaults to 0.01% instead of 0.1%. Re-adding",
+    "an entry here is a deliberate admission that a layer regressed or that a new",
+    "one has not landed yet — never a way to quiet a diff you have not explained."
   ],
-  "cells": {
-    "spa · 50% · light": "set_content panel — step 2.4",
-    "spa · 50% · dark": "set_content panel — step 2.4",
-    "spa · 75% · light": "set_content panel — step 2.4",
-    "spa · 75% · dark": "set_content panel — step 2.4",
-    "spa · 100% · light": "comment bubble — step 2.4",
-
-    "clientServer · 75% · light": "set_content panel + comment bubble — step 2.4",
-    "clientServer · 75% · dark": "set_content panel + comment bubble — step 2.4",
-    "clientServer · 100% · light": "set_content panel + comment bubble — step 2.4",
-    "clientServer · 100% · dark": "set_content panel + comment bubble — step 2.4",
-
-    "messageQueue · 25% · light": "set_content panel — step 2.4",
-    "messageQueue · 25% · dark": "set_content panel — step 2.4",
-    "messageQueue · 50% · light": "set_content panel + comment bubble — step 2.4",
-    "messageQueue · 50% · dark": "set_content panel + comment bubble — step 2.4",
-    "messageQueue · 75% · light": "comment bubble — step 2.4",
-    "messageQueue · 75% · dark": "comment bubble — step 2.4",
-    "messageQueue · 100% · light": "set_content panel — step 2.4",
-    "messageQueue · 100% · dark": "set_content panel — step 2.4",
-
-    "collision · 50% · light": "comment bubble — step 2.4",
-    "collision · 50% · dark": "comment bubble — step 2.4",
-    "collision · 75% · light": "comment bubble — step 2.4",
-    "collision · 75% · dark": "comment bubble — step 2.4"
-  }
+  "cells": {}
 }

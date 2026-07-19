@@ -250,3 +250,76 @@ describe('mountVanillaStage — teardown', () => {
     }).not.toThrow();
   });
 });
+
+describe('mountVanillaStage — set_content and comments', () => {
+  const contentSpec = {
+    timeline: [
+      {
+        type: 'set_content' as const,
+        object: 'a',
+        content: { type: 'text' as const, value: 'panel' },
+        duration: 2000,
+      },
+    ],
+  };
+
+  const commentSpec = (object?: string) => ({
+    timeline: [
+      { type: 'comment' as const, text: 'hello', object, duration: 2000 },
+    ],
+  });
+
+  it('builds the panel INSIDE its node, not in the overlay', () => {
+    const { container } = mount(contentSpec, 500);
+
+    const node = container.querySelector('[data-node-id="a"]');
+    // This is the whole point of step 2.4: a panel makes its node GROW, so it
+    // has to be inside the measured box rather than on an absolute layer.
+    expect(node?.querySelector('.rdfa-content')).not.toBeNull();
+    expect(container.querySelector('.rdfa-overlay .rdfa-content')).toBeNull();
+    expect(node?.classList.contains('rdfa-node--content')).toBe(true);
+  });
+
+  it('renders a node`s own content with no clip driving it', () => {
+    const { container } = mount({
+      nodes: [
+        {
+          id: 'a',
+          type: 'server',
+          content: { type: 'code', value: 'x', language: 'sql' },
+        },
+        { id: 'b', type: 'database' },
+      ],
+    });
+
+    expect(
+      container.querySelector('[data-node-id="a"] .rdfa-terminal')
+    ).not.toBeNull();
+  });
+
+  it('puts an omniscient comment bubble in the overlay', () => {
+    const { container } = mount(commentSpec(), 500);
+
+    const bubble = container.querySelector('.rdfa-overlay .rdfa-comment');
+    expect(bubble).not.toBeNull();
+    // No anchor → the omniscient variant, which has no tail.
+    expect(bubble?.classList.contains('rdfa-comment--omniscient')).toBe(true);
+    expect(bubble?.querySelector('.rdfa-comment-tail')).toBeNull();
+  });
+
+  it('anchors a bubble to its node and gives it a tail', () => {
+    const { container } = mount(commentSpec('a'), 500);
+
+    const bubble = container.querySelector('.rdfa-comment');
+    expect(bubble?.classList.contains('rdfa-comment--omniscient')).toBe(false);
+    expect(bubble?.querySelector('.rdfa-comment-tail')).not.toBeNull();
+  });
+
+  it('drops a bubble whose anchor names an unknown node', () => {
+    const { container } = mount(commentSpec('nope'), 500);
+
+    // Silently promoting it to an omniscient bubble would invent a layer the
+    // React Stage does not draw.
+    expect(container.querySelector('.rdfa-comment')).toBeNull();
+  });
+});

@@ -209,3 +209,58 @@ describe('pin nudge', () => {
     expect(s.nudgedLayout.a.cy).toBeCloseTo(0.6, 6);
   });
 });
+
+describe('buildStageModel — content limits', () => {
+  it('caps every node and expresses the cap in render units', () => {
+    const layout = computeLayout(flowSpec, { aspect: 1.6 });
+    const s = buildStageModel({
+      spec: flowSpec,
+      layout,
+      metrics: metrics(),
+      density: 'comfortable',
+    });
+
+    expect(Object.keys(s.contentLimits).sort()).toEqual(['a', 'b']);
+    for (const id of ['a', 'b']) {
+      expect(s.contentLimits[id].maxW).toBeGreaterThan(0);
+      expect(s.contentLimits[id].maxW).toBeLessThanOrEqual(s.contentMaxW);
+      expect(s.contentLimits[id].maxH).toBeLessThanOrEqual(s.contentMaxH);
+    }
+  });
+
+  it('scales with the player, like every other length here', () => {
+    const layout = computeLayout(flowSpec, { aspect: 1.6 });
+    const big = buildStageModel({
+      spec: flowSpec,
+      layout,
+      metrics: metrics({ width: 800, height: 500 }),
+      density: 'comfortable',
+    });
+    const small = buildStageModel({
+      spec: flowSpec,
+      layout,
+      metrics: metrics({ width: 400, height: 250 }),
+      density: 'comfortable',
+    });
+
+    // Half the player, half the k — a strictly homogeneous reduction.
+    expect(small.contentLimits.a.maxW).toBeLessThan(big.contentLimits.a.maxW);
+  });
+
+  it('still produces real limits on an unmeasured stage', () => {
+    const layout = computeLayout(flowSpec, { aspect: 1.6 });
+    const s = buildStageModel({
+      spec: flowSpec,
+      layout,
+      metrics: INITIAL_METRICS,
+      density: 'comfortable',
+    });
+
+    // The design space has a FIXED size (700×500 at k=1), so a 0×0 stage never
+    // reaches `computeContentLimits`' degenerate branch: neighbours still
+    // constrain the box, and the first pass renders a panel of the right shape
+    // instead of an unbounded one that would have to shrink afterwards.
+    expect(s.contentLimits.a.maxH).toBeLessThan(s.contentMaxH);
+    expect(s.contentLimits.a.maxH).toBeGreaterThan(0);
+  });
+});

@@ -1,27 +1,41 @@
-import type { DataFlowSpec, Packet } from '../types';
+import type { DataFlowSpec, ObjectContent, Packet } from '../types';
 import { compile } from '../engine/compiler';
 import {
   clamp,
   easeInOutCubic,
   evaluate,
   type ArrowClip,
+  type CommentClip,
   type FlowClip,
   type MoveClip,
+  type SetContentClip,
 } from '../engine/timeline';
 import { computeLayout, type LayoutMap } from '../engine/layout';
 import {
   collectArrowConnections,
   computePortOffsets,
 } from '../engine/portOffsets';
-import { connection, pathTip, pointAtArc } from '../engine/geometry';
+import {
+  connection,
+  pathTip,
+  pointAtArc,
+  type GeometryMap,
+  type NodeGeom,
+} from '../engine/geometry';
 import { refNode } from '../engine/pins';
 import { highlightCode } from '../highlight/highlight';
-import { clipOpacity } from '../render/clipOpacity';
+import { clipOpacity, contentCrossfade } from '../render/clipOpacity';
 import { h, s, setStyle } from './el';
 import { buildArrowElement } from './arrowElement';
+import { appendCommentElement } from './commentElement';
+import {
+  applyCodeFontScale,
+  measureCodeFit,
+  type CodeFitTarget,
+} from './contentElement';
 import { buildPacketElement } from './packetElement';
 import { netColorMap } from './netColors';
-import { HOP_RADIUS } from './stageConstants';
+import { HOP_RADIUS, lerp } from './stageConstants';
 import {
   buildZoneLabel,
   buildZoneRect,
@@ -45,7 +59,11 @@ import {
 import { settle } from './settle';
 import { buildStageModel, type StageModel } from './stageModel';
 import { autoRotationMap, computeNodeStateAtT } from './nodeStateAtT';
-import { applyNodePlacement, buildNodeElement } from './nodeElement';
+import {
+  applyContentLimit,
+  applyNodePlacement,
+  buildNodeElement,
+} from './nodeElement';
 
 /** Handle returned by {@link mountVanillaStage}. */
 export interface VanillaStageHandle {
@@ -77,6 +95,26 @@ const BASE_PASSES = 4;
  */
 const CIRCUIT_EXTRA_PASSES = 12;
 
+/**
+ * Smallest change in a code block's fit ratio worth re-rendering for — the
+ * tolerance `Stage`'s `handleCodeFit` applies before it stores a new ratio.
+ *
+ * It is what TERMINATES the font-fit fixed point: shrinking the font changes the
+ * box, which changes the ratio by an ever smaller amount. Without the deadband
+ * the two would chase each other indefinitely.
+ */
+const CODE_FIT_EPSILON = 0.005;
+
+/**
+ * The convergence state. Geometry is not the whole picture: a `code` panel also
+ * negotiates a COMMON font scale across every code block on the stage, and that
+ * scale changes the panels' size — so it belongs in the same fixed point rather
+ * than in a loop of its own.
+ */
+interface FrameMetrics extends StageMetrics {
+  codeFontScale: number;
+}
+
 /** What the last convergence pass produced, reused to build the wire layer. */
 interface SettledFrame {
   metrics: StageMetrics;
@@ -91,13 +129,20 @@ interface SettledFrame {
  * producing the same `.rdfa-*` markup, styled by the same `dataflow.css`,
  * without any framework runtime.
  *
- * PHASE 2.3 SCOPE — the static substrate (zones, static nodes, baseline
- * connections; step 2.2) plus the DYNAMIC CLIPS at a frozen `t`: packets
- * (`move`), progressive arrows (`arrow`) and flow charges (`flow`). The two
- * remaining time-varying layers — `set_content` panels and comment bubbles —
- * arrive in step 2.4. Their absence is a real difference from the React
- * `Stage`, tracked cell by cell in the compare ratchet
- * (`compare-ratchet.json`) rather than hidden.
+ * PHASE 2.4 SCOPE — every rendering layer at a frozen `t`: the static substrate
+ * (zones, nodes, baseline connections), the dynamic clips (packets, progressive
+ * arrows, flow charges) and now `set_content` panels and comment bubbles. The
+ * compare ratchet is consequently EMPTY: the A/B grid agrees with the React
+ * `Stage` to the pixel, so any non-zero cell is a regression.
+ *
+ * The layers split in two, and the split is structural rather than a matter of
+ * taste. Overlays (arrows, packets, comments, zones) are absolutely positioned:
+ * they read the settled geometry and cannot perturb it, so they are built ONCE
+ * after the loop. A `set_content` panel is not an overlay — it lives inside its
+ * node and makes it GROW — so it is built up front and the loop converges with
+ * it in place.
+ *
+ * Playback (a moving `t`) arrives in step 2.5.
  */
 export function mountVanillaStage(
   container: HTMLElement,
@@ -147,6 +192,36 @@ export function mountVanillaStage(
 
   const state = computeNodeStateAtT(spec, active, initialAutoRotation);
 
+  // ─── Effective content per node ───────────────────────────────────────────
+  // A node's own `content` shows at full opacity; an active `set_content`
+  // overrides it and crossfades. `contentCrossfade` is EASED and drives both the
+  // opacity and the icon→panel geometry lerp below — easing them together is
+  // what removes the mechanical feel of a linear morph, so they must stay the
+  // same number.
+  const contentByNode: Record<
+    string,
+    { content: ObjectContent; opacity: number }
+  > = {};
+  for (const node of spec.nodes) {
+    if (node.content)
+      contentByNode[node.id] = { content: node.content, opacity: 1 };
+  }
+  for (const a of active) {
+    if (a.clip.kind !== 'set_content') continue;
+    const clip = a.clip as SetContentClip;
+    contentByNode[clip.objectId] = {
+      content: clip.content,
+      opacity: contentCrossfade(clip, t),
+    };
+  }
+  // Revealed fraction: the top-down `clip-path` wipe. Deliberately DECOUPLED
+  // from measurement (no geometry input), so it is correct even at a frozen `t`.
+  const revealByNode: Record<string, number> = {};
+  for (const nodeId in contentByNode) {
+    const op = contentByNode[nodeId].opacity;
+    if (op < 1) revealByNode[nodeId] = op;
+  }
+
   // Shared by the port-offset computation and the `move`/`arrow` clip key
   // fallback below — one collection, as in `Stage`.
   const lineConnections = collectArrowConnections(spec);
@@ -155,6 +230,8 @@ export function mountVanillaStage(
   );
 
   const nodeEls = new Map<string, HTMLElement>();
+  const contentNodeIds: string[] = [];
+  const codeFits = new Map<string, CodeFitTarget>();
   const zoneEls: HTMLElement[] = [];
   for (const node of spec.nodes) {
     const placement = initialModel.placements[node.id];
@@ -163,9 +240,14 @@ export function mountVanillaStage(
     // A fully-hidden node is removed from the DOM entirely, as in React.
     if (opacity <= 0) continue;
 
-    const el = buildNodeElement(node, {
+    const content = contentByNode[node.id];
+    const { el, codeFit } = buildNodeElement(node, {
       placement,
       highlight,
+      content: content?.content,
+      contentOpacity: content?.opacity,
+      reveal: revealByNode[node.id],
+      contentLimit: content ? initialModel.contentLimits[node.id] : undefined,
       iconOverride: state.icon[node.id],
       closed: state.closed[node.id],
       loading: state.loading.has(node.id),
@@ -177,6 +259,8 @@ export function mountVanillaStage(
         : undefined,
     });
     nodeEls.set(node.id, el);
+    if (content) contentNodeIds.push(node.id);
+    if (codeFit) codeFits.set(node.id, codeFit);
     // BEFORE the overlay: React's order is zones → arrows → nodes → zone
     // labels → overlay, and `appendChild` here would put every node behind the
     // front layer instead.
@@ -199,7 +283,39 @@ export function mountVanillaStage(
     model: initialModel,
   };
 
-  const applyMetrics = (metrics: StageMetrics): void => {
+  // Pre-panel ("icon") geometry of nodes driven by an active `set_content`,
+  // captured on the FIRST pass that produced a geometry for them and never
+  // overwritten afterwards — including across ResizeObserver-driven re-runs,
+  // where React keeps its own captured state too. It anchors the icon→panel
+  // morph below.
+  const iconGeomByNode: Record<string, NodeGeom> = {};
+  const activeContentNodeIds = new Set<string>();
+  for (const a of active) {
+    if (a.clip.kind === 'set_content')
+      activeContentNodeIds.add((a.clip as SetContentClip).objectId);
+  }
+
+  // Per-block fit ratios, gated by the same deadband `handleCodeFit` applies.
+  const codeRatios: Record<string, number> = {};
+
+  /**
+   * Re-measures every code block and returns the COMMON scale: the minimum
+   * across all of them, so no block overflows and — more visibly — every block
+   * on the stage renders at exactly the same size.
+   *
+   * `Math.min(1, ...[])` is 1, which is also React's value before any block has
+   * reported, so an all-text stage costs nothing.
+   */
+  const measureCodeFontScale = (): number => {
+    for (const [id, target] of codeFits) {
+      const ratio = measureCodeFit(target);
+      if (Math.abs((codeRatios[id] ?? 1) - ratio) >= CODE_FIT_EPSILON)
+        codeRatios[id] = ratio;
+    }
+    return Math.min(1, ...Object.values(codeRatios));
+  };
+
+  const applyMetrics = (metrics: FrameMetrics): void => {
     // `computeLayout` depends on the measured aspect, so the layout is part of
     // what each pass recomputes — not just the placements derived from it.
     const layout = computeLayout(spec, { aspect: metrics.aspect });
@@ -217,17 +333,40 @@ export function mountVanillaStage(
       const placement = model.placements[id];
       if (placement) applyNodePlacement(el, placement);
     }
+    // Ceilings scale with the player, so they are rewritten every pass.
+    for (const id of contentNodeIds) {
+      const el = nodeEls.get(id);
+      const limit = model.contentLimits[id];
+      if (el && limit) applyContentLimit(el, limit);
+    }
+    for (const target of codeFits.values())
+      applyCodeFontScale(target, metrics.codeFontScale);
+    // Captured from the geometry this pass MEASURED, i.e. the first one in which
+    // the node existed — matching the render at which React's layout effect
+    // first sees a non-empty `geometry`.
+    for (const id of activeContentNodeIds) {
+      if (!iconGeomByNode[id] && metrics.geometry[id])
+        iconGeomByNode[id] = metrics.geometry[id];
+    }
     settled = { metrics, layout, autoRotation, labelSides, model };
   };
 
   const maxPasses =
     BASE_PASSES + (initialModel.frameAspect ? CIRCUIT_EXTRA_PASSES : 0);
 
+  const initialFrame: FrameMetrics = { ...INITIAL_METRICS, codeFontScale: 1 };
+
   const run = (): { passes: number; converged: boolean } =>
-    settle<StageMetrics>({
-      initial: INITIAL_METRICS,
-      measure: (previous) => tracker.measure(previous),
-      same: sameMetrics,
+    settle<FrameMetrics>({
+      initial: initialFrame,
+      measure: (previous) => {
+        // Order is free: `measureCodeFit` restores the inline font before
+        // returning, so the geometry read sees exactly the DOM the pass
+        // started with either way.
+        const codeFontScale = measureCodeFontScale();
+        return { ...tracker.measure(previous), codeFontScale };
+      },
+      same: (a, b) => a.codeFontScale === b.codeFontScale && sameMetrics(a, b),
       apply: applyMetrics,
       maxPasses,
     });
@@ -250,6 +389,50 @@ export function mountVanillaStage(
 
     const { metrics, layout, autoRotation, labelSides, model } = settled;
     const { geometry } = metrics;
+
+    // ─── Icon → panel morph ─────────────────────────────────────────────────
+    // Mid-crossfade, a node is neither its icon nor its full panel. Everything
+    // that ATTACHES to a node — wires, arrows, packets, comment tails — reads
+    // this interpolated geometry so it tracks the box actually on screen. The
+    // factor is `contentCrossfade`, the same eased number driving the opacity.
+    //
+    // Zones and node PLACEMENTS keep reading the raw geometry, as in `Stage`.
+    let effectiveGeometry: GeometryMap = geometry;
+    let geometryOverridden = false;
+    for (const a of active) {
+      if (a.clip.kind !== 'set_content') continue;
+      const nodeId = (a.clip as SetContentClip).objectId;
+      const iconGeom = iconGeomByNode[nodeId];
+      const currGeom = geometry[nodeId];
+      if (!iconGeom || !currGeom) continue;
+      const p = contentByNode[nodeId]?.opacity ?? 0;
+      if (p >= 1) continue;
+      if (!geometryOverridden) {
+        effectiveGeometry = { ...geometry };
+        geometryOverridden = true;
+      }
+      const lH = lerp(iconGeom.labelH ?? 0, currGeom.labelH ?? 0, p);
+      const lW = lerp(iconGeom.labelW ?? 0, currGeom.labelW ?? 0, p);
+      // Tinted badge outset: resolves toward 0 as the (untinted) panel takes
+      // over, so the attachment point never jumps.
+      const bo = lerp(
+        iconGeom.borderOutset ?? 0,
+        currGeom.borderOutset ?? 0,
+        p
+      );
+      effectiveGeometry[nodeId] = {
+        id: currGeom.id,
+        x: lerp(iconGeom.x, currGeom.x, p),
+        y: lerp(iconGeom.y, currGeom.y, p),
+        width: lerp(iconGeom.width, currGeom.width, p),
+        height: lerp(iconGeom.height, currGeom.height, p),
+        ...(lH > 0 ? { labelH: lH } : {}),
+        ...(lW > 0 ? { labelW: lW } : {}),
+        ...(bo > 0 ? { borderOutset: bo } : {}),
+        // Same stage scale as the icon (arrow↔node gap at scale).
+        ...(currGeom.scale != null ? { scale: currGeom.scale } : {}),
+      };
+    }
 
     // ─── Zones ──────────────────────────────────────────────────────────────
     const bounds = computeZoneBounds(spec.zones, geometry);
@@ -288,11 +471,13 @@ export function mountVanillaStage(
     const circuit = routeCircuit(spec, geometry, ctx, labelSides, model.k);
     const isCircuit = (spec.direction ?? 'left-to-right') === 'circuit';
     const netColorById = netColorMap(spec);
-    const obstacles = Object.values(geometry);
+    // Identity when nothing is mid-crossfade — `effectiveGeometry` is then the
+    // same object as `geometry`.
+    const obstacles = Object.values(effectiveGeometry);
 
     (spec.connections ?? []).forEach((link, i) => {
-      const f = geometry[refNode(link.from)];
-      const tg = geometry[refNode(link.to)];
+      const f = effectiveGeometry[refNode(link.from)];
+      const tg = effectiveGeometry[refNode(link.to)];
       if (!f || !tg) return;
       const key = connectionKey(link, i);
       const ports = ctx.portsFor(key, link.from, link.to);
@@ -331,8 +516,8 @@ export function mountVanillaStage(
     for (const a of active) {
       if (a.clip.kind !== 'arrow') continue;
       const clip = a.clip as ArrowClip;
-      const f = geometry[refNode(clip.fromId)];
-      const tg = geometry[refNode(clip.toId)];
+      const f = effectiveGeometry[refNode(clip.fromId)];
+      const tg = effectiveGeometry[refNode(clip.toId)];
       if (!f || !tg) continue;
       // An arrow between two connected nodes shares the connection's port
       // spread, so the animated line lands exactly on the static one.
@@ -371,7 +556,7 @@ export function mountVanillaStage(
       const clip = a.clip as FlowClip;
       const pathPts = buildFlowPath(
         clip.route,
-        geometry,
+        effectiveGeometry,
         ctx.contourFor,
         ctx.axisFor,
         obstacles,
@@ -406,8 +591,8 @@ export function mountVanillaStage(
     for (const a of active) {
       if (a.clip.kind !== 'move') continue;
       const clip = a.clip as MoveClip;
-      const f = geometry[refNode(clip.fromId)];
-      const tg = geometry[refNode(clip.toId)];
+      const f = effectiveGeometry[refNode(clip.fromId)];
+      const tg = effectiveGeometry[refNode(clip.toId)];
       const obj = packetById.get(clip.objectId);
       if (!f || !tg || !obj) continue;
       // Same key fallback as the arrow clips: a move along an existing
@@ -442,6 +627,29 @@ export function mountVanillaStage(
           highlight,
         })
       );
+    }
+
+    // ─── Comment bubbles ────────────────────────────────────────────────────
+    // Same front layer as the packets, AFTER them — `Stage` emits the two lists
+    // in this order and `.rdfa-comment` (z-index 6) has no z-index of its own to
+    // fall back on, so document order is what decides overlap.
+    for (const a of active) {
+      if (a.clip.kind !== 'comment') continue;
+      const clip = a.clip as CommentClip;
+      const anchor = clip.nextToId
+        ? effectiveGeometry[clip.nextToId]
+        : undefined;
+      // `nextToId` given but unknown (bad ID) → the bubble is dropped, rather
+      // than silently promoted to an omniscient one.
+      if (clip.nextToId && !anchor) continue;
+      appendCommentElement(overlay, {
+        node: anchor,
+        text: clip.text,
+        // Bubbles fade on the clip's own PROGRESS, not `clipOpacity`.
+        opacity: a.progress,
+        stageW: metrics.width,
+        stageH: metrics.height,
+      });
     }
   };
 

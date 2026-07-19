@@ -17,11 +17,11 @@ const PORT = 5198;
 export default defineConfig({
   testDir: './scripts/validation-harness',
   testMatch: '**/*.ab.spec.ts',
-  // Every cell of compare.ab.spec.ts currently fails (panel B is a
-  // placeholder), and Playwright restarts the worker after each failure —
-  // resetting in-memory module state. globalSetup/globalTeardown run once in
-  // the main process regardless, which is what the on-disk result
-  // accumulator (abResults.ts) relies on for a single final table.
+  // Playwright restarts the worker after each failure, resetting in-memory
+  // module state — so a run with several failing cells would lose most of its
+  // results. globalSetup/globalTeardown run once in the main process
+  // regardless, which is what the on-disk result accumulator (abResults.ts)
+  // relies on to print a single final table covering the whole grid.
   globalSetup: './scripts/validation-harness/globalSetup.ts',
   globalTeardown: './scripts/validation-harness/globalTeardown.ts',
   fullyParallel: false,

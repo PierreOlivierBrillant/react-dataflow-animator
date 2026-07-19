@@ -1,5 +1,11 @@
 import { readAbResults, type AbResultRow } from './abResults';
-import { judge, readRatchet, statusLabel, type CellVerdict } from './ratchet';
+import {
+  COMPARE_THRESHOLD,
+  judge,
+  readRatchet,
+  statusLabel,
+  type CellVerdict,
+} from './ratchet';
 
 function printSelfTest(rows: AbResultRow[]): void {
   if (rows.length === 0) return;
@@ -80,9 +86,8 @@ export default function globalTeardown(): void {
   const compareRows = readAbResults('compare');
   if (compareRows.length === 0) return;
 
-  const threshold = Number(process.env.COMPARE_THRESHOLD ?? '0.001');
-  const verdicts = judge(compareRows, readRatchet(), threshold);
-  printCompare(verdicts, threshold);
+  const verdicts = judge(compareRows, readRatchet(), COMPARE_THRESHOLD);
+  printCompare(verdicts, COMPARE_THRESHOLD);
 
   const stale = verdicts.filter((v) => v.status === 'to-remove');
   if (stale.length > 0) {

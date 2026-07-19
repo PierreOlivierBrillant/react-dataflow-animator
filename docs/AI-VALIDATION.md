@@ -89,7 +89,9 @@ The contrast is most telling on a **short window** (little hold): the
 renderer (`@react-dataflow-animator/core/dom/mount`), one layer at a time. The
 harness carries the instrument that keeps that migration honest: a side-by-side
 comparison mode, a pixel-diff gate calibrated against its own noise floor, a
-ratchet listing the layers that have not landed yet, and a perf baseline.
+ratchet that forces a landed layer to delete its own exemptions, and a perf
+baseline. As of step 2.4 the gate is EXACT: every cell diffs at 0.0000% and the
+ratchet is empty.
 
 ### A/B mode (`?ab=1`)
 
@@ -144,29 +146,44 @@ numbers.
 
 ```bash
 npm run harness:compare -w react-dataflow-animator
-COMPARE_THRESHOLD=0.005 npm run harness:compare -w react-dataflow-animator  # override the 0.1% default
+COMPARE_THRESHOLD=0.005 npm run harness:compare -w react-dataflow-animator  # override the 0.01% default
 ```
 
 `compare.ab.spec.ts` walks every risk demo × 5 instants (0/25/50/75/100% of
 duration) × 2 themes (50 cells), diffs panel A against panel B with
 `pixelmatch`, and judges each cell against a threshold (`COMPARE_THRESHOLD` env
-var, default 0.1%). It is deliberately NOT wired into the root `npm run` check
+var, default 0.01%). It is deliberately NOT wired into the root `npm run` check
 sequence or CI yet.
 
-Panel B renders the **static substrate** — zones, static nodes (panels, shapes,
-pictograms, labels, tints), the baseline connections (step 2.2) — plus the
-**dynamic clips** at the frozen `t`: packets (`move`), progressive arrows
-(`arrow`) and flow charges (`flow`), landed in step 2.3 with every affected
-cell at 0.0000%. The two remaining time-varying layers — `set_content` panels
-and comment bubbles — land in step 2.4, so the cells they touch legitimately
-differ today.
+Panel B renders **every layer panel A does at a frozen `t`**: the static
+substrate (zones, static nodes, baseline connections; step 2.2), the dynamic
+clips — packets (`move`), progressive arrows (`arrow`), flow charges (`flow`);
+step 2.3 — and, since step 2.4, `set_content` panels and comment bubbles.
+
+**The whole 50-cell grid currently measures exactly 0.0000%** — not "under
+threshold", bit-identical screenshots — and the ratchet is empty. Since the
+self-test independently pins the harness's own noise floor at exactly 0.00%,
+there is no headroom left to hide in: any non-zero cell is a real difference in
+what the two renderers drew. That is why the default threshold is 0.01% rather
+than the 0.1% it started at; it guards against measurement dust, it is not a
+tolerance budget.
+
+The two layers split by whether they can perturb measurement, and the split is
+structural. Overlays (arrows, packets, comments, zones) are absolutely
+positioned: they read the settled geometry and cannot change it, so they are
+built once, after the convergence loop. A `set_content` panel is **not** an
+overlay — it lives inside its node and makes it GROW — so it is built up front
+and the loop converges with it in place, negotiating a common code-font scale
+along the way.
 
 #### The ratchet
 
-Loosening the threshold to accommodate those cells would blind the gate
-everywhere. Instead they are enumerated, one line per cell with its reason, in
-`compare-ratchet.json`. Three rules, and the third is what makes it a ratchet
-rather than a suppression list:
+While the vanilla renderer was being built layer by layer, some cells
+legitimately differed. Loosening the threshold to accommodate them would have
+blinded the gate everywhere; instead they were enumerated, one line per cell
+with its reason, in `compare-ratchet.json`. **That file is now empty** — step
+2.4 was forced to drain it by rule 3 below. Three rules, and the third is what
+makes it a ratchet rather than a suppression list:
 
 | situation                            | verdict                              |
 | ------------------------------------ | ------------------------------------ |
@@ -191,6 +208,11 @@ listed cause is the only structural difference present in that cell.
 
 **When your step lands a layer**, re-run the gate and delete every entry it now
 passes. The gate will not let you forget.
+
+With the ratchet empty, re-adding an entry is a deliberate admission that a
+layer regressed or that a new one has not landed yet — never a way to quiet a
+diff you have not explained. A residual difference you can account for is worth
+more than a gate that has been talked down.
 
 #### Shared plumbing
 

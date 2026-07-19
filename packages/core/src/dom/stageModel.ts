@@ -1,7 +1,11 @@
 import type { DataFlowSpec } from '../types';
 import type { LayoutMap } from '../engine/layout';
 import { computeScale, type Density } from '../engine/scale';
-import { computePlacements } from '../engine/placements';
+import {
+  computeContentLimits,
+  computePlacements,
+  type ContentLimit,
+} from '../engine/placements';
 import { circuitFrameAspect, letterbox, type Frame } from './frame';
 import { DESIGN_H } from './stageConstants';
 import type { StageMetrics } from './geometryTracker';
@@ -33,6 +37,8 @@ export interface StageModel {
   nudgedLayout: LayoutMap;
   /** Changes when a resolved pin nudge moves; drives an extra measurement. */
   nudgeKey: string;
+  /** Per-node `set_content` ceiling, already multiplied by `k` (render units). */
+  contentLimits: Record<string, ContentLimit>;
   placements: Record<string, { cx: number; cy: number }>;
   /** Custom properties for the `.rdfa-stage` root, ready for `setStyle`. */
   stageVars: Record<string, string>;
@@ -93,6 +99,26 @@ export function buildStageModel(input: StageModelInput): StageModel {
   const maxW = design.maxW * k;
   const contentMaxW = design.contentMaxW * k;
   const contentMaxH = design.contentMaxH * k;
+
+  // Max panel size per node so a `set_content` never overlaps a neighbour
+  // (positions are FIXED and known in advance): beyond this, the content
+  // shrinks. Computed in DESIGN space — constant for a given aspect — then
+  // scaled by k, exactly like every other length here.
+  const designLimits = computeContentLimits(
+    layout,
+    designW,
+    DESIGN_H,
+    design.scale,
+    design.contentMaxW,
+    design.contentMaxH
+  );
+  const contentLimits: Record<string, ContentLimit> = {};
+  for (const id in designLimits) {
+    contentLimits[id] = {
+      maxW: designLimits[id].maxW * k,
+      maxH: designLimits[id].maxH * k,
+    };
+  }
 
   // Resolve the layout's `pinNudge` — a fraction of a node's height, the only
   // unit it could express — now that the symbols are measured. It shifts a node
@@ -166,6 +192,7 @@ export function buildStageModel(input: StageModelInput): StageModel {
     k,
     nudgedLayout,
     nudgeKey,
+    contentLimits,
     placements,
     stageVars: {
       // Unitless numbers; React does not append `px` to custom properties

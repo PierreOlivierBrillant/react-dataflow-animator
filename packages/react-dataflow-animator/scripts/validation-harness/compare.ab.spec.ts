@@ -3,7 +3,7 @@ import { RISK_DEMOS } from './riskDemos';
 import { diffPngBuffers } from './pixelDiff';
 import { waitForAbReady } from './waitForAbReady';
 import { appendAbResult } from './abResults';
-import { readRatchet } from './ratchet';
+import { COMPARE_THRESHOLD, readRatchet } from './ratchet';
 
 /**
  * A/B pixel-diff gate: React `Stage` (panel A) vs. the framework-agnostic DOM
@@ -13,10 +13,10 @@ import { readRatchet } from './ratchet';
  * final table is printed by `globalTeardown.ts`, not from here — see
  * `abResults.ts` for why.
  *
- * Panel B renders the STATIC SUBSTRATE (zones, nodes, connections). The layers
- * that have not landed yet — packets, arrow clips, `set_content` panels,
- * comment bubbles — make some cells differ legitimately; those are enumerated
- * in `compare-ratchet.json` with their reason.
+ * As of step 2.4 panel B draws EVERY layer panel A does at a frozen `t`, and the
+ * ratchet is empty: the grid measures exactly 0.0000% throughout. The threshold
+ * below is therefore a guard against measurement dust, not a tolerance budget —
+ * a cell that lands anywhere above zero is drawing something different.
  *
  * Only UNLISTED cells assert here, so a genuine regression fails the test that
  * names it. The complementary rule — a listed cell that has started passing
@@ -27,7 +27,7 @@ import { readRatchet } from './ratchet';
 
 const THEMES = ['light', 'dark'] as const;
 const PROBE_PCTS = [0, 0.25, 0.5, 0.75, 1] as const;
-const THRESHOLD = Number(process.env.COMPARE_THRESHOLD ?? '0.001'); // 0.1%
+const THRESHOLD = COMPARE_THRESHOLD;
 const RATCHET = readRatchet();
 
 for (const demo of RISK_DEMOS) {
