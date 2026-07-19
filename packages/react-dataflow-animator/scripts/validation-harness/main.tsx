@@ -24,17 +24,25 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { compile } from '@react-dataflow-animator/core/engine/compiler';
-import type {
-  Clip,
-  Timeline,
+import {
+  evaluate,
+  type Clip,
+  type SetContentClip,
+  type Timeline,
 } from '@react-dataflow-animator/core/engine/timeline';
 import {
   clipOpacity,
   contentCrossfade,
 } from '@react-dataflow-animator/core/render/clipOpacity';
 import { mountVanillaStage } from '@react-dataflow-animator/core/dom/mount';
+import { mountVanillaPlayer } from '@react-dataflow-animator/core/dom/player';
+import {
+  firstDifference,
+  normalizeStageHtml,
+} from '@react-dataflow-animator/core/dom/normalizeHtml';
 import { Stage } from '../../src/components/Stage';
-import { useClock } from '../../src/hooks/useClock';
+import { Controls } from '../../src/components/Controls';
+import { useClock, type Clock } from '../../src/hooks/useClock';
 import { highlightCode } from '@react-dataflow-animator/core/highlight/highlight';
 import type { DataFlowSpec, PlayerTheme } from '../../src/types';
 import {
@@ -78,6 +86,23 @@ const spec: DataFlowSpec | undefined = demo ? getSpec(demo, locale) : undefined;
 // scripts/validation-harness/compare.ab.spec.ts (the pixel-diff gate that
 // drives this page).
 const isAB = params.has('ab');
+// Mount-vs-update mode (?mu=1). Both panels are the VANILLA renderer: panel A
+// is mounted fresh at `t`, panel B is mounted at the start of the timeline and
+// walked to `t` with `update()`. It is the proof that retained mode does not
+// drift, and — unlike the A/B gate — it does not involve React at all, so it
+// stays meaningful after the 2.6 switchover. See mountUpdate.ab.spec.ts.
+const isMU = params.has('mu');
+// `?chrome=1` widens the A/B comparison from the stage alone to the WHOLE
+// player: control bar included. The diff target is already
+// `[data-ab-panel="x"] .rdfa-player`, so the chrome enters the comparison
+// without changing the selector.
+const isChrome = params.has('chrome');
+// `?walk=1` drives BOTH panels through the same sequence of instants before
+// capturing, instead of mounting each at a frozen `t`. It is the only mode that
+// reproduces the real playback scenario on both sides — and therefore the only
+// one that compares React and the vanilla renderer on states that depend on the
+// PATH taken (`iconGeomByNode`), which a frozen mount cannot reach.
+const isWalk = params.has('walk');
 // `panelB=react` mounts a SECOND, independent React `Stage` instead of the
 // vanilla renderer: two mounts of the identical spec/t, used by
 // selftest.ab.spec.ts to calibrate the gate itself (0.00% expected) before
@@ -111,6 +136,66 @@ function resolveFrozenT(durationMs: number): number {
 const isBench = params.has('bench');
 const benchFrames = Number(params.get('frames') ?? '300');
 const BENCH_PANEL = { width: 640, height: 420 };
+// Which renderer the bench drives. Both are measured in the SAME run (see
+// scripts/bench-perf.mjs) because these figures are machine-dependent.
+const benchRenderer =
+  params.get('renderer') === 'vanilla' ? 'vanilla' : 'react';
+
+/**
+ * The passive rAF sampler, shared by both bench renderers.
+ *
+ * It only records the wall-clock gap between frames; the renderer's own loop is
+ * what advances `t`. Both callbacks land in the same animation-frame batch, so
+ * the gap still reflects the real per-frame cost.
+ */
+function useBenchSampler(): void {
+  useEffect(() => {
+    const samples: number[] = [];
+    let last: number | null = null;
+    let raf = 0;
+    const sample = (now: number) => {
+      if (last != null) samples.push(now - last);
+      last = now;
+      if (samples.length >= benchFrames) {
+        (window as unknown as { __BENCH__: unknown }).__BENCH__ = {
+          demo: demoId,
+          renderer: benchRenderer,
+          frames: samples.length,
+          samples,
+          done: true,
+        };
+        return;
+      }
+      raf = requestAnimationFrame(sample);
+    };
+    raf = requestAnimationFrame(sample);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+}
+
+/** The vanilla player under the same protocol as `BenchApp`: autoplay + loop. */
+function VanillaBenchApp() {
+  const slotRef = useRef<HTMLDivElement | null>(null);
+  useBenchSampler();
+  useEffect(() => {
+    const container = slotRef.current;
+    if (!container || !spec) return;
+    const player = mountVanillaPlayer(container, spec, {
+      height: BENCH_PANEL.height,
+      width: BENCH_PANEL.width,
+      // No chrome, so the measurement compares the RENDERER against the React
+      // bench's bare `Stage`, not two different amounts of furniture.
+      controls: false,
+      autoPlay: true,
+      loop: true,
+      theme,
+      mode,
+    });
+    return () => player.destroy();
+  }, []);
+  if (!spec) return <div className="harness-error">Unknown demo: {demoId}</div>;
+  return <div ref={slotRef} />;
+}
 
 function BenchApp() {
   if (!spec) {
@@ -176,13 +261,36 @@ function BenchApp() {
 
 const AB_PANEL = { width: 480, height: 320 };
 
-/** Mounts the framework-agnostic renderer inside a flex slot sized like `.rdfa-stage`. */
-function VanillaPanel({ spec, t }: { spec: DataFlowSpec; t: number }) {
+/**
+ * Mounts the framework-agnostic renderer inside a flex slot sized like
+ * `.rdfa-stage`.
+ *
+ * `path` is what the mount-vs-update gate drives: the renderer is mounted at
+ * `path[0]` and then walked through the remaining instants with `update()`, so
+ * the panel ends up at the same `t` a fresh mount would have been given — but
+ * having got there the way playback actually gets there. Omitted (or a single
+ * entry), it is a plain frozen-`t` mount, which is what the A/B gate uses.
+ */
+function VanillaPanel({
+  spec,
+  t,
+  path,
+}: {
+  spec: DataFlowSpec;
+  t: number;
+  path?: readonly number[];
+}) {
   const slotRef = useRef<HTMLDivElement | null>(null);
+  const walk = path && path.length > 0 ? path : [t];
+  // The array identity would change on every render and re-run the effect;
+  // its CONTENT is what matters.
+  const walkKey = walk.join(',');
   useEffect(() => {
     const container = slotRef.current;
     if (!container) return;
-    const handle = mountVanillaStage(container, spec, t);
+    const steps = walkKey.split(',').map(Number);
+    const handle = mountVanillaStage(container, spec, steps[0]);
+    for (let i = 1; i < steps.length; i++) handle.update(steps[i]);
     // The convergence diagnostic, republished for scripts to read. `converged:
     // false` means the measurement BUDGET stopped the loop rather than the
     // geometry settling — see core/src/dom/settle.ts for why that matters.
@@ -192,7 +300,7 @@ function VanillaPanel({ spec, t }: { spec: DataFlowSpec; t: number }) {
       w.__AB__.converged = handle.converged;
     }
     return () => handle.destroy();
-  }, [spec, t]);
+  }, [spec, walkKey]);
   // `display:flex` is NOT cosmetic. Panel A puts `.rdfa-stage` directly under
   // `.rdfa-player` (itself `display:flex; flex-direction:column`), and the stage
   // gets ALL its height from `flex: 1 1 auto` — every one of its children is
@@ -219,23 +327,126 @@ function ABPanel({
   label,
   panelId,
   children,
+  bare,
 }: {
   label: string;
   panelId: 'a' | 'b';
   children: ReactNode;
+  /** The child renders its OWN `.rdfa-player` — `mountVanillaPlayer` does. */
+  bare?: boolean;
 }) {
   return (
     <section className="ab-panel" data-ab-panel={panelId}>
       <h2>{label}</h2>
-      <div
-        className="rdfa-player"
-        data-theme={theme}
-        data-mode={mode}
-        style={{ width: AB_PANEL.width, height: AB_PANEL.height }}
-      >
-        {children}
-      </div>
+      {bare ? (
+        children
+      ) : (
+        <div
+          className="rdfa-player"
+          data-theme={theme}
+          data-mode={mode}
+          style={{ width: AB_PANEL.width, height: AB_PANEL.height }}
+        >
+          {children}
+        </div>
+      )}
     </section>
+  );
+}
+
+/**
+ * A `Clock` frozen at `t`.
+ *
+ * `DataFlowPlayer` owns its clock and cannot be told to stand still from the
+ * outside, so the chrome comparison assembles `Stage` + `Controls` by hand — the
+ * same approach the panels already take for the stage. Every command is a no-op:
+ * the gate captures a still frame, and a control that moved would break the
+ * self-test's successive-capture invariant.
+ */
+function frozenClock(t: number, durationMs: number): Clock {
+  const noop = () => {};
+  return {
+    t,
+    playing: false,
+    durationMs,
+    play: noop,
+    pause: noop,
+    toggle: noop,
+    seek: noop,
+    playTo: noop,
+    restart: noop,
+  };
+}
+
+/** Mounts the framework-agnostic PLAYER — stage plus chrome — paused at `t`. */
+function VanillaPlayerPanel({
+  spec,
+  t,
+  path,
+}: {
+  spec: DataFlowSpec;
+  t: number;
+  path?: readonly number[];
+}) {
+  const slotRef = useRef<HTMLDivElement | null>(null);
+  const walk = path && path.length > 0 ? path : [t];
+  const walkKey = walk.join(',');
+  useEffect(() => {
+    const container = slotRef.current;
+    if (!container) return;
+    const steps = walkKey.split(',').map(Number);
+    const player = mountVanillaPlayer(container, spec, {
+      height: AB_PANEL.height,
+      width: AB_PANEL.width,
+      theme,
+      mode,
+      controls: true,
+      autoPlay: false,
+    });
+    for (const step of steps) player.clock.seek(step);
+    return () => player.destroy();
+  }, [spec, walkKey]);
+  return <div ref={slotRef} />;
+}
+
+/**
+ * Panel A under `?walk=1`: re-renders `Stage` across the sequence, ONE COMMIT
+ * PER STEP.
+ *
+ * The per-step commit is the whole point. React accumulates `iconGeomByNode`
+ * from the geometry measured between renders, so only a real sequence of
+ * renders reproduces what production does — a single render at the target `t`
+ * lands on a different icon anchor. Publishing `ready` at the end is what keeps
+ * the gate from capturing mid-walk.
+ */
+function StageWalk({
+  spec,
+  timeline,
+  path,
+}: {
+  spec: DataFlowSpec;
+  timeline: Timeline;
+  path: readonly number[];
+}) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (i >= path.length - 1) {
+      const w = window as unknown as { __AB__?: Record<string, unknown> };
+      if (w.__AB__) w.__AB__.ready = true;
+      return;
+    }
+    const raf = requestAnimationFrame(() => setI(i + 1));
+    return () => cancelAnimationFrame(raf);
+  }, [i, path.length]);
+
+  return (
+    <Stage
+      spec={spec}
+      timeline={timeline}
+      t={path[i]}
+      highlight={highlightCode}
+      density="comfortable"
+    />
   );
 }
 
@@ -259,8 +470,45 @@ function ABApp() {
     t,
     durationMs: timeline.durationMs,
     panelB: panelBMode,
-    ready: true,
+    chrome: isChrome,
+    walk: isWalk,
+    // A walk is only comparable once panel A has committed every step of it;
+    // `StageWalk` flips this when it lands on the target.
+    ready: !isWalk,
   };
+
+  const path = isWalk
+    ? cumulativePath(timeline.durationMs, t / (timeline.durationMs || 1))
+    : undefined;
+
+  const reactStage = isWalk ? (
+    <StageWalk spec={spec} timeline={timeline} path={path!} />
+  ) : (
+    <Stage
+      spec={spec}
+      timeline={timeline}
+      t={t}
+      highlight={highlightCode}
+      density="comfortable"
+    />
+  );
+
+  // ONE definition of what a React panel contains, used by both sides. The
+  // cross-mount self-test compares panel A against a second React mount, so an
+  // asymmetry here would show up as a renderer difference that isn't one.
+  const reactPanel = (
+    <>
+      {reactStage}
+      {isChrome ? (
+        <Controls
+          clock={frozenClock(t, timeline.durationMs)}
+          timeline={timeline}
+          isFullscreen={false}
+          onToggleFullscreen={() => {}}
+        />
+      ) : null}
+    </>
+  );
 
   return (
     <main className="harness ab-harness" data-theme={mode}>
@@ -269,18 +517,14 @@ function ABApp() {
           A/B — {demoId}{' '}
           <span>
             · t={Math.round(t)}ms · panel B = {panelBMode}
+            {isChrome ? ' · chrome' : ''}
+            {isWalk ? ' · walk' : ''}
           </span>
         </h1>
       </header>
       <div className="ab-grid">
         <ABPanel label="A — React (Stage.tsx)" panelId="a">
-          <Stage
-            spec={spec}
-            timeline={timeline}
-            t={t}
-            highlight={highlightCode}
-            density="comfortable"
-          />
+          {reactPanel}
         </ABPanel>
         <ABPanel
           label={
@@ -289,18 +533,113 @@ function ABApp() {
               : 'B — Vanilla DOM (@react-dataflow-animator/core)'
           }
           panelId="b"
+          bare={isChrome && panelBMode !== 'react'}
         >
           {panelBMode === 'react' ? (
-            <Stage
-              spec={spec}
-              timeline={timeline}
-              t={t}
-              highlight={highlightCode}
-              density="comfortable"
-            />
+            reactPanel
+          ) : isChrome ? (
+            <VanillaPlayerPanel spec={spec} t={t} path={path} />
           ) : (
-            <VanillaPanel spec={spec} t={t} />
+            <VanillaPanel spec={spec} t={t} path={path} />
           )}
+        </ABPanel>
+      </div>
+    </main>
+  );
+}
+
+// ─── Mount-vs-update mode (?mu=1) ──────────────────────────────────────────
+
+/**
+ * The instants the walked panel passes through on its way to `t`: the compare
+ * grid's own checkpoints, up to the target.
+ *
+ * Cumulative rather than a single jump on purpose. One `update()` would only
+ * prove that a lone transition lands correctly; walking the whole grid is what
+ * catches an error that ACCUMULATES over a sequence of frames, which is the
+ * actual failure mode of a retained renderer.
+ */
+function cumulativePath(durationMs: number, pct: number): number[] {
+  const checkpoints = [0, 0.25, 0.5, 0.75].filter((p) => p < pct);
+  return [...checkpoints, pct].map((p) => durationMs * p);
+}
+
+function MUApp() {
+  if (!spec) {
+    return (
+      <div className="harness-error">
+        Unknown demo: <code>{demoId}</code>. Available demos:{' '}
+        {Object.keys(catalog).sort().join(', ')}
+      </div>
+    );
+  }
+  const { timeline } = compile(spec);
+  const pctParam = params.get('probePct');
+  const pct =
+    pctParam != null ? Math.min(1, Math.max(0, Number(pctParam))) : 0.5;
+  const t = timeline.durationMs * pct;
+  const path = cumulativePath(timeline.durationMs, pct);
+
+  // A `set_content` caught MID-CROSSFADE is the one documented case where the
+  // two paths legitimately disagree: the icon geometry anchoring the icon→panel
+  // morph is captured once and never rewritten, so a fresh mount captures a
+  // panel that has already partly grown while a walked mount captured the true
+  // icon box. React has exactly the same path dependence — see the comment on
+  // `iconGeomByNode` in core/src/dom/mount.ts. The gate reads this flag and
+  // reports such a cell instead of asserting on it.
+  const midCrossfade = evaluate(timeline, t).some((a) => {
+    if (a.clip.kind !== 'set_content') return false;
+    const p = contentCrossfade(a.clip as SetContentClip, t);
+    return p > 0 && p < 1;
+  });
+
+  (window as unknown as { __AB__: unknown }).__AB__ = {
+    demo: demoId,
+    t,
+    durationMs: timeline.durationMs,
+    panelB: 'vanilla-updated',
+    path,
+    midCrossfade,
+    ready: true,
+  };
+
+  // The gate reads the two subtrees through this, so the normaliser runs in the
+  // page next to the DOM it describes rather than being reimplemented in the
+  // Playwright process.
+  (window as unknown as { __MU__: unknown }).__MU__ = {
+    compare() {
+      const read = (panel: 'a' | 'b'): string | null => {
+        const stage = document.querySelector(
+          `[data-ab-panel="${panel}"] .rdfa-stage`
+        );
+        return stage ? normalizeStageHtml(stage) : null;
+      };
+      const a = read('a');
+      const b = read('b');
+      if (a == null || b == null) return { ok: false, reason: 'missing-stage' };
+      const diff = firstDifference(a, b);
+      return diff == null
+        ? { ok: true, length: a.length }
+        : { ok: false, reason: 'diff', ...diff };
+    },
+  };
+
+  return (
+    <main className="harness ab-harness" data-theme={mode}>
+      <header className="harness-bar">
+        <h1>
+          mount-vs-update — {demoId}{' '}
+          <span>
+            · t={Math.round(t)}ms · walk={path.map(Math.round).join('→')}
+          </span>
+        </h1>
+      </header>
+      <div className="ab-grid">
+        <ABPanel label="A — Vanilla, fresh mount(t)" panelId="a">
+          <VanillaPanel spec={spec} t={t} />
+        </ABPanel>
+        <ABPanel label="B — Vanilla, mount(0) + update(…)" panelId="b">
+          <VanillaPanel spec={spec} t={t} path={path} />
         </ABPanel>
       </div>
     </main>
@@ -630,5 +969,17 @@ function App() {
 // iconGeom capture → forceRemeasure sequence of set_content. We remain faithful to
 // the real render (Docusaurus doesn't wrap the player in StrictMode).
 createRoot(document.getElementById('root')!).render(
-  isBench ? <BenchApp /> : isAB ? <ABApp /> : <App />
+  isBench ? (
+    benchRenderer === 'vanilla' ? (
+      <VanillaBenchApp />
+    ) : (
+      <BenchApp />
+    )
+  ) : isMU ? (
+    <MUApp />
+  ) : isAB ? (
+    <ABApp />
+  ) : (
+    <App />
+  )
 );

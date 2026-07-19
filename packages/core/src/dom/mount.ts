@@ -1,9 +1,10 @@
-import type { DataFlowSpec, ObjectContent, Packet } from '../types';
+import type { DataFlowSpec, Node, ObjectContent, Packet } from '../types';
 import { compile } from '../engine/compiler';
 import {
   clamp,
   easeInOutCubic,
   evaluate,
+  type ActiveClip,
   type ArrowClip,
   type CommentClip,
   type FlowClip,
@@ -25,17 +26,28 @@ import {
 import { refNode } from '../engine/pins';
 import { highlightCode } from '../highlight/highlight';
 import { clipOpacity, contentCrossfade } from '../render/clipOpacity';
-import { h, s, setStyle } from './el';
-import { buildArrowElement } from './arrowElement';
-import { appendCommentElement } from './commentElement';
+import { h, s, setStyle, syncStyle } from './el';
 import {
-  applyCodeFontScale,
-  measureCodeFit,
-  type CodeFitTarget,
-} from './contentElement';
-import { buildPacketElement } from './packetElement';
+  applyArrowElement,
+  createArrowElement,
+  type ArrowDescriptor,
+  type ArrowElement,
+} from './arrowElement';
+import {
+  applyCommentElement,
+  createCommentElement,
+  type CommentElement,
+  type CommentElementOptions,
+} from './commentElement';
+import { applyCodeFontScale, measureCodeFit } from './contentElement';
+import {
+  applyPacketPose,
+  createPacketElement,
+  type PacketPose,
+} from './packetElement';
 import { netColorMap } from './netColors';
 import { HOP_RADIUS, lerp } from './stageConstants';
+import { reconcileKeyed, reorder, type KeyedItem } from './reconcile';
 import {
   buildZoneLabel,
   buildZoneRect,
@@ -49,6 +61,7 @@ import {
   labelSideMap,
   routeCircuit,
   routesByNodePair,
+  type WireContext,
 } from './wireModel';
 import {
   createGeometryTracker,
@@ -58,15 +71,33 @@ import {
 } from './geometryTracker';
 import { settle } from './settle';
 import { buildStageModel, type StageModel } from './stageModel';
-import { autoRotationMap, computeNodeStateAtT } from './nodeStateAtT';
 import {
-  applyContentLimit,
-  applyNodePlacement,
-  buildNodeElement,
+  autoRotationMap,
+  computeNodeStateAtT,
+  type NodeStateAtT,
+} from './nodeStateAtT';
+import {
+  applyNodeElement,
+  createNodeElement,
+  type NodeElement,
+  type NodeElementOptions,
 } from './nodeElement';
 
 /** Handle returned by {@link mountVanillaStage}. */
 export interface VanillaStageHandle {
+  /**
+   * The `.rdfa-stage` root. Exposed so a caller that composes the stage with
+   * sibling chrome can place it without guessing which child it is.
+   */
+  readonly el: HTMLElement;
+  /**
+   * Moves the stage to `t`, MUTATING the DOM that is already there.
+   *
+   * This is the animated read path: nothing is rebuilt that has not genuinely
+   * changed shape, and the convergence loop is not re-run unless the geometry
+   * can actually have moved (see `shouldRemeasure` below).
+   */
+  update(t: number): void;
   /** Detaches the rendered content and releases any resources it holds. */
   destroy(): void;
   /**
@@ -89,9 +120,7 @@ const BASE_PASSES = 4;
  * Extra measurements granted to a circuit. Each change of the resolved pin
  * nudge costs React one `forceRemeasure`, and the letterbox effect can add
  * another; the nudge is a pure function of the settled height, so it reaches a
- * fixed point rather than oscillating. No `RISK_DEMOS` entry is a circuit, so
- * this allowance is validated at step 2.5 — the `converged` flag is what says
- * whether it was enough.
+ * fixed point rather than oscillating.
  */
 const CIRCUIT_EXTRA_PASSES = 12;
 
@@ -124,25 +153,39 @@ interface SettledFrame {
   model: StageModel;
 }
 
+/** The only inline declaration a flow charge ever carries. */
+const FLOW_STYLE_KEYS = ['--rdfa-flow'];
+
+/** A retained flow-charge group: the `<g>` and the dots `apply` moves. */
+interface FlowElement {
+  g: SVGGElement;
+  dots: SVGCircleElement[];
+}
+
 /**
  * Framework-agnostic DOM renderer: the vanilla-DOM equivalent of `Stage.tsx`,
  * producing the same `.rdfa-*` markup, styled by the same `dataflow.css`,
  * without any framework runtime.
  *
- * PHASE 2.4 SCOPE — every rendering layer at a frozen `t`: the static substrate
- * (zones, nodes, baseline connections), the dynamic clips (packets, progressive
- * arrows, flow charges) and now `set_content` panels and comment bubbles. The
- * compare ratchet is consequently EMPTY: the A/B grid agrees with the React
- * `Stage` to the pixel, so any non-zero cell is a regression.
+ * PHASE 2.5 SCOPE — RETAINED MODE. Step 2.4 completed every rendering layer at a
+ * frozen `t`; this step makes `t` move without rebuilding the tree.
  *
- * The layers split in two, and the split is structural rather than a matter of
- * taste. Overlays (arrows, packets, comments, zones) are absolutely positioned:
- * they read the settled geometry and cannot perturb it, so they are built ONCE
- * after the loop. A `set_content` panel is not an overlay — it lives inside its
- * node and makes it GROW — so it is built up front and the loop converges with
- * it in place.
+ * The design rule that makes this trustworthy is `build === create + apply`:
+ * every element module exposes a `create` that builds only what is independent
+ * of `t`, and an `apply` that writes everything that depends on it. Mounting
+ * runs both; updating runs `apply` alone. `mount(t₀) + update(t)` is therefore
+ * identical to `mount(t)` BY CONSTRUCTION — both paths execute the same writer —
+ * rather than by empirical agreement that a gate could only ever spot-check.
  *
- * Playback (a moving `t`) arrives in step 2.5.
+ * Two states deliberately survive across updates and make the rendering
+ * path-dependent, faithfully to React: `iconGeomByNode` (captured once, never
+ * rewritten) and `codeRatios` (gated by a deadband). See `update` below.
+ *
+ * The layer split from 2.4 still holds. Overlays (arrows, packets, comments,
+ * zones) are absolutely positioned: they read the settled geometry and cannot
+ * perturb it, so they are reconciled after the loop. A `set_content` panel is
+ * not an overlay — it lives inside its node and makes it GROW — so it is applied
+ * before the loop, which converges with it in place.
  */
 export function mountVanillaStage(
   container: HTMLElement,
@@ -150,14 +193,14 @@ export function mountVanillaStage(
   t: number
 ): VanillaStageHandle {
   const { timeline } = compile(spec);
-  const active = evaluate(timeline, t);
 
   const root = h('div', { class: 'rdfa-stage' });
 
-  // The two overlay layers are created EMPTY, up front, at their React document
-  // positions. `.rdfa-zone` elements all share z-index 0 and `.rdfa-node`
-  // elements all share 3, so ties break on source order — the geometry-
-  // dependent rebuild below fills them in without re-deciding the z-order.
+  // The two overlay layers are created EMPTY, up front. Document order among
+  // the root's children is imposed explicitly by `reorderRoot` rather than by
+  // insertion order, because several `.rdfa-*` layers share a z-index and break
+  // the tie on source order — which must therefore not drift with update
+  // history.
   const arrowSvg = s('svg', { class: 'rdfa-arrow-svg' });
   const overlay = h('div', { class: 'rdfa-overlay' });
   root.appendChild(arrowSvg);
@@ -170,11 +213,7 @@ export function mountVanillaStage(
   // `Stage`'s own default, and what the A/B harness passes explicitly.
   const density = 'comfortable' as const;
 
-  // ─── Build the node layer once ────────────────────────────────────────────
-  // The node SET is fixed: visibility comes from clips, not from measurement,
-  // and `computePlacements` already returns the base layout while the geometry
-  // is still empty. So only `left`/`top` are rewritten per pass, which also
-  // keeps the ResizeObserver registrations stable.
+  // ─── Spec-derived invariants ──────────────────────────────────────────────
   const initialLayout = computeLayout(spec, { aspect: INITIAL_METRICS.aspect });
   const initialAutoRotation = autoRotationMap(initialLayout);
   const initialLabelSides = labelSideMap(
@@ -190,87 +229,80 @@ export function mountVanillaStage(
     labelSides: initialLabelSides,
   });
 
-  const state = computeNodeStateAtT(spec, active, initialAutoRotation);
-
-  // ─── Effective content per node ───────────────────────────────────────────
-  // A node's own `content` shows at full opacity; an active `set_content`
-  // overrides it and crossfades. `contentCrossfade` is EASED and drives both the
-  // opacity and the icon→panel geometry lerp below — easing them together is
-  // what removes the mechanical feel of a linear morph, so they must stay the
-  // same number.
-  const contentByNode: Record<
-    string,
-    { content: ObjectContent; opacity: number }
-  > = {};
-  for (const node of spec.nodes) {
-    if (node.content)
-      contentByNode[node.id] = { content: node.content, opacity: 1 };
-  }
-  for (const a of active) {
-    if (a.clip.kind !== 'set_content') continue;
-    const clip = a.clip as SetContentClip;
-    contentByNode[clip.objectId] = {
-      content: clip.content,
-      opacity: contentCrossfade(clip, t),
-    };
-  }
-  // Revealed fraction: the top-down `clip-path` wipe. Deliberately DECOUPLED
-  // from measurement (no geometry input), so it is correct even at a frozen `t`.
-  const revealByNode: Record<string, number> = {};
-  for (const nodeId in contentByNode) {
-    const op = contentByNode[nodeId].opacity;
-    if (op < 1) revealByNode[nodeId] = op;
-  }
-
   // Shared by the port-offset computation and the `move`/`arrow` clip key
   // fallback below — one collection, as in `Stage`.
   const lineConnections = collectArrowConnections(spec);
   const packetById = new Map<string, Packet>(
     spec.packets.map((p) => [p.id, p])
   );
+  const netColorById = netColorMap(spec);
+  const isCircuit = (spec.direction ?? 'left-to-right') === 'circuit';
 
-  const nodeEls = new Map<string, HTMLElement>();
-  const contentNodeIds: string[] = [];
-  const codeFits = new Map<string, CodeFitTarget>();
-  const zoneEls: HTMLElement[] = [];
-  for (const node of spec.nodes) {
-    const placement = initialModel.placements[node.id];
-    if (!placement) continue;
-    const opacity = state.visibility[node.id] ?? 1;
-    // A fully-hidden node is removed from the DOM entirely, as in React.
-    if (opacity <= 0) continue;
+  // ─── Retained layers ──────────────────────────────────────────────────────
+  const nodeEls = new Map<string, NodeElement>();
+  const arrowEls = new Map<string, ArrowElement>();
+  const flowEls = new Map<string, FlowElement>();
+  const packetEls = new Map<string, HTMLElement>();
+  const commentEls = new Map<string, CommentElement>();
+  let nodeOrder: HTMLElement[] = [];
+  let zoneRects: HTMLElement[] = [];
+  let zoneLabels: HTMLElement[] = [];
 
-    const content = contentByNode[node.id];
-    const { el, codeFit } = buildNodeElement(node, {
-      placement,
-      highlight,
-      content: content?.content,
-      contentOpacity: content?.opacity,
-      reveal: revealByNode[node.id],
-      contentLimit: content ? initialModel.contentLimits[node.id] : undefined,
-      iconOverride: state.icon[node.id],
-      closed: state.closed[node.id],
-      loading: state.loading.has(node.id),
-      highlighted: state.highlighted.has(node.id),
-      opacity: opacity < 1 ? opacity : undefined,
-      rotation: state.rotation[node.id],
-      colorOverride: state.recolored.has(node.id)
-        ? state.color[node.id]
-        : undefined,
-    });
-    nodeEls.set(node.id, el);
-    if (content) contentNodeIds.push(node.id);
-    if (codeFit) codeFits.set(node.id, codeFit);
-    // BEFORE the overlay: React's order is zones → arrows → nodes → zone
-    // labels → overlay, and `appendChild` here would put every node behind the
-    // front layer instead.
-    root.insertBefore(el, overlay);
-  }
+  // ─── Per-frame state, refreshed by `refreshFrame` ─────────────────────────
+  let currentT = t;
+  let active: ActiveClip[] = [];
+  let state: NodeStateAtT;
+  let contentByNode: Record<
+    string,
+    { content: ObjectContent; opacity: number }
+  > = {};
+  let revealByNode: Record<string, number> = {};
+  let activeContentNodeIds = new Set<string>();
 
-  setStyle(root, initialModel.stageVars);
-  container.appendChild(root);
+  /**
+   * Recomputes everything that is a pure function of `t`. No DOM is touched
+   * here — this only decides WHAT the frame should look like.
+   *
+   * `initialAutoRotation` rather than the settled one, deliberately: that is
+   * what the frozen-`t` renderer already did, and the A/B grid agrees with React
+   * to the pixel on it. Rotation is a function of the layout and not of `t`, so
+   * using the same map on every frame is exactly as faithful as using it once.
+   */
+  const refreshFrame = (tMs: number): void => {
+    currentT = tMs;
+    active = evaluate(timeline, tMs);
+    state = computeNodeStateAtT(spec, active, initialAutoRotation);
 
-  // ─── Converge ─────────────────────────────────────────────────────────────
+    // A node's own `content` shows at full opacity; an active `set_content`
+    // overrides it and crossfades. `contentCrossfade` is EASED and drives both
+    // the opacity and the icon→panel geometry lerp below — easing them together
+    // is what removes the mechanical feel of a linear morph, so they must stay
+    // the same number.
+    contentByNode = {};
+    for (const node of spec.nodes) {
+      if (node.content)
+        contentByNode[node.id] = { content: node.content, opacity: 1 };
+    }
+    activeContentNodeIds = new Set<string>();
+    for (const a of active) {
+      if (a.clip.kind !== 'set_content') continue;
+      const clip = a.clip as SetContentClip;
+      activeContentNodeIds.add(clip.objectId);
+      contentByNode[clip.objectId] = {
+        content: clip.content,
+        opacity: contentCrossfade(clip, tMs),
+      };
+    }
+    // Revealed fraction: the top-down `clip-path` wipe. Deliberately DECOUPLED
+    // from measurement (no geometry input), so it is correct at any `t`.
+    revealByNode = {};
+    for (const nodeId in contentByNode) {
+      const op = contentByNode[nodeId].opacity;
+      if (op < 1) revealByNode[nodeId] = op;
+    }
+  };
+
+  // ─── Convergence state ────────────────────────────────────────────────────
   const tracker = createGeometryTracker(root);
 
   // Seeded with render#1's state, so the wire layer is buildable even if the
@@ -282,21 +314,103 @@ export function mountVanillaStage(
     labelSides: initialLabelSides,
     model: initialModel,
   };
+  /** Bumped whenever `settled` is replaced, so derived caches can invalidate. */
+  let settledStamp = 0;
 
-  // Pre-panel ("icon") geometry of nodes driven by an active `set_content`,
-  // captured on the FIRST pass that produced a geometry for them and never
-  // overwritten afterwards — including across ResizeObserver-driven re-runs,
-  // where React keeps its own captured state too. It anchors the icon→panel
-  // morph below.
+  /**
+   * Pre-panel ("icon") geometry of nodes driven by an active `set_content`,
+   * captured on the FIRST measurement that produced a geometry for them and
+   * never overwritten afterwards — as React captures it, and never rewrites it
+   * either.
+   *
+   * This is the renderer's main path dependence, and it is inherited rather than
+   * introduced: a fresh `mount` mid-crossfade captures a panel that is already
+   * partly grown, where an `update` that walked in from an earlier `t` captured
+   * the true icon box. React behaves identically, so "fixing" it here would be a
+   * behaviour change, not a bug fix.
+   */
   const iconGeomByNode: Record<string, NodeGeom> = {};
-  const activeContentNodeIds = new Set<string>();
-  for (const a of active) {
-    if (a.clip.kind === 'set_content')
-      activeContentNodeIds.add((a.clip as SetContentClip).objectId);
-  }
 
-  // Per-block fit ratios, gated by the same deadband `handleCodeFit` applies.
+  /** Per-block fit ratios, gated by the same deadband `handleCodeFit` applies. */
   const codeRatios: Record<string, number> = {};
+
+  const captureIconGeometry = (geometry: GeometryMap): void => {
+    for (const id of activeContentNodeIds) {
+      if (!iconGeomByNode[id] && geometry[id])
+        iconGeomByNode[id] = geometry[id];
+    }
+  };
+
+  /**
+   * Builds the options one node is drawn from, or `undefined` when the node
+   * should not be in the DOM at all (no placement, or fully faded out — React
+   * renders nothing in both cases).
+   */
+  const nodeOptionsFor = (
+    node: Node,
+    model: StageModel
+  ): NodeElementOptions | undefined => {
+    const placement = model.placements[node.id];
+    if (!placement) return undefined;
+    const opacity = state.visibility[node.id] ?? 1;
+    if (opacity <= 0) return undefined;
+    const content = contentByNode[node.id];
+    return {
+      placement,
+      highlight,
+      content: content?.content,
+      contentOpacity: content?.opacity,
+      reveal: revealByNode[node.id],
+      contentLimit: content ? model.contentLimits[node.id] : undefined,
+      iconOverride: state.icon[node.id],
+      closed: state.closed[node.id],
+      loading: state.loading.has(node.id),
+      highlighted: state.highlighted.has(node.id),
+      opacity: opacity < 1 ? opacity : undefined,
+      rotation: state.rotation[node.id],
+      colorOverride: state.recolored.has(node.id)
+        ? state.color[node.id]
+        : undefined,
+    };
+  };
+
+  /**
+   * Reconciles the node layer. Returns whether the node SET changed, which is
+   * one of the two things that can move the geometry without a resize.
+   */
+  const applyNodes = (model: StageModel): boolean => {
+    const desired: KeyedItem<{ node: Node; opts: NodeElementOptions }>[] = [];
+    for (const node of spec.nodes) {
+      const opts = nodeOptionsFor(node, model);
+      if (opts) desired.push({ key: node.id, data: { node, opts } });
+    }
+
+    let setChanged = false;
+    const handles = reconcileKeyed({
+      map: nodeEls,
+      desired,
+      create: (data) => {
+        setChanged = true;
+        const handle = createNodeElement(data.node);
+        // Attached immediately so `apply` can measure through it; `reorderRoot`
+        // puts it in its final position.
+        root.appendChild(handle.el);
+        return handle;
+      },
+      apply: (handle, data) => applyNodeElement(handle, data.node, data.opts),
+      remove: (handle, key) => {
+        setChanged = true;
+        handle.el.remove();
+        // A node that left takes its code block with it, exactly as an
+        // unmounting `CodeBlock` drops its entry on the React side. Leaving the
+        // ratio behind would keep pinning the COMMON font scale to a panel that
+        // is no longer drawn.
+        delete codeRatios[key];
+      },
+    });
+    nodeOrder = handles.map((handle) => handle.el);
+    return setChanged;
+  };
 
   /**
    * Re-measures every code block and returns the COMMON scale: the minimum
@@ -307,12 +421,23 @@ export function mountVanillaStage(
    * reported, so an all-text stage costs nothing.
    */
   const measureCodeFontScale = (): number => {
-    for (const [id, target] of codeFits) {
+    for (const [id, handle] of nodeEls) {
+      const target = handle.codeFit;
+      if (!target) {
+        delete codeRatios[id];
+        continue;
+      }
       const ratio = measureCodeFit(target);
       if (Math.abs((codeRatios[id] ?? 1) - ratio) >= CODE_FIT_EPSILON)
         codeRatios[id] = ratio;
     }
     return Math.min(1, ...Object.values(codeRatios));
+  };
+
+  const applyCodeScale = (scale: number): void => {
+    for (const handle of nodeEls.values()) {
+      if (handle.codeFit) applyCodeFontScale(handle.codeFit, scale);
+    }
   };
 
   const applyMetrics = (metrics: FrameMetrics): void => {
@@ -329,26 +454,11 @@ export function mountVanillaStage(
       labelSides,
     });
     setStyle(root, model.stageVars);
-    for (const [id, el] of nodeEls) {
-      const placement = model.placements[id];
-      if (placement) applyNodePlacement(el, placement);
-    }
-    // Ceilings scale with the player, so they are rewritten every pass.
-    for (const id of contentNodeIds) {
-      const el = nodeEls.get(id);
-      const limit = model.contentLimits[id];
-      if (el && limit) applyContentLimit(el, limit);
-    }
-    for (const target of codeFits.values())
-      applyCodeFontScale(target, metrics.codeFontScale);
-    // Captured from the geometry this pass MEASURED, i.e. the first one in which
-    // the node existed — matching the render at which React's layout effect
-    // first sees a non-empty `geometry`.
-    for (const id of activeContentNodeIds) {
-      if (!iconGeomByNode[id] && metrics.geometry[id])
-        iconGeomByNode[id] = metrics.geometry[id];
-    }
+    applyNodes(model);
+    applyCodeScale(metrics.codeFontScale);
+    captureIconGeometry(metrics.geometry);
     settled = { metrics, layout, autoRotation, labelSides, model };
+    settledStamp++;
   };
 
   const maxPasses =
@@ -371,87 +481,21 @@ export function mountVanillaStage(
       maxPasses,
     });
 
-  /**
-   * Builds the layers that DEPEND on settled geometry but cannot influence it.
-   *
-   * All of them live in absolutely-positioned layers (`.rdfa-arrow-svg` and
-   * `.rdfa-overlay` are `inset: 0`, `.rdfa-zone` is positioned), so they cannot
-   * change what `measure()` reads about the nodes. Building them once, after
-   * the loop, is therefore equivalent to rebuilding them every pass — and React
-   * itself renders `null` for the zones on its first pass, before any geometry
-   * exists.
-   */
-  const buildGeometryDependentLayers = (): void => {
-    arrowSvg.replaceChildren();
-    overlay.replaceChildren();
-    for (const el of zoneEls) el.remove();
-    zoneEls.length = 0;
+  // ─── Geometry-derived caches ──────────────────────────────────────────────
+  // Port offsets, the wire context and the circuit routes depend on the LAYOUT
+  // and the measured geometry, never on `t`. Recomputing them every frame would
+  // put A* routing on the animation path for nothing.
+  let wireStamp = -1;
+  let wireCache: {
+    portOffsets: Record<string, { start: number; end: number }>;
+    ctx: WireContext;
+    circuit: ReturnType<typeof routeCircuit>;
+    routeByNodePair: ReturnType<typeof routesByNodePair>;
+  } | null = null;
 
+  const wireData = (): NonNullable<typeof wireCache> => {
+    if (wireStamp === settledStamp && wireCache) return wireCache;
     const { metrics, layout, autoRotation, labelSides, model } = settled;
-    const { geometry } = metrics;
-
-    // ─── Icon → panel morph ─────────────────────────────────────────────────
-    // Mid-crossfade, a node is neither its icon nor its full panel. Everything
-    // that ATTACHES to a node — wires, arrows, packets, comment tails — reads
-    // this interpolated geometry so it tracks the box actually on screen. The
-    // factor is `contentCrossfade`, the same eased number driving the opacity.
-    //
-    // Zones and node PLACEMENTS keep reading the raw geometry, as in `Stage`.
-    let effectiveGeometry: GeometryMap = geometry;
-    let geometryOverridden = false;
-    for (const a of active) {
-      if (a.clip.kind !== 'set_content') continue;
-      const nodeId = (a.clip as SetContentClip).objectId;
-      const iconGeom = iconGeomByNode[nodeId];
-      const currGeom = geometry[nodeId];
-      if (!iconGeom || !currGeom) continue;
-      const p = contentByNode[nodeId]?.opacity ?? 0;
-      if (p >= 1) continue;
-      if (!geometryOverridden) {
-        effectiveGeometry = { ...geometry };
-        geometryOverridden = true;
-      }
-      const lH = lerp(iconGeom.labelH ?? 0, currGeom.labelH ?? 0, p);
-      const lW = lerp(iconGeom.labelW ?? 0, currGeom.labelW ?? 0, p);
-      // Tinted badge outset: resolves toward 0 as the (untinted) panel takes
-      // over, so the attachment point never jumps.
-      const bo = lerp(
-        iconGeom.borderOutset ?? 0,
-        currGeom.borderOutset ?? 0,
-        p
-      );
-      effectiveGeometry[nodeId] = {
-        id: currGeom.id,
-        x: lerp(iconGeom.x, currGeom.x, p),
-        y: lerp(iconGeom.y, currGeom.y, p),
-        width: lerp(iconGeom.width, currGeom.width, p),
-        height: lerp(iconGeom.height, currGeom.height, p),
-        ...(lH > 0 ? { labelH: lH } : {}),
-        ...(lW > 0 ? { labelW: lW } : {}),
-        ...(bo > 0 ? { borderOutset: bo } : {}),
-        // Same stage scale as the icon (arrow↔node gap at scale).
-        ...(currGeom.scale != null ? { scale: currGeom.scale } : {}),
-      };
-    }
-
-    // ─── Zones ──────────────────────────────────────────────────────────────
-    const bounds = computeZoneBounds(spec.zones, geometry);
-    (spec.zones ?? []).forEach((zone, i) => {
-      const b = bounds[zoneKey(zone, i)];
-      if (!b) return;
-      const rect = buildZoneRect(zone, b);
-      zoneEls.push(rect);
-      // Behind the arrows and the nodes.
-      root.insertBefore(rect, arrowSvg);
-      if (zone.label) {
-        const label = buildZoneLabel(zone, b);
-        zoneEls.push(label);
-        // Above the nodes, below the animated packets.
-        root.insertBefore(label, overlay);
-      }
-    });
-
-    // ─── Connections ────────────────────────────────────────────────────────
     const portOffsets = computePortOffsets(
       lineConnections,
       layout,
@@ -468,12 +512,132 @@ export function mountVanillaStage(
       portOffsets,
       autoRotation
     );
-    const circuit = routeCircuit(spec, geometry, ctx, labelSides, model.k);
-    const isCircuit = (spec.direction ?? 'left-to-right') === 'circuit';
-    const netColorById = netColorMap(spec);
-    // Identity when nothing is mid-crossfade — `effectiveGeometry` is then the
-    // same object as `geometry`.
+    const circuit = routeCircuit(
+      spec,
+      metrics.geometry,
+      ctx,
+      labelSides,
+      model.k
+    );
+    wireCache = {
+      portOffsets,
+      ctx,
+      circuit,
+      routeByNodePair: routesByNodePair(spec, circuit.routes),
+    };
+    wireStamp = settledStamp;
+    return wireCache;
+  };
+
+  // Zones read the settled geometry and nothing else, so they are rebuilt when
+  // the geometry settles rather than per frame.
+  let zoneStamp = -1;
+  const rebuildZones = (): void => {
+    if (zoneStamp === settledStamp) return;
+    for (const el of zoneRects) el.remove();
+    for (const el of zoneLabels) el.remove();
+    zoneRects = [];
+    zoneLabels = [];
+    const bounds = computeZoneBounds(spec.zones, settled.metrics.geometry);
+    (spec.zones ?? []).forEach((zone, i) => {
+      const b = bounds[zoneKey(zone, i)];
+      if (!b) return;
+      const rect = buildZoneRect(zone, b);
+      zoneRects.push(rect);
+      root.appendChild(rect);
+      if (zone.label) {
+        const label = buildZoneLabel(zone, b);
+        zoneLabels.push(label);
+        root.appendChild(label);
+      }
+    });
+    zoneStamp = settledStamp;
+  };
+
+  /**
+   * Imposes React's document order on the stage root: zones behind everything,
+   * then the arrow layer, the nodes, the zone labels, and the front overlay.
+   */
+  const reorderRoot = (): void => {
+    reorder(root, [
+      ...zoneRects,
+      arrowSvg,
+      ...nodeOrder,
+      ...zoneLabels,
+      overlay,
+    ]);
+  };
+
+  /**
+   * Interpolated geometry for anything that ATTACHES to a node.
+   *
+   * Mid-crossfade a node is neither its icon nor its full panel. Wires, arrows,
+   * packets and comment tails read this so they track the box actually on
+   * screen. The factor is `contentCrossfade`, the same eased number driving the
+   * opacity. Zones and node PLACEMENTS keep reading the raw geometry, as in
+   * `Stage`.
+   */
+  const effectiveGeometryNow = (): GeometryMap => {
+    const { geometry } = settled.metrics;
+    let effective: GeometryMap = geometry;
+    let overridden = false;
+    for (const a of active) {
+      if (a.clip.kind !== 'set_content') continue;
+      const nodeId = (a.clip as SetContentClip).objectId;
+      const iconGeom = iconGeomByNode[nodeId];
+      const currGeom = geometry[nodeId];
+      if (!iconGeom || !currGeom) continue;
+      const p = contentByNode[nodeId]?.opacity ?? 0;
+      if (p >= 1) continue;
+      if (!overridden) {
+        effective = { ...geometry };
+        overridden = true;
+      }
+      const lH = lerp(iconGeom.labelH ?? 0, currGeom.labelH ?? 0, p);
+      const lW = lerp(iconGeom.labelW ?? 0, currGeom.labelW ?? 0, p);
+      // Tinted badge outset: resolves toward 0 as the (untinted) panel takes
+      // over, so the attachment point never jumps.
+      const bo = lerp(
+        iconGeom.borderOutset ?? 0,
+        currGeom.borderOutset ?? 0,
+        p
+      );
+      effective[nodeId] = {
+        id: currGeom.id,
+        x: lerp(iconGeom.x, currGeom.x, p),
+        y: lerp(iconGeom.y, currGeom.y, p),
+        width: lerp(iconGeom.width, currGeom.width, p),
+        height: lerp(iconGeom.height, currGeom.height, p),
+        ...(lH > 0 ? { labelH: lH } : {}),
+        ...(lW > 0 ? { labelW: lW } : {}),
+        ...(bo > 0 ? { borderOutset: bo } : {}),
+        // Same stage scale as the icon (arrow↔node gap at scale).
+        ...(currGeom.scale != null ? { scale: currGeom.scale } : {}),
+      };
+    }
+    return effective;
+  };
+
+  /**
+   * Reconciles every layer that depends on the settled geometry but cannot
+   * influence it: zones, wires, arrows, flow charges, packets, comment bubbles.
+   *
+   * All of them live in absolutely-positioned layers, so they cannot change what
+   * `measure()` reads about the nodes — which is why reconciling them after the
+   * loop is equivalent to doing it on every pass.
+   */
+  const reconcileOverlays = (): void => {
+    rebuildZones();
+
+    const { model } = settled;
+    const { metrics } = settled;
+    const { portOffsets, ctx, circuit, routeByNodePair } = wireData();
+    const effectiveGeometry = effectiveGeometryNow();
+    // Identity when nothing is mid-crossfade.
     const obstacles = Object.values(effectiveGeometry);
+
+    // ─── Arrows: baseline connections then `arrow` clips ────────────────────
+    const arrowDesired: KeyedItem<ArrowDescriptor>[] = [];
 
     (spec.connections ?? []).forEach((link, i) => {
       const f = effectiveGeometry[refNode(link.from)];
@@ -481,8 +645,9 @@ export function mountVanillaStage(
       if (!f || !tg) return;
       const key = connectionKey(link, i);
       const ports = ctx.portsFor(key, link.from, link.to);
-      arrowSvg.appendChild(
-        buildArrowElement({
+      arrowDesired.push({
+        key: `conn:${key}`,
+        data: {
           from: f,
           to: tg,
           startPortOffset: ports.start,
@@ -506,11 +671,10 @@ export function mountVanillaStage(
           route: circuit.routes.get(key),
           hops: circuit.hops.get(key),
           hopRadius: HOP_RADIUS * model.scale,
-        })
-      );
+        },
+      });
     });
 
-    // ─── Arrow clips ────────────────────────────────────────────────────────
     // Progressive arrows drawn by an `arrow` action — after the baseline
     // connections, matching React's document order inside the SVG.
     for (const a of active) {
@@ -529,8 +693,9 @@ export function mountVanillaStage(
         if (matchingLine) lineKey = matchingLine.key;
       }
       const ports = ctx.portsFor(lineKey, clip.fromId, clip.toId);
-      arrowSvg.appendChild(
-        buildArrowElement({
+      arrowDesired.push({
+        key: `arrow:${clip.id}`,
+        data: {
           from: f,
           to: tg,
           startPortOffset: ports.start,
@@ -544,17 +709,31 @@ export function mountVanillaStage(
           axis: ctx.axisFor(clip.fromId, clip.toId),
           fromContour: ctx.contourFor(clip.fromId),
           toContour: ctx.contourFor(clip.toId),
-        })
-      );
+        },
+      });
     }
 
-    // ─── Flow charges ───────────────────────────────────────────────────────
-    // Electric current: charge dots riding the wire route(s).
-    const routeByNodePair = routesByNodePair(spec, circuit.routes);
+    const arrowHandles = reconcileKeyed({
+      map: arrowEls,
+      desired: arrowDesired,
+      create: () => {
+        const el = createArrowElement();
+        arrowSvg.appendChild(el.g);
+        return el;
+      },
+      apply: (el, desc) => applyArrowElement(el, desc),
+      remove: (el) => el.g.remove(),
+    });
+
+    // ─── Flow charges: dots riding the wire route(s) ─────────────────────────
+    const flowDesired: KeyedItem<{
+      clip: FlowClip;
+      points: ReturnType<typeof buildFlowPath>;
+    }>[] = [];
     for (const a of active) {
       if (a.clip.kind !== 'flow') continue;
       const clip = a.clip as FlowClip;
-      const pathPts = buildFlowPath(
+      const points = buildFlowPath(
         clip.route,
         effectiveGeometry,
         ctx.contourFor,
@@ -562,39 +741,64 @@ export function mountVanillaStage(
         obstacles,
         routeByNodePair
       );
-      if (pathPts.length < 2) continue;
-      const lapMs = Math.max(1, clip.endMs - clip.animStartMs);
-      const raw = (t - clip.animStartMs) / lapMs;
-      const phase = clip.reverse ? -raw : raw;
-      const r = 3.4 * model.scale;
-      const g = s('g');
-      for (let j = 0; j < clip.count; j++) {
-        let u = phase + j / clip.count;
-        u = clip.loop ? ((u % 1) + 1) % 1 : clamp(u, 0, 1);
-        const p = pointAtArc(pathPts, u);
-        const dot = s('circle', {
-          class: 'rdfa-flow-charge',
-          cx: String(p.x),
-          cy: String(p.y),
-          r: String(r),
-        });
-        if (clip.color) setStyle(dot, { '--rdfa-flow': clip.color });
-        g.appendChild(dot);
-      }
-      arrowSvg.appendChild(g);
+      if (points.length < 2) continue;
+      flowDesired.push({ key: `flow:${clip.id}`, data: { clip, points } });
     }
 
+    const flowHandles = reconcileKeyed({
+      map: flowEls,
+      desired: flowDesired,
+      create: (data) => {
+        const g = s('g');
+        const dots: SVGCircleElement[] = [];
+        for (let j = 0; j < data.clip.count; j++) {
+          const dot = s('circle', { class: 'rdfa-flow-charge' });
+          dots.push(dot);
+          g.appendChild(dot);
+        }
+        arrowSvg.appendChild(g);
+        return { g, dots };
+      },
+      apply: (el, { clip, points }) => {
+        const lapMs = Math.max(1, clip.endMs - clip.animStartMs);
+        const raw = (currentT - clip.animStartMs) / lapMs;
+        const phase = clip.reverse ? -raw : raw;
+        const r = String(3.4 * model.scale);
+        el.dots.forEach((dot, j) => {
+          let u = phase + j / clip.count;
+          u = clip.loop ? ((u % 1) + 1) % 1 : clamp(u, 0, 1);
+          const p = pointAtArc(points, u);
+          dot.setAttribute('cx', String(p.x));
+          dot.setAttribute('cy', String(p.y));
+          dot.setAttribute('r', r);
+          // Constant key set: the declaration is either there or removed, and
+          // `syncStyle` drops the empty attribute either way.
+          syncStyle(
+            dot,
+            clip.color ? { '--rdfa-flow': clip.color } : {},
+            FLOW_STYLE_KEYS
+          );
+        });
+      },
+      remove: (el) => el.g.remove(),
+    });
+
+    reorder(arrowSvg, [
+      ...arrowHandles.map((el) => el.g),
+      ...flowHandles.map((el) => el.g),
+    ]);
+
     // ─── Packets (move clips) ───────────────────────────────────────────────
-    // Front layer: a packet rides the SAME `connection()` path an arrow
-    // between the two nodes would draw, at the eased progress of its clip —
-    // the engine's `evaluate` already resolved which clips are live at `t`.
+    // A packet rides the SAME `connection()` path an arrow between the two
+    // nodes would draw, at the eased progress of its clip.
+    const packetDesired: KeyedItem<{ object: Packet; pose: PacketPose }>[] = [];
     for (const a of active) {
       if (a.clip.kind !== 'move') continue;
       const clip = a.clip as MoveClip;
       const f = effectiveGeometry[refNode(clip.fromId)];
       const tg = effectiveGeometry[refNode(clip.toId)];
-      const obj = packetById.get(clip.objectId);
-      if (!f || !tg || !obj) continue;
+      const object = packetById.get(clip.objectId);
+      if (!f || !tg || !object) continue;
       // Same key fallback as the arrow clips: a move along an existing
       // connection adopts its port spread.
       let moveKey = clip.id;
@@ -617,22 +821,38 @@ export function mountVanillaStage(
         ctx.contourFor(clip.toId)
       );
       const pt = pathTip(conn, easeInOutCubic(a.progress));
-      const opacity = clipOpacity(clip, t);
-      overlay.appendChild(
-        buildPacketElement(obj, {
-          x: pt.x,
-          y: pt.y,
-          opacity,
-          scale: 0.8 + 0.2 * opacity,
-          highlight,
-        })
-      );
+      const opacity = clipOpacity(clip, currentT);
+      packetDesired.push({
+        key: `packet:${clip.id}`,
+        data: {
+          object,
+          pose: {
+            x: pt.x,
+            y: pt.y,
+            opacity,
+            scale: 0.8 + 0.2 * opacity,
+          },
+        },
+      });
     }
+
+    const packetHandles = reconcileKeyed({
+      map: packetEls,
+      desired: packetDesired,
+      create: (data) => {
+        const el = createPacketElement(data.object, highlight);
+        overlay.appendChild(el);
+        return el;
+      },
+      apply: (el, data) => applyPacketPose(el, data.pose),
+      remove: (el) => el.remove(),
+    });
 
     // ─── Comment bubbles ────────────────────────────────────────────────────
     // Same front layer as the packets, AFTER them — `Stage` emits the two lists
     // in this order and `.rdfa-comment` (z-index 6) has no z-index of its own to
     // fall back on, so document order is what decides overlap.
+    const commentDesired: KeyedItem<CommentElementOptions>[] = [];
     for (const a of active) {
       if (a.clip.kind !== 'comment') continue;
       const clip = a.clip as CommentClip;
@@ -642,34 +862,110 @@ export function mountVanillaStage(
       // `nextToId` given but unknown (bad ID) → the bubble is dropped, rather
       // than silently promoted to an omniscient one.
       if (clip.nextToId && !anchor) continue;
-      appendCommentElement(overlay, {
-        node: anchor,
-        text: clip.text,
-        // Bubbles fade on the clip's own PROGRESS, not `clipOpacity`.
-        opacity: a.progress,
-        stageW: metrics.width,
-        stageH: metrics.height,
+      commentDesired.push({
+        key: `comment:${clip.id}`,
+        data: {
+          node: anchor,
+          text: clip.text,
+          // Bubbles fade on the clip's own PROGRESS, not `clipOpacity`.
+          opacity: a.progress,
+          stageW: metrics.width,
+          stageH: metrics.height,
+        },
       });
     }
+
+    const commentHandles = reconcileKeyed({
+      map: commentEls,
+      desired: commentDesired,
+      create: (data) => {
+        const handle = createCommentElement(data.text, !data.node);
+        // Attached before `apply` because placement is a function of the
+        // bubble's own rendered size, which needs it in the document.
+        overlay.appendChild(handle.el);
+        return handle;
+      },
+      apply: (handle, data) => applyCommentElement(handle, data),
+      remove: (handle) => handle.el.remove(),
+    });
+
+    reorder(overlay, [
+      ...packetHandles,
+      ...commentHandles.map((handle) => handle.el),
+    ]);
+
+    reorderRoot();
   };
 
+  // ─── Initial mount ────────────────────────────────────────────────────────
+  refreshFrame(t);
+  // Nodes must exist before the loop starts: `settle` measures BEFORE it
+  // applies, so the first measurement has to see the real tree — including any
+  // `set_content` panel, which is what makes its node grow.
+  applyNodes(initialModel);
+  setStyle(root, initialModel.stageVars);
+  container.appendChild(root);
+
   let outcome = run();
-  buildGeometryDependentLayers();
+  reconcileOverlays();
+
+  const onGeometryChange = (): void => {
+    outcome = run();
+    reconcileOverlays();
+  };
 
   // Fonts settle AFTER mount: when the webfont lands, every label reflows, the
   // node boxes resize, and React's own ResizeObserver re-converges panel A. A
   // panel B without one would stay frozen on the fallback-font geometry and
   // diff against a settled panel A — so this is required for agreement, not an
   // optimisation.
-  tracker.observe(() => {
-    outcome = run();
-    buildGeometryDependentLayers();
-  });
+  tracker.observe(onGeometryChange);
 
   return {
+    el: root,
+    update(tMs: number) {
+      refreshFrame(tMs);
+
+      // React's `Stage` decides in a layout effect whether the icon→panel
+      // transition needs a synchronous re-measure, and these are its two
+      // predicates, ported literally. Both are evaluated against the geometry
+      // measured BEFORE this frame's content was applied — which is precisely
+      // what makes the captured icon geometry the icon's and not the panel's.
+      const geometry = settled.metrics.geometry;
+      const hasNew = [...activeContentNodeIds].some(
+        (id) => !iconGeomByNode[id] && geometry[id]
+      );
+      const hasGone = Object.keys(iconGeomByNode).some(
+        (id) => !activeContentNodeIds.has(id)
+      );
+      captureIconGeometry(geometry);
+      for (const id of Object.keys(iconGeomByNode)) {
+        if (!activeContentNodeIds.has(id)) delete iconGeomByNode[id];
+      }
+
+      // Applying the nodes is unconditional — it is the mutation this whole
+      // step exists for. Re-MEASURING is not: geometry only moves when a panel
+      // grows or shrinks, or when a node enters or leaves the tree.
+      const setChanged = applyNodes(settled.model);
+
+      if (hasNew || hasGone || setChanged) {
+        outcome = run();
+        // A `set_visible` reveal puts a node in the tree that the
+        // ResizeObserver has never seen; re-observing is the vanilla
+        // counterpart of React's MutationObserver.
+        if (setChanged) tracker.observe(onGeometryChange);
+      }
+
+      reconcileOverlays();
+    },
     destroy() {
       tracker.disconnect();
       root.remove();
+      nodeEls.clear();
+      arrowEls.clear();
+      flowEls.clear();
+      packetEls.clear();
+      commentEls.clear();
     },
     get passes() {
       return outcome.passes;

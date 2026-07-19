@@ -1,5 +1,5 @@
 import type { Highlighter, ObjectContent } from '../types';
-import { h, setStyle } from './el';
+import { h, pruneEmptyStyle, setStyle } from './el';
 
 /**
  * `set_content` panel markup — the port of `ContentPanel.tsx` and its inner
@@ -60,7 +60,7 @@ export function measureCodeFit(target: CodeFitTarget): number {
     (parseFloat(preCs.paddingTop) || 0) +
     (parseFloat(preCs.paddingBottom) || 0);
   const applied = el.style.fontSize;
-  el.style.fontSize = '';
+  el.style.removeProperty('font-size');
   const base = parseFloat(getComputedStyle(el).fontSize) || FALLBACK_BASE_FONT;
   const naturalW = el.scrollWidth - padX;
   const naturalH = el.scrollHeight - padY;
@@ -68,7 +68,12 @@ export function measureCodeFit(target: CodeFitTarget): number {
   // Available height = body height (bounded by max-height), minus <pre> padding.
   const body = el.parentElement;
   const availH = (body ? body.clientHeight : el.clientHeight) - padY;
-  el.style.fontSize = applied;
+  // Restored through the CSSOM rather than by assigning back a possibly-empty
+  // string: `el.style.fontSize = ''` materialises an empty `style=""` attribute
+  // on a block that never had one, which is a DOM difference the mount-vs-update
+  // gate would (rightly) report even though nothing renders differently.
+  if (applied) el.style.setProperty('font-size', applied);
+  else pruneEmptyStyle(el);
 
   const ratioW =
     availW > 0 && naturalW > availW ? (availW - FIT_SAFETY) / naturalW : 1;
@@ -91,6 +96,7 @@ export function applyCodeFontScale(target: CodeFitTarget, scale: number): void {
   const { pre, baseFont } = target;
   if (baseFont == null || scale >= 1) {
     pre.style.removeProperty('font-size');
+    pruneEmptyStyle(pre);
     return;
   }
   setStyle(pre, { 'font-size': `${Math.max(1, baseFont * scale)}px` });

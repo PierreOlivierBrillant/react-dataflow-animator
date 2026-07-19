@@ -30,10 +30,17 @@ const { values } = parseArgs({
     frames: { type: 'string', default: '300' },
     port: { type: 'string', default: '5197' },
     out: { type: 'string' },
+    renderer: { type: 'string', default: 'both' },
   },
 });
 
 const DEMOS = values.demo ? [values.demo] : ['circuit', 'clientServer'];
+// `both` measures the two renderers in ONE run, which is the only comparison
+// worth making: these numbers are machine-dependent, so diffing a fresh vanilla
+// figure against a React baseline captured elsewhere would mostly measure the
+// hardware. See docs/AI-VALIDATION.md.
+const RENDERERS =
+  values.renderer === 'both' ? ['react', 'vanilla'] : [values.renderer];
 const FRAMES = Number(values.frames);
 
 // The harness's own vite.config.ts reads PORT from the environment (see
@@ -68,10 +75,13 @@ function metricDelta(before, after, name) {
 }
 
 try {
+  for (const renderer of RENDERERS) {
   for (const demo of DEMOS) {
-    console.log(`Benchmarking ${demo} (${FRAMES} frames)...`);
+    console.log(`Benchmarking ${demo} — ${renderer} (${FRAMES} frames)...`);
     const page = await browser.newPage();
-    await page.goto(`${baseUrl}/?bench=1&demo=${demo}&frames=${FRAMES}`);
+    await page.goto(
+      `${baseUrl}/?bench=1&demo=${demo}&frames=${FRAMES}&renderer=${renderer}`
+    );
     await page.evaluate(() => document.fonts.ready);
 
     const cdp = await page.context().newCDPSession(page);
@@ -93,7 +103,7 @@ try {
     const mean =
       bench.samples.reduce((s, v) => s + v, 0) / bench.samples.length;
 
-    results[demo] = {
+    results[`${renderer}/${demo}`] = {
       frames: bench.samples.length,
       frameMs: {
         mean: Number(mean.toFixed(3)),
@@ -120,6 +130,7 @@ try {
 
     await page.close();
   }
+  }
 } finally {
   await browser.close();
   await server.close();
@@ -127,17 +138,21 @@ try {
 
 const report = {
   generatedAt: new Date().toISOString(),
-  renderer: 'react',
+  renderer: RENDERERS.join('+'),
   framesRequested: FRAMES,
   demos: results,
 };
 
+// NOT bench-baseline.json by default any more: that file is the step 2.1 React
+// reference and stays frozen. A run writes beside it.
 const outPath =
-  values.out ?? join(__dirname, 'validation-harness/bench-baseline.json');
+  values.out ?? join(__dirname, 'validation-harness/bench-vanilla.json');
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
 
-console.log(`\nPerf baseline — React player (${FRAMES} frames/demo)\n`);
+console.log(
+  `\nPer-frame cost — ${RENDERERS.join(' vs ')} (${FRAMES} frames/demo)\n`
+);
 for (const [demo, r] of Object.entries(results)) {
   console.log(
     `${demo.padEnd(14)} mean ${r.frameMs.mean}ms  median ${r.frameMs.median}ms  ` +

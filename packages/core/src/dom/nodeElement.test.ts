@@ -1,21 +1,19 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it } from 'vitest';
-import {
-  applyContentLimit,
-  applyNodePlacement,
-  buildNodeElement,
-} from './nodeElement';
+import { applyNodeElement, buildNodeElement } from './nodeElement';
 import { escapeHtml } from '../highlight/highlight';
 import type { Node } from '../types';
 
 /** Unwraps to the element: most assertions here do not care about the code-fit
  *  handle that comes with a `code` content panel. */
-const build = (node: Node, options = {}) =>
+const buildHandle = (node: Node, options = {}) =>
   buildNodeElement(node, {
     placement: { cx: 0.25, cy: 0.5 },
     highlight: escapeHtml,
     ...options,
-  }).el;
+  });
+
+const build = (node: Node, options = {}) => buildHandle(node, options).el;
 
 describe('buildNodeElement — root', () => {
   it('carries the id and the placement as percentages', () => {
@@ -407,26 +405,84 @@ describe('buildNodeElement — content panel', () => {
   });
 });
 
-describe('applyNodePlacement', () => {
-  it('rewrites left/top without touching anything else', () => {
-    const el = build({ id: 'a', type: 'server' }, { opacity: 0.5 });
-    applyNodePlacement(el, { cx: 0.75, cy: 0.1 });
-
-    expect(el.style.left).toBe('75%');
-    expect(el.style.top).toBe('10%');
-    expect(el.style.opacity).toBe('0.5');
+describe('applyNodeElement — the single writer', () => {
+  const node: Node = { id: 'a', type: 'server' };
+  const opts = (over = {}) => ({
+    placement: { cx: 0.25, cy: 0.5 },
+    highlight: escapeHtml,
+    ...over,
   });
-});
 
-describe('applyContentLimit', () => {
-  it('rewrites the ceilings each pass, as the player rescales', () => {
-    const el = build(
-      { id: 'a', type: 'server' },
-      { content: { type: 'text' as const, value: 'hi' } }
+  it('rewrites left/top without disturbing the other declarations', () => {
+    const handle = buildHandle(node, { opacity: 0.5 });
+    applyNodeElement(
+      handle,
+      node,
+      opts({ placement: { cx: 0.75, cy: 0.1 }, opacity: 0.5 })
     );
-    applyContentLimit(el, { maxW: 64, maxH: 48 });
 
-    expect(el.style.getPropertyValue('--rdfa-content-maxw')).toBe('64px');
-    expect(el.style.getPropertyValue('--rdfa-content-maxh')).toBe('48px');
+    expect(handle.el.style.left).toBe('75%');
+    expect(handle.el.style.top).toBe('10%');
+    expect(handle.el.style.opacity).toBe('0.5');
+  });
+
+  it('rewrites the panel ceilings each pass, as the player rescales', () => {
+    const content = { type: 'text' as const, value: 'hi' };
+    const handle = buildHandle(node, {
+      content,
+      contentLimit: { maxW: 10, maxH: 10 },
+    });
+    applyNodeElement(
+      handle,
+      node,
+      opts({ content, contentLimit: { maxW: 64, maxH: 48 } })
+    );
+
+    expect(handle.el.style.getPropertyValue('--rdfa-content-maxw')).toBe(
+      '64px'
+    );
+    expect(handle.el.style.getPropertyValue('--rdfa-content-maxh')).toBe(
+      '48px'
+    );
+  });
+
+  // The property retained mode is most likely to get wrong: React drops a
+  // declaration it stops producing, so this one has to as well.
+  it('removes a declaration that stops applying', () => {
+    const content = { type: 'text' as const, value: 'hi' };
+    const handle = buildHandle(node, {
+      content,
+      contentLimit: { maxW: 64, maxH: 48 },
+      opacity: 0.5,
+      rotation: 30,
+    });
+    expect(handle.el.style.getPropertyValue('--rdfa-content-maxw')).toBe(
+      '64px'
+    );
+    expect(handle.visual.style.transform).toBe('rotate(30deg)');
+
+    applyNodeElement(handle, node, opts());
+
+    expect(handle.el.style.getPropertyValue('--rdfa-content-maxw')).toBe('');
+    expect(handle.el.style.opacity).toBe('');
+    expect(handle.visual.style.transform).toBe('');
+    // Emptied entirely, the husk goes too — see `pruneEmptyStyle`.
+    expect(handle.visual.hasAttribute('style')).toBe(false);
+  });
+
+  it('swaps the visual body when the content changes, and only then', () => {
+    const content = { type: 'text' as const, value: 'hi' };
+    const handle = buildHandle(node, { content });
+    const panel = handle.visual.firstElementChild;
+
+    applyNodeElement(handle, node, opts({ content }));
+    expect(handle.visual.firstElementChild).toBe(panel);
+
+    applyNodeElement(
+      handle,
+      node,
+      opts({ content: { type: 'text' as const, value: 'other' } })
+    );
+    expect(handle.visual.firstElementChild).not.toBe(panel);
   });
 });

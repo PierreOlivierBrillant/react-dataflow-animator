@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it } from 'vitest';
-import { h, px, pct, s, setStyle } from './el';
+import { h, pct, px, s, setAttrIfChanged, setStyle, syncStyle } from './el';
 
 describe('h', () => {
   it('sets attributes and appends string and node children', () => {
@@ -85,5 +85,43 @@ describe('px / pct', () => {
     expect(pct(0.5)).toBe('50%');
     expect(pct(0)).toBe('0%');
     expect(pct(1)).toBe('100%');
+  });
+});
+
+describe('syncStyle', () => {
+  it('removes a declaration the previous call wrote and this one does not', () => {
+    const el = document.createElement('span');
+    const first = syncStyle(el, { opacity: '0.5', transform: 'rotate(3deg)' });
+    expect(first).toEqual(['opacity', 'transform']);
+    const second = syncStyle(el, { opacity: '0.5' }, first);
+    expect(second).toEqual(['opacity']);
+    expect(el.style.getPropertyValue('transform')).toBe('');
+  });
+
+  it('drops the empty style attribute when the last declaration goes', () => {
+    const el = document.createElement('span');
+    const keys = syncStyle(el, { opacity: '0.5' });
+    expect(el.hasAttribute('style')).toBe(true);
+    syncStyle(el, {}, keys);
+    expect(el.style.length).toBe(0);
+    expect(el.hasAttribute('style')).toBe(false);
+  });
+
+  it('handles custom properties, which el.style cannot reach by assignment', () => {
+    const el = document.createElement('span');
+    const keys = syncStyle(el, { '--rdfa-arrow': 'red' });
+    expect(el.style.getPropertyValue('--rdfa-arrow')).toBe('red');
+    syncStyle(el, {}, keys);
+    expect(el.hasAttribute('style')).toBe(false);
+  });
+});
+
+describe('setAttrIfChanged', () => {
+  it('writes only when the value differs', () => {
+    const el = document.createElement('div');
+    setAttrIfChanged(el, 'd', 'M0 0');
+    expect(el.getAttribute('d')).toBe('M0 0');
+    setAttrIfChanged(el, 'd', 'M1 1');
+    expect(el.getAttribute('d')).toBe('M1 1');
   });
 });

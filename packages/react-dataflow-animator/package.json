@@ -53,6 +53,7 @@
     "curves": "node scripts/extract-curves.mjs",
     "test:visual": "playwright test",
     "harness:selftest": "playwright test --config playwright.compare.config.ts selftest.ab.spec.ts",
+    "harness:mountupdate": "playwright test --config playwright.compare.config.ts mountUpdate.ab.spec.ts",
     "harness:compare": "playwright test --config playwright.compare.config.ts compare.ab.spec.ts",
     "harness:bench": "node scripts/bench-perf.mjs"
   },

@@ -1,0 +1,71 @@
+{
+  "generatedAt": "2026-07-19T19:18:58.484Z",
+  "renderer": "react+vanilla",
+  "framesRequested": 300,
+  "demos": {
+    "react/circuit": {
+      "frames": 300,
+      "frameMs": {
+        "mean": 16.611,
+        "median": 16.7,
+        "p95": 16.7,
+        "min": 0.052,
+        "max": 16.8
+      },
+      "cdp": {
+        "scriptDurationMs": 878.07,
+        "layoutDurationMs": 23.86,
+        "recalcStyleDurationMs": 38.63,
+        "taskDurationMs": 1157.58
+      }
+    },
+    "react/clientServer": {
+      "frames": 300,
+      "frameMs": {
+        "mean": 16.666,
+        "median": 16.7,
+        "p95": 16.7,
+        "min": 16.5,
+        "max": 16.8
+      },
+      "cdp": {
+        "scriptDurationMs": 927.27,
+        "layoutDurationMs": 32.84,
+        "recalcStyleDurationMs": 41.79,
+        "taskDurationMs": 1244.55
+      }
+    },
+    "vanilla/circuit": {
+      "frames": 300,
+      "frameMs": {
+        "mean": 16.61,
+        "median": 16.7,
+        "p95": 16.7,
+        "min": 0,
+        "max": 16.8
+      },
+      "cdp": {
+        "scriptDurationMs": 162.36,
+        "layoutDurationMs": 18.83,
+        "recalcStyleDurationMs": 36.88,
+        "taskDurationMs": 370.34
+      }
+    },
+    "vanilla/clientServer": {
+      "frames": 300,
+      "frameMs": {
+        "mean": 16.666,
+        "median": 16.7,
+        "p95": 16.8,
+        "min": 16.5,
+        "max": 16.8
+      },
+      "cdp": {
+        "scriptDurationMs": 139.21,
+        "layoutDurationMs": 25.57,
+        "recalcStyleDurationMs": 39.61,
+        "taskDurationMs": 388.18
+      }
+    }
+  }
+}

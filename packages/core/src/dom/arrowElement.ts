@@ -10,7 +10,7 @@ import {
   type Point,
 } from '../engine/geometry';
 import type { ConnectionAxis } from '../engine/layout';
-import { s, setStyle } from './el';
+import { s, setAttrIfChanged, syncStyle } from './el';
 import { ARROW_HEAD } from './stageConstants';
 import { appendRichTextSvg } from './richtext';
 
@@ -19,6 +19,23 @@ import { appendRichTextSvg } from './richtext';
  *
  * `progress` ∈ [0,1] animates the progressive drawing; a static connection
  * passes 1. Produces a `<g>` meant to live inside `<svg class="rdfa-arrow-svg">`.
+ *
+ * RETAINED MODE (step 2.5) — the module is split in two, and the split is the
+ * pattern every element module follows:
+ *
+ *  - {@link createArrowElement} builds the parts that exist no matter what `t`
+ *    is: the `<g>` and its `<path>`.
+ *  - {@link applyArrowElement} writes EVERY `t`-dependent value onto them.
+ *
+ * Creating an arrow is therefore `create` followed by `apply`, and updating one
+ * is `apply` alone. That is what makes `mount(t₀) + update(t)` identical to
+ * `mount(t)` BY CONSTRUCTION rather than by empirical agreement: both paths run
+ * the same writer.
+ *
+ * The two arrowheads genuinely appear and disappear with `progress` (they exist
+ * only above 0.02), so `apply` creates and removes them. They are re-inserted at
+ * fixed positions — after the path, before the label — so the document order
+ * never depends on the order updates arrived in.
  */
 
 export interface ArrowDescriptor {
@@ -72,7 +89,36 @@ function headPoints(tip: Point, angleRad: number): string {
   );
 }
 
-export function buildArrowElement(desc: ArrowDescriptor): SVGGElement {
+/**
+ * A retained arrow: the `<g>` plus the child references `apply` mutates.
+ *
+ * `labelText` is cached because rebuilding rich text is the one write here that
+ * is not a single attribute — re-running `appendRichTextSvg` every frame for a
+ * label that never changes would be exactly the per-frame rebuild this step
+ * exists to remove.
+ */
+export interface ArrowElement {
+  readonly g: SVGGElement;
+  path: SVGPathElement;
+  forwardHead?: SVGPolygonElement;
+  backwardHead?: SVGPolygonElement;
+  label?: SVGTextElement;
+  labelText?: string;
+  colorStyleKeys?: string[];
+}
+
+/** Creates the `t`-independent skeleton. Not renderable until `apply` runs. */
+export function createArrowElement(): ArrowElement {
+  const g = s('g');
+  const path = s('path');
+  g.appendChild(path);
+  return { g, path };
+}
+
+export function applyArrowElement(
+  el: ArrowElement,
+  desc: ArrowDescriptor
+): void {
   const {
     from,
     to,
@@ -143,44 +189,81 @@ export function buildArrowElement(desc: ArrowDescriptor): SVGGElement {
   const lineCls = `rdfa-arrow-line${highlighted ? ' rdfa-arrow-line--highlight' : ''}`;
   const headCls = `rdfa-arrow-head${highlighted ? ' rdfa-arrow-head--highlight' : ''}`;
 
-  const g = s('g');
+  const { g } = el;
   // A custom colour overrides the theme's neutral stroke variable that both the
   // line (stroke) and the head (fill) read; the `--highlight` classes paint
   // `--rdfa-accent` instead, so a highlighted connection keeps the accent.
-  if (color) setStyle(g, { '--rdfa-arrow': color });
-
-  // `style` is destructured with a default, so `data-style` is ALWAYS emitted.
-  g.appendChild(
-    s('path', {
-      class: lineCls,
-      'data-style': style,
-      d: pathD(ptsAdjusted, hops, hopRadius),
-    })
+  // Clearing it when the colour goes away matters in retained mode: React drops
+  // the declaration on re-render, so a stale variable would outlive its clip.
+  el.colorStyleKeys = syncStyle(
+    g,
+    color ? { '--rdfa-arrow': color } : {},
+    el.colorStyleKeys
   );
 
-  if (renderForward && progress > 0.02)
-    g.appendChild(
-      s('polygon', { class: headCls, points: headPoints(tip, ang) })
-    );
-  if (renderBackward && progress > 0.02)
-    g.appendChild(
-      s('polygon', { class: headCls, points: headPoints(startTip, angStart) })
-    );
+  // `style` is destructured with a default, so `data-style` is ALWAYS emitted.
+  setAttrIfChanged(el.path, 'class', lineCls);
+  setAttrIfChanged(el.path, 'data-style', style);
+  setAttrIfChanged(el.path, 'd', pathD(ptsAdjusted, hops, hopRadius));
+
+  // Heads are inserted at fixed slots (after the path, before the label) so the
+  // child order is a function of the descriptor alone, never of update history.
+  const wantForward = renderForward && progress > 0.02;
+  const wantBackward = renderBackward && progress > 0.02;
+
+  if (wantForward) {
+    if (!el.forwardHead) {
+      el.forwardHead = s('polygon');
+      g.insertBefore(el.forwardHead, el.path.nextSibling);
+    }
+    setAttrIfChanged(el.forwardHead, 'class', headCls);
+    setAttrIfChanged(el.forwardHead, 'points', headPoints(tip, ang));
+  } else if (el.forwardHead) {
+    el.forwardHead.remove();
+    el.forwardHead = undefined;
+  }
+
+  if (wantBackward) {
+    if (!el.backwardHead) {
+      el.backwardHead = s('polygon');
+      g.insertBefore(el.backwardHead, (el.forwardHead ?? el.path).nextSibling);
+    }
+    setAttrIfChanged(el.backwardHead, 'class', headCls);
+    setAttrIfChanged(el.backwardHead, 'points', headPoints(startTip, angStart));
+  } else if (el.backwardHead) {
+    el.backwardHead.remove();
+    el.backwardHead = undefined;
+  }
 
   if (text) {
     // Label position: the anchor offset if the middle of the path falls on an
     // interleaved node, otherwise the middle of the path.
     const mid = conn.labelAnchor ?? pathTip(conn, 0.5);
-    const label = s('text', {
-      class: 'rdfa-arrow-label',
-      x: String(mid.x),
-      y: String(mid.y - 6),
-      'text-anchor': 'middle',
-      opacity: String(progress),
-    });
-    appendRichTextSvg(label, text);
-    g.appendChild(label);
+    if (!el.label) {
+      el.label = s('text', {
+        class: 'rdfa-arrow-label',
+        'text-anchor': 'middle',
+      });
+      g.appendChild(el.label);
+    }
+    if (el.labelText !== text) {
+      el.label.replaceChildren();
+      appendRichTextSvg(el.label, text);
+      el.labelText = text;
+    }
+    setAttrIfChanged(el.label, 'x', String(mid.x));
+    setAttrIfChanged(el.label, 'y', String(mid.y - 6));
+    setAttrIfChanged(el.label, 'opacity', String(progress));
+  } else if (el.label) {
+    el.label.remove();
+    el.label = undefined;
+    el.labelText = undefined;
   }
+}
 
-  return g;
+/** Convenience for the reconciler's create path: `create` then `apply`. */
+export function buildArrowElement(desc: ArrowDescriptor): ArrowElement {
+  const el = createArrowElement();
+  applyArrowElement(el, desc);
+  return el;
 }

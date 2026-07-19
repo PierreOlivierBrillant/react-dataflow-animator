@@ -30,6 +30,25 @@ export interface PacketElementOptions {
   highlight?: Highlighter;
 }
 
+/**
+ * Where a packet sits at the current `t` — everything about it that moves.
+ *
+ * The split between this and the packet's CONTENT is the cleanest in the
+ * renderer: the card (header, body, highlighted code, table) is a pure function
+ * of the `Packet` spec object and never changes while the packet flies, so it is
+ * built once by {@link createPacketElement} and only the pose is rewritten per
+ * frame. A packet crossing the stage costs four style writes.
+ */
+export interface PacketPose {
+  /** Centre of the packet, in stage px. */
+  x: number;
+  y: number;
+  /** Opacity (fade in/out). Default: 1. */
+  opacity?: number;
+  /** Scale (slight "pop" on appearance/disappearance). Default: 1. */
+  scale?: number;
+}
+
 /** Highlighter-or-plain content zone shared by the HTTP and SQL kinds. */
 function zone(
   className: string,
@@ -207,12 +226,14 @@ const packetBuilders: Record<
   subicon: buildSubIconPacket,
 };
 
-/** Builds one `.rdfa-packet` element, ready to append to `.rdfa-overlay`. */
-export function buildPacketElement(
+/**
+ * Builds the `t`-independent card: the box and its filled content. Not
+ * positioned — {@link applyPacketPose} does that.
+ */
+export function createPacketElement(
   object: Packet,
-  options: PacketElementOptions
+  highlight?: Highlighter
 ): HTMLElement {
-  const { x, y, opacity = 1, scale = 1, highlight } = options;
   const build = packetBuilders[object.kind];
   // A panel-kind packet draws its own box (buildPanel) and a subicon packet is
   // a round badge; both replace the wrapper's default box via a modifier
@@ -223,16 +244,30 @@ export function buildPacketElement(
       ? ' rdfa-packet--subicon'
       : '';
 
-  const el = h(
+  return h(
     'div',
     { class: `rdfa-packet rdfa-packet-${object.kind}${modifier}` },
     build ? build(object, highlight) : []
   );
+}
+
+/** Writes the current pose. The whole of a packet's per-frame cost. */
+export function applyPacketPose(el: HTMLElement, pose: PacketPose): void {
+  const { x, y, opacity = 1, scale = 1 } = pose;
   setStyle(el, {
     left: px(x),
     top: px(y),
     opacity: String(opacity),
     transform: `translate(-50%, -50%) scale(${scale})`,
   });
+}
+
+/** Convenience for the reconciler's create path: `create` then `apply`. */
+export function buildPacketElement(
+  object: Packet,
+  options: PacketElementOptions
+): HTMLElement {
+  const el = createPacketElement(object, options.highlight);
+  applyPacketPose(el, options);
   return el;
 }

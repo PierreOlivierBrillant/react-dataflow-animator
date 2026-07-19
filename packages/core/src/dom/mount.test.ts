@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountVanillaStage } from './mount';
 import { compile } from '../engine/compiler';
 import type { DataFlowSpec } from '../types';
+import { normalizeStageHtml } from './normalizeHtml';
 
 /**
  * Orchestration-level assertions only: layer order, teardown, and the
@@ -321,5 +322,127 @@ describe('mountVanillaStage — set_content and comments', () => {
     // Silently promoting it to an omniscient bubble would invent a layer the
     // React Stage does not draw.
     expect(container.querySelector('.rdfa-comment')).toBeNull();
+  });
+});
+
+describe('mountVanillaStage — update(t), the retained read path', () => {
+  const movingSpec: Partial<DataFlowSpec> = {
+    packets: [{ id: 'p', kind: 'http_packet' }],
+    timeline: [
+      {
+        type: 'move',
+        id: 'm1',
+        object: 'p',
+        from: 'a',
+        to: 'b',
+        duration: 1000,
+      },
+    ],
+  };
+
+  it('mutates the existing node elements rather than rebuilding them', () => {
+    const { container, handle } = mount(movingSpec, 0);
+    const before = [...container.querySelectorAll('[data-node-id]')];
+
+    handle.update(500);
+    const after = [...container.querySelectorAll('[data-node-id]')];
+
+    // Element IDENTITY is the assertion: a rebuild would replace these.
+    expect(after).toEqual(before);
+  });
+
+  it('keeps a packet element alive across the frames of its clip', () => {
+    const { container, handle } = mount(movingSpec, 200);
+    const first = container.querySelector('.rdfa-packet');
+    expect(first).not.toBeNull();
+
+    handle.update(600);
+
+    expect(container.querySelector('.rdfa-packet')).toBe(first);
+  });
+
+  it('creates a packet when its clip opens and drops it when it closes', () => {
+    const { container, handle } = mount(movingSpec, 0);
+
+    handle.update(500);
+    expect(container.querySelectorAll('.rdfa-packet')).toHaveLength(1);
+
+    handle.update(5000);
+    expect(container.querySelectorAll('.rdfa-packet')).toHaveLength(0);
+  });
+
+  it('adds and removes nodes as set_visible reveals and hides them', () => {
+    const hidden: Partial<DataFlowSpec> = {
+      nodes: [
+        { id: 'a', type: 'server', text: 'A', lane: 1 },
+        { id: 'b', type: 'database', text: 'B', lane: 2, visible: false },
+      ],
+      timeline: [
+        {
+          type: 'set_visible',
+          id: 'v1',
+          object: 'b',
+          visible: true,
+          duration: 500,
+        },
+      ],
+    };
+    const { container, handle } = mount(hidden, 0);
+    const present = () =>
+      [...container.querySelectorAll('[data-node-id]')].map((el) =>
+        el.getAttribute('data-node-id')
+      );
+
+    expect(present()).toEqual(['a']);
+    handle.update(500);
+    expect(present()).toEqual(['a', 'b']);
+  });
+
+  it('walking to t lands on the same markup as mounting there directly', () => {
+    // The jsdom counterpart of the mount-vs-update gate: no layout here, so it
+    // proves the STRUCTURE converges, while the browser gate proves the
+    // measured geometry does too.
+    const walked = mount(movingSpec, 0);
+    walked.handle.update(300);
+    walked.handle.update(700);
+    const fresh = mount(movingSpec, 700);
+
+    expect(normalizeStageHtml(walked.container.firstElementChild!)).toBe(
+      normalizeStageHtml(fresh.container.firstElementChild!)
+    );
+  });
+});
+
+describe('mountVanillaStage — teardown', () => {
+  it('detaches the tree and disconnects the observer', () => {
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect = disconnect;
+      }
+    );
+    const { container, handle } = mount();
+
+    handle.destroy();
+
+    expect(container.querySelector('.rdfa-stage')).toBeNull();
+    expect(disconnect).toHaveBeenCalled();
+  });
+
+  // Retained mode plus a live observer is exactly the combination that leaks:
+  // repeated cycles must not accumulate anything in the document.
+  it('leaves nothing behind over repeated mount/destroy cycles', () => {
+    for (let i = 0; i < 20; i++) {
+      const { container, handle } = mount(undefined, 250);
+      handle.update(500);
+      handle.destroy();
+      container.remove();
+    }
+
+    expect(document.body.querySelectorAll('.rdfa-stage')).toHaveLength(0);
+    expect(document.body.children).toHaveLength(0);
   });
 });

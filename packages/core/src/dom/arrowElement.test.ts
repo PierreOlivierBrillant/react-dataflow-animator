@@ -6,8 +6,10 @@ import type { NodeGeom } from '../engine/geometry';
 const from: NodeGeom = { id: 'a', x: 100, y: 100, width: 40, height: 40 };
 const to: NodeGeom = { id: 'b', x: 400, y: 100, width: 40, height: 40 };
 
+/** Unwraps to the `<g>`: these assertions are about the emitted markup, not
+ *  about the retained handle `applyArrowElement` mutates. */
 const arrow = (over: Partial<ArrowDescriptor> = {}): SVGGElement =>
-  buildArrowElement({ from, to, progress: 1, ...over });
+  buildArrowElement({ from, to, progress: 1, ...over }).g;
 
 describe('buildArrowElement — line', () => {
   it('emits a g wrapping a classed path', () => {

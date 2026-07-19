@@ -26,41 +26,66 @@ import { appendAbResult } from './abResults';
 
 const THEMES = ['light', 'dark'] as const;
 
-for (const demo of RISK_DEMOS) {
-  for (const theme of THEMES) {
-    test(`self-test — ${demo} · ${theme}`, async ({ page }) => {
-      await page.goto(`/?ab=1&demo=${demo}&mode=${theme}&panelB=react`);
-      await waitForAbReady(page);
+/**
+ * The configurations the gate is calibrated for. A configuration that compare
+ * exercises but the self-test does not is a configuration whose numbers mean
+ * nothing — which is exactly how the `chrome` cells slipped in uncalibrated.
+ *
+ * `chrome` sweeps the probe grid where `stage` samples only the midpoint,
+ * because composing the stage with a sibling control bar changes the stage's
+ * height and therefore its measurement schedule — and the suspected race is
+ * instant-dependent, so a single instant would not find it.
+ */
+const CONFIGS = [
+  { name: 'stage', query: '', pcts: [0.5] },
+  { name: 'chrome', query: '&chrome=1', pcts: [0, 0.25, 0.5, 0.75, 1] },
+] as const;
 
-      const panelA = page.locator('[data-ab-panel="a"] .rdfa-player');
-      const panelB = page.locator('[data-ab-panel="b"] .rdfa-player');
-      // `t` is frozen and the spec is static, but a CSS `loading` spinner
-      // (native @keyframes, driven by the browser's wall clock rather than
-      // React's `t`) would still drift between two successive captures.
-      // `animations: 'disabled'` snaps it to a fixed state first — the same
-      // mechanism `expect(page).toHaveScreenshot()` applies by default in
-      // harness.visual.spec.ts, applied here to the raw `.screenshot()` call.
-      const shot = { animations: 'disabled' as const };
+for (const config of CONFIGS) {
+  for (const demo of RISK_DEMOS) {
+    for (const pct of config.pcts) {
+      for (const theme of THEMES) {
+        const suffix =
+          config.name === 'stage'
+            ? `${demo} · ${theme}`
+            : `${demo} · ${Math.round(pct * 100)}% · ${theme} · chrome`;
+        test(`self-test — ${suffix}`, async ({ page }) => {
+          await page.goto(
+            `/?ab=1&demo=${demo}&mode=${theme}&panelB=react&probePct=${pct}${config.query}`
+          );
+          await waitForAbReady(page);
 
-      const a1 = await panelA.screenshot(shot);
-      const a2 = await panelA.screenshot(shot);
-      const successive = diffPngBuffers(a1, a2);
-      appendAbResult('selftest', {
-        label: `${demo} · ${theme} · successive`,
-        ratio: successive.ratio,
-      });
-      expect(
-        successive.ratio,
-        `successive-capture drift on ${demo}/${theme}`
-      ).toBe(0);
+          const panelA = page.locator('[data-ab-panel="a"] .rdfa-player');
+          const panelB = page.locator('[data-ab-panel="b"] .rdfa-player');
+          // `t` is frozen and the spec is static, but a CSS `loading` spinner
+          // (native @keyframes, driven by the browser's wall clock rather than
+          // React's `t`) would still drift between two successive captures.
+          // `animations: 'disabled'` snaps it to a fixed state first — the same
+          // mechanism `expect(page).toHaveScreenshot()` applies by default in
+          // harness.visual.spec.ts, applied here to the raw `.screenshot()` call.
+          const shot = { animations: 'disabled' as const };
 
-      const b1 = await panelB.screenshot(shot);
-      const crossMount = diffPngBuffers(a1, b1);
-      appendAbResult('selftest', {
-        label: `${demo} · ${theme} · cross-mount`,
-        ratio: crossMount.ratio,
-      });
-      expect(crossMount.ratio, `cross-mount drift on ${demo}/${theme}`).toBe(0);
-    });
+          const a1 = await panelA.screenshot(shot);
+          const a2 = await panelA.screenshot(shot);
+          const successive = diffPngBuffers(a1, a2);
+          appendAbResult('selftest', {
+            label: `${suffix} · successive`,
+            ratio: successive.ratio,
+          });
+          expect(
+            successive.ratio,
+            `successive-capture drift on ${suffix}`
+          ).toBe(0);
+
+          const b1 = await panelB.screenshot(shot);
+          const crossMount = diffPngBuffers(a1, b1);
+          appendAbResult('selftest', {
+            label: `${suffix} · cross-mount`,
+            ratio: crossMount.ratio,
+          });
+          expect(crossMount.ratio, `cross-mount drift on ${suffix}`).toBe(0);
+        });
+      }
+    }
   }
 }

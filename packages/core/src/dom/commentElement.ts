@@ -35,26 +35,25 @@ export interface CommentElementOptions {
   stageH: number;
 }
 
-/**
- * Builds the bubble and appends it to `parent`, then positions it.
- *
- * The two-phase shape is REQUIRED, not stylistic: the bubble's placement is a
- * function of its own rendered size, which is only knowable once it is in the
- * document. React discovers that size through a `ResizeObserver` and re-renders;
- * here the element is appended, measured, then placed — reaching the same
- * resting state in one synchronous step instead of two frames.
- *
- * `offsetWidth`/`offsetHeight` (not `getBoundingClientRect`) on purpose: React
- * stores those, and they are ROUNDED to integers. A fractional rect would place
- * the bubble a sub-pixel off and light up the diff.
- */
-export function appendCommentElement(
-  parent: HTMLElement,
-  options: CommentElementOptions
-): HTMLElement {
-  const { node, text, opacity, stageW, stageH } = options;
-  const omniscient = !node;
+/** A retained bubble: the element plus the tail `apply` repositions. */
+export interface CommentElement {
+  readonly el: HTMLElement;
+  readonly tail?: HTMLElement;
+  readonly omniscient: boolean;
+}
 
+/**
+ * Builds the bubble itself — the `t`-independent half.
+ *
+ * `omniscient` is fixed for the lifetime of the element because it decides the
+ * rich-text treatment (see the asymmetry note above) and whether a tail exists.
+ * A clip either names a `nextToId` or does not; it never switches mid-flight, so
+ * the reconciler creates a new element rather than mutating across that line.
+ */
+export function createCommentElement(
+  text: string,
+  omniscient: boolean
+): CommentElement {
   const el = h('div', {
     class: omniscient
       ? 'rdfa-comment rdfa-comment--omniscient'
@@ -69,15 +68,44 @@ export function appendCommentElement(
     : h('span', { class: 'rdfa-comment-tail' });
   if (tail) el.appendChild(tail);
 
-  // Placed off-flow with no left/top yet: `.rdfa-comment` is absolutely
-  // positioned and width-capped by `max-width`, so its size does NOT depend on
-  // where it ends up — measuring before placing is safe.
-  parent.appendChild(el);
+  return { el, tail, omniscient };
+}
+
+/**
+ * Measures the bubble and writes its placement.
+ *
+ * The measure-then-place shape is REQUIRED, not stylistic: the bubble's
+ * placement is a function of its own rendered size, which is only knowable once
+ * it is in the document. React discovers that size through a `ResizeObserver`
+ * and re-renders; here the element is measured then placed — reaching the same
+ * resting state in one synchronous step instead of two frames. The element must
+ * therefore already be in `parent` when this runs.
+ *
+ * The size is re-read on every call rather than cached. It genuinely can change
+ * without the text changing (`.rdfa-comment` is `max-width`-capped, so it
+ * reflows when the player resizes), and a bubble is a rare, small element — a
+ * cached size that silently went stale would cost a pixel, which is worse than
+ * the layout read.
+ *
+ * `offsetWidth`/`offsetHeight` (not `getBoundingClientRect`) on purpose: React
+ * stores those, and they are ROUNDED to integers. A fractional rect would place
+ * the bubble a sub-pixel off and light up the diff.
+ */
+export function applyCommentElement(
+  handle: CommentElement,
+  options: CommentElementOptions
+): void {
+  const { node, opacity, stageW, stageH } = options;
+  const { el, tail, omniscient } = handle;
+
   const w = el.offsetWidth;
   const h0 = el.offsetHeight;
   const degenerate = w === 0 || h0 === 0;
 
-  if (omniscient) {
+  // `omniscient` and `node` are decided together at creation, but they are two
+  // values as far as the type system is concerned — testing both narrows `node`
+  // and keeps the pair honest if a caller ever mismatches them.
+  if (omniscient || !node) {
     let left = stageW / 2 - w / 2;
     if (w > 0 && stageW > 0) {
       left = clamp(left, PAD, Math.max(PAD, stageW - w - PAD));
@@ -88,14 +116,17 @@ export function appendCommentElement(
       opacity: String(opacity),
       visibility: degenerate ? 'hidden' : 'visible',
     });
-    return el;
+    return;
   }
 
   const nodeTop = node.y - node.height / 2;
   const nodeBottom = node.y + node.height / 2;
   // Not enough room above → flip below the node (and flip the tail with it).
+  // The class is TOGGLED, not just added: in retained mode a bubble whose anchor
+  // drifts back up must lose the modifier again, which a build-once path never
+  // had to care about.
   const below = h0 > 0 && nodeTop - NODE_GAP - h0 < PAD;
-  if (below) el.classList.add('rdfa-comment--below');
+  el.classList.toggle('rdfa-comment--below', below);
 
   let top = below ? nodeBottom + NODE_GAP : nodeTop - NODE_GAP - h0;
   if (h0 > 0 && stageH > 0) {
@@ -117,5 +148,21 @@ export function appendCommentElement(
     visibility: degenerate ? 'hidden' : 'visible',
   });
   if (tail) setStyle(tail, { left: px(tailX) });
-  return el;
+}
+
+/**
+ * Convenience for the reconciler's create path: builds the bubble, appends it to
+ * `parent` (it must be in the document to be measurable) and places it.
+ */
+export function appendCommentElement(
+  parent: HTMLElement,
+  options: CommentElementOptions
+): CommentElement {
+  const handle = createCommentElement(options.text, !options.node);
+  // Appended with no left/top yet: `.rdfa-comment` is absolutely positioned and
+  // width-capped by `max-width`, so its size does NOT depend on where it ends
+  // up — measuring before placing is safe.
+  parent.appendChild(handle.el);
+  applyCommentElement(handle, options);
+  return handle;
 }

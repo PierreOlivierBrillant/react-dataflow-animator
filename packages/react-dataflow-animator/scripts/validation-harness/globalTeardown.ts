@@ -71,6 +71,40 @@ function printCompare(verdicts: CellVerdict[], threshold: number): void {
 }
 
 /**
+ * Mount-vs-update: the retained renderer against itself.
+ *
+ * `html` is the verdict that counts. The pixel column is printed beside it as a
+ * corroborating signal, but a structural divergence is real whether or not it
+ * has grown large enough to move a pixel yet, so it is the one that decides.
+ */
+function printMountUpdate(rows: AbResultRow[]): void {
+  if (rows.length === 0) return;
+  const lines = [
+    '',
+    'mount(t) vs mount(0)+update(...) — the retained renderer against itself',
+    '',
+    'label'.padEnd(30) + 'html'.padEnd(10) + 'pixels'.padEnd(12) + 'note',
+  ];
+  for (const r of rows) {
+    lines.push(
+      r.label.padEnd(30) +
+        (r.htmlEqual ? 'equal' : 'DIFF').padEnd(10) +
+        `${(r.ratio * 100).toFixed(4)}%`.padEnd(12) +
+        (r.note ?? '')
+    );
+  }
+  const asserted = rows.filter((r) => !r.note);
+  const drifting = asserted.filter((r) => !r.htmlEqual);
+  lines.push(
+    '',
+    drifting.length > 0
+      ? `${drifting.length}/${asserted.length} asserted cell(s) DRIFTED — retained mode does not converge to a fresh mount.`
+      : `All ${asserted.length} asserted cell(s) identical; ${rows.length - asserted.length} excluded (documented path dependence).`
+  );
+  console.log(lines.join('\n'));
+}
+
+/**
  * Runs exactly once, in the main process, after every worker has finished —
  * unlike a `test.afterAll` inside the spec, immune to the per-worker module
  * resets that per-test failures trigger (see abResults.ts).
@@ -82,6 +116,7 @@ function printCompare(verdicts: CellVerdict[], threshold: number): void {
  */
 export default function globalTeardown(): void {
   printSelfTest(readAbResults('selftest'));
+  printMountUpdate(readAbResults('mountupdate'));
 
   const compareRows = readAbResults('compare');
   if (compareRows.length === 0) return;

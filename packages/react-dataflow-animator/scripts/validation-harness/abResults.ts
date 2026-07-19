@@ -23,9 +23,17 @@ import { fileURLToPath } from 'node:url';
 export interface AbResultRow {
   label: string;
   ratio: number;
+  /**
+   * Mount-vs-update only: whether the two normalised DOM serialisations were
+   * identical. It is the PRIMARY signal there — the pixel ratio beside it is a
+   * backstop, since a structural drift can be real long before it moves a pixel.
+   */
+  htmlEqual?: boolean;
+  /** Why a cell is not asserted strictly (see the crossfade note in the spec). */
+  note?: string;
 }
 
-export type AbSpec = 'compare' | 'selftest';
+export type AbSpec = 'compare' | 'selftest' | 'mountupdate';
 
 const RESULTS_DIR = fileURLToPath(new URL('./.ab-results', import.meta.url));
 

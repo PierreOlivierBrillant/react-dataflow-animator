@@ -30,10 +30,17 @@ beforeEach(() => {
   document.body.replaceChildren(parent);
 });
 
+/** Unwraps to the bubble element; the handle itself is exercised through the
+ *  retained path in mount.test.ts. */
+const appendComment = (
+  parent: HTMLElement,
+  options: Parameters<typeof appendCommentElement>[1]
+): HTMLElement => appendCommentElement(parent, options).el;
+
 describe('appendCommentElement — omniscient', () => {
   it('centres at the top of the stage, with no tail', () => {
     withSize(100, 30);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       text: 'hi',
       opacity: 0.5,
       stageW: 480,
@@ -50,7 +57,7 @@ describe('appendCommentElement — omniscient', () => {
 
   it('clamps to the stage padding when it is wider than the stage', () => {
     withSize(600, 30);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       text: 'wide',
       opacity: 1,
       stageW: 480,
@@ -62,7 +69,7 @@ describe('appendCommentElement — omniscient', () => {
 
   it('INTERPRETS rich text — unlike the anchored variant', () => {
     withSize(80, 20);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       text: 'water $H_2O$',
       opacity: 1,
       stageW: 480,
@@ -74,7 +81,7 @@ describe('appendCommentElement — omniscient', () => {
 
   it('hides itself while it has no measurable size', () => {
     withSize(0, 0);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       text: 'x',
       opacity: 1,
       stageW: 480,
@@ -88,7 +95,7 @@ describe('appendCommentElement — omniscient', () => {
 describe('appendCommentElement — anchored', () => {
   it('sits above the node and points its tail at it', () => {
     withSize(100, 30);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       node: node(),
       text: 'above',
       opacity: 1,
@@ -106,7 +113,7 @@ describe('appendCommentElement — anchored', () => {
 
   it('flips below the node when there is no room above', () => {
     withSize(100, 30);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       node: node({ y: 30 }),
       text: 'below',
       opacity: 1,
@@ -120,7 +127,7 @@ describe('appendCommentElement — anchored', () => {
 
   it('keeps the tail inside the bubble when an edge clamp shifts it', () => {
     withSize(100, 30);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       node: node({ x: 10 }),
       text: 'edge',
       opacity: 1,
@@ -138,7 +145,7 @@ describe('appendCommentElement — anchored', () => {
 
   it('does NOT interpret rich text', () => {
     withSize(80, 20);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       node: node(),
       text: 'water $H_2O$',
       opacity: 1,
@@ -152,7 +159,7 @@ describe('appendCommentElement — anchored', () => {
 
   it('clamps a bubble taller than the stage to the top pad', () => {
     withSize(100, 400);
-    const el = appendCommentElement(parent, {
+    const el = appendComment(parent, {
       node: node(),
       text: 'tall',
       opacity: 1,

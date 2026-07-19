@@ -87,6 +87,78 @@ export function setStyle(
   }
 }
 
+/**
+ * Retained-mode counterpart of {@link setStyle}: writes `style`, then REMOVES
+ * every property the previous call wrote that is absent now. Returns the key set
+ * to hand back on the next call.
+ *
+ * This asymmetry is the single most common way a retained renderer drifts from
+ * a rebuilding one. React re-creates the `style` object each render, so a
+ * declaration that stops being produced simply disappears; `setStyle` alone
+ * would leave it behind forever. A node that stops being tinted, an arrow that
+ * loses its colour, a visual whose rotation returns to 0 — each would keep the
+ * stale value and diverge from a fresh mount.
+ */
+export function syncStyle(
+  el: HTMLElement | SVGElement,
+  style: Record<string, string | undefined>,
+  previous?: readonly string[]
+): string[] {
+  const written: string[] = [];
+  for (const name in style) {
+    const value = style[name];
+    if (value === undefined) continue;
+    // Reading the current value first is what makes a STATIC frame free. Under
+    // playback most elements are unchanged, and `setProperty` with an identical
+    // value still dirties the element for style recalculation; `getPropertyValue`
+    // is a map read that touches no layout.
+    if (el.style.getPropertyValue(name) !== value)
+      el.style.setProperty(name, value);
+    written.push(name);
+  }
+  if (previous) {
+    for (const name of previous) {
+      if (!written.includes(name)) el.style.removeProperty(name);
+    }
+  }
+  pruneEmptyStyle(el);
+  return written;
+}
+
+/**
+ * Drops an empty `style=""` attribute.
+ *
+ * Any mutation of `el.style` — including a `removeProperty` for a property that
+ * is not set — MATERIALISES the attribute, so an element that has been written
+ * to and then emptied carries `style=""` while one that was never written to
+ * carries no attribute at all. The two render identically, but they are not the
+ * same DOM, and the mount-vs-update gate is right to say so.
+ *
+ * The test is on the SERIALISED attribute rather than on `el.style.length`,
+ * deliberately: `length` counts standard longhands only, and engines disagree
+ * about whether custom properties are included. Asking for the string the DOM
+ * will actually expose is the question we mean, and the only one that is
+ * portable.
+ */
+export function pruneEmptyStyle(el: HTMLElement | SVGElement): void {
+  if (el.getAttribute('style') === '') el.removeAttribute('style');
+}
+
+/**
+ * Attribute counterpart of the read-before-write in {@link syncStyle}: skips the
+ * write when the attribute already holds `value`.
+ *
+ * Same reasoning — a connection whose `d` has not moved should cost nothing, and
+ * `getAttribute` is a map read where `setAttribute` invalidates.
+ */
+export function setAttrIfChanged(
+  el: Element,
+  name: string,
+  value: string
+): void {
+  if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+}
+
 export function px(n: number): string {
   return `${n}px`;
 }
