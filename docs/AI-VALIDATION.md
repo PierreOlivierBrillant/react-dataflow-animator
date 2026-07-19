@@ -85,11 +85,11 @@ The contrast is most telling on a **short window** (little hold): the
 
 ## Tool 3 — A/B harness, pixel-diff gate and perf baseline
 
-Ahead of reimplementing `Stage.tsx`'s rendering as a framework-agnostic DOM
-renderer (`@react-dataflow-animator/core/dom/mount`), the harness gained a
-measurement instrument: a side-by-side comparison mode, a pixel-diff gate
-calibrated against its own noise floor, and a perf baseline to catch a
-regression once the real renderer replaces today's placeholder.
+`Stage.tsx`'s rendering is being reimplemented as a framework-agnostic DOM
+renderer (`@react-dataflow-animator/core/dom/mount`), one layer at a time. The
+harness carries the instrument that keeps that migration honest: a side-by-side
+comparison mode, a pixel-diff gate calibrated against its own noise floor, a
+ratchet listing the layers that have not landed yet, and a perf baseline.
 
 ### A/B mode (`?ab=1`)
 
@@ -110,7 +110,8 @@ the normal harness: `?probeT=<ms>` or `?probePct=<0..1>` (fraction of the
 compiled duration — lets a script ask for "25%" without first looking up that
 demo's own duration) freeze the instant both panels render at; the default is
 the timeline's midpoint. `window.__AB__` exposes `{ demo, t, durationMs,
-panelB, ready }` for scripts to poll.
+panelB, ready }` for scripts to poll, plus `{ passes, converged }` from the
+vanilla renderer's settle loop (see the convergence diagnostic below).
 
 ### Self-test — calibrating the gate against itself
 
@@ -148,26 +149,68 @@ COMPARE_THRESHOLD=0.005 npm run harness:compare -w react-dataflow-animator  # ov
 
 `compare.ab.spec.ts` walks every risk demo × 5 instants (0/25/50/75/100% of
 duration) × 2 themes (50 cells), diffs panel A against panel B with
-`pixelmatch`, and fails any cell whose diff ratio exceeds a threshold
-(`COMPARE_THRESHOLD` env var, default 0.1%). **Panel B is currently the
-documented placeholder** (`core/dom/mount.ts`): every cell is expected to
-fail today (an empty box vs. a real diagram) — that is normal, not a
-regression. This gate starts being meaningful once the real renderer replaces
-the placeholder; it is deliberately NOT wired into the root `npm run` check
+`pixelmatch`, and judges each cell against a threshold (`COMPARE_THRESHOLD` env
+var, default 0.1%). It is deliberately NOT wired into the root `npm run` check
 sequence or CI yet.
+
+Panel B renders the **static substrate**: zones, static nodes (panels, shapes,
+pictograms, labels, tints) and the baseline connections. The time-varying
+overlays — packets, arrow clips, flow charges, `set_content` panels, comment
+bubbles — land in steps 2.3/2.4, so some cells legitimately differ today.
+
+#### The ratchet
+
+Loosening the threshold to accommodate those cells would blind the gate
+everywhere. Instead they are enumerated, one line per cell with its reason, in
+`compare-ratchet.json`. Three rules, and the third is what makes it a ratchet
+rather than a suppression list:
+
+| situation                            | verdict                              |
+| ------------------------------------ | ------------------------------------ |
+| **unlisted** cell over the threshold | failure — a regression               |
+| **listed** cell over the threshold   | tolerated, printed with its reason   |
+| **listed** cell that now **passes**  | failure — delete it from the ratchet |
+
+Without the third rule the list would only ever go stale: a step could land its
+layer, leave the entry behind, and keep that cell exempt forever. So the list
+can only shrink, and every entry that survives is one someone had to justify.
+
+Rules 1 and 3 are judged in different places, and not by accident. An unlisted
+regression asserts inside the test that names it, so the failure points at the
+cell. A listed-but-passing cell cannot be judged from inside a single test —
+that test passed — so the verdict lives in `globalTeardown.ts`, the only place
+that sees the whole grid; it throws, which is what makes Playwright exit
+non-zero.
+
+The reasons in `compare-ratchet.json` are evidence, not guesswork: each was
+derived by diffing the `.rdfa-*` element inventory of the two panels, so the
+listed cause is the only structural difference present in that cell.
+
+**When your step lands a layer**, re-run the gate and delete every entry it now
+passes. The gate will not let you forget.
+
+#### Shared plumbing
 
 Both `compare.ab.spec.ts` and `selftest.ab.spec.ts` run under
 `playwright.compare.config.ts` — a config dedicated to these two files, never
 `test:visual`'s goldens: its own port (5198, distinct from the interactive
 harness's default 5199) and `reuseExistingServer: false` unconditionally, so
 a developer's already-running `npm run harness` session is never silently
-reused mid-measurement (the documented port-5199 trap). Because every cell of
-`compare.ab.spec.ts` currently fails, and Playwright restarts the worker
-process after each failing test (fresh module state), per-cell rows are
+reused mid-measurement (the documented port-5199 trap). Per-cell rows are
 accumulated on disk (`abResults.ts`, gitignored scratch) rather than in an
-in-memory array; the final table is printed from `globalTeardown.ts`, which
-Playwright guarantees runs exactly once, in the main process, regardless of
-worker restarts.
+in-memory array, because Playwright restarts the worker process (fresh module
+state) after a failing test; the final table is printed from
+`globalTeardown.ts`, which Playwright guarantees runs exactly once, in the main
+process, regardless of worker restarts.
+
+#### Convergence diagnostic
+
+`window.__AB__` also carries `passes` and `converged` from the vanilla
+renderer's settle loop. `converged: false` means the measurement BUDGET stopped
+the loop rather than the geometry settling — the renderer would then be drawing
+a state React never renders, and **the fix is not to raise the budget**: it is
+matched to React's on purpose (see `core/src/dom/settle.ts`). Every risk demo
+currently settles in 3 passes, inside React's 4.
 
 ### Perf baseline
 

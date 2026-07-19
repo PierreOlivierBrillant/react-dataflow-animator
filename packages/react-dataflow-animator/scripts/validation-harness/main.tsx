@@ -176,16 +176,43 @@ function BenchApp() {
 
 const AB_PANEL = { width: 480, height: 320 };
 
-/** Mounts the framework-agnostic placeholder inside a flex slot sized like `.rdfa-stage`. */
+/** Mounts the framework-agnostic renderer inside a flex slot sized like `.rdfa-stage`. */
 function VanillaPanel({ spec, t }: { spec: DataFlowSpec; t: number }) {
   const slotRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const container = slotRef.current;
     if (!container) return;
     const handle = mountVanillaStage(container, spec, t);
+    // The convergence diagnostic, republished for scripts to read. `converged:
+    // false` means the measurement BUDGET stopped the loop rather than the
+    // geometry settling — see core/src/dom/settle.ts for why that matters.
+    const w = window as unknown as { __AB__?: Record<string, unknown> };
+    if (w.__AB__) {
+      w.__AB__.passes = handle.passes;
+      w.__AB__.converged = handle.converged;
+    }
     return () => handle.destroy();
   }, [spec, t]);
-  return <div ref={slotRef} style={{ flex: '1 1 auto', minHeight: 0 }} />;
+  // `display:flex` is NOT cosmetic. Panel A puts `.rdfa-stage` directly under
+  // `.rdfa-player` (itself `display:flex; flex-direction:column`), and the stage
+  // gets ALL its height from `flex: 1 1 auto` — every one of its children is
+  // absolutely positioned, so its content height is 0. This wrapper adds one
+  // nesting level; left as a plain block it would not be a flex container, the
+  // stage's `flex` would be ignored, and panel B's stage would compute to height
+  // 0 — `measure()` would never see a size and the root would stay
+  // `visibility:hidden`. Every cell would then fail for a reason having nothing
+  // to do with the renderer.
+  return (
+    <div
+      ref={slotRef}
+      style={{
+        flex: '1 1 auto',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    />
+  );
 }
 
 function ABPanel({

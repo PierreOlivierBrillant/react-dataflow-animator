@@ -3,7 +3,8 @@
   "workspaces": {
     "packages/core": {
       "entry": ["src/**/*.test.ts", "scripts/*.mjs"],
-      "project": ["src/**/*.ts", "scripts/*.mjs"]
+      "project": ["src/**/*.ts", "scripts/*.mjs"],
+      "ignoreDependencies": ["react-icons"]
     },
     "packages/react-dataflow-animator": {
       "entry": [

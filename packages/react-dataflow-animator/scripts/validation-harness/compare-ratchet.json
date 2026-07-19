@@ -1,0 +1,53 @@
+{
+  "$comment": [
+    "Cells of the A/B compare grid that are EXPECTED to exceed the pixel threshold,",
+    "each with the reason. This list may only SHRINK: `check` in globalTeardown.ts",
+    "fails the run when a listed cell starts passing, so a feature that lands is",
+    "forced to delete its entries. See docs/AI-VALIDATION.md.",
+    "",
+    "Every entry below is a layer the vanilla renderer does not draw YET. The",
+    "reasons are not guesses: each was derived by diffing the `.rdfa-*` element",
+    "inventory of the two panels, so the listed cause is the ONLY structural",
+    "difference present in that cell.",
+    "",
+    "Watch `spa · 100% · light` (0.1055%) — it sits just over the 0.1% threshold",
+    "while its `dark` twin (0.0840%) passes, with the identical cause. It is the",
+    "entry most likely to flip on an unrelated rendering nudge."
+  ],
+  "cells": {
+    "spa · 25% · light": "move clip (packet) — step 2.3",
+    "spa · 25% · dark": "move clip (packet) — step 2.3",
+    "spa · 50% · light": "set_content panel — step 2.4",
+    "spa · 50% · dark": "set_content panel — step 2.4",
+    "spa · 75% · light": "set_content panel + move clip (packet) — steps 2.3/2.4",
+    "spa · 75% · dark": "set_content panel + move clip (packet) — steps 2.3/2.4",
+    "spa · 100% · light": "comment bubble — step 2.4",
+
+    "clientServer · 25% · light": "move clip (packet) — step 2.3",
+    "clientServer · 25% · dark": "move clip (packet) — step 2.3",
+    "clientServer · 50% · light": "move clip (packet, SQL table) — step 2.3",
+    "clientServer · 50% · dark": "move clip (packet, SQL table) — step 2.3",
+    "clientServer · 75% · light": "set_content panel + comment bubble — step 2.4",
+    "clientServer · 75% · dark": "set_content panel + comment bubble — step 2.4",
+    "clientServer · 100% · light": "set_content panel + comment bubble — step 2.4",
+    "clientServer · 100% · dark": "set_content panel + comment bubble — step 2.4",
+
+    "messageQueue · 25% · light": "set_content panel — step 2.4",
+    "messageQueue · 25% · dark": "set_content panel — step 2.4",
+    "messageQueue · 50% · light": "set_content panel + comment bubble — step 2.4",
+    "messageQueue · 50% · dark": "set_content panel + comment bubble — step 2.4",
+    "messageQueue · 75% · light": "comment bubble — step 2.4",
+    "messageQueue · 75% · dark": "comment bubble — step 2.4",
+    "messageQueue · 100% · light": "set_content panel — step 2.4",
+    "messageQueue · 100% · dark": "set_content panel — step 2.4",
+
+    "collision · 25% · light": "move clips (packets) — step 2.3",
+    "collision · 25% · dark": "move clips (packets) — step 2.3",
+    "collision · 50% · light": "comment bubble — step 2.4",
+    "collision · 50% · dark": "comment bubble — step 2.4",
+    "collision · 75% · light": "comment bubble — step 2.4",
+    "collision · 75% · dark": "comment bubble — step 2.4",
+    "collision · 100% · light": "arrow clips — step 2.3",
+    "collision · 100% · dark": "arrow clips — step 2.3"
+  }
+}
