@@ -401,7 +401,17 @@ function pushButtonIcon(closed: number): ReactNode {
 
 const fallback = svg(<rect x="4" y="4" width="16" height="16" rx="2" />);
 
-/** Registers/overwrites the icon for a node type (extensibility). */
+/**
+ * Registers/overwrites the icon for a node type (extensibility).
+ *
+ * No longer reachable from `index.ts`: since v3 the public `registerNodeIcon`
+ * is the core's, because the player renders through the core and a ReactNode
+ * registry could not reach it. Kept because the React renderer still consults
+ * it and `check-icon-parity.mjs` reads this file's structure; both go at step
+ * 2.6b, together with the renderer.
+ *
+ * @lintignore
+ */
 export function registerNodeIcon(type: string, node: ReactNode): void {
   (icons as Record<string, ReactNode>)[type] = node;
 }

@@ -103,9 +103,11 @@ npm run harness -w react-dataflow-animator
 Renders two fixed-size (480×320), frozen-`t` panels side by side:
 
 - **panel A** — the real React `Stage`;
-- **panel B** — `mountVanillaStage` (default), or a SECOND independent React
+- **panel B** — `mountVanillaStage` (default); a SECOND independent React
   `Stage` mount of the identical spec (`panelB=react`), used to calibrate the
-  gate itself (see self-test below).
+  gate itself (see self-test below); or the published `DataFlowPlayer`
+  (`panelB=player`, chrome mode only — the wrapper does not expose its clock, so
+  it cannot walk, and asking it to throws rather than silently approximating).
 
 Extra URL parameters, on top of `?demo=`/`?mode=`/`?theme=`/`?locale=` from
 the normal harness: `?probeT=<ms>` or `?probePct=<0..1>` (fraction of the
@@ -132,7 +134,13 @@ list `harness.visual.spec.ts` golden-tests) × both themes:
   independent React `Stage` (`panelB=react`) of the identical spec/`t`: must
   be 0.00%, or DOM measurement itself is nondeterministic across mounts.
 
-Both checks require EXACTLY 0.00% on every demo × theme (20 checks). While
+Both checks require EXACTLY 0.00% on every configuration (120 checks). Note what
+is being calibrated: the MEASUREMENT, which is determined by panel A's
+configuration plus the capture protocol. `panelB=react` mounts a second panel A,
+so an entry naming a panel-B variant would measure nothing new — which is why
+compare's `wrapper` mode needs no entry of its own and is covered by `chrome`'s.
+The rule the self-test enforces binds on compare modes whose PANEL A is
+uncalibrated. While
 building this, the self-test caught a real bug: a `loading` spinner is a
 native CSS `@keyframes` animation, driven by the browser's wall clock rather
 than React's `t` — so two successive captures drifted even with `t` frozen.
@@ -150,7 +158,8 @@ COMPARE_THRESHOLD=0.005 npm run harness:compare -w react-dataflow-animator  # ov
 ```
 
 `compare.ab.spec.ts` walks every risk demo × 5 instants (0/25/50/75/100% of
-duration) × 2 themes (50 cells), diffs panel A against panel B with
+duration) × 2 themes × 4 modes (`stage`, `chrome`, `walk`, `wrapper` — 200
+cells), diffs panel A against panel B with
 `pixelmatch`, and judges each cell against a threshold (`COMPARE_THRESHOLD` env
 var, default 0.01%). It is deliberately NOT wired into the root `npm run` check
 sequence or CI yet.
@@ -158,9 +167,13 @@ sequence or CI yet.
 Panel B renders **every layer panel A does at a frozen `t`**: the static
 substrate (zones, static nodes, baseline connections; step 2.2), the dynamic
 clips — packets (`move`), progressive arrows (`arrow`), flow charges (`flow`);
-step 2.3 — and, since step 2.4, `set_content` panels and comment bubbles.
+step 2.3 — `set_content` panels and comment bubbles (step 2.4), the player
+chrome (step 2.5), and since step 2.6a the `wrapper` mode, where panel B is
+built by the published `DataFlowPlayer` component rather than by a direct
+`mountVanillaPlayer` call — the proof that the React wrapper's prop→option
+mapping loses nothing.
 
-**The whole 50-cell grid currently measures exactly 0.0000%** — not "under
+**The whole 200-cell grid currently measures exactly 0.0000%** — not "under
 threshold", bit-identical screenshots — and the ratchet is empty. Since the
 self-test independently pins the harness's own noise floor at exactly 0.00%,
 there is no headroom left to hide in: any non-zero cell is a real difference in
@@ -243,9 +256,10 @@ currently settles in 3 passes, inside React's 4.
 npm run harness:bench -w react-dataflow-animator
 ```
 
-`scripts/bench-perf.mjs` drives the harness's `?bench=1&demo=<id>` page — a
-single `Stage`, autoPlay + loop via the SAME `useClock` hook `DataFlowPlayer`
-uses (not a reimplementation) — for ~300 frames on `circuit` (heavy: dense
+`scripts/bench-perf.mjs` drives the harness's `?bench=1&demo=<id>` page, in one
+of three renderer modes (`?renderer=react|vanilla|wrapper`): the React `Stage`
+driven by `useClock`, the core's `mountVanillaPlayer`, or the published
+`DataFlowPlayer` component. All three autoPlay + loop — for ~300 frames on `circuit` (heavy: dense
 orthogonal routing) and `clientServer` (average), and records, via Playwright
 
 - CDP:
@@ -256,9 +270,11 @@ orthogonal routing) and `clientServer` (average), and records, via Playwright
   over the whole run — a breakdown by phase, useful once there is a second
   (vanilla) renderer to compare against.
 
-Results are saved to the versioned
-`scripts/validation-harness/bench-baseline.json` — the baseline the step-2.6
-gate (vanilla renderer vs. this number) will compare against. Two caveats:
+Results are saved beside the versioned
+`scripts/validation-harness/bench-baseline.json`, which is the FROZEN step-2.1
+React reference and is never rewritten: a default run writes `bench-vanilla.json`
+(react + vanilla in one run) and `--renderer wrapper` writes
+`bench-wrapper.json`. Two caveats:
 
 - at these demos' sizes, render cost is comfortably under the 16.7ms frame
   budget, so the wall-clock frame time reads as vsync-locked (~16.7ms)

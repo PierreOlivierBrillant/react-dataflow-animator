@@ -1,14 +1,7 @@
-import type { ReactNode } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import type { Highlighter, Node } from '../../types';
-import { escapeHtml } from '@react-dataflow-animator/core/highlight/highlight';
-import { getNodeIcon } from './nodeIcons';
-import { getSubIcon } from './subIcons';
-import { NodePanel } from './NodePanel';
-import { ShapeNode } from './ShapeNode';
-import {
-  isPanelNode,
-  isShapeType,
-} from '@react-dataflow-animator/core/render/nodeKinds';
+import { renderNodeVisual } from '@react-dataflow-animator/core/dom/nodeElement';
 
 export interface NodeViewProps {
   /** The node to represent. Only `type` — and, for panels,
@@ -25,45 +18,55 @@ export interface NodeViewProps {
   signalValue?: string;
 }
 
+/** See `DataFlowPlayer`: the host's box is removed so the visual keeps the
+ *  layout position it had when this component rendered the markup itself. */
+const HOST_STYLE: CSSProperties = { display: 'contents' };
+
 /**
  * Visual core of a node — pictogram or text panel — without positioning,
  * sub-icon, spinner or enclosing Stage. Sizes itself on `--rdfa-scale`
  * (fallback `1`), so it's renderable outside a `<DataFlowPlayer>`.
  *
- * `StaticNode` reuses it (a single rendering path, a single decision
- * panel/shape/pictogram via {@link isPanelNode} / {@link isShapeType}); it
- * is exported to display an isolated node, e.g. the types gallery of the
- * API reference.
+ * Since v3 this mounts the core's `renderNodeVisual` in an effect rather than
+ * rendering JSX, so a single dispatch decides panel/shape/signal/pictogram for
+ * both this and the player. Like the player, it therefore emits nothing on the
+ * server and fills in on hydration.
  */
 export function NodeView({
   node,
-  highlight = escapeHtml,
+  highlight,
   closed,
   signalValue,
-}: NodeViewProps): ReactNode {
-  if (isPanelNode(node.type)) {
-    return <NodePanel object={node} highlight={highlight} />;
-  }
-  if (isShapeType(node.type)) {
-    return <ShapeNode object={node} />;
-  }
-  if (node.type === 'signal') {
-    // A labelled I/O pad for logic diagrams: the bit value sits in the centre.
-    const val = signalValue ?? node.icon ?? '';
-    return (
-      <span className="rdfa-signal">
-        {val ? (
-          <span className="rdfa-signal-value">{getSubIcon(val)}</span>
-        ) : null}
-      </span>
-    );
-  }
-  // Stateful contacts read `closed` (live from a `toggle`, else the static
-  // `node.closed`); other component/pictogram types ignore it.
-  const closedFrac = closed ?? (node.closed ? 1 : 0);
-  return (
-    <span className="rdfa-node-icon">
-      {getNodeIcon(node.type, { closed: closedFrac })}
-    </span>
-  );
+}: NodeViewProps) {
+  const hostRef = useRef<HTMLSpanElement>(null);
+
+  // Structural key, for the same reason `DataFlowPlayer` keys on `specKey`:
+  // callers build the node inline (the API reference's type gallery does), so
+  // the object identity changes on every render while the node does not.
+  const nodeKey = useMemo(() => JSON.stringify(node), [node]);
+  const nodeRef = useRef(node);
+  const highlightRef = useRef(highlight);
+
+  // See `DataFlowPlayer`: synced in an effect, declared before the mount effect
+  // so the latter reads this render's values.
+  useEffect(() => {
+    nodeRef.current = node;
+    highlightRef.current = highlight;
+  });
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const el = renderNodeVisual(nodeRef.current, {
+      highlight: highlightRef.current,
+      closed,
+      signalValue,
+    });
+    host.appendChild(el);
+    return () => el.remove();
+    // `node` and `highlight` are read through refs; `nodeKey` stands in for the
+    // node's structure.
+  }, [nodeKey, closed, signalValue]);
+
+  return <span ref={hostRef} style={HOST_STYLE} />;
 }

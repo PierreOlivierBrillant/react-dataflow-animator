@@ -125,15 +125,15 @@ export const en: Messages = {
     principles: [
       {
         strong: 'Time is the single source of truth.',
-        rest: ' The engine compiles the spec into a pure timeline: t (ms) → visual state. Backward seeking, step-by-step navigation and SSR are trivial and deterministic.',
+        rest: ' The engine compiles the spec into a pure timeline: t (ms) → visual state. Backward seeking and step-by-step navigation are trivial and deterministic.',
       },
       {
         strong: 'Automatic layout.',
         rest: ' Linear (based on direction and lane) or circular. No coordinates to provide.',
       },
       {
-        strong: 'SSR-safe.',
-        rest: ' No DOM access during render — usable directly in Docusaurus, Next.js, or any React site.',
+        strong: 'Fast rendering.',
+        rest: ' A retained DOM renderer mutates the frame in place instead of re-rendering it — about 6x less script time per frame. It mounts on the client, so the diagram appears on hydration.',
       },
       {
         strong: 'Extensible.',

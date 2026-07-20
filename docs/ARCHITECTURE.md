@@ -25,8 +25,10 @@ See also [SPEC.md](./SPEC.md) (functional specification).
    dependency of the npm package and never appears in its `dist/`.
 5. **Scoped CSS** (`.rdfa-`) + CSS variables, compiled into `dist/style.css`.
    No CSS framework imposed on the consumer.
-6. **SSR-safe**: no DOM access during rendering (measurement and clock in
-   effects).
+6. **Browser rendering, no server markup**: since v3 the player MOUNTS the
+   core's DOM renderer in a client effect, so nothing is emitted server-side
+   beyond a sized placeholder (and `fallback`). No DOM is touched at module
+   scope, so importing the package on a server is safe.
 7. **Extensible registries** (node icons, sub-icons, highlighter).
 
 ## Rendering pipeline
@@ -34,19 +36,38 @@ See also [SPEC.md](./SPEC.md) (functional specification).
 ```text
 spec ──compile()──▶ Timeline (clips, steps, durationMs)   [pure, no DOM, core]
                           │
-useClock (rAF) ──▶ t ─────┤
+createPlayerClock (rAF) ──▶ t ─────┤
                           ▼
-            Stage: evaluate(timeline, t) ──▶ active clips (+ progress)   [core]
+    mountVanillaStage: evaluate(timeline, t) ──▶ active clips (+ progress)  [core]
                           │
    layout (CSS ratios) + geometry (measured BoundingClientRects)         [core]
                           ▼
-        nodes / arrows / packets / spinners / contents / comments        [react]
+   nodes / arrows / packets / spinners / contents / comments  [core, retained]
 ```
 
-`compile`, `evaluate`, layout and geometry/routing are pure functions with no
-DOM or React dependency, living in `@react-dataflow-animator/core`. Only the
-final step — mapping computed clips/positions to JSX — touches React and the
-DOM, and stays in `packages/react-dataflow-animator`.
+The whole pipeline lives in `@react-dataflow-animator/core`, React included out.
+A clock tick calls `handle.update(t)`, which MUTATES the DOM already on screen
+rather than rebuilding it — the retained mode that makes a frame 5–7× cheaper in
+script time than the React reconciliation it replaced.
+
+`packages/react-dataflow-animator` is a thin wrapper: `DataFlowPlayer` maps its
+props to `mountVanillaPlayer`'s options in an effect and calls `destroy()` on
+cleanup. It renders nothing per frame.
+
+**Every option is read once, at mount.** The core reads its options when it
+builds, so the wrapper remounts on any change — `spec` included, keyed on the
+spec's structure rather than its identity, carrying the current instant and play
+state across. Live per-option updates would be a second renderer's worth of
+work.
+
+### The React renderer, until step 2.6b
+
+`src/components/` (`Stage.tsx`, `Controls.tsx`, `nodes/`, `dynamic/`),
+`src/hooks/useClock.ts` and `src/tex/RichText.tsx` are no longer reachable from
+`index.ts` and no longer ship in the bundle. They stay in the tree because they
+are **panel A of the A/B pixel gate**: the reference the vanilla renderer is
+measured against. The validation harness imports them from source directly. They
+are removed at step 2.6b, once the migration no longer needs a reference.
 
 ## Monorepo structure
 
@@ -72,28 +93,32 @@ packages/
       highlight/                      Prism wrapper (replaceable)
       export/
         json.ts                       serialize / copy / download the spec JSON
-      dom/
-        mount.ts                      framework-agnostic DOM renderer entry point
-                                       (documented placeholder — see docs/AI-VALIDATION.md)
+      dom/                            THE renderer (retained-mode, no framework)
+        player.ts                     mountVanillaPlayer: stage + chrome + clock
+        mount.ts                      mountVanillaStage: the stage, update(t), settle loop
+        clock.ts                      createPlayerClock (rAF, subscribe/destroy)
+        controls.ts, jsonDialog.ts, debugOverlay.ts        the player's chrome
+        nodeElement.ts, packetElement.ts, arrowElement.ts,
+        commentElement.ts, contentElement.ts, zones.ts     the layers
+        icons/                        pictograms, tech badges, custom registry
+        el.ts, reconcile.ts, settle.ts, geometryTracker.ts plumbing
     scripts/
       generate-schema.mjs             types.ts → schema.generated.json (ts-json-schema-generator)
       check-schema-is-fresh.mjs       CI guard: schema.generated.json is committed & fresh
-  react-dataflow-animator/            the published npm package
+      generate-subicon-data.mjs       react-icons glyphs → subIconData.generated.ts
+  react-dataflow-animator/            the published npm package (thin React wrapper)
     src/
-      DataFlowPlayer.tsx              root component
+      DataFlowPlayer.tsx              mounts the core's player in an effect
       index.ts                        public exports
       types.ts                        re-exports core's spec types + the React-facing props type
       schema.ts                       thin re-export of core's schema.generated.json
-      hooks/
-        useClock.ts                   rAF clock (play/pause/seek/playTo)
-        useStageGeometry.ts           DOM measurement + ResizeObserver
-      components/
-        Stage.tsx                     rendering orchestration
-        Controls.tsx                  controls bar
-        nodes/                        StaticNode + icon registries
-        dynamic/                      Packet, ArrowLine, ContentPanel
+      utils/styleMap.ts               CSSProperties → the core's kebab-case string map
+      components/nodes/NodeView.tsx   isolated node preview, mounts renderNodeVisual
       styles/
         dataflow.css                  scoped .rdfa- styles
+      ── retained until step 2.6b, unpublished, gate reference only ──
+      hooks/useClock.ts, hooks/useStageGeometry.ts
+      components/Stage.tsx, Controls.tsx, nodes/, dynamic/, tex/RichText.tsx
 apps/
   docs/                              Docusaurus site
     docs/                            MDX content (intro, concepts, reference)
@@ -124,9 +149,15 @@ workspace.
 
 ### New node type or new sub-icon
 
-- `registerNodeIcon(type, svg)` / `registerSubIcon(name, svg)` at
-  runtime;
-- or enrich `nodeIcons.tsx` / `subIcons.tsx` directly in the lib.
+- at runtime, `registerNodeIcon(type, icon)` / `registerSubIcon(name, icon)`,
+  where `icon` is SVG markup or a `() => SVGElement` factory
+  (`core/src/dom/icons/registry.ts`). Markup is parsed lazily, on first
+  resolution, via a `<template>` — so registering never touches the DOM and is
+  safe at module scope in an SSR bundle. A registration wins over every
+  built-in, the stateful `switch`/`push_button` geometry included;
+- or enrich the data tables in the lib: `core/src/dom/icons/nodeIconShapes.ts`
+  (pictogram geometry) and `subIconCatalog.ts` (tech badges, whose glyph data is
+  then generated by `npm run generate:subicons`).
 
 ## Build and publication
 

@@ -35,23 +35,30 @@ Only the `spec` prop is required.
 | `theme`      | `PlayerTheme`                              | `'default'`     | Visual palette ([see below](#themes)).                    |
 | `mode`       | `'light' \| 'dark' \| 'auto'`              | `'auto'`        | Which variant of `theme` to show.                         |
 | `density`    | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Visual density (element size / spacing).                  |
+| `width`      | `number \| string`                         | container       | Stage width. Read at mount, before the first measurement. |
+| `initialT`   | `number`                                   | `0`             | Instant the player opens at, in ms. Read once, at mount.  |
 | `debug`      | `boolean`                                  | `false`         | Internal timeline inspection overlay.                     |
 | `highlight`  | `Highlighter`                              | Prism           | Custom syntax highlighting (see below).                   |
-| `fallback`   | `ReactNode`                                | —               | Content rendered during SSR / before hydration.           |
+| `fallback`   | `ReactNode`                                | —               | Rendered on the server and until the player mounts.       |
 | `className`  | `string`                                   | —               | Additional CSS class on the root container.               |
 | `style`      | `CSSProperties`                            | —               | Inline styles on the root container.                      |
 
-:::warning Memoize your spec
+:::info Changing the spec remounts the player
 
-If the `spec` prop is a literal object defined in a parent component's body, it
-receives a **new referential identity** on every render. The compiler then recompiles
-the entire timeline and the DOM measurement (`useStageGeometry`) is unnecessarily invalidated.
+The player reads its options once, when it mounts, so changing any of them —
+`spec` included — rebuilds it. The current instant and play state are carried
+across, so scrubbing or editing a spec live stays smooth.
+
+Remounting is keyed on the spec's **structure**, not its referential identity: a
+literal object rebuilt on every parent render costs a serialisation, not a
+rebuild. Memoizing it is still worthwhile on a hot render path, but it is no
+longer the difference between smooth and stuttering.
 
 ```tsx
-// ✗ — recompiles on every parent render
+// fine — an equal spec does not remount anything
 <DataFlowPlayer spec={{ nodes: [...], timeline: [...] }} />
 
-// ✓ — stable: defined outside the component or protected by useMemo
+// cheaper still on a frequently re-rendering parent
 const spec = useMemo(() => ({ nodes: [...], timeline: [...] }), []);
 <DataFlowPlayer spec={spec} />
 ```
@@ -214,17 +221,31 @@ to a known tech, then to a **registered** badge. Two functions
 feed these registries:
 
 ```ts
-registerNodeIcon(type: string, node: ReactNode): void; // main node pictogram
-registerSubIcon(name: string, node: ReactNode): void;  // `icon` badge (tech)
+type IconSource = string | (() => SVGElement);
+
+registerNodeIcon(type: string, icon: IconSource): void; // main node pictogram
+registerSubIcon(name: string, icon: IconSource): void;  // `icon` badge (tech)
 ```
 
-```tsx
+An icon is **SVG markup**, or a **factory** returning an `SVGElement` when it has
+to vary:
+
+```ts
 import { registerSubIcon } from 'react-dataflow-animator';
-import { SiKubernetes } from 'react-icons/si';
 
-registerSubIcon('k8s', <SiKubernetes color="#326CE5" />);
+registerSubIcon(
+  'k8s',
+  '<svg viewBox="0 0 24 24" fill="#326CE5"><path d="…" /></svg>'
+);
 // then: { id: 'orchestrator', type: 'cloud', icon: 'k8s' }
+
+// a factory, called on every resolution
+registerSubIcon('build', () => buildAnimatedGlyph());
 ```
+
+Markup is parsed once, on first use, and cloned afterwards. A registration always
+wins over the built-in icon of the same name — including the stateful `switch`
+and `push_button` pictograms.
 
 :::warning Global registry — register only once
 
@@ -232,12 +253,22 @@ registerSubIcon('k8s', <SiKubernetes color="#326CE5" />);
 shared across all player instances and across requests in
 SSR environments. Call them **only once at application startup**
 (entry file, `_app.tsx`, `layout.tsx`...), never in a component body
-or a `useEffect`.
+or a `useEffect`. Registering never touches the DOM, so it is safe at module
+scope in a bundle that also runs on the server.
 
 :::
 
 The `getNodeIcon(type)` / `getSubIcon(name)` readers allow you to inspect the
-registry if needed.
+registry if needed; both return a fresh `SVGElement`.
+
+:::caution Changed in v3
+
+These four functions used to take and return React nodes. They now drive the
+framework-agnostic registry the player actually renders through — had they kept
+pointing at the React one, they would have become silently inert. See the
+[changelog](https://github.com/PierreOlivierBrillant/react-dataflow-animator/blob/main/CHANGELOG.md).
+
+:::
 
 ## Syntax highlighting
 
@@ -273,7 +304,13 @@ component:
 | `evaluate(timeline, t)`                 | Pure visual state at time `t` (ms).                  |
 | `stepIndexAt` / `nextStop` / `prevStop` | Step-by-step navigation and breakpoints.             |
 | `computeLayout(spec)`                   | Relative node positions (ratios), without DOM.       |
-| `useClock()`                            | `requestAnimationFrame` clock hook (playback/seek).  |
 
-These functions are **SSR-safe** (no DOM access) except for `useClock`,
-which is used like any React hook.
+These functions touch no DOM and can run on the server.
+
+:::caution Removed in v3
+
+`useClock` and the `Clock` type are gone. The player's clock now lives in the
+framework-agnostic core and is no longer a React hook, so the exported hook drove
+nothing the player did.
+
+:::

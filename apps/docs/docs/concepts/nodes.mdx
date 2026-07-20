@@ -266,9 +266,15 @@ accepted, in this resolution order:
 
 :::tip Registering your own badges
 
-`registerSubIcon(name, node)` adds a technology to the global registry. Call it
-**only once at application startup** (never inside a component body) — see the
-warning in the [API Reference](../reference/api.mdx).
+`registerSubIcon(name, icon)` adds a technology to the global registry, where
+`icon` is SVG markup or a `() => SVGElement` factory:
+
+```ts
+registerSubIcon('k8s', '<svg viewBox="0 0 24 24">…</svg>');
+```
+
+Call it **only once at application startup** (never inside a component body) —
+see the warning in the [API Reference](../reference/api.mdx).
 
 :::
 

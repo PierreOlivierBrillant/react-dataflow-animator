@@ -1,55 +1,130 @@
 /** @vitest-environment jsdom */
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, waitFor } from '@testing-library/react';
 import { NodeView } from './NodeView';
-import { isPanelNode } from '@react-dataflow-animator/core/render/nodeKinds';
 
 afterEach(cleanup);
 
+/**
+ * Since v3 `NodeView` mounts the core's `renderNodeVisual` in an effect instead
+ * of rendering JSX, so every assertion waits for the effect. The JSX path it
+ * used to take is still covered, by `NodeVisual.test.tsx`.
+ */
+
 describe('NodeView — rendu isolé du cœur visuel', () => {
-  it('type pictogramme : rend une icône, pas de panneau', () => {
+  it('type pictogramme : rend une icône, pas de panneau', async () => {
     const { container } = render(
       <NodeView node={{ id: 'srv', type: 'server' }} />
     );
-    expect(container.querySelector('.rdfa-node-icon svg')).toBeTruthy();
+
+    await waitFor(() =>
+      expect(container.querySelector('.rdfa-node-icon svg')).not.toBeNull()
+    );
     expect(container.querySelector('.rdfa-node-panel')).toBeNull();
   });
 
-  it('simple_node : rend un panneau (body), sans pictogramme', () => {
+  it('simple_node : rend un panneau avec le corps', async () => {
     const { container } = render(
       <NodeView node={{ id: 'w', type: 'simple_node', body: 'Worker' }} />
     );
-    expect(container.querySelector('.rdfa-node-icon')).toBeNull();
-    expect(container.querySelector('.rdfa-node-panel-body')?.textContent).toBe(
-      'Worker'
+
+    await waitFor(() =>
+      expect(container.querySelector('.rdfa-node-panel')).not.toBeNull()
     );
+    expect(container.textContent).toContain('Worker');
   });
 
-  it('rend sans highlighter fourni (défaut), même pour un complex_node', () => {
+  it('échappe le code par défaut, sans coloration', async () => {
     const { container } = render(
       <NodeView
-        node={{ id: 'r', type: 'complex_node', header: 'GET /', body: 'ok' }}
+        node={{
+          id: 'c',
+          type: 'simple_node',
+          body: '<b>x</b>',
+          language: 'js',
+        }}
       />
     );
-    expect(container.querySelector('.rdfa-node-panel--complex')).toBeTruthy();
-    expect(
-      container.querySelector('.rdfa-node-panel-header')?.textContent
-    ).toBe('GET /');
+
+    await waitFor(() =>
+      expect(container.querySelector('.rdfa-code')).not.toBeNull()
+    );
+    expect(container.querySelector('.rdfa-code')?.innerHTML).toContain(
+      '&lt;b&gt;'
+    );
   });
 
-  it('type forme : rend une forme (body), pas de pictogramme ni panneau', () => {
+  it('utilise le highlighter fourni', async () => {
+    const highlight = vi.fn(() => '<em>hl</em>');
+    const { container } = render(
+      <NodeView
+        node={{ id: 'c', type: 'simple_node', body: 'x', language: 'js' }}
+        highlight={highlight}
+      />
+    );
+
+    await waitFor(() => expect(highlight).toHaveBeenCalledWith('x', 'js'));
+    expect(container.querySelector('.rdfa-code em')).not.toBeNull();
+  });
+
+  it('forme : rend le fond SVG de la forme', async () => {
     const { container } = render(
       <NodeView node={{ id: 'd', type: 'diamond', body: 'OK' }} />
     );
-    expect(container.querySelector('.rdfa-node-icon')).toBeNull();
-    expect(container.querySelector('.rdfa-node-panel')).toBeNull();
-    expect(container.querySelector('.rdfa-shape--diamond')).toBeTruthy();
-    expect(container.querySelector('.rdfa-shape-text')?.textContent).toBe('OK');
+
+    await waitFor(() =>
+      expect(container.querySelector('svg.rdfa-shape-bg')).not.toBeNull()
+    );
   });
 
-  it('isPanelNode distingue panneaux et pictogrammes', () => {
-    expect(isPanelNode('simple_node')).toBe(true);
-    expect(isPanelNode('complex_node')).toBe(true);
-    expect(isPanelNode('server')).toBe(false);
+  it('pad signal : affiche la valeur live plutôt que l’icône statique', async () => {
+    const { container } = render(
+      <NodeView node={{ id: 's', type: 'signal', icon: '0' }} signalValue="1" />
+    );
+
+    await waitFor(() =>
+      expect(container.querySelector('.rdfa-signal-value')).not.toBeNull()
+    );
+  });
+
+  it('ne réempile pas le visuel quand un nœud identique est repassé', async () => {
+    const node = { id: 'srv', type: 'server' } as const;
+    const { container, rerender } = render(<NodeView node={node} />);
+    await waitFor(() =>
+      expect(container.querySelector('.rdfa-node-icon')).not.toBeNull()
+    );
+
+    rerender(<NodeView node={{ ...node }} />);
+
+    expect(container.querySelectorAll('.rdfa-node-icon')).toHaveLength(1);
+  });
+
+  it('remplace le visuel quand le nœud change vraiment', async () => {
+    const { container, rerender } = render(
+      <NodeView node={{ id: 'a', type: 'server' }} />
+    );
+    await waitFor(() =>
+      expect(container.querySelector('.rdfa-node-icon')).not.toBeNull()
+    );
+
+    rerender(<NodeView node={{ id: 'a', type: 'diamond' }} />);
+
+    await waitFor(() =>
+      expect(container.querySelector('svg.rdfa-shape-bg')).not.toBeNull()
+    );
+    expect(container.querySelectorAll('.rdfa-node-icon')).toHaveLength(0);
+  });
+
+  it('nettoie derrière lui au démontage', async () => {
+    const { container, unmount } = render(
+      <NodeView node={{ id: 'srv', type: 'server' }} />
+    );
+    await waitFor(() =>
+      expect(container.querySelector('.rdfa-node-icon')).not.toBeNull()
+    );
+
+    unmount();
+
+    expect(container.querySelector('.rdfa-node-icon')).toBeNull();
   });
 });

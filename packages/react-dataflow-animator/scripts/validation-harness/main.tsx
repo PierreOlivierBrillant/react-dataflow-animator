@@ -40,6 +40,7 @@ import {
   firstDifference,
   normalizeStageHtml,
 } from '@react-dataflow-animator/core/dom/normalizeHtml';
+import { DataFlowPlayer } from '../../src/DataFlowPlayer';
 import { Stage } from '../../src/components/Stage';
 import { Controls } from '../../src/components/Controls';
 import { useClock, type Clock } from '../../src/hooks/useClock';
@@ -107,8 +108,16 @@ const isWalk = params.has('walk');
 // vanilla renderer: two mounts of the identical spec/t, used by
 // selftest.ab.spec.ts to calibrate the gate itself (0.00% expected) before
 // it's trusted to judge the real (React vs. vanilla) diff.
-const panelBMode: 'vanilla' | 'react' =
-  params.get('panelB') === 'react' ? 'react' : 'vanilla';
+// `panelB=player` drives panel B with the PUBLISHED React component instead of
+// calling `mountVanillaPlayer` by hand. Same expected markup as `vanilla` in
+// chrome mode — which is the point: any difference is overhead or drift the
+// wrapper introduced between the props and the core's options.
+const panelBMode: 'vanilla' | 'react' | 'player' =
+  params.get('panelB') === 'react'
+    ? 'react'
+    : params.get('panelB') === 'player'
+      ? 'player'
+      : 'vanilla';
 
 /**
  * Resolves the single frozen instant the A/B page renders at, in priority
@@ -138,8 +147,15 @@ const benchFrames = Number(params.get('frames') ?? '300');
 const BENCH_PANEL = { width: 640, height: 420 };
 // Which renderer the bench drives. Both are measured in the SAME run (see
 // scripts/bench-perf.mjs) because these figures are machine-dependent.
+// `wrapper` measures the published `DataFlowPlayer` — the vanilla renderer plus
+// whatever the React wrapper costs per frame (expected: nothing, since the
+// wrapper renders nothing once mounted).
 const benchRenderer =
-  params.get('renderer') === 'vanilla' ? 'vanilla' : 'react';
+  params.get('renderer') === 'vanilla'
+    ? 'vanilla'
+    : params.get('renderer') === 'wrapper'
+      ? 'wrapper'
+      : 'react';
 
 /**
  * The passive rAF sampler, shared by both bench renderers.
@@ -171,6 +187,30 @@ function useBenchSampler(): void {
     raf = requestAnimationFrame(sample);
     return () => cancelAnimationFrame(raf);
   }, []);
+}
+
+/**
+ * The published component under the same protocol as `VanillaBenchApp`.
+ *
+ * Identical panel, identical options — it IS `VanillaBenchApp` with
+ * `<DataFlowPlayer>` in place of the imperative mount, which is exactly the
+ * delta being measured.
+ */
+function WrapperBenchApp() {
+  useBenchSampler();
+  if (!spec) return null;
+  return (
+    <DataFlowPlayer
+      spec={spec}
+      height={BENCH_PANEL.height}
+      width={BENCH_PANEL.width}
+      controls={false}
+      autoPlay
+      loop
+      theme={theme}
+      mode={mode}
+    />
+  );
 }
 
 /** The vanilla player under the same protocol as `BenchApp`: autoplay + loop. */
@@ -414,6 +454,40 @@ function VanillaPlayerPanel({
 }
 
 /**
+ * Panel B driven by the PUBLISHED `DataFlowPlayer`.
+ *
+ * Deliberately declarative: props only, no handle, no imperative seek. That is
+ * the whole assertion — if the component can be given the same instant and box
+ * as `VanillaPlayerPanel` gets imperatively and produce the same pixels, then
+ * the prop→option mapping is lossless.
+ *
+ * Frozen `t` only. The wrapper's clock is not reachable from outside, so a walk
+ * cannot be replayed through it; asking for one is a harness error rather than
+ * something to silently approximate.
+ */
+function WrapperPlayerPanel({ spec, t }: { spec: DataFlowSpec; t: number }) {
+  // Loud on purpose: a silently-ignored `walk` would leave a cell measuring
+  // something other than what its name claims.
+  if (isWalk)
+    throw new Error(
+      'panelB=player cannot walk: the wrapper does not expose its clock. ' +
+        'Drop &walk=1, or use panelB=vanilla for a walk cell.'
+    );
+  return (
+    <DataFlowPlayer
+      spec={spec}
+      height={AB_PANEL.height}
+      width={AB_PANEL.width}
+      theme={theme}
+      mode={mode}
+      controls
+      autoPlay={false}
+      initialT={t}
+    />
+  );
+}
+
+/**
  * Panel A under `?walk=1`: re-renders `Stage` across the sequence, ONE COMMIT
  * PER STEP.
  *
@@ -534,13 +608,19 @@ function ABApp() {
           label={
             panelBMode === 'react'
               ? 'B — React (self-test mount)'
-              : 'B — Vanilla DOM (@react-dataflow-animator/core)'
+              : panelBMode === 'player'
+                ? 'B — react-dataflow-animator (DataFlowPlayer wrapper)'
+                : 'B — Vanilla DOM (@react-dataflow-animator/core)'
           }
           panelId="b"
+          // `bare` whenever the child builds its own `.rdfa-player` — which
+          // `DataFlowPlayer` does, through the core.
           bare={isChrome && panelBMode !== 'react'}
         >
           {panelBMode === 'react' ? (
             reactPanel
+          ) : panelBMode === 'player' ? (
+            <WrapperPlayerPanel spec={spec} t={t} />
           ) : isChrome ? (
             <VanillaPlayerPanel spec={spec} t={t} path={path} />
           ) : (
@@ -976,6 +1056,8 @@ createRoot(document.getElementById('root')!).render(
   isBench ? (
     benchRenderer === 'vanilla' ? (
       <VanillaBenchApp />
+    ) : benchRenderer === 'wrapper' ? (
+      <WrapperBenchApp />
     ) : (
       <BenchApp />
     )

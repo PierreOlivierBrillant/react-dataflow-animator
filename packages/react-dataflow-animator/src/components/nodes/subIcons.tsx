@@ -132,7 +132,14 @@ const KNOWN: Record<string, IconDef> = {
 
 const custom: Record<string, ReactNode> = {};
 
-/** Registers a custom sub-icon (react-icons component, SVG, image...). */
+/**
+ * Registers a custom sub-icon (react-icons component, SVG, image...).
+ *
+ * See the note on `registerNodeIcon`: superseded as public API by the core's
+ * registry in v3, retained for the React renderer until step 2.6b.
+ *
+ * @lintignore
+ */
 export function registerSubIcon(name: string, node: ReactNode): void {
   custom[name.toLowerCase()] = node;
 }

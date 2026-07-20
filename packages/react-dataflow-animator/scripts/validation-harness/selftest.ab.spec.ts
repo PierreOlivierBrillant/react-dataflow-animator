@@ -31,6 +31,17 @@ const THEMES = ['light', 'dark'] as const;
  * exercises but the self-test does not is a configuration whose numbers mean
  * nothing — which is exactly how the `chrome` cells slipped in uncalibrated.
  *
+ * Read that rule precisely, because it is narrower than it looks. What is
+ * calibrated here is the MEASUREMENT, and the measurement is determined by
+ * **panel A's configuration plus the capture protocol** — `panelB=react` mounts
+ * a second panel A, so an entry naming a panel-B variant would measure nothing
+ * new. The rule therefore binds on compare modes whose PANEL A is uncalibrated.
+ *
+ * That is why compare's `wrapper` mode has no entry of its own: it reuses
+ * `chrome`'s panel A, `chrome`'s probe grid and `chrome`'s
+ * `animations: 'disabled'` capture, and only swaps what panel B is built by. It
+ * is calibrated by the `chrome` entry below.
+ *
  * `chrome` sweeps the probe grid where `stage` samples only the midpoint,
  * because composing the stage with a sibling control bar changes the stage's
  * height and therefore its measurement schedule — and the suspected race is

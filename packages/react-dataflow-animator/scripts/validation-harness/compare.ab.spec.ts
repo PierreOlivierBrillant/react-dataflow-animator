@@ -41,18 +41,22 @@ const RATCHET = readRatchet();
  *    above all, which a frozen mount can never reach. It is what will carry the
  *    2.6 switchover.
  *
- * The `chrome` cells are NOT here yet, deliberately. The configuration is built
- * (`?chrome=1`) and the instrument is calibrated for it — `selftest.ab.spec.ts`
- * reports 0.00% on the whole chrome grid, successive AND cross-mount — but the
- * vanilla side still diverges on `clientServer · 75%`, and a gate is either
- * green or it is not a gate. Wiring the cells in behind a ratchet entry is
- * explicitly forbidden here. They land in step 2.5b, once the divergence is
- * understood.
+ *  - `chrome` widens the comparison from the stage alone to the whole player,
+ *    control bar included. Landed in step 2.5, once the `clientServer · 75%`
+ *    divergence that held it back was understood and fixed.
+ *
+ *  - `wrapper` is `chrome` with panel B driven by the PUBLISHED
+ *    `DataFlowPlayer` component rather than by a hand-written
+ *    `mountVanillaPlayer` call. Same panel A, same probe grid, same expected
+ *    markup — so it is a strict superset of `chrome`, and what it adds is proof
+ *    that the React wrapper's prop→option mapping neither loses anything nor
+ *    shifts anything. Landed in step 2.6a, with the wrapper itself.
  */
 const MODES = [
   { name: 'stage', query: '' },
   { name: 'chrome', query: '&chrome=1' },
   { name: 'walk', query: '&walk=1' },
+  { name: 'wrapper', query: '&chrome=1&panelB=player' },
 ] as const;
 
 for (const modeUnderTest of MODES) {

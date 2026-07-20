@@ -190,8 +190,10 @@ The shape expands to accommodate the text, but the latter is bounded (`max-width
 and **cropped** (`overflow:hidden`) to never overflow the visible path — the `body`
 is therefore intended for a brief label, not a paragraph. The `subicon` remains
 available and an active `set_content` replaces the shape. All these families share
-the same rendering path (`NodeView`): `isPanelNode`/`isShapeType` (`nodeKinds` module)
-arbitrate panel/shape/pictogram.
+the same rendering path (`renderNodeVisual`, in the core's `dom/nodeElement`):
+`isPanelNode`/`isShapeType` (`nodeKinds` module) arbitrate panel/shape/pictogram.
+The exported `NodeView` component mounts that same function, so an isolated node
+preview and a node inside the player cannot drift apart.
 
 **Responsive scaling**: a "cell" (smallest distance between two
 nodes, in px) drives a global scale factor (`--rdfa-scale`: larger icons/fonts in
@@ -432,8 +434,9 @@ files, likewise `"\\overline{A}"`.
 - **Geometric shapes** (`square` ... `star`): SVG shape (`preserveAspectRatio="none"`,
   `non-scaling-stroke`) with a short centered `body`. Security margin by shape +
   `max-width` + `overflow:hidden` guarantee the text does not overflow the path.
-  Rendered by `ShapeNode` via `NodeView`; the `isShapeType` predicate lives in
-  `components/nodes/nodeKinds.ts` (single source of truth, like `isPanelNode`).
+  Drawn by the shape branch of `renderNodeVisual`; the `isShapeType` predicate
+  lives in the core's `render/nodeKinds` (single source of truth, like
+  `isPanelNode`).
 - **Node colors** (`background_color` / `border_color` / `text_color`): placed
   as CSS variables `--rdfa-fill` / `--rdfa-stroke` / `--rdfa-ink` on the root
   `.rdfa-node` (`nodeColors.ts`), read by the CSS of shapes/panels/pictograms with

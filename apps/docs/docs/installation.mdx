@@ -89,8 +89,26 @@ The same path works with any JSON Schema draft-07 compatible validator (Ajv, ajv
 
 ## SSR and hydration
 
-The component never touches the DOM during render (measurement and clock are confined to effects). No risk of SSR ↔ client mismatch. To display a placeholder during hydration, use the `fallback` prop:
+The player renders **no markup on the server**. It mounts a framework-agnostic
+DOM renderer in a client effect, so the static HTML holds a correctly-sized
+placeholder and the diagram appears on hydration. There is no hydration mismatch
+— there is nothing to match — and importing the package on a server is safe:
+nothing touches the DOM at module scope.
+
+What that costs you: a prerendered page shows an empty box where the diagram
+will be. Use `fallback` to put something meaningful in the static HTML — a
+poster image, a caption, a skeleton:
 
 ```tsx
 <DataFlowPlayer spec={spec} fallback={<div>Loading animation...</div>} />
 ```
+
+`NodeView` behaves the same way.
+
+:::note Changed in v3
+
+Before v3 the server emitted the full stage markup — hidden until measurement —
+plus a visible control bar. Only the control bar was ever actually visible, and
+its buttons did nothing until hydration.
+
+:::

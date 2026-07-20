@@ -45,8 +45,20 @@ export { dataFlowSchema } from './schema';
 export type { DataFlowSchema } from './schema';
 
 // Extensibility: register your own icons.
-export { registerNodeIcon, getNodeIcon } from './components/nodes/nodeIcons';
-export { registerSubIcon, getSubIcon } from './components/nodes/subIcons';
+//
+// v3 — these now drive the framework-agnostic registry in the core. An icon is
+// SVG markup or a factory returning an SVGElement, instead of a ReactNode, and
+// the getters return an SVGElement. Pointing them at the React registries would
+// have left them silently inert, since the player no longer renders through it.
+export {
+  registerNodeIcon,
+  renderNodeIcon as getNodeIcon,
+} from '@react-dataflow-animator/core/dom/icons/nodeIcons';
+export {
+  registerSubIcon,
+  renderSubIcon as getSubIcon,
+} from '@react-dataflow-animator/core/dom/icons/subIcons';
+export type { IconSource } from '@react-dataflow-animator/core/dom/icons/registry';
 
 // Isolated rendering of the visual core of a node (pictogram or panel), outside Stage —
 // used by the doc for the types gallery, reusable by the consumer.
@@ -94,5 +106,7 @@ export type {
   GeometryMap,
   NodeGeom,
 } from '@react-dataflow-animator/core/engine/geometry';
-export { useClock } from './hooks/useClock';
-export type { Clock } from './hooks/useClock';
+// `useClock` was removed in v3: the player's clock now lives in the core and is
+// no longer a React hook. `hooks/useClock.ts` remains in the source tree because
+// the A/B validation harness drives the React renderer with it until step 2.6b
+// removes that renderer.

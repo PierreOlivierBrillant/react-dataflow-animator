@@ -207,9 +207,8 @@ function renderRaw(data) {
 //   vsc — VS Code Codicons (CC-BY-4.0)
 //   md  — Material Design icons (Apache-2.0)
 //   tb  — Tabler Icons (MIT)
-// Today react-icons is an externalized dependency of the published package;
-// once this data ships inlined in the published bundle (phase 2.6 of the
-// framework-agnostic migration), this attribution ships with it.
+// As of 3.0.0 this data ships inlined in the published bundle, so the
+// attribution above ships with it — see the published package's LICENSE.
 
 /** One SVG child element of an icon (react-icons trees are flat). */
 export interface SubIconChild {

@@ -21,6 +21,24 @@ export interface DataFlowPlayerProps {
   style?: CSSProperties;
   /** Scene height (e.g., 420, '60vh'). Default: 420. */
   height?: number | string;
+  /**
+   * Scene width (e.g., 480, '100%'). Omitted, the player takes its width from
+   * its container.
+   *
+   * It exists because the stage MEASURES while mounting — including the one-shot
+   * capture of a `set_content` node's pre-panel geometry — so sizing has to be
+   * known before the first measurement, not applied after it.
+   */
+  width?: number | string;
+  /**
+   * Instant the player opens at, in ms. Default: 0.
+   *
+   * Uncontrolled: it seeds the clock when the player mounts and is not read
+   * again. Opening AT `t` is not the same rendering as opening at 0 and seeking
+   * to `t` — the icon→panel morph is anchored to the state actually measured
+   * first — which is why this is a mount-time option rather than a seek.
+   */
+  initialT?: number;
   /** Starts playback automatically. Default: false. */
   autoPlay?: boolean;
   /** Replays in a loop at the end. Default: false. */
@@ -52,8 +70,22 @@ export interface DataFlowPlayerProps {
   debug?: boolean;
   /** Playback speed (1 = normal). Default: 1. */
   speed?: number;
-  /** Custom syntax highlighting (replaces Prism). */
+  /**
+   * Custom syntax highlighting (replaces Prism).
+   *
+   * Read when the player mounts, and not watched afterwards: an inline arrow
+   * function would otherwise be a new value on every render, and since every
+   * option change remounts the player, that would remount it forever. Change it
+   * together with `spec` for it to take effect.
+   */
   highlight?: Highlighter;
-  /** Content rendered during SSR / before hydration (placeholder). */
+  /**
+   * Rendered on the server and until the player has mounted.
+   *
+   * The player renders no markup on the server: it mounts a framework-agnostic
+   * DOM renderer in a client effect. There is no hydration mismatch — there is
+   * nothing to match — but the static HTML holds only this placeholder, so use
+   * it for a poster, a caption or a skeleton.
+   */
   fallback?: ReactNode;
 }

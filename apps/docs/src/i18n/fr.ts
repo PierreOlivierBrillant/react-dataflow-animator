@@ -135,15 +135,15 @@ export const fr = {
     principles: [
       {
         strong: "Le temps est l'unique source de vérité.",
-        rest: ' Le moteur compile la spec en une chronologie pure : t (ms) → état visuel. Le seek arrière, la navigation par étapes et le SSR sont triviaux et déterministes.',
+        rest: ' Le moteur compile la spec en une chronologie pure : t (ms) → état visuel. Le seek arrière et la navigation par étapes sont triviaux et déterministes.',
       },
       {
         strong: 'Disposition automatique.',
         rest: ' Linéaire (selon direction et lane) ou circular. Aucune coordonnée à fournir.',
       },
       {
-        strong: 'SSR-safe.',
-        rest: ' Aucun accès au DOM pendant le rendu — utilisable directement dans Docusaurus, Next.js, ou tout site React.',
+        strong: 'Rendu rapide.',
+        rest: ' Un moteur de rendu DOM en mode retenu mute la frame sur place au lieu de la re-rendre — environ 6× moins de temps de script par frame. Il se monte côté client : le diagramme apparaît à l’hydratation.',
       },
       {
         strong: 'Extensible.',

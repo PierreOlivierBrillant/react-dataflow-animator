@@ -270,9 +270,16 @@ acceptées, dans cet ordre de résolution :
 
 :::tip Enregistrer ses propres badges
 
-`registerSubIcon(name, node)` ajoute une techno au registre global. Appelez-la
-**une seule fois au démarrage** de l'application (jamais dans un corps de
-composant) — voir l'avertissement dans la [Référence API](../reference/api.mdx).
+`registerSubIcon(name, icon)` ajoute une techno au registre global, où `icon` est
+du balisage SVG ou une fabrique `() => SVGElement` :
+
+```ts
+registerSubIcon('k8s', '<svg viewBox="0 0 24 24">…</svg>');
+```
+
+Appelez-la **une seule fois au démarrage** de l'application (jamais dans un corps
+de composant) — voir l'avertissement dans la
+[Référence API](../reference/api.mdx).
 
 :::
 

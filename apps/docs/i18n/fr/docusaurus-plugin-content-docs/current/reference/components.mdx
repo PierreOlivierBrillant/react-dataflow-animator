@@ -35,23 +35,30 @@ Seule la prop `spec` est requise.
 | `theme`      | `PlayerTheme`                              | `'default'`     | Palette visuelle ([voir plus bas](#themes)).                      |
 | `mode`       | `'light' \| 'dark' \| 'auto'`              | `'auto'`        | Variante de `theme` à afficher.                                   |
 | `density`    | `'compact' \| 'comfortable' \| 'spacious'` | `'comfortable'` | Densité visuelle (taille des éléments / espacement).              |
+| `width`      | `number \| string`                         | conteneur       | Largeur de la scène. Lue au montage, avant la première mesure.    |
+| `initialT`   | `number`                                   | `0`             | Instant d'ouverture du player, en ms. Lu une seule fois.          |
 | `debug`      | `boolean`                                  | `false`         | Overlay d'inspection de la timeline interne.                      |
 | `highlight`  | `Highlighter`                              | Prism           | Coloration syntaxique personnalisée (cf. plus bas).               |
-| `fallback`   | `ReactNode`                                | —               | Contenu rendu pendant le SSR / avant hydratation.                 |
+| `fallback`   | `ReactNode`                                | —               | Rendu côté serveur et jusqu'au montage du player.                 |
 | `className`  | `string`                                   | —               | Classe CSS additionnelle sur le conteneur racine.                 |
 | `style`      | `CSSProperties`                            | —               | Styles inline sur le conteneur racine.                            |
 
-:::warning Mémoïsez votre spec
+:::info Changer la spec remonte le player
 
-Si la prop `spec` est un objet littéral défini dans le corps d'un composant parent, elle
-reçoit une **nouvelle identité référentielle** à chaque rendu. Le compilateur recompile
-alors toute la timeline et la mesure DOM (`useStageGeometry`) est invalidée inutilement.
+Le player lit ses options une seule fois, à son montage : changer l'une d'elles —
+`spec` comprise — le reconstruit. L'instant courant et l'état de lecture sont
+repris, de sorte que scruber ou éditer une spec en direct reste fluide.
+
+Le remontage est déclenché par la **structure** de la spec, pas par son identité
+référentielle : un objet littéral reconstruit à chaque rendu du parent coûte une
+sérialisation, pas une reconstruction. Le mémoïser reste utile sur un chemin de
+rendu chaud, mais ce n'est plus la différence entre fluide et saccadé.
 
 ```tsx
-// ✗ — recompile à chaque rendu du parent
+// très bien — une spec équivalente ne remonte rien
 <DataFlowPlayer spec={{ nodes: [...], timeline: [...] }} />
 
-// ✓ — stable : définie en dehors du composant ou protégée par useMemo
+// encore moins cher sur un parent qui se rend souvent
 const spec = useMemo(() => ({ nodes: [...], timeline: [...] }), []);
 <DataFlowPlayer spec={spec} />
 ```
@@ -215,17 +222,31 @@ d'abord une techno connue, puis un badge **enregistré**. Deux fonctions
 alimentent ces registres :
 
 ```ts
-registerNodeIcon(type: string, node: ReactNode): void; // pictogramme principal du nœud
-registerSubIcon(name: string, node: ReactNode): void;  // badge `icon` (techno)
+type IconSource = string | (() => SVGElement);
+
+registerNodeIcon(type: string, icon: IconSource): void; // pictogramme principal du nœud
+registerSubIcon(name: string, icon: IconSource): void;  // badge `icon` (techno)
 ```
 
-```tsx
+Une icône est du **balisage SVG**, ou une **fabrique** renvoyant un `SVGElement`
+quand elle doit varier :
+
+```ts
 import { registerSubIcon } from 'react-dataflow-animator';
-import { SiKubernetes } from 'react-icons/si';
 
-registerSubIcon('k8s', <SiKubernetes color="#326CE5" />);
+registerSubIcon(
+  'k8s',
+  '<svg viewBox="0 0 24 24" fill="#326CE5"><path d="…" /></svg>'
+);
 // puis : { id: 'orchestrator', type: 'cloud', icon: 'k8s' }
+
+// une fabrique, appelée à chaque résolution
+registerSubIcon('build', () => buildAnimatedGlyph());
 ```
+
+Le balisage est analysé une seule fois, à la première utilisation, puis cloné.
+Un enregistrement l'emporte toujours sur l'icône intégrée de même nom — y compris
+sur les pictogrammes à état `switch` et `push_button`.
 
 :::warning Registre global — enregistrez une seule fois
 
@@ -233,12 +254,23 @@ registerSubIcon('k8s', <SiKubernetes color="#326CE5" />);
 partagé entre toutes les instances du player et entre les requêtes en
 environnement SSR. Appelez-les **une seule fois au démarrage de l'application**
 (fichier d'entrée, `_app.tsx`, `layout.tsx`…), jamais dans un corps de composant
-ou un `useEffect`.
+ou un `useEffect`. L'enregistrement ne touche jamais au DOM : il est donc sûr au
+niveau module, y compris dans un bundle qui tourne aussi côté serveur.
 
 :::
 
 Les lecteurs `getNodeIcon(type)` / `getSubIcon(name)` permettent d'inspecter le
-registre si besoin.
+registre si besoin ; tous deux renvoient un `SVGElement` neuf.
+
+:::caution Changement en v3
+
+Ces quatre fonctions prenaient et renvoyaient des nœuds React. Elles pilotent
+désormais le registre framework-agnostique par lequel le player rend réellement —
+si elles avaient continué de pointer sur celui de React, elles seraient devenues
+silencieusement inopérantes. Voir le
+[changelog](https://github.com/PierreOlivierBrillant/react-dataflow-animator/blob/main/CHANGELOG.md).
+
+:::
 
 ## Coloration syntaxique
 
@@ -268,13 +300,19 @@ Pour des intégrations sur mesure (rendu maison, tests, outillage), le moteur pu
 est exporté. Sa surface est **bas niveau** et peut évoluer plus librement que le
 composant :
 
-| Export                                  | Rôle                                                   |
-| --------------------------------------- | ------------------------------------------------------ |
-| `compile(spec)`                         | Compile une `spec` en `Timeline` (clips ordonnés).     |
-| `evaluate(timeline, t)`                 | État visuel pur à l'instant `t` (ms).                  |
-| `stepIndexAt` / `nextStop` / `prevStop` | Navigation par étapes et points d'arrêt.               |
-| `computeLayout(spec)`                   | Positions relatives des nœuds (ratios), sans DOM.      |
-| `useClock()`                            | Hook d'horloge `requestAnimationFrame` (lecture/seek). |
+| Export                                  | Rôle                                               |
+| --------------------------------------- | -------------------------------------------------- |
+| `compile(spec)`                         | Compile une `spec` en `Timeline` (clips ordonnés). |
+| `evaluate(timeline, t)`                 | État visuel pur à l'instant `t` (ms).              |
+| `stepIndexAt` / `nextStop` / `prevStop` | Navigation par étapes et points d'arrêt.           |
+| `computeLayout(spec)`                   | Positions relatives des nœuds (ratios), sans DOM.  |
 
-Ces fonctions sont **SSR-safe** (aucun accès DOM) à l'exception de `useClock`,
-qui s'utilise comme tout hook React.
+Ces fonctions ne touchent aucun DOM et peuvent s'exécuter côté serveur.
+
+:::caution Retiré en v3
+
+`useClock` et le type `Clock` ont disparu. L'horloge du player vit désormais dans
+le cœur framework-agnostique et n'est plus un hook React : le hook exporté ne
+pilotait donc plus rien de ce que fait le player.
+
+:::

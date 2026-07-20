@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-07-20T13:15:24.226Z",
+  "renderer": "wrapper",
+  "framesRequested": 300,
+  "demos": {
+    "wrapper/circuit": {
+      "frames": 300,
+      "frameMs": {
+        "mean": 16.666,
+        "median": 16.7,
+        "p95": 16.8,
+        "min": 16.5,
+        "max": 16.8
+      },
+      "cdp": {
+        "scriptDurationMs": 99.84,
+        "layoutDurationMs": 16.59,
+        "recalcStyleDurationMs": 18.17,
+        "taskDurationMs": 217.47
+      }
+    },
+    "wrapper/clientServer": {
+      "frames": 300,
+      "frameMs": {
+        "mean": 16.666,
+        "median": 16.7,
+        "p95": 16.8,
+        "min": 16.5,
+        "max": 16.8
+      },
+      "cdp": {
+        "scriptDurationMs": 83.61,
+        "layoutDurationMs": 19.02,
+        "recalcStyleDurationMs": 18.8,
+        "taskDurationMs": 220.42
+      }
+    }
+  }
+}

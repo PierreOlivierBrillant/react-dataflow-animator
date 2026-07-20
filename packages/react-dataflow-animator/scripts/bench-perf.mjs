@@ -39,6 +39,10 @@ const DEMOS = values.demo ? [values.demo] : ['circuit', 'clientServer'];
 // worth making: these numbers are machine-dependent, so diffing a fresh vanilla
 // figure against a React baseline captured elsewhere would mostly measure the
 // hardware. See docs/AI-VALIDATION.md.
+//
+// `--renderer wrapper` measures the published `DataFlowPlayer`. Pair it with
+// `vanilla` (`--renderer wrapper` then compare against a `both` run captured on
+// the same machine) to read the wrapper's own per-frame cost.
 const RENDERERS =
   values.renderer === 'both' ? ['react', 'vanilla'] : [values.renderer];
 const FRAMES = Number(values.frames);
@@ -144,9 +148,14 @@ const report = {
 };
 
 // NOT bench-baseline.json by default any more: that file is the step 2.1 React
-// reference and stays frozen. A run writes beside it.
-const outPath =
-  values.out ?? join(__dirname, 'validation-harness/bench-vanilla.json');
+// reference and stays frozen. A run writes beside it — and a `wrapper` run gets
+// its own file rather than overwriting the react-vs-vanilla comparison, which is
+// the step 2.5 reference the wrapper is measured against.
+const defaultOut =
+  values.renderer === 'wrapper'
+    ? 'validation-harness/bench-wrapper.json'
+    : 'validation-harness/bench-vanilla.json';
+const outPath = values.out ?? join(__dirname, defaultOut);
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
 

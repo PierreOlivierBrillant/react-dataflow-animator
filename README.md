@@ -12,7 +12,8 @@ React component that compiles a JSON specification into a deterministic and navi
 
 - No coordinates to provide — the engine places the nodes.
 - Built-in player: play, pause, step navigation, fullscreen.
-- SSR-safe, usable directly in Docusaurus, Next.js, Vite, etc.
+- Renders in the browser, safe to import from Docusaurus, Next.js, Vite, etc.
+  (the diagram appears on hydration — see [SSR](#ssr)).
 - Built-in syntax highlighting (Prism, replaceable).
 
 ## Installation
@@ -77,15 +78,17 @@ A **spec** describes three things:
    `set_content`, `comment`, `highlight`.
 
 The engine compiles the spec into a deterministic chronology: the time `t` (ms)
-is the single source of truth, which makes seek, step navigation,
-and SSR trivial.
+is the single source of truth, which makes seek and step navigation trivial —
+and keeps the whole compilation step free of any DOM.
 
 ## Main props of `<DataFlowPlayer>`
 
 | Prop         | Type                                       | Default         | Description                                                                            |
 | ------------ | ------------------------------------------ | --------------- | -------------------------------------------------------------------------------------- |
-| `spec`       | `DataFlowSpec`                             | —               | The specification to animate.                                                          |
+| `spec`       | `DataFlowSpec`                             | —               | The specification to animate. Changing it remounts the player, keeping the instant.    |
 | `height`     | `number \| string`                         | `420`           | Height of the stage.                                                                   |
+| `width`      | `number \| string`                         | container       | Width of the stage. Must be known before the first measurement.                        |
+| `initialT`   | `number`                                   | `0`             | Instant the player opens at, in ms. Read once, at mount.                               |
 | `autoPlay`   | `boolean`                                  | `false`         | Starts playback automatically.                                                         |
 | `loop`       | `boolean`                                  | `false`         | Replays on loop at the end.                                                            |
 | `controls`   | `boolean`                                  | `true`          | Displays the controls bar.                                                             |
@@ -96,15 +99,25 @@ and SSR trivial.
 | `speed`      | `number`                                   | `1`             | Playback speed.                                                                        |
 | `highlight`  | `Highlighter`                              | Prism           | Override syntax highlighting.                                                          |
 | `debug`      | `boolean`                                  | `false`         | Timeline debugging overlay.                                                            |
+| `fallback`   | `ReactNode`                                | —               | Rendered on the server and until the player mounts (see [SSR](#ssr)).                  |
 
 ## Extensibility
 
-```tsx
+An icon is **SVG markup**, or a **factory** returning an `SVGElement` when it
+has to vary:
+
+```ts
 import { registerNodeIcon, registerSubIcon } from 'react-dataflow-animator';
 
-registerNodeIcon('queue', <svg viewBox="0 0 24 24">{/* … */}</svg>);
-registerSubIcon('kafka', <svg viewBox="0 0 24 24">{/* … */}</svg>);
+registerNodeIcon('queue', '<svg viewBox="0 0 24 24">…</svg>');
+registerSubIcon('kafka', '<svg viewBox="0 0 24 24">…</svg>');
+
+registerSubIcon('build', () => buildAnimatedGlyph());
 ```
+
+Markup is parsed once, on first use, and cloned afterwards; a factory is called
+on every resolution. A registration always wins over the built-in icon of the
+same name.
 
 A sub-icon can also be **free text** (`'v2'`, `'API'`, `'JWT'`),
 automatically rendered in a badge.
@@ -113,7 +126,22 @@ automatically rendered in a badge.
 > registry — shared across all player instances and across requests in an
 > SSR environment. Call them **only once at application startup**
 > (entry file, `_app.tsx`, `layout.tsx`...), never in a component body or
-> a `useEffect`.
+> a `useEffect`. Registering never touches the DOM, so it is safe at module
+> scope in a bundle that also runs on the server.
+
+## SSR
+
+The player emits **no markup on the server**: it mounts a framework-agnostic DOM
+renderer in a client effect, so the static HTML holds a correctly-sized
+placeholder and the diagram appears on hydration. There is no hydration mismatch
+— there is nothing to match. Use `fallback` to render a poster, a caption or a
+skeleton into the static HTML:
+
+```tsx
+<DataFlowPlayer spec={spec} fallback={<img src="/diagram.png" alt="…" />} />
+```
+
+`NodeView` behaves the same way.
 
 ## Documentation
 
@@ -122,6 +150,8 @@ automatically rendered in a badge.
 - **Functional specification**: [`docs/SPEC.md`](./docs/SPEC.md).
 - **Internal architecture**: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 - **JSON Schema**: exposed via the `dataFlowSchema` export.
+- **Release notes**: [`CHANGELOG.md`](./CHANGELOG.md) — start here when upgrading
+  across a major version.
 
 ## Repository structure
 
@@ -131,8 +161,10 @@ The project is an npm workspaces monorepo:
 packages/
   core/                      framework-agnostic core (private, not published): spec
                              types, JSON Schema, the pure engine, TeX/highlight, JSON
-                             export — inlined into the published bundle, no React dependency
-  react-dataflow-animator/   the package published on npm
+                             export AND the DOM renderer the player runs on —
+                             inlined into the published bundle, no React dependency
+  react-dataflow-animator/   the package published on npm: a thin React wrapper
+                             that mounts the core's renderer
 apps/
   docs/                      Docusaurus site (demos, playground, API doc)
 docs/

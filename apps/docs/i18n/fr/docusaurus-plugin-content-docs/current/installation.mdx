@@ -98,11 +98,27 @@ publiquement, il peut également être référencé depuis le
 
 ## SSR et hydratation
 
-Le composant ne touche jamais au DOM pendant le rendu (mesure et horloge
-confinées à des effets). Aucun risque de divergence SSR ↔ client. Pour
-afficher un placeholder pendant l'hydratation, utilisez la prop
-`fallback` :
+Le player ne rend **aucun balisage côté serveur**. Il monte un moteur de rendu
+DOM framework-agnostique dans un effet client : le HTML statique ne contient
+qu'un placeholder aux bonnes dimensions, et le diagramme apparaît à
+l'hydratation. Aucune divergence d'hydratation possible — il n'y a rien à faire
+correspondre — et importer le paquet côté serveur reste sûr : rien ne touche au
+DOM au niveau module.
+
+Ce que cela coûte : une page prérendue affiche une boîte vide à l'emplacement du
+diagramme. Utilisez `fallback` pour mettre quelque chose d'utile dans le HTML
+statique — une image d'aperçu, une légende, un squelette :
 
 ```tsx
 <DataFlowPlayer spec={spec} fallback={<div>Chargement de l'animation…</div>} />
 ```
+
+`NodeView` se comporte de la même façon.
+
+:::note Changement en v3
+
+Avant la v3, le serveur émettait tout le balisage de la scène — masqué jusqu'à la
+mesure — plus une barre de contrôles visible. Seule cette barre était réellement
+visible, et ses boutons ne faisaient rien avant l'hydratation.
+
+:::
