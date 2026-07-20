@@ -266,3 +266,44 @@ describe('mountVanillaPlayer — teardown', () => {
     expect(document.body.children).toHaveLength(0);
   });
 });
+
+describe('mountVanillaPlayer — initialT', () => {
+  it('opens at the instant asked for, stage and control bar together', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const player = mountVanillaPlayer(container, spec, { initialT: 800 });
+
+    expect(player.clock.t).toBe(800);
+    // The bar is written from the clock exactly once at construction, before
+    // anything is subscribed — so a clock seeded late would leave it at 0.
+    expect(player.el.querySelector('.rdfa-time')!.textContent).toBe('1s / 2s');
+    expect(
+      (player.el.querySelector('.rdfa-timeline-thumb') as HTMLElement).style
+        .left
+    ).toBe('50%');
+  });
+
+  // The regression this option exists for: mounting at 0 and seeking to `t`
+  // captures the icon→panel anchor at 0 and walks there, which is a DIFFERENT
+  // (and equally legitimate) rendering from opening at `t`. The A/B gate
+  // compares against a React render at `t`, so the player has to open there.
+  it('is not equivalent to mounting at 0 and seeking afterwards', () => {
+    const direct = document.createElement('div');
+    document.body.appendChild(direct);
+    const a = mountVanillaPlayer(direct, spec, { initialT: 800 });
+
+    const walked = document.createElement('div');
+    document.body.appendChild(walked);
+    const b = mountVanillaPlayer(walked, spec);
+    b.clock.seek(800);
+
+    // Both land on the same instant...
+    expect(a.clock.t).toBe(b.clock.t);
+    // ...and jsdom lays nothing out, so the two agree here. The distinction is
+    // geometric and is asserted by compare.ab.spec.ts's chrome cells; this test
+    // pins the API contract that makes it expressible at all.
+    expect(a.el.querySelector('.rdfa-time')!.textContent).toBe(
+      b.el.querySelector('.rdfa-time')!.textContent
+    );
+  });
+});

@@ -43,6 +43,18 @@ export interface VanillaPlayerOptions {
    * happen before the first measurement, not after it.
    */
   width?: number | string;
+  /**
+   * Instant the player opens at, in ms. Default: 0.
+   *
+   * It has to be an option rather than a `seek` the caller performs afterwards,
+   * and that is not a convenience: the stage captures a `set_content` node's
+   * pre-panel geometry ONCE, during its first measurement. Mounting at 0 and
+   * seeking to `t` therefore anchors the icon→panel morph to the state at 0 and
+   * walks to `t`, which is a different (and equally legitimate) rendering from
+   * one mounted at `t` directly — the path dependence `mountUpdate.ab.spec.ts`
+   * documents. A player asked to open at `t` must actually open there.
+   */
+  initialT?: number;
   autoPlay?: boolean;
   loop?: boolean;
   /** Renders the control bar, the keyboard shortcuts and the focus ring. */
@@ -99,6 +111,7 @@ export function mountVanillaPlayer(
   const {
     height = 420,
     width,
+    initialT = 0,
     autoPlay = false,
     loop = false,
     controls = true,
@@ -134,6 +147,13 @@ export function mountVanillaPlayer(
     loop,
     autoPlay,
   });
+  // Seeded immediately, before ANYTHING reads it. The stage captures a
+  // `set_content` node's pre-panel geometry once, on its first measurement, and
+  // the control bar is written from the clock exactly once at construction —
+  // both happen below, and both must already see the instant asked for. Seeking
+  // afterwards would leave the bar showing 0 (nothing is subscribed yet) and
+  // would anchor the icon→panel morph to the state at 0.
+  if (initialT !== 0) clock.seek(initialT);
 
   let isFullscreen = false;
   const toggleFullscreen = (): void => {

@@ -51,6 +51,7 @@ const RATCHET = readRatchet();
  */
 const MODES = [
   { name: 'stage', query: '' },
+  { name: 'chrome', query: '&chrome=1' },
   { name: 'walk', query: '&walk=1' },
 ] as const;
 

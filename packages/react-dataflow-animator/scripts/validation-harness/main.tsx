@@ -402,8 +402,12 @@ function VanillaPlayerPanel({
       mode,
       controls: true,
       autoPlay: false,
+      // Opens AT the first instant of the walk rather than at 0 and seeking:
+      // the icon→panel anchor is captured on the first measurement, so where
+      // the player opens is part of what it renders.
+      initialT: steps[0],
     });
-    for (const step of steps) player.clock.seek(step);
+    for (const step of steps.slice(1)) player.clock.seek(step);
     return () => player.destroy();
   }, [spec, walkKey]);
   return <div ref={slotRef} />;
