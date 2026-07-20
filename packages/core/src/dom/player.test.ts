@@ -307,3 +307,95 @@ describe('mountVanillaPlayer — initialT', () => {
     );
   });
 });
+
+describe('mountVanillaPlayer — options that reach the stage', () => {
+  // `density` used to be declared here and dropped on the floor: the stage
+  // hardcoded 'comfortable'. `'spacious'` was not even expressible.
+  it('forwards density, including spacious', () => {
+    const scale = (density: 'compact' | 'comfortable' | 'spacious') =>
+      mount({ density })
+        .player.el.querySelector<HTMLElement>('.rdfa-stage')
+        ?.style.getPropertyValue('--rdfa-scale');
+
+    expect(scale('spacious')).not.toBe(scale('compact'));
+    expect(scale('spacious')).not.toBe(scale('comfortable'));
+  });
+
+  it('forwards the highlighter to panel content, not just the JSON dialog', () => {
+    const highlight = vi.fn(() => '<em>x</em>');
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    mountVanillaPlayer(
+      container,
+      {
+        ...spec,
+        nodes: [
+          {
+            id: 'a',
+            type: 'simple_node',
+            text: 'A',
+            lane: 1,
+            content: { type: 'code', value: 'SELECT 1', language: 'sql' },
+          },
+        ],
+        packets: [],
+        timeline: [],
+        connections: [],
+      },
+      { highlight }
+    );
+
+    expect(highlight).toHaveBeenCalledWith('SELECT 1', 'sql');
+  });
+
+  it('renders the debug overlay only when asked', () => {
+    expect(mount().player.el.querySelector('.rdfa-debug')).toBeNull();
+    expect(
+      mount({ debug: true }).player.el.querySelector('.rdfa-debug')
+    ).not.toBeNull();
+  });
+});
+
+describe('mountVanillaPlayer — style and warnings', () => {
+  it('applies extra styles to the root', () => {
+    const { player } = mount({ style: { border: '2px solid red' } });
+
+    expect(player.el.style.border).toBe('2px solid red');
+  });
+
+  // `style` lands after height/width so a caller can override them, and before
+  // the root is inserted so the first measurement sees the final box.
+  it('lets style override height', () => {
+    const { player } = mount({ height: 300, style: { height: '99px' } });
+
+    expect(player.el.style.height).toBe('99px');
+  });
+
+  it('exposes the compile warnings rather than making the caller recompile', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    // A `keep_until` pointing at an action that does not exist is one of the
+    // things the compiler warns about.
+    const player = mountVanillaPlayer(container, {
+      ...spec,
+      timeline: [
+        {
+          type: 'move',
+          id: 'm1',
+          object: 'p',
+          from: 'a',
+          to: 'b',
+          keep_until: 'ghost',
+        },
+      ],
+    });
+
+    expect(player.warnings.length).toBeGreaterThan(0);
+  });
+
+  it('reports no warnings for a clean spec', () => {
+    expect(mount().player.warnings).toEqual([]);
+  });
+});

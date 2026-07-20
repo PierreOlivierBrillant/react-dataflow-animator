@@ -1,6 +1,7 @@
 import { s } from '../el';
 import { SUB_ICON_CATALOG } from './subIconCatalog';
 import { SUB_ICON_GLYPHS } from './subIconData.generated';
+import { customSubIcon, registerSubIcon } from './registry';
 
 /**
  * Framework-free `subicon` tech badges — the port of
@@ -96,16 +97,12 @@ function renderText(text: string) {
 }
 
 /**
- * Resolves a `subicon`: known tech glyph, otherwise a free-text badge
- * (e.g. 'v2', 'API', 'JWT').
- *
- * The React version also consults a `registerSubIcon` registry first. There is
- * no vanilla equivalent yet on purpose: the extension point takes a `ReactNode`
- * today, so its framework-free shape is part of the public vanilla API that
- * step 2.6 designs. Until then core has no custom entries to consult and the
- * two resolutions agree.
+ * Resolves a `subicon`: custom registration, then known tech glyph, otherwise a
+ * free-text badge (e.g. 'v2', 'API', 'JWT') — the same order React resolved in.
  */
 export function renderSubIcon(name: string): SVGElement {
+  const custom = customSubIcon(name);
+  if (custom) return custom;
   const def = SUB_ICON_CATALOG[name.toLowerCase()];
   if (def) return renderGlyph(def.icon, def.color, name);
   return renderText(name);
@@ -115,3 +112,6 @@ export function renderSubIcon(name: string): SVGElement {
 export function subIconNames(): string[] {
   return Object.keys(SUB_ICON_CATALOG);
 }
+
+// See the note in `nodeIcons.ts`: one public module per icon kind.
+export { registerSubIcon };

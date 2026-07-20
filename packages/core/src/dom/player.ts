@@ -1,4 +1,5 @@
 import type { DataFlowSpec, Highlighter, PlayerTheme } from '../types';
+import type { Density } from '../engine/scale';
 import { compile } from '../engine/compiler';
 import { nextStop, prevStop } from '../engine/timeline';
 import { copyText, downloadJson, serializeSpec } from '../export/json';
@@ -63,16 +64,34 @@ export interface VanillaPlayerOptions {
   exportable?: boolean;
   theme?: PlayerTheme;
   mode?: 'auto' | 'light' | 'dark';
-  density?: 'compact' | 'comfortable';
+  density?: Density;
   speed?: number;
   highlight?: Highlighter;
   className?: string;
+  /** Renders the timeline debug overlay. Default: false. */
+  debug?: boolean;
+  /**
+   * Extra inline styles for the `.rdfa-player` root.
+   *
+   * Kebab-case property names and string values — the contract `el.ts` states
+   * and defends. Applied AFTER `height`/`width`, so a caller can override them,
+   * and before the root is inserted, so the stage's first measurement already
+   * sees the final box.
+   */
+  style?: Readonly<Record<string, string>>;
 }
 
 export interface VanillaPlayerHandle {
   /** The `.rdfa-player` root, for callers that need to place or measure it. */
   readonly el: HTMLElement;
   readonly clock: PlayerClock;
+  /**
+   * Compile warnings for the mounted spec — what a `debug` caller logs.
+   *
+   * Exposed rather than recomputed: the spec is already compiled here, and a
+   * caller that wanted the warnings would otherwise have to compile it again.
+   */
+  readonly warnings: readonly string[];
   /** Detaches everything and releases the clock, observers and listeners. */
   destroy(): void;
 }
@@ -118,12 +137,15 @@ export function mountVanillaPlayer(
     exportable = false,
     theme = 'default',
     mode = 'auto',
+    density = 'comfortable',
     speed = 1,
     highlight = highlightCode,
     className,
+    debug = false,
+    style,
   } = options;
 
-  const { timeline } = compile(spec);
+  const { timeline, warnings } = compile(spec);
 
   const root = h('div', {
     class: `rdfa-player${className ? ` ${className}` : ''}`,
@@ -135,6 +157,7 @@ export function mountVanillaPlayer(
     ...(width != null
       ? { width: typeof width === 'number' ? `${width}px` : width }
       : {}),
+    ...style,
   });
   // `tabIndex` is what makes the root focusable for the keyboard shortcuts, so
   // it is present exactly when the controls are — as in React.
@@ -204,7 +227,11 @@ export function mountVanillaPlayer(
     root.appendChild(bar.el);
   }
 
-  const stage: VanillaStageHandle = mountVanillaStage(root, spec, clock.t);
+  const stage: VanillaStageHandle = mountVanillaStage(root, spec, clock.t, {
+    density,
+    highlight,
+    debug,
+  });
   if (bar) root.insertBefore(stage.el, bar.el);
 
   const onFullscreenChange = (): void => {
@@ -241,6 +268,7 @@ export function mountVanillaPlayer(
   return {
     el: root,
     clock,
+    warnings,
     destroy() {
       // Order matters: drop the subscription before stopping the clock, so a
       // final notification cannot reach a stage that is already gone.

@@ -6,7 +6,7 @@ import {
 import type { Highlighter, ObjectContent, Node } from '../../types';
 import type { NodePlacement } from '@react-dataflow-animator/core/engine/layout';
 import { ContentPanel } from '../dynamic/ContentPanel';
-import { NodeView } from './NodeView';
+import { NodeVisual } from './NodeVisual';
 import {
   isPanelNode,
   isShapeType,
@@ -112,7 +112,7 @@ export const StaticNode: AnimatableComponent<StaticNodeProps> =
       />
     ) : (
       <>
-        <NodeView
+        <NodeVisual
           node={object}
           highlight={highlight}
           closed={closed}

@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountVanillaStage } from './mount';
+import { mountVanillaStage, type VanillaStageOptions } from './mount';
+import type { Density } from '../engine/scale';
 import { compile } from '../engine/compiler';
 import type { DataFlowSpec } from '../types';
 import { normalizeStageHtml } from './normalizeHtml';
@@ -28,12 +29,30 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-function mount(over?: Partial<DataFlowSpec>, t = 0) {
+function mount(
+  over?: Partial<DataFlowSpec>,
+  t = 0,
+  options?: VanillaStageOptions
+) {
   const container = document.createElement('div');
   document.body.appendChild(container);
-  const handle = mountVanillaStage(container, { ...spec, ...over }, t);
+  const handle = mountVanillaStage(container, { ...spec, ...over }, t, options);
   return { container, handle };
 }
+
+/** A `code` panel is the only thing that reaches the highlighter. */
+const codeSpec: Partial<DataFlowSpec> = {
+  nodes: [
+    {
+      id: 'a',
+      type: 'simple_node',
+      text: 'A',
+      lane: 1,
+      content: { type: 'code', value: 'SELECT 1', language: 'sql' },
+    },
+  ],
+  connections: [],
+};
 
 describe('mountVanillaStage — structure', () => {
   it('roots the render in .rdfa-stage', () => {
@@ -444,5 +463,96 @@ describe('mountVanillaStage — teardown', () => {
 
     expect(document.body.querySelectorAll('.rdfa-stage')).toHaveLength(0);
     expect(document.body.children).toHaveLength(0);
+  });
+});
+
+/**
+ * These three options were declared before they were wired: the stage hardcoded
+ * `'comfortable'` and `highlightCode`, and had no debug layer at all. A caller
+ * setting them got silence. What follows asserts they are genuinely CONSUMED,
+ * not just accepted.
+ */
+describe('mountVanillaStage — options', () => {
+  it('feeds density into the stage model', () => {
+    const scaleFor = (density: Density): string | undefined => {
+      const { container } = mount(undefined, 0, { density });
+      const stage = container.querySelector<HTMLElement>('.rdfa-stage');
+      return stage?.style.getPropertyValue('--rdfa-scale');
+    };
+
+    const compact = scaleFor('compact');
+    const comfortable = scaleFor('comfortable');
+    const spacious = scaleFor('spacious');
+
+    expect(new Set([compact, comfortable, spacious]).size).toBe(3);
+  });
+
+  it('defaults density to comfortable, as an options-free call always did', () => {
+    const { container: withOptions } = mount(undefined, 0, {
+      density: 'comfortable',
+    });
+    const { container: without } = mount();
+
+    expect(
+      without.querySelector<HTMLElement>('.rdfa-stage')?.style.cssText
+    ).toBe(
+      withOptions.querySelector<HTMLElement>('.rdfa-stage')?.style.cssText
+    );
+  });
+
+  it('keeps density after a remeasure, not only on the first pass', () => {
+    const { container, handle } = mount(undefined, 0, { density: 'spacious' });
+    const stage = container.querySelector<HTMLElement>('.rdfa-stage');
+    const before = stage?.style.getPropertyValue('--rdfa-scale');
+
+    handle.update(250);
+
+    expect(stage?.style.getPropertyValue('--rdfa-scale')).toBe(before);
+  });
+
+  // The regression this closes: `highlight` reached the JSON dialog but never
+  // the stage, so a consumer's highlighter silently stopped colouring panels.
+  it('passes the highlighter through to panel content', () => {
+    const highlight = vi.fn(() => '<em>marked</em>');
+
+    const { container } = mount(codeSpec, 0, { highlight });
+
+    expect(highlight).toHaveBeenCalledWith('SELECT 1', 'sql');
+    expect(container.querySelector('.rdfa-code')?.innerHTML).toContain(
+      '<em>marked</em>'
+    );
+  });
+
+  it('renders no debug overlay unless asked', () => {
+    const { container } = mount();
+
+    expect(container.querySelector('.rdfa-debug')).toBeNull();
+  });
+
+  it('renders the debug overlay as the last child of the stage', () => {
+    const { container } = mount(undefined, 0, { debug: true });
+    const stage = container.querySelector('.rdfa-stage');
+
+    expect(stage?.lastElementChild?.getAttribute('class')).toBe('rdfa-debug');
+  });
+
+  // A reorder is what a node entering or leaving triggers; the overlay must not
+  // be shuffled into the middle of the layer stack by it.
+  it('keeps the debug overlay last across an update that reorders', () => {
+    const { container, handle } = mount(undefined, 0, { debug: true });
+
+    handle.update(500);
+
+    const stage = container.querySelector('.rdfa-stage');
+    expect(stage?.lastElementChild?.getAttribute('class')).toBe('rdfa-debug');
+  });
+
+  it('moves the debug overlay with t', () => {
+    const { container, handle } = mount(undefined, 0, { debug: true });
+    const first = container.querySelector('.rdfa-debug')?.textContent;
+
+    handle.update(500);
+
+    expect(container.querySelector('.rdfa-debug')?.textContent).not.toBe(first);
   });
 });

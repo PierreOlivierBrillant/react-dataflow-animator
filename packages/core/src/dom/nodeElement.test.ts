@@ -1,6 +1,10 @@
 /** @vitest-environment jsdom */
-import { describe, expect, it } from 'vitest';
-import { applyNodeElement, buildNodeElement } from './nodeElement';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  applyNodeElement,
+  buildNodeElement,
+  renderNodeVisual,
+} from './nodeElement';
 import { escapeHtml } from '../highlight/highlight';
 import type { Node } from '../types';
 
@@ -484,5 +488,92 @@ describe('applyNodeElement — the single writer', () => {
       opts({ content: { type: 'text' as const, value: 'other' } })
     );
     expect(handle.visual.firstElementChild).not.toBe(panel);
+  });
+});
+
+/**
+ * `renderNodeVisual` is the public face of the dispatch `applyNodeElement` uses
+ * internally — the port of `NodeView`, which the React package re-exports for
+ * isolated node previews (the API reference's type gallery).
+ */
+describe('renderNodeVisual', () => {
+  it('renders a panel for a panel-kind node', () => {
+    const el = renderNodeVisual({
+      id: 'a',
+      type: 'complex_node',
+      header: 'H',
+      body: 'B',
+    });
+
+    expect(el.getAttribute('class')).toContain('rdfa-node-panel');
+    expect(el.textContent).toContain('H');
+  });
+
+  it('renders a shape wrapper carrying its SVG background', () => {
+    const el = renderNodeVisual({ id: 'a', type: 'diamond' });
+
+    expect(el.querySelector('svg.rdfa-shape-bg')).not.toBeNull();
+  });
+
+  it('renders a pictogram wrapper for a plain node type', () => {
+    const el = renderNodeVisual({ id: 'a', type: 'server' });
+
+    expect(el.getAttribute('class')).toBe('rdfa-node-icon');
+    expect(el.querySelector('svg')).not.toBeNull();
+  });
+
+  it('renders an empty signal pad when the node has no value', () => {
+    const el = renderNodeVisual({ id: 'a', type: 'signal' });
+
+    expect(el.getAttribute('class')).toBe('rdfa-signal');
+    expect(el.querySelector('.rdfa-signal-value')).toBeNull();
+  });
+
+  it('puts signalValue in the pad, overriding node.icon', () => {
+    const el = renderNodeVisual(
+      { id: 'a', type: 'signal', icon: '0' },
+      { signalValue: '1' }
+    );
+
+    expect(el.querySelector('.rdfa-signal-value')).not.toBeNull();
+  });
+
+  it('falls back to node.icon in a signal pad', () => {
+    const el = renderNodeVisual({ id: 'a', type: 'signal', icon: '1' });
+
+    expect(el.querySelector('.rdfa-signal-value')).not.toBeNull();
+  });
+
+  it('lets closed override node.closed on a stateful contact', () => {
+    const open = renderNodeVisual(
+      { id: 'a', type: 'switch', closed: true },
+      { closed: 0 }
+    );
+    const shut = renderNodeVisual({ id: 'a', type: 'switch', closed: true });
+
+    expect(open.innerHTML).not.toBe(shut.innerHTML);
+  });
+
+  it('escapes panel code by default rather than highlighting it', () => {
+    const el = renderNodeVisual({
+      id: 'a',
+      type: 'simple_node',
+      body: '<script>',
+      language: 'js',
+    });
+
+    expect(el.innerHTML).toContain('&lt;script&gt;');
+  });
+
+  it('uses a supplied highlighter for panel code', () => {
+    const highlight = vi.fn(() => '<em>hl</em>');
+
+    const el = renderNodeVisual(
+      { id: 'a', type: 'simple_node', body: 'x', language: 'js' },
+      { highlight }
+    );
+
+    expect(highlight).toHaveBeenCalledWith('x', 'js');
+    expect(el.innerHTML).toContain('<em>hl</em>');
   });
 });

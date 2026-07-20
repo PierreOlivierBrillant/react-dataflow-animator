@@ -1,4 +1,10 @@
-import type { DataFlowSpec, Node, ObjectContent, Packet } from '../types';
+import type {
+  DataFlowSpec,
+  Highlighter,
+  Node,
+  ObjectContent,
+  Packet,
+} from '../types';
 import { compile } from '../engine/compiler';
 import {
   clamp,
@@ -12,6 +18,7 @@ import {
   type SetContentClip,
 } from '../engine/timeline';
 import { computeLayout, type LayoutMap } from '../engine/layout';
+import type { Density } from '../engine/scale';
 import {
   collectArrowConnections,
   computePortOffsets,
@@ -71,6 +78,7 @@ import {
 } from './geometryTracker';
 import { settle } from './settle';
 import { buildStageModel, type StageModel } from './stageModel';
+import { createDebugOverlay } from './debugOverlay';
 import {
   autoRotationMap,
   computeNodeStateAtT,
@@ -82,6 +90,23 @@ import {
   type NodeElement,
   type NodeElementOptions,
 } from './nodeElement';
+
+/** Options accepted by {@link mountVanillaStage}. */
+export interface VanillaStageOptions {
+  /** Sizing preset. Default: `'comfortable'` — `Stage`'s own default. */
+  density?: Density;
+  /**
+   * Syntax highlighter for `code` panel bodies. Default: `highlightCode`.
+   *
+   * It has to reach the stage and not just the JSON dialog: React passes the
+   * resolved highlighter to `<Stage>`, where it colours every panel. A renderer
+   * that accepted the option and kept using its own default would silently drop
+   * a consumer's highlighter for all panel content.
+   */
+  highlight?: Highlighter;
+  /** Renders the timeline debug overlay. Default: false. */
+  debug?: boolean;
+}
 
 /** Handle returned by {@link mountVanillaStage}. */
 export interface VanillaStageHandle {
@@ -190,7 +215,8 @@ interface FlowElement {
 export function mountVanillaStage(
   container: HTMLElement,
   spec: DataFlowSpec,
-  t: number
+  t: number,
+  options: VanillaStageOptions = {}
 ): VanillaStageHandle {
   const { timeline } = compile(spec);
 
@@ -206,12 +232,19 @@ export function mountVanillaStage(
   root.appendChild(arrowSvg);
   root.appendChild(overlay);
 
-  // `mountVanillaStage` receives neither a timeline nor a highlighter, so both
-  // are derived here exactly as the React caller derives them. Both are
-  // deterministic, so the two panels agree.
-  const highlight = highlightCode;
-  // `Stage`'s own default, and what the A/B harness passes explicitly.
-  const density = 'comfortable' as const;
+  // The defaults are exactly what React resolves when the corresponding props
+  // are omitted, so an options-free call renders what it always did — which is
+  // what keeps the A/B grid at 0.0000%.
+  const {
+    density = 'comfortable',
+    highlight = highlightCode,
+    debug = false,
+  } = options;
+
+  // React renders `<DebugOverlay>` as the LAST child of `.rdfa-stage`, after the
+  // overlay layer; `reorderRoot` reproduces that position on every reorder.
+  const debugOverlay = debug ? createDebugOverlay(timeline) : undefined;
+  if (debugOverlay) root.appendChild(debugOverlay.el);
 
   // ─── Spec-derived invariants ──────────────────────────────────────────────
   const initialLayout = computeLayout(spec, { aspect: INITIAL_METRICS.aspect });
@@ -300,6 +333,10 @@ export function mountVanillaStage(
       const op = contentByNode[nodeId].opacity;
       if (op < 1) revealByNode[nodeId] = op;
     }
+
+    // Here rather than in `update`, so the overlay is also correct on the very
+    // first frame — this is the one place `active` is recomputed.
+    debugOverlay?.update(tMs, active.length);
   };
 
   // ─── Convergence state ────────────────────────────────────────────────────
@@ -565,6 +602,7 @@ export function mountVanillaStage(
       ...nodeOrder,
       ...zoneLabels,
       overlay,
+      ...(debugOverlay ? [debugOverlay.el] : []),
     ]);
   };
 

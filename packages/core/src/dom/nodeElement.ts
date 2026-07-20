@@ -2,6 +2,7 @@ import type { Highlighter, Node, ObjectContent } from '../types';
 import { isPanelNode, isShapeType, type ShapeType } from '../render/nodeKinds';
 import { nodeTint, type ColorOverride } from '../render/nodeColors';
 import type { ContentLimit } from '../engine/placements';
+import { escapeHtml } from '../highlight/highlight';
 import { h, pct, px, s, syncStyle, type Child } from './el';
 import { buildContentPanel, type CodeFitTarget } from './contentElement';
 import { renderNodeIcon } from './icons/nodeIcons';
@@ -148,19 +149,35 @@ export function buildPanel(
   );
 }
 
-/** Port of `NodeView`: dispatch to panel / shape / signal pad / pictogram. */
-function buildVisualBody(
-  object: Node,
-  options: NodeElementOptions,
-  effIcon: string | undefined,
-  isSignal: boolean
+/** Options accepted by {@link renderNodeVisual}. */
+export interface NodeVisualOptions {
+  /** Panel syntax highlighting. Default: `escapeHtml`, as in `NodeView`. */
+  highlight?: Highlighter;
+  /** Contact fraction (0..1) for `switch` / `push_button`. Default: `node.closed`. */
+  closed?: number;
+  /** Live value in a `signal` pad (`set_icon`); falls back to `node.icon`. */
+  signalValue?: string;
+}
+
+/**
+ * Visual core of a node — panel / shape / signal pad / pictogram — with no
+ * positioning, corner badge, spinner or enclosing stage. The port of `NodeView`,
+ * and the single dispatch both the retained renderer and the public isolated
+ * view go through.
+ *
+ * `isSignal` and the icon override used to be parameters; they were already
+ * derivable from the node plus `signalValue`, so they are derived here instead.
+ */
+export function renderNodeVisual(
+  node: Node,
+  options: NodeVisualOptions = {}
 ): HTMLElement | SVGElement {
-  if (isPanelNode(object.type))
-    return buildPanel(object as PanelContent, options.highlight);
-  if (isShapeType(object.type)) return buildShape(object);
-  if (isSignal) {
+  if (isPanelNode(node.type))
+    return buildPanel(node as PanelContent, options.highlight ?? escapeHtml);
+  if (isShapeType(node.type)) return buildShape(node);
+  if (node.type === 'signal') {
     // A labelled I/O pad for logic diagrams: the bit value sits in the centre.
-    const val = effIcon ?? object.icon ?? '';
+    const val = options.signalValue ?? node.icon ?? '';
     return h(
       'span',
       { class: 'rdfa-signal' },
@@ -171,9 +188,9 @@ function buildVisualBody(
   }
   // Stateful contacts read `closed` (live from a `toggle`, else the static
   // `node.closed`); other component/pictogram types ignore it.
-  const closedFrac = options.closed ?? (object.closed ? 1 : 0);
+  const closedFrac = options.closed ?? (node.closed ? 1 : 0);
   return h('span', { class: 'rdfa-node-icon' }, [
-    renderNodeIcon(object.type, { closed: closedFrac }),
+    renderNodeIcon(node.type, { closed: closedFrac }),
   ]);
 }
 
@@ -318,7 +335,13 @@ export function applyNodeElement(
       ? buildContentPanel(content, options.highlight)
       : undefined;
     handle.visual.replaceChildren(
-      panel ? panel.el : buildVisualBody(object, options, effIcon, isSignal)
+      panel
+        ? panel.el
+        : renderNodeVisual(object, {
+            highlight: options.highlight,
+            closed: options.closed,
+            signalValue: effIcon,
+          })
     );
 
     // Unique corner badge: the subicon (tech) and the loading ring share the

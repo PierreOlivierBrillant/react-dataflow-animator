@@ -2,6 +2,7 @@ import type { NodeType } from '../../types';
 import { s } from '../el';
 import { lerp } from '../stageConstants';
 import { NODE_ICON_SHAPES, type IconShape } from './nodeIconShapes';
+import { customNodeIcon, registerNodeIcon } from './registry';
 
 /**
  * Framework-free node pictograms — the port of
@@ -87,15 +88,17 @@ const FALLBACK: IconShape[] = [
  * Icon for a node type. `state.closed` (0..1) drives the stateful contacts
  * (`switch`, `push_button`); it is ignored by every other type.
  *
- * The React version also consults a `registerNodeIcon` registry. There is no
- * vanilla equivalent yet, for the same reason as `renderSubIcon`: the extension
- * point takes a `ReactNode` today, so its framework-free shape belongs to the
- * public vanilla API that step 2.6 designs.
+ * A `registerNodeIcon` entry wins over everything, the stateful contacts
+ * included. v2 tested those two before its registry, so registering over them
+ * did nothing at all; "what you register wins" is the only rule that does not
+ * need an exception documented next to it.
  */
 export function renderNodeIcon(
   type: NodeType,
   state?: { closed?: number }
 ): SVGElement {
+  const custom = customNodeIcon(type);
+  if (custom) return custom;
   if (type === 'switch') return switchIcon(state?.closed ?? 0);
   if (type === 'push_button') return pushButtonIcon(state?.closed ?? 0);
   return svg(NODE_ICON_SHAPES[type] ?? FALLBACK);
@@ -105,3 +108,7 @@ export function renderNodeIcon(
 export function nodeIconTypes(): string[] {
   return Object.keys(NODE_ICON_SHAPES);
 }
+
+// Re-exported here so the public API has one module per icon kind, rather than
+// asking consumers to know about the shared registry module.
+export { registerNodeIcon };

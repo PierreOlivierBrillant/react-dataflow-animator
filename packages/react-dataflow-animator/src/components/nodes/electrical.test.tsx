@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { StaticNode } from './StaticNode';
-import { NodeView } from './NodeView';
+import { NodeVisual } from './NodeVisual';
 import { highlightCode } from '@react-dataflow-animator/core/highlight/highlight';
 import type { Node } from '../../types';
 
@@ -23,7 +23,7 @@ function renderNode(object: Node) {
 describe('composants électriques', () => {
   it('rend un pictogramme électrique comme icône SVG', () => {
     const { container } = render(
-      <NodeView node={{ id: 'r1', type: 'resistor' }} />
+      <NodeVisual node={{ id: 'r1', type: 'resistor' }} />
     );
     expect(container.querySelector('.rdfa-node-icon svg')).toBeTruthy();
     expect(container.querySelector('.rdfa-node-panel')).toBeNull();
@@ -56,14 +56,14 @@ describe('composants électriques', () => {
 
   it("l'interrupteur ouvert et fermé produisent des leviers différents", () => {
     const open = render(
-      <NodeView node={{ id: 'sw', type: 'switch' }} closed={0} />
+      <NodeVisual node={{ id: 'sw', type: 'switch' }} closed={0} />
     );
     const openPaths = Array.from(open.container.querySelectorAll('path')).map(
       (p) => p.getAttribute('d')
     );
     cleanup();
     const closed = render(
-      <NodeView node={{ id: 'sw', type: 'switch' }} closed={1} />
+      <NodeVisual node={{ id: 'sw', type: 'switch' }} closed={1} />
     );
     const closedPaths = Array.from(
       closed.container.querySelectorAll('path')
